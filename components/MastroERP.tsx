@@ -504,7 +504,7 @@ export default function MastroMisure() {
   }, []);
 
   // ── Persistence ──
-  useEffect(()=>{
+useEffect(()=>{ (()=>{
       try{const _v=localStorage.getItem("mastro:cantieri");if(_v)setCantieri(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:tasks");if(_v)setTasks(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:events");if(_v)setEvents(JSON.parse(_v));}catch(e){}
@@ -5656,5 +5656,3 @@ export default function MastroMisure() {
     </>
   );
 }
-
-// build fix
