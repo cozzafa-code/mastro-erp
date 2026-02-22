@@ -1028,73 +1028,7 @@ useEffect(()=>{ (()=>{
             );
           })(),
 
-          calendario: (() => {
-            const dateStr = (d) => d.toISOString().split("T")[0];
-            const todayISO = dateStr(today);
-            const y = today.getFullYear(), mo = today.getMonth();
-            const firstDay = new Date(y, mo, 1).getDay();
-            const offset = firstDay === 0 ? 6 : firstDay - 1;
-            const daysInMonth = new Date(y, mo+1, 0).getDate();
-            const cells = Array.from({length: offset + daysInMonth}, (_,i) => i < offset ? null : i - offset + 1);
-            const dayEvs = events.filter(e => e.date === todayISO).sort((a,b) => (a.time||"99").localeCompare(b.time||"99"));
-            return (
-              <div style={{ marginBottom:12 }}>
-                <div style={S.section}>
-                  <div style={S.sectionTitle}>Calendario</div>
-                  <div style={{ display:"flex", gap:1, background:T.bg, borderRadius:8, padding:2 }}>
-                    {["giorno","settimana","mese"].map(v => (
-                      <div key={v} onClick={() => { setAgendaView(v); setTab("agenda"); }}
-                        style={{ padding:"4px 9px", borderRadius:6, fontSize:10, fontWeight:600, cursor:"pointer", background:agendaView===v?T.card:"transparent", color:agendaView===v?T.text:T.sub, transition:"all 0.15s" }}>
-                        {v.charAt(0).toUpperCase()+v.slice(1)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ padding:"0 16px" }}>
-                  <div style={{ background:T.card, borderRadius:T.r, border:`1px solid ${T.bdr}`, overflow:"hidden" }}>
-                    <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", borderBottom:`1px solid ${T.bdr}`, padding:"6px 8px 4px" }}>
-                      {["L","M","M","G","V","S","D"].map((d,i) => <div key={i} style={{ textAlign:"center", fontSize:9, fontWeight:700, color:T.sub }}>{d}</div>)}
-                    </div>
-                    <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:1, padding:"4px 6px 6px" }}>
-                      {cells.map((day,i) => {
-                        if (!day) return <div key={i}/>;
-                        const iso = `${y}-${String(mo+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-                        const isT = iso === todayISO;
-                        const evs = events.filter(e => e.date === iso);
-                        return (
-                          <div key={i} onClick={() => { setTab("agenda"); setAgendaView("giorno"); setSelDate(new Date(iso)); }}
-                            style={{ textAlign:"center", padding:"3px 1px", borderRadius:6, background:isT?T.acc:"transparent", cursor:"pointer", minHeight:28 }}>
-                            <div style={{ fontSize:12, fontWeight:isT?700:400, color:isT?"#fff":T.text }}>{day}</div>
-                            {evs.length>0 && <div style={{ width:4, height:4, borderRadius:"50%", background:isT?"#fff":(evs[0].color||T.acc), margin:"1px auto 0" }}/>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {dayEvs.length > 0 && (
-                      <div style={{ borderTop:`1px solid ${T.bdr}` }}>
-                        <div style={{ padding:"6px 14px 0", fontSize:10, fontWeight:700, color:T.sub, textTransform:"uppercase", letterSpacing:"0.07em" }}>Oggi</div>
-                        {dayEvs.map((ev,i) => (
-                          <div key={ev.id} onClick={() => { setTab("agenda"); setAgendaView("giorno"); setSelDate(new Date(ev.date)); }}
-                            style={{ display:"flex", gap:10, padding:"8px 14px", borderBottom:i<dayEvs.length-1?`1px solid ${T.bg}`:"none", cursor:"pointer" }}>
-                            <div style={{ width:3, alignSelf:"stretch", borderRadius:2, background:ev.color||T.acc, flexShrink:0 }}/>
-                            <div style={{ fontSize:11, color:T.sub, fontFamily:FM, minWidth:36, paddingTop:1 }}>{ev.time||"—"}</div>
-                            <div style={{ flex:1 }}>
-                              <div style={{ fontSize:13, fontWeight:600, color:T.text }}>{ev.text}</div>
-                              <div style={{ display:"flex", gap:4, marginTop:2, flexWrap:"wrap" }}>
-                                {ev.cm && <span style={S.badge(T.accLt, T.acc)}>{ev.cm}</span>}
-                                {ev.persona && <span style={S.badge(T.bg, T.sub)}>{ev.persona}</span>}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {dayEvs.length === 0 && <div style={{ borderTop:`1px solid ${T.bdr}`, padding:"10px 14px", fontSize:12, color:T.sub, textAlign:"center" }}>Nessun evento oggi — <span onClick={()=>setShowModal("event")} style={{ color:T.acc, cursor:"pointer", fontWeight:600 }}>+ Aggiungi</span></div>}
-                  </div>
-                </div>
-              </div>
-            );
-          })(),
+          calendario: <MastroAgendaWidget events={events} cantieri={cantieri} T={T} onEventClick={() => setTab("agenda")} onAddEvent={() => setTab("agenda")} />,
 
           email: (() => {
             const emailsOnly = msgs.filter(m => m.canale === "email");
