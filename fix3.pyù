@@ -1,0 +1,97 @@
+with open(r'components\MastroERP.tsx', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+def find_jsx_end(content, start):
+    depth = 0
+    i = start
+    while i < len(content):
+        if content[i] == '{':
+            depth += 1
+        elif content[i] == '}':
+            depth -= 1
+            if depth == 0:
+                return i + 1
+        i += 1
+    return -1
+
+def process_iife(content, search_str, func_name, condition=None):
+    idx = content.find(search_str)
+    if idx == -1:
+        print(f"NON TROVATO: {search_str[:60]}")
+        return content, None
+    end = find_jsx_end(content, idx)
+    if end == -1:
+        print(f"FINE NON TROVATA per {func_name}")
+        return content, None
+    block = content[idx:end]
+    iife_open = block.find('(() => {')
+    body_start = iife_open + len('(() => {')
+    body_end = block.rfind('})()')
+    if body_end == -1:
+        print(f"})() NON TROVATO in {func_name}")
+        print(f"Fine blocco: ...{block[-150:]}")
+        return content, None
+    body = block[body_start:body_end]
+    func_code = f"\n  const {func_name} = () => {{{body}}};\n"
+    if condition:
+        replacement = '{' + condition + ' && ' + func_name + '()}'
+    else:
+        replacement = '{' + func_name + '()}'
+    new_content = content[:idx] + replacement + content[end:]
+    print(f"OK {func_name}: {len(body)} chars")
+    return new_content, func_code
+
+extracted = []
+
+content, fn = process_iife(
+    content,
+    '{newCM.tipo === "nuova" && (() => {',
+    'renderNuovaInstallazione',
+    condition='newCM.tipo === "nuova"'
+)
+if fn: extracted.insert(0, fn)
+
+content, fn = process_iife(
+    content,
+    '{newCM.tipo === "riparazione" && (() => {',
+    'renderRiparazione',
+    condition='newCM.tipo === "riparazione"'
+)
+if fn: extracted.insert(0, fn)
+
+content, fn = process_iife(
+    content,
+    '{vanoStep === 0 && (() => {',
+    'renderVanoStep0',
+    condition='vanoStep === 0'
+)
+if fn: extracted.insert(0, fn)
+
+content, fn = process_iife(
+    content,
+    '{(() => {\n        const sections = {',
+    'renderHomeSections'
+)
+if fn: extracted.insert(0, fn)
+
+content, fn = process_iife(
+    content,
+    '{globalSearch.trim().length > 1 && (() => {',
+    'renderSearchResults',
+    condition='globalSearch.trim().length > 1'
+)
+if fn: extracted.insert(0, fn)
+
+marker = '/* ═══════ MAIN RENDER ═══════ */'
+insert_pos = content.find(marker)
+if insert_pos == -1:
+    print("ERRORE: Marker MAIN RENDER non trovato!")
+else:
+    all_funcs = ''.join(extracted)
+    content = content[:insert_pos] + all_funcs + '\n  ' + content[insert_pos:]
+    print(f"\nInserite {len(extracted)} funzioni prima di MAIN RENDER")
+
+with open(r'components\MastroERP.tsx', 'w', encoding='utf-8') as f:
+    f.write(content)
+
+print("\nFatto! Ora esegui: npm run build")
