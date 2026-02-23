@@ -1,20 +1,24 @@
-"use client";
-// @ts-nocheck
+// =======================================================
+// MASTRO ERP v2 — PARTE 1/5
+// Righe 1-1280: Costanti, Dati Demo (incluse visite/vaniList/euro/scadenza),
+//               MOTIVI_BLOCCO, AFASE, useDragOrder hook, Home, Helpers, Stili
+// Continuazione in PARTE2
+// =======================================================
 // components/MastroERP.tsx
 // MASTRO ERP — adattato per Next.js + Supabase
-'use client'
-import { useState, useRef, useCallback, useEffect } from "react";
+"use client";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 
-/* ═══════════════════════════════════════════════════════
+/* =======================================================
    MASTRO MISURE — v15 COMPLETE REBUILD
    Tutte le feature recuperate + design Apple chiaro
-   ═══════════════════════════════════════════════════════ */
+   ======================================================= */
 
 const FONT = "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;600&display=swap";
 const FF = "'Plus Jakarta Sans',sans-serif";
 const FM = "'JetBrains Mono',monospace";
 
-/* ── TEMI ── */
+/* == TEMI == */
 const THEMES = {
   chiaro: {
     name: "Chiaro", emoji: "☀️",
@@ -63,7 +67,7 @@ const THEMES = {
   }
 };
 
-/* ── PIPELINE 7+1 FASI ── */
+/* == PIPELINE 7+1 FASI == */
 const PIPELINE_DEFAULT = [
   { id: "sopralluogo", nome: "Sopralluogo", ico: "🔍", color: "#007aff", attiva: true },
   { id: "preventivo", nome: "Preventivo", ico: "📋", color: "#ff9500", attiva: true },
@@ -75,112 +79,196 @@ const PIPELINE_DEFAULT = [
   { id: "chiusura", nome: "Chiusura", ico: "✅", color: "#30b0c7", attiva: true },
 ];
 
-/* ── DATI DEMO ── */
+/* == MOTIVI BLOCCO SOPRALLUOGO == */
+const MOTIVI_BLOCCO = [
+  "Cliente assente",
+  "Vano inaccessibile",
+  "Materiale da rimuovere",
+  "Lavori in corso",
+  "Arredo da spostare",
+  "Altro"
+];
+
+/* == AZIONE SUGGERITA PER FASE == */
+const AFASE = {
+  sopralluogo: { i: "📐", t: "Pianifica sopralluogo",  c: "#007aff" },
+  preventivo:  { i: "📝", t: "Invia preventivo",        c: "#ff9500" },
+  conferma:    { i: "✍️", t: "Fai firmare contratto",   c: "#af52de" },
+  misure:      { i: "📏", t: "Esegui rilievo misure",   c: "#5856d6" },
+  ordini:      { i: "🛒", t: "Conferma ordine",          c: "#ff2d55" },
+  produzione:  { i: "🏭", t: "Monitora produzione",      c: "#ff9500" },
+  posa:        { i: "🔧", t: "Schedula posa",            c: "#34c759" },
+  chiusura:    { i: "✅", t: "Richiedi saldo finale",    c: "#30b0c7" },
+};
+
+/* == DATI DEMO == */
 const CANTIERI_INIT = [
   { id: 1, code: "S-0004", cliente: "Fabio", cognome: "Cozza", indirizzo: "Via Gabriele Barrio 12, Cosenza", fase: "sopralluogo",
     sistema: "Schüco CT70", tipo: "nuova", telefono: "338 1234567",
     difficoltaSalita: "media", mezzoSalita: "Scala interna", pianoEdificio: "P2 — 2° Piano", foroScale: "80×200",
     note: "Attenzione: muro portante in soggiorno. Portare spessimetro.",
-    allegati: [], creato: "15 Feb", aggiornato: "oggi",
-    vani: [
-      { id: 1, nome: "Cucina", tipo: "F2A", stanza: "Cucina", piano: "PT",
-        sistema: "Schüco CT70", vetro: "4/16/4 Basso-emissivo", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
-        telaio: "Z", telaioAlaZ: "35", rifilato: true, rifilSx: "10", rifilDx: "10", rifilSopra: "5", rifilSotto: "0",
-        coprifilo: "CP40", lamiera: "LD200",
-        misure: { lAlto: 1202, lCentro: 1198, lBasso: 1195, hSx: 1402, hCentro: 1400, hDx: 1398, d1: 1825, d2: 1823, spSx: 120, spDx: 115, spSopra: 80, imbotte: 180, davInt: 200, davEst: 50, davProf: 200, davSporg: 40, soglia: 0 },
-        cassonetto: true, casH: 250, casP: 300,
-        accessori: { tapparella: { attivo: true, colore: "RAL 9010", l: 1240, h: 1650 }, persiana: { attivo: false }, zanzariera: { attivo: true, colore: "RAL 9010", l: 1180, h: 1370 } },
-        foto: {}, note: "Muro portante lato sinistro — spalletta ridotta di 5mm rispetto destra" },
-      { id: 2, nome: "Salone PF", tipo: "PF2A", stanza: "Soggiorno", piano: "PT",
-        sistema: "Schüco CT70", vetro: "6/16/6", coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "Come profili",
-        telaio: "L", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
-        coprifilo: "CP50", lamiera: "LD250",
-        misure: { lAlto: 1405, lCentro: 1402, lBasso: 1400, hSx: 2202, hCentro: 2200, hDx: 2198, d1: 2616, d2: 2626, spSx: 150, spDx: 150, spSopra: 90, imbotte: 200, davInt: 0, davEst: 0, davProf: 0, davSporg: 0, soglia: 15 },
-        cassonetto: false, casH: 0, casP: 0,
-        accessori: { tapparella: { attivo: true, colore: "RAL 7016", l: 1440, h: 2450 }, persiana: { attivo: true, l: 1402, h: 2200, colore: "RAL 7016" }, zanzariera: { attivo: true, colore: "RAL 9010", l: 1390, h: 2190 } },
-        foto: {}, note: "Fuori squadra 10mm — verificare architrave. Soglia esistente da mantenere h=15mm" },
-      { id: 3, nome: "Camera F1A", tipo: "F1A", stanza: "Camera", piano: "P1",
-        sistema: "Schüco CT70", vetro: "4/16/4 Basso-emissivo", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
-        telaio: "Z", telaioAlaZ: "35", rifilato: true, rifilSx: "8", rifilDx: "8", rifilSopra: "5", rifilSotto: "0",
-        coprifilo: "CP40", lamiera: "LD200",
-        misure: { lAlto: 900, lCentro: 898, lBasso: 900, hSx: 1202, hCentro: 1200, hDx: 1200, d1: 1505, d2: 1504, spSx: 100, spDx: 100, spSopra: 75, imbotte: 160, davInt: 180, davEst: 40, davProf: 180, davSporg: 35, soglia: 0 },
-        cassonetto: true, casH: 220, casP: 280,
-        accessori: { tapparella: { attivo: true, colore: "RAL 9010", l: 935, h: 1420 }, persiana: { attivo: false }, zanzariera: { attivo: true, colore: "RAL 9010", l: 880, h: 1170 } },
-        foto: {}, note: "" },
-      { id: 4, nome: "Bagno VAS", tipo: "VAS", stanza: "Bagno", piano: "P1",
-        sistema: "Schüco CT70", vetro: "Acidato", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
-        telaio: "Z", telaioAlaZ: "35", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
-        coprifilo: "CP40", lamiera: "",
-        misure: { lAlto: 702, lCentro: 700, lBasso: 700, hSx: 502, hCentro: 500, hDx: 500, d1: 862, d2: 861, spSx: 95, spDx: 95, spSopra: 70, imbotte: 150, davInt: 150, davEst: 30, davProf: 150, davSporg: 25, soglia: 0 },
-        cassonetto: false, casH: 0, casP: 0,
-        accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        foto: {}, note: "Vetro acidato per privacy" },
-      { id: 5, nome: "Salone SC2A", tipo: "SC2A", stanza: "Soggiorno", piano: "PT",
-        sistema: "Schüco ASS80", vetro: "6/16/6", coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "Come profili",
-        telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
-        coprifilo: "", lamiera: "",
-        misure: { lAlto: 2402, lCentro: 2400, lBasso: 2398, hSx: 2202, hCentro: 2200, hDx: 2200, d1: 3204, d2: 3202, spSx: 160, spDx: 160, spSopra: 100, imbotte: 220, davInt: 0, davEst: 0, davProf: 0, davSporg: 0, soglia: 20 },
-        cassonetto: false, casH: 0, casP: 0,
-        accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: true, colore: "RAL 9010", l: 2390, h: 2190 } },
-        foto: {}, note: "Alzante scorrevole — verificare spazio binario a pavimento min 30mm" },
+    euro: 4200, scadenza: (() => { const d = new Date(); d.setDate(d.getDate()+10); return d.toISOString().split("T")[0]; })(),
+    rilievi: [
+      { id: 1, n: 1, data: "2026-02-15", ora: "09:00", rilevatore: "Fabio Cozza",
+        tipo: "rilievo", motivoModifica: "", note: "Prima visita. Tutti i vani accessibili. Misure complete.",
+        stato: "completo",
+        vani: [
+          { id: 1, nome: "Cucina", tipo: "F2A", stanza: "Cucina", piano: "PT",
+            pezzi: 1,
+            sistema: "Schüco CT70", vetro: "4/16/4 Basso-emissivo", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
+            telaio: "Z", telaioAlaZ: "35", rifilato: true, rifilSx: "10", rifilDx: "10", rifilSopra: "5", rifilSotto: "0",
+            coprifilo: "CP40", lamiera: "LD200",
+            misure: { lAlto: 1202, lCentro: 1198, lBasso: 1195, hSx: 1402, hCentro: 1400, hDx: 1398, d1: 1825, d2: 1823, spSx: 120, spDx: 115, spSopra: 80, imbotte: 180, davInt: 200, davEst: 50, davProf: 200, davSporg: 40, soglia: 0 },
+            cassonetto: true, casH: 250, casP: 300,
+            accessori: { tapparella: { attivo: true, colore: "RAL 9010", l: 1240, h: 1650 }, persiana: { attivo: false }, zanzariera: { attivo: true, colore: "RAL 9010", l: 1180, h: 1370 } },
+            foto: {}, note: "Muro portante lato sinistro — spalletta ridotta di 5mm rispetto destra" },
+          { id: 2, nome: "Salone PF", tipo: "PF2A", stanza: "Soggiorno", piano: "PT",
+            pezzi: 1,
+            sistema: "Schüco CT70", vetro: "6/16/6", coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "Come profili",
+            telaio: "L", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
+            coprifilo: "CP50", lamiera: "LD250",
+            misure: { lAlto: 1405, lCentro: 1402, lBasso: 1400, hSx: 2202, hCentro: 2200, hDx: 2198, d1: 2616, d2: 2626, spSx: 150, spDx: 150, spSopra: 90, imbotte: 200, davInt: 0, davEst: 0, davProf: 0, davSporg: 0, soglia: 15 },
+            cassonetto: false, casH: 0, casP: 0,
+            accessori: { tapparella: { attivo: true, colore: "RAL 7016", l: 1440, h: 2450 }, persiana: { attivo: true, l: 1402, h: 2200, colore: "RAL 7016" }, zanzariera: { attivo: true, colore: "RAL 9010", l: 1390, h: 2190 } },
+            foto: {}, note: "Fuori squadra 10mm — verificare architrave. Soglia esistente da mantenere h=15mm" },
+          { id: 3, nome: "Camera F1A", tipo: "F1A", stanza: "Camera", piano: "P1",
+            pezzi: 1,
+            sistema: "Schüco CT70", vetro: "4/16/4 Basso-emissivo", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
+            telaio: "Z", telaioAlaZ: "35", rifilato: true, rifilSx: "8", rifilDx: "8", rifilSopra: "5", rifilSotto: "0",
+            coprifilo: "CP40", lamiera: "LD200",
+            misure: { lAlto: 900, lCentro: 898, lBasso: 900, hSx: 1202, hCentro: 1200, hDx: 1200, d1: 1505, d2: 1504, spSx: 100, spDx: 100, spSopra: 75, imbotte: 160, davInt: 180, davEst: 40, davProf: 180, davSporg: 35, soglia: 0 },
+            cassonetto: true, casH: 220, casP: 280,
+            accessori: { tapparella: { attivo: true, colore: "RAL 9010", l: 935, h: 1420 }, persiana: { attivo: false }, zanzariera: { attivo: true, colore: "RAL 9010", l: 880, h: 1170 } },
+            foto: {}, note: "" },
+          { id: 4, nome: "Bagno VAS", tipo: "VAS", stanza: "Bagno", piano: "P1",
+            pezzi: 1,
+            sistema: "Schüco CT70", vetro: "Acidato", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
+            telaio: "Z", telaioAlaZ: "35", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
+            coprifilo: "CP40", lamiera: "",
+            misure: { lAlto: 702, lCentro: 700, lBasso: 700, hSx: 502, hCentro: 500, hDx: 500, d1: 862, d2: 861, spSx: 95, spDx: 95, spSopra: 70, imbotte: 150, davInt: 150, davEst: 30, davProf: 150, davSporg: 25, soglia: 0 },
+            cassonetto: false, casH: 0, casP: 0,
+            accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+            foto: {}, note: "Vetro acidato per privacy" },
+          { id: 5, nome: "Salone SC2A", tipo: "SC2A", stanza: "Soggiorno", piano: "PT",
+            pezzi: 1,
+            sistema: "Schüco ASS80", vetro: "6/16/6", coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "Come profili",
+            telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
+            coprifilo: "", lamiera: "",
+            misure: { lAlto: 2402, lCentro: 2400, lBasso: 2398, hSx: 2202, hCentro: 2200, hDx: 2200, d1: 3204, d2: 3202, spSx: 160, spDx: 160, spSopra: 100, imbotte: 220, davInt: 0, davEst: 0, davProf: 0, davSporg: 0, soglia: 20 },
+            cassonetto: false, casH: 0, casP: 0,
+            accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: true, colore: "RAL 9010", l: 2390, h: 2190 } },
+            foto: {}, note: "Alzante scorrevole — verificare spazio binario a pavimento min 30mm" },
+        ]
+      }
     ],
+    allegati: [], creato: "15 Feb", aggiornato: "oggi",
     log: [
       { chi: "Fabio", cosa: "completato vano Bagno VAS", quando: "Oggi, 11:45", color: "#007aff" },
       { chi: "Fabio", cosa: "completato misure Salone SC2A", quando: "Oggi, 11:20", color: "#007aff" },
-      { chi: "Fabio", cosa: "completato misure Camera F1A", quando: "Oggi, 10:50", color: "#34c759" },
-      { chi: "Fabio", cosa: "completato misure Salone PF — ATTENZIONE fuori squadra 10mm", quando: "Oggi, 10:10", color: "#ff3b30" },
-      { chi: "Fabio", cosa: "completato misure Cucina F2A", quando: "Oggi, 09:30", color: "#34c759" },
       { chi: "Fabio", cosa: "iniziato sopralluogo", quando: "Oggi, 09:00", color: "#ff9500" },
     ]
   },
-  { id: 2, code: "CM-0002", cliente: "Teresa", cognome: "Bruno", indirizzo: "Via Roma 45, Rende", fase: "ordini",
-    sistema: "Rehau S80", tipo: "nuova", telefono: "347 9876543",
+  { id: 2, code: "CM-0002", cliente: "Teresa", cognome: "Greco", indirizzo: "Via Roma 45, interno 3 — Cosenza", fase: "misure",
+    sistema: "Rehau S80", tipo: "nuova", telefono: "+39 333 456 7890",
     difficoltaSalita: "facile", mezzoSalita: "Scala a mano", pianoEdificio: "P1 — 1° Piano", foroScale: "85×200",
     note: "Cliente preferisce colori chiari. Confermare campioni RAL prima dell'ordine.",
-    allegati: [], creato: "10 Feb", aggiornato: "16 Feb",
-    vani: [
-      { id: 1, nome: "Bagno VAS", tipo: "VAS", stanza: "Bagno", piano: "P1",
-        sistema: "Rehau S80", vetro: "Acidato Privacy", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
-        telaio: "Z", telaioAlaZ: "30", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
-        coprifilo: "CP40", lamiera: "",
-        misure: { lAlto: 702, lCentro: 700, lBasso: 700, hSx: 502, hCentro: 500, hDx: 500, d1: 862, d2: 861, spSx: 90, spDx: 90, spSopra: 65, imbotte: 140, davInt: 140, davEst: 25, davProf: 140, davSporg: 20, soglia: 0 },
-        cassonetto: false, casH: 0, casP: 0,
-        accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        foto: {}, note: "Vetro acidato per privacy" },
-      { id: 2, nome: "Studio F2A", tipo: "F2A", stanza: "Studio", piano: "PT",
-        sistema: "Rehau S80", vetro: "4/16/4 Low-E", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
-        telaio: "Z", telaioAlaZ: "35", rifilato: true, rifilSx: "12", rifilDx: "12", rifilSopra: "8", rifilSotto: "0",
-        coprifilo: "CP40", lamiera: "LD200",
-        misure: { lAlto: 1002, lCentro: 998, lBasso: 1000, hSx: 1202, hCentro: 1200, hDx: 1198, d1: 1562, d2: 1561, spSx: 110, spDx: 108, spSopra: 75, imbotte: 165, davInt: 190, davEst: 45, davProf: 190, davSporg: 38, soglia: 0 },
-        cassonetto: true, casH: 230, casP: 280,
-        accessori: { tapparella: { attivo: true, colore: "RAL 7016", l: 1038, h: 1430 }, persiana: { attivo: false }, zanzariera: { attivo: true, colore: "RAL 9010", l: 975, h: 1170 } },
-        foto: {}, note: "Doppio vetro richiesto — verificare U value < 1.0" },
-      { id: 3, nome: "Ingresso BLI", tipo: "BLI", stanza: "Ingresso", piano: "PT",
-        sistema: "Schüco ADS75", vetro: "Blindato P4", coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "RAL 7016",
-        telaio: "L", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
-        coprifilo: "CP60", lamiera: "LD300",
-        misure: { lAlto: 902, lCentro: 900, lBasso: 900, hSx: 2102, hCentro: 2100, hDx: 2100, d1: 2287, d2: 2286, spSx: 130, spDx: 130, spSopra: 90, imbotte: 180, davInt: 0, davEst: 0, davProf: 0, davSporg: 0, soglia: 20 },
-        cassonetto: false, casH: 0, casP: 0,
-        accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        foto: {}, note: "Porta blindata classe 4 — soglia piatta h=20mm" },
-      { id: 4, nome: "Cameretta SC2A", tipo: "SC2A", stanza: "Camera", piano: "P1",
-        sistema: "Rehau S80", vetro: "4/16/4 Low-E", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
-        telaio: "", telaioAlaZ: "", rifilato: true, rifilSx: "10", rifilDx: "10", rifilSopra: "5", rifilSotto: "0",
-        coprifilo: "CP40", lamiera: "LD200",
-        misure: { lAlto: 1602, lCentro: 1600, lBasso: 1598, hSx: 1402, hCentro: 1400, hDx: 1400, d1: 2136, d2: 2135, spSx: 120, spDx: 120, spSopra: 80, imbotte: 170, davInt: 180, davEst: 40, davProf: 180, davSporg: 35, soglia: 0 },
-        cassonetto: false, casH: 0, casP: 0,
-        accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: true, colore: "RAL 9010", l: 1585, h: 1380 } },
-        foto: {}, note: "Scorrevole 2 ante — verificare guide a pavimento" },
+    euro: 8900, scadenza: (() => { const d = new Date(); d.setDate(d.getDate()-2); return d.toISOString().split("T")[0]; })(),
+    rilievi: [
+      { id: 101, n: 1, data: "2026-01-23", ora: "09:30", rilevatore: "Fabio Cozza",
+        tipo: "rilievo", motivoModifica: "", note: "Prima visita. Soggiorno, cucina e camera 1 misurati senza problemi. Camera 2 e bagno inaccessibili.",
+        stato: "parziale",
+        vani: [
+          { id: 11, nome: "Soggiorno", tipo: "PF2A", stanza: "Soggiorno", piano: "PT",
+            pezzi: 1,
+            sistema: "Rehau S80", vetro: "6/16/6", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
+            telaio: "L", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
+            coprifilo: "CP50", lamiera: "LD250",
+            misure: { lAlto: 1405, lCentro: 1402, lBasso: 1400, hSx: 2202, hCentro: 2200, hDx: 2198, d1: 0, d2: 0, spSx: 150, spDx: 150, spSopra: 90, imbotte: 200, davInt: 0, davEst: 0, davProf: 0, davSporg: 0, soglia: 0 },
+            cassonetto: false, casH: 0, casP: 0,
+            accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+            foto: {}, note: "" },
+          { id: 12, nome: "Cucina", tipo: "F2A", stanza: "Cucina", piano: "PT",
+            pezzi: 1,
+            sistema: "Rehau S80", vetro: "4/16/4", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
+            telaio: "Z", telaioAlaZ: "35", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
+            coprifilo: "CP40", lamiera: "LD200",
+            misure: { lAlto: 1000, lCentro: 998, lBasso: 1000, hSx: 1400, hCentro: 1398, hDx: 1400, d1: 0, d2: 0, spSx: 110, spDx: 110, spSopra: 80, imbotte: 170, davInt: 180, davEst: 40, davProf: 180, davSporg: 35, soglia: 0 },
+            cassonetto: false, casH: 0, casP: 0,
+            accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+            foto: {}, note: "" },
+          { id: 13, nome: "Camera 1", tipo: "F1A", stanza: "Camera", piano: "P1",
+            pezzi: 1,
+            sistema: "Rehau S80", vetro: "4/16/4", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
+            telaio: "Z", telaioAlaZ: "35", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
+            coprifilo: "CP40", lamiera: "LD200",
+            misure: { lAlto: 902, lCentro: 900, lBasso: 900, hSx: 1202, hCentro: 1200, hDx: 1200, d1: 0, d2: 0, spSx: 100, spDx: 100, spSopra: 75, imbotte: 160, davInt: 180, davEst: 40, davProf: 180, davSporg: 35, soglia: 0 },
+            cassonetto: false, casH: 0, casP: 0,
+            accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+            foto: {}, note: "" },
+          { id: 14, nome: "Camera 2 ❌", tipo: "F1A", stanza: "Camera", piano: "P1",
+            pezzi: 1,
+            sistema: "Rehau S80", vetro: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "",
+            telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
+            coprifilo: "", lamiera: "",
+            misure: {}, cassonetto: false, casH: 0, casP: 0,
+            accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+            foto: {}, note: "🔴 BLOCCATO: Arredo da spostare — Armadio enorme davanti alla finestra" },
+          { id: 15, nome: "Bagno ❌", tipo: "VAS", stanza: "Bagno", piano: "P1",
+            pezzi: 1,
+            sistema: "Rehau S80", vetro: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "",
+            telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
+            coprifilo: "", lamiera: "",
+            misure: {}, cassonetto: false, casH: 0, casP: 0,
+            accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+            foto: {}, note: "🔴 BLOCCATO: Lavori in corso — Idraulico presente, pavimento aperto" },
+        ]
+      },
+      { id: 102, n: 2, data: "2026-01-28", ora: "14:00", rilevatore: "Marco Ferraro",
+        tipo: "rilievo", motivoModifica: "", note: "Recuperato camera 2 e bagno. Ripostiglio ancora inaccessibile perché cliente assente.",
+        stato: "parziale",
+        vani: [
+          { id: 21, nome: "Camera 2", tipo: "F1A", stanza: "Camera", piano: "P1",
+            sistema: "Rehau S80", vetro: "4/16/4", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
+            telaio: "Z", telaioAlaZ: "35", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
+            coprifilo: "CP40", lamiera: "LD200",
+            misure: { lAlto: 800, lCentro: 798, lBasso: 800, hSx: 1200, hCentro: 1200, hDx: 1198, d1: 0, d2: 0, spSx: 100, spDx: 100, spSopra: 70, imbotte: 150, davInt: 170, davEst: 35, davProf: 170, davSporg: 30, soglia: 0 },
+            cassonetto: false, casH: 0, casP: 0,
+            accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+            foto: {}, note: "" },
+          { id: 22, nome: "Bagno", tipo: "VAS", stanza: "Bagno", piano: "P1",
+            sistema: "Rehau S80", vetro: "Acidato Privacy", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
+            telaio: "Z", telaioAlaZ: "30", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
+            coprifilo: "CP40", lamiera: "",
+            misure: { lAlto: 700, lCentro: 700, lBasso: 700, hSx: 500, hCentro: 500, hDx: 500, d1: 0, d2: 0, spSx: 90, spDx: 90, spSopra: 65, imbotte: 140, davInt: 140, davEst: 25, davProf: 140, davSporg: 20, soglia: 0 },
+            cassonetto: false, casH: 0, casP: 0,
+            accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+            foto: {}, note: "Vetro acidato per privacy" },
+          { id: 23, nome: "Ripostiglio ❌", tipo: "F1A", stanza: "Ripostiglio", piano: "P1",
+            sistema: "", vetro: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "",
+            telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
+            coprifilo: "", lamiera: "",
+            misure: {}, cassonetto: false, casH: 0, casP: 0,
+            accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+            foto: {}, note: "🔴 BLOCCATO: Cliente assente — Appuntamento dimenticato, ripostiglio chiuso a chiave" },
+        ]
+      },
     ],
+    allegati: [], creato: "10 Gen", aggiornato: "28 Gen",
     log: [
-      { chi: "Fabio", cosa: "avanzato a Ordine", quando: "16 Feb, 11:00", color: "#ff2d55" },
-      { chi: "Fabio", cosa: "completato tutte le misure", quando: "15 Feb, 16:30", color: "#34c759" },
-      { chi: "Fabio", cosa: "creato la commessa", quando: "10 Feb, 08:00", color: "#86868b" },
+      { chi: "Marco Ferraro", cosa: "2° sopralluogo — Camera 2 e Bagno misurati", quando: "28 Gen, 14:00", color: "#34c759" },
+      { chi: "Fabio Cozza", cosa: "1° sopralluogo — Soggiorno, Cucina, Camera 1", quando: "23 Gen, 09:30", color: "#007aff" },
+      { chi: "Fabio Cozza", cosa: "creato la commessa", quando: "10 Gen, 08:00", color: "#86868b" },
     ]},
-  { id: 3, code: "CM-0003", cliente: "Mario Ferraro", indirizzo: "Via Gabriele Barrio, Cosenza", fase: "sopralluogo", vani: [
-    { id: 1, nome: "Sala", tipo: "Scorrevole", stanza: "Soggiorno", piano: "PT", misure: {}, foto: {}, note: "", accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } },
-  ], sistema: "", tipo: "riparazione", telefono: "", mezzoSalita: "", allegati: [], creato: "12 Feb", aggiornato: "12 Feb", alert: "Sopralluogo oggi", log: [] },
-  { id: 4, code: "CM-0001", cliente: "Antonio Rossi", indirizzo: "Via G. Barrio, 8", fase: "sopralluogo", vani: [], sistema: "", tipo: "nuova", telefono: "333 7654321", mezzoSalita: "", allegati: [], creato: "8 Feb", aggiornato: "8 Feb", alert: "Nessun vano inserito", log: [] },
+  { id: 3, code: "CM-0003", cliente: "Mario", cognome: "Ferraro", indirizzo: "Via Gabriele Barrio, Cosenza", fase: "sopralluogo",
+    euro: 1200, scadenza: (() => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().split("T")[0]; })(),
+    rilievi: [],
+    sistema: "", tipo: "riparazione", telefono: "", mezzoSalita: "", difficoltaSalita: "", pianoEdificio: "", foroScale: "",
+    note: "", allegati: [], creato: "12 Feb", aggiornato: "12 Feb", alert: "Sopralluogo oggi", log: [] },
+  { id: 4, code: "CM-0001", cliente: "Antonio", cognome: "Rossi", indirizzo: "Via G. Barrio, 8", fase: "sopralluogo",
+    euro: 0, scadenza: "",
+    rilievi: [],
+    sistema: "", tipo: "nuova", telefono: "333 7654321", mezzoSalita: "", difficoltaSalita: "", pianoEdificio: "", foroScale: "",
+    note: "", allegati: [], creato: "8 Feb", aggiornato: "8 Feb", alert: "Nessun rilievo inserito", log: [] },
 ];
 
 const TASKS_INIT = [
@@ -190,29 +278,121 @@ const TASKS_INIT = [
   { id: 4, text: "Comprare viti inox 5x60", meta: "Brico — fatto", time: "08:00", priority: "bassa", cm: "", done: true },
 ];
 
+
+// === AI INBOX — email in arrivo con classificazione AI ===
+const AI_INBOX_INIT = [
+  {
+    id: "ai1", from: "Luigi Martino", email: "martino@gmail.com",
+    subject: "Richiesta preventivo finestre",
+    body: "Buongiorno, vi scrivo perché devo sostituire 6 finestre al piano terra della mia abitazione a Cosenza, via Panebianco 12. Ho sentito parlare bene di voi. Potete mandarmi un preventivo? Grazie.",
+    time: "09:14", date: "23/02/2026", read: false,
+    ai: {
+      tipo: "richiesta_preventivo",
+      label: "Richiesta preventivo",
+      emoji: "💰",
+      color: "#34C759",
+      confidenza: 97,
+      cmSuggerita: null,
+      cmNuova: true,
+      azione: "Crea nuova commessa",
+      note: "Nuovo cliente — 6 finestre via Panebianco 12, Cosenza",
+      estratto: { cliente: "Luigi Martino", indirizzo: "Via Panebianco 12, Cosenza", telefono: "", email: "martino@gmail.com", note: "6 finestre piano terra" }
+    }
+  },
+  {
+    id: "ai2", from: "Teresa Greco", email: "greco@pec.it",
+    subject: "Re: Preventivo CM-0002 - ok procediamo",
+    body: "Buongiorno Fabio, ho ricevuto il preventivo. Va bene, possiamo procedere. Quando possiamo fissare l'appuntamento per le misure definitive? Disponibile mattina dal 25/02.",
+    time: "11:32", date: "23/02/2026", read: false,
+    ai: {
+      tipo: "conferma_ordine",
+      label: "Conferma ordine",
+      emoji: "✅",
+      color: "#007AFF",
+      confidenza: 94,
+      cmSuggerita: "CM-0002",
+      cmNuova: false,
+      azione: "Collega a CM-0002 · Avanza a Conferma",
+      note: "Cliente Teresa Greco conferma il preventivo e chiede appuntamento misure",
+      estratto: null
+    }
+  },
+  {
+    id: "ai3", from: "Fornitore Rehau", email: "ordini@rehau.it",
+    subject: "Ritardo consegna ordine #7821 — 5 giorni lavorativi",
+    body: "Gentile cliente, la informiamo che l'ordine #7821 relativo al profilo S80 subirà un ritardo di 5 giorni lavorativi causa problemi di produzione. Nuova data di consegna prevista: 03/03/2026. Ci scusiamo per l'inconveniente.",
+    time: "14:05", date: "22/02/2026", read: false,
+    ai: {
+      tipo: "ritardo_fornitore",
+      label: "Ritardo fornitore",
+      emoji: "⚠️",
+      color: "#FF9500",
+      confidenza: 99,
+      cmSuggerita: "CM-0002",
+      cmNuova: false,
+      azione: "Segnala ritardo su CM-0002",
+      note: "Rehau comunica ritardo di 5gg — consegna slittata al 03/03",
+      estratto: null
+    }
+  },
+  {
+    id: "ai4", from: "Rosario Bianchi", email: "bianchi@libero.it",
+    subject: "Problema dopo la posa — finestra non chiude bene",
+    body: "Buongiorno, vi scrivo perché una delle finestre posate la settimana scorsa (camera da letto) non si chiude correttamente. Si sente aria da un lato. Potete venire a vedere? Grazie.",
+    time: "08:50", date: "22/02/2026", read: true,
+    ai: {
+      tipo: "reclamo_garanzia",
+      label: "Reclamo / Garanzia",
+      emoji: "🔴",
+      color: "#FF3B30",
+      confidenza: 91,
+      cmSuggerita: "CM-0003",
+      cmNuova: false,
+      azione: "Apri ticket garanzia su CM-0003",
+      note: "Camera da letto — finestra non chiude, aria laterale. Intervento urgente.",
+      estratto: null
+    }
+  },
+  {
+    id: "ai5", from: "Comune di Cosenza", email: "sportello@comune.cosenza.it",
+    subject: "Risposta pratica CILA n.2024/1823",
+    body: "Spett.le ditta, la informiamo che la pratica CILA n.2024/1823 presentata in data 15/01/2024 è stata approvata. Può procedere con i lavori. Allego ricevuta di approvazione.",
+    time: "16:20", date: "21/02/2026", read: true,
+    ai: {
+      tipo: "pratica_burocratica",
+      label: "Pratica burocratica",
+      emoji: "🏛️",
+      color: "#AF52DE",
+      confidenza: 88,
+      cmSuggerita: null,
+      cmNuova: false,
+      azione: "Archivia nella commessa correlata",
+      note: "CILA approvata — allegare ai documenti della commessa",
+      estratto: null
+    }
+  },
+];
+
 const MSGS_INIT = [
   { id: 1, from: "Fornitore Schüco", preview: "Conferma ordine #4521 — materiale pronto per spedizione il 20/02", time: "14:32", cm: "CM-0002", read: false, canale: "email", thread: [
     { who: "Tu", text: "Buongiorno, stato ordine #4521?", time: "09:15", date: "18/02", canale: "email" },
     { who: "Fornitore Schüco", text: "Ordine in lavorazione, consegna prevista 20/02", time: "10:40", date: "18/02", canale: "email" },
-    { who: "Tu", text: "Perfetto, confermate anche le maniglie satinate?", time: "11:05", date: "18/02", canale: "email" },
     { who: "Fornitore Schüco", text: "Conferma ordine #4521 — materiale pronto per spedizione il 20/02. Maniglie satinate incluse.", time: "14:32", date: "19/02", canale: "email" },
   ]},
   { id: 2, from: "Mario (posatore)", preview: "Fabio, per la CM-0004 servono i controtelai speciali?", time: "12:15", cm: "CM-0004", read: false, canale: "whatsapp", thread: [
     { who: "Mario", text: "Ciao Fabio, domani vado a posare CM-0004", time: "08:30", date: "19/02", canale: "whatsapp" },
-    { who: "Tu", text: "Ok Mario, ricordati il silicone neutro", time: "08:45", date: "19/02", canale: "whatsapp" },
     { who: "Mario", text: "Fabio, per la CM-0004 servono i controtelai speciali?", time: "12:15", date: "19/02", canale: "whatsapp" },
   ]},
   { id: 3, from: "Cliente Rossi", preview: "Grazie per il preventivo, procediamo con l'ordine", time: "Ieri", cm: "CM-0001", read: true, canale: "sms", thread: [
-    { who: "Tu", text: "Buongiorno Sig. Rossi, in allegato il preventivo per la sostituzione dei 5 infissi.", time: "16:00", date: "17/02", canale: "email" },
+    { who: "Tu", text: "Buongiorno Sig. Rossi, in allegato il preventivo.", time: "16:00", date: "17/02", canale: "email" },
     { who: "Cliente Rossi", text: "Grazie per il preventivo, procediamo con l'ordine", time: "09:30", date: "18/02", canale: "sms" },
   ]},
   { id: 4, from: "Vetreria Milano", preview: "Vetri tripli pronti per il ritiro", time: "11:00", cm: "CM-0002", read: false, canale: "telegram", thread: [
     { who: "Vetreria Milano", text: "Vetri tripli pronti per il ritiro. Magazzino aperto fino alle 17.", time: "11:00", date: "19/02", canale: "telegram" },
   ]},
-  { id: 5, from: "Teresa Bruno", preview: "Quando iniziate i lavori?", time: "Ieri", cm: "CM-0002", read: true, canale: "whatsapp", thread: [
-    { who: "Teresa Bruno", text: "Buongiorno, quando iniziate i lavori a casa mia?", time: "15:00", date: "18/02", canale: "whatsapp" },
-    { who: "Tu", text: "Buongiorno signora Bruno, prevediamo di iniziare la prossima settimana", time: "15:30", date: "18/02", canale: "whatsapp" },
-    { who: "Teresa Bruno", text: "Quando iniziate i lavori?", time: "10:00", date: "19/02", canale: "sms" },
+  { id: 5, from: "Teresa Greco", preview: "Quando iniziate i lavori?", time: "Ieri", cm: "CM-0002", read: true, canale: "whatsapp", thread: [
+    { who: "Teresa Greco", text: "Buongiorno, quando iniziate i lavori a casa mia?", time: "15:00", date: "18/02", canale: "whatsapp" },
+    { who: "Tu", text: "Buongiorno signora, prevediamo di iniziare la prossima settimana", time: "15:30", date: "18/02", canale: "whatsapp" },
   ]},
 ];
 
@@ -311,13 +491,13 @@ const LAMIERE_INIT = [
   { id: 5, nome: "Scossalina 200mm", cod: "SC200", prezzoMl: 8.5 },
 ];
 
-/* ── ICONS SVG ── */
-const Ico = ({ d, s = 20, c = "#888", sw = 1.8 }: { d?: any; s?: number; c?: string; sw?: number }) => (
+/* == ICONS SVG == */
+const Ico = ({ d, s = 20, c = "#888", sw = 1.8 }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">{d}</svg>
 );
 const ICO = {
   home: <><path d="M2 12L12 3l10 9"/><path d="M5 9.5V20a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V9.5"/></>,
-  calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><circle cx="8" cy="15" r="1" fill="currentColor"/><circle cx="12" cy="15" r="1" fill="currentColor"/><circle cx="16" cy="15" r="1" fill="currentColor"/></>,
+  calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><rect x="7" y="14" width="2" height="2" rx="0.5" fill="currentColor"/><rect x="11" y="14" width="2" height="2" rx="0.5" fill="currentColor"/><rect x="15" y="14" width="2" height="2" rx="0.5" fill="currentColor"/></>,
   chat: <><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M7 8h10M7 12h6"/></>,
   settings: <><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></>,
   back: <><polyline points="15 18 9 12 15 6"/></>,
@@ -338,7 +518,7 @@ const ICO = {
   ai: <><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></>,
 };
 
-/* ── MISURE PUNTI ── */
+/* == MISURE PUNTI == */
 const PUNTI_MISURE = [
   { key: "lAlto", label: "L alto", x: 95, y: 8, color: "acc" },
   { key: "lCentro", label: "L centro", x: 95, y: 125, color: "acc" },
@@ -350,19 +530,46 @@ const PUNTI_MISURE = [
   { key: "d2", label: "D2 ↘", x: 140, y: 55, color: "purple" },
 ];
 
-/* ══════════════════════════════════════ */
-/* ══          MAIN COMPONENT          ══ */
-/* ══════════════════════════════════════ */
+/* ====================================== */
+/* ==          MAIN COMPONENT          == */
+/* ====================================== */
 
-export default function MastroMisure({ user, azienda }: { user?: any; azienda?: any }) {
+/* == HOOK DRAG ORDER == */
+function useDragOrder(init) {
+  const [order, setOrder] = React.useState(init);
+  const [dragging, setDragging] = React.useState(null);
+  const [over, setOver] = React.useState(null);
+  function start(id) { setDragging(id); }
+  function onOver(id) { if (dragging && dragging !== id) setOver(id); }
+  function drop(id) {
+    if (!dragging || dragging === id) { setDragging(null); setOver(null); return; }
+    setOrder(o => { const a = [...o], f = a.indexOf(dragging), t = a.indexOf(id); a.splice(f,1); a.splice(t,0,dragging); return a; });
+    setDragging(null); setOver(null);
+  }
+  function end() { setDragging(null); setOver(null); }
+  return { order, setOrder, dragging, over, start, onOver, drop, end };
+}
+
+export default function MastroMisure({ user, azienda: aziendaInit }: { user?: any, azienda?: any }) {
   const [theme, setTheme] = useState("chiaro");
-  const T = THEMES[theme as keyof typeof THEMES];
+  const T = THEMES[theme];
   
   const [tab, setTab] = useState("home");
-  const [homeOrder, setHomeOrder] = useState(["banner","calendario","email","commesse"]);
+  const WIDGET_IDS = ["banner", "urgenti", "calendario", "email", "commesse"];
+  const drag = useDragOrder(WIDGET_IDS);
   const [homeEditMode, setHomeEditMode] = useState(false);
-  const [dragIdx, setDragIdx] = useState(null);
-  const [dragOverIdx, setDragOverIdx] = useState(null);
+  // Wizard nuova visita
+  const [cmSubTab, setCmSubTab] = useState("sopralluoghi"); // "sopralluoghi" | "misure" | "info"
+  const [nvView, setNvView] = useState(false);
+  const [nvStep, setNvStep] = useState(1);
+  const [nvData, setNvData] = useState({ data: "", ora: "", rilevatore: "" });
+  const [nvTipo, setNvTipo] = useState("rilievo"); // "rilievo" | "definitiva" | "modifica"
+  const [nvMotivoModifica, setNvMotivoModifica] = useState("");
+  const [nvVani, setNvVani] = useState([]);
+  const [nvBlocchi, setNvBlocchi] = useState({});
+  const [nvNote, setNvNote] = useState("");
+  // Calendario griglia espandibile
+  const [expandedDay, setExpandedDay] = useState(null); // ISO string del giorno espanso
   const [cantieri, setCantieri] = useState(CANTIERI_INIT);
   const [tasks, setTasks] = useState(TASKS_INIT);
   const [msgs, setMsgs] = useState(MSGS_INIT);
@@ -385,17 +592,21 @@ export default function MastroMisure({ user, azienda }: { user?: any; azienda?: 
   
   // Navigation
   const [selectedCM, setSelectedCM] = useState(null);
+  const [selectedRilievo, setSelectedRilievo] = useState(null); // rilievo aperto
+  const [showNuovoRilievo, setShowNuovoRilievo] = useState(false);
+  const [nuovoRilTipo, setNuovoRilTipo] = useState("rilievo");
+  const [nuovoRilData, setNuovoRilData] = useState({ data: "", ora: "", rilevatore: "", note: "", motivoModifica: "" });
   const [selectedVano, setSelectedVano] = useState(null);
   const [filterFase, setFilterFase] = useState("tutte");
   const [searchQ, setSearchQ] = useState("");
   const [showModal, setShowModal] = useState(null); // 'task' | 'commessa' | 'vano' | null
   const [settingsTab, setSettingsTab] = useState("generali");
   const [aziendaInfo, setAziendaInfo] = useState({
-    ragione: azienda?.ragione || "Walter Cozza Serramenti SRL",
-    piva: azienda?.piva || "",
-    indirizzo: azienda?.indirizzo || "",
-    telefono: azienda?.telefono || "",
-    email: azienda?.email || "",
+    ragione: aziendaInit?.ragione || "Walter Cozza Serramenti SRL",
+    piva: aziendaInit?.piva || "",
+    indirizzo: aziendaInit?.indirizzo || "",
+    telefono: aziendaInit?.telefono || "",
+    email: aziendaInit?.email || "",
     website: "",
     iban: "",
     cciaa: "",
@@ -418,10 +629,16 @@ export default function MastroMisure({ user, azienda }: { user?: any; azienda?: 
   
   // Agenda
   const [agendaView, setAgendaView] = useState("mese"); // "giorno" | "settimana" | "mese"
+  const [cmFaseIdx, setCmFaseIdx] = useState(0); // filtro fase widget commesse dashboard
+  const [cmView, setCmView] = useState<"card"|"list">("card"); // vista commesse: card grande | lista compatta
+  const [fasePanelOpen, setFasePanelOpen] = useState<Record<string,boolean>>({}); // accordion checklist per fase
+  const [catIdx, setCatIdx] = useState(0); // categoria widget allerte dashboard
   const [selDate, setSelDate] = useState(new Date());
   const [showNewEvent, setShowNewEvent] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [newEvent, setNewEvent] = useState({ text: "", time: "", tipo: "appuntamento", cm: "", persona: "", date: "" });
+  const [showMailModal, setShowMailModal] = useState<{ev: any, cm: any} | null>(null);
+  const [mailBody, setMailBody] = useState("");
+  const [newEvent, setNewEvent] = useState({ text: "", time: "", tipo: "appuntamento", cm: "", persona: "", date: "", reminder: "", addr: "" });
   const [events, setEvents] = useState(() => {
     const t = new Date(); const td = t.toISOString().split("T")[0];
     const tm = new Date(t); tm.setDate(tm.getDate() + 1); const tmStr = tm.toISOString().split("T")[0];
@@ -476,7 +693,9 @@ export default function MastroMisure({ user, azienda }: { user?: any; azienda?: 
   const [composeMsg, setComposeMsg] = useState({ to: "", text: "", canale: "whatsapp", cm: "" });
   const [fabOpen, setFabOpen] = useState(false);
   const [contatti, setContatti] = useState(CONTATTI_INIT);
-  const [msgSubTab, setMsgSubTab] = useState("chat"); // "chat" | "rubrica"
+  const [msgSubTab, setMsgSubTab] = useState("chat"); // "chat" | "rubrica" | "ai"
+  const [aiInbox, setAiInbox] = useState(AI_INBOX_INIT);
+  const [selectedAiMsg, setSelectedAiMsg] = useState(null);
   const [rubricaSearch, setRubricaSearch] = useState("");
   const [rubricaFilter, setRubricaFilter] = useState("tutti"); // tutti/preferiti/team/clienti/fornitori
   const [globalSearch, setGlobalSearch] = useState("");
@@ -490,7 +709,7 @@ export default function MastroMisure({ user, azienda }: { user?: any; azienda?: 
   // New vano form
   const [vanoInfoOpen, setVanoInfoOpen] = useState(null); // which accordion section is open
   const [tipCat, setTipCat] = useState("Finestre");
-  const [newVano, setNewVano] = useState({ nome: "", tipo: "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "" });
+  const [newVano, setNewVano] = useState({ nome: "", tipo: "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", pezzi: 1 });
   const [customPiani, setCustomPiani] = useState(["S1", "PT", "P1", "P2", "P3"]);
   const [mezziSalita, setMezziSalita] = useState(["Scala interna", "Scala esterna", "Scala aerea", "Scala a mano", "Gru", "Elevatore", "Ponteggio", "Nessuno"]);
   const [showAddPiano, setShowAddPiano] = useState(false);
@@ -504,8 +723,8 @@ export default function MastroMisure({ user, azienda }: { user?: any; azienda?: 
     return () => window.removeEventListener("resize", h);
   }, []);
 
-  // ── Persistence ──
-useEffect(()=>{ (()=>{
+  // == Persistence ==
+  useEffect(()=>{
       try{const _v=localStorage.getItem("mastro:cantieri");if(_v)setCantieri(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:tasks");if(_v)setTasks(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:events");if(_v)setEvents(JSON.parse(_v));}catch(e){}
@@ -518,8 +737,8 @@ useEffect(()=>{ (()=>{
       try{const _v=localStorage.getItem("mastro:contatti");if(_v)setContatti(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:pipeline");if(_v)setPipelineDB(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:azienda");if(_v)setAziendaInfo(JSON.parse(_v));}catch(e){}
-  })();},[ ]);
-  // useEffect(()=>{supabase.from("cantieri").upsert(cantieri.map(c=>({...c,azienda_id:azienda.id}))).then(()=>{});},[cantieri]);
+},[]);
+  useEffect(()=>{try{localStorage.setItem("mastro:cantieri",JSON.stringify(cantieri));}catch(e){}},[cantieri]);
   useEffect(()=>{try{localStorage.setItem("mastro:tasks",JSON.stringify(tasks));}catch(e){}},[tasks]);
   useEffect(()=>{try{localStorage.setItem("mastro:events",JSON.stringify(events));}catch(e){}},[events]);
   useEffect(()=>{try{localStorage.setItem("mastro:colori",JSON.stringify(coloriDB));}catch(e){}},[coloriDB]);
@@ -539,14 +758,14 @@ useEffect(()=>{ (()=>{
     if(s==="oggi"||s==="Oggi"||s==="Adesso") return oggi0;
     const mesi2 = {gen:0,feb:1,mar:2,apr:3,mag:4,giu:5,lug:6,ago:7,set:8,ott:9,nov:10,dic:11};
     const m2 = s.toLowerCase().match(/(\d+)\s+([a-z]+)/);
-    if(m2) return new Date(oggi0.getFullYear(), (mesi2 as any)[m2[2]]??0, parseInt(m2[1]));
+    if(m2) return new Date(oggi0.getFullYear(), mesi2[m2[2]]??0, parseInt(m2[1]));
     return null;
   };
   const giorniFermaCM = (c) => {
     const oggi0 = new Date(); oggi0.setHours(0,0,0,0);
     const d = parseDataCM(c.aggiornato);
     if(!d) return 0;
-    return Math.floor(((oggi0 as any) - (d as any)) / 86400000);
+    return Math.floor((oggi0 - d) / 86400000);
   };
   const isTablet = winW >= 768;
   const isDesktop = winW >= 1024;
@@ -554,11 +773,24 @@ useEffect(()=>{ (()=>{
   const goBack = () => {
     if (showRiepilogo) { setShowRiepilogo(false); return; }
     if (selectedVano) { setSelectedVano(null); setVanoStep(0); return; }
+    if (showNuovoRilievo) { setShowNuovoRilievo(false); return; }
+    if (selectedRilievo) { setSelectedRilievo(null); return; }
     if (selectedCM) { setSelectedCM(null); return; }
   };
 
-  /* ── Helpers ── */
-  const countVani = () => cantieri.reduce((s, c) => s + c.vani.length, 0);
+  /* == Helpers == */
+  // Ritorna i vani del rilievo attivo (o dell'ultimo se nessuno selezionato)
+  const getVaniCM = (c) => {
+    if (!c?.rilievi || c.rilievi.length === 0) return [];
+    if (selectedRilievo && selectedCM?.id === c.id) return selectedRilievo.vani || [];
+    return c.rilievi[c.rilievi.length - 1]?.vani || [];
+  };
+  const getVaniAttivi = (c) => {
+    if (!c?.rilievi || c.rilievi.length === 0) return [];
+    // Per stats generali: tutti i vani dell'ultimo rilievo
+    return c.rilievi[c.rilievi.length - 1]?.vani || [];
+  };
+  const countVani = () => cantieri.reduce((s, c) => s + getVaniAttivi(c).length, 0);
   const urgentCount = () => cantieri.filter(c => c.alert).length;
   const readyCount = () => cantieri.filter(c => c.fase === "posa" || c.fase === "chiusura").length;
   const faseIndex = (fase) => PIPELINE.findIndex(p => p.id === fase);
@@ -577,7 +809,7 @@ useEffect(()=>{ (()=>{
   const addCommessa = () => {
     if (!newCM.cliente.trim()) return;
     const code = "S-" + String(cantieri.length + 1).padStart(4, "0");
-    const nc = { id: Date.now(), code, cliente: newCM.cliente, cognome: newCM.cognome||"", indirizzo: newCM.indirizzo, telefono: newCM.telefono, email: newCM.email||"", fase: "sopralluogo", vani: [], sistema: newCM.sistema, tipo: newCM.tipo, difficoltaSalita: newCM.difficoltaSalita, mezzoSalita: newCM.mezzoSalita, foroScale: newCM.foroScale, pianoEdificio: newCM.pianoEdificio, note: newCM.note, allegati: [], creato: new Date().toLocaleDateString("it-IT",{day:"numeric",month:"short"}), aggiornato: new Date().toLocaleDateString("it-IT",{day:"numeric",month:"short"}), log: [{ chi: "Fabio", cosa: "creato la commessa", quando: "Adesso", color: T.sub }] };
+    const nc = { id: Date.now(), code, cliente: newCM.cliente, cognome: newCM.cognome||"", indirizzo: newCM.indirizzo, telefono: newCM.telefono, email: newCM.email||"", fase: "sopralluogo", rilievi: [], sistema: newCM.sistema, tipo: newCM.tipo, difficoltaSalita: newCM.difficoltaSalita, mezzoSalita: newCM.mezzoSalita, foroScale: newCM.foroScale, pianoEdificio: newCM.pianoEdificio, note: newCM.note, allegati: [], creato: new Date().toLocaleDateString("it-IT",{day:"numeric",month:"short"}), aggiornato: new Date().toLocaleDateString("it-IT",{day:"numeric",month:"short"}), log: [{ chi: "Fabio", cosa: "creato la commessa", quando: "Adesso", color: T.sub }] };
     setCantieri(cs => [nc, ...cs]);
     setNewCM({ cliente: "", cognome: "", indirizzo: "", telefono: "", email: "", sistema: "", tipo: "nuova", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "", note: "" });
     setShowModal(null);
@@ -586,55 +818,60 @@ useEffect(()=>{ (()=>{
   };
 
   const addVano = () => {
-    if (!selectedCM) return;
+    if (!selectedCM || !selectedRilievo) return;
     const tipObj = TIPOLOGIE_RAPIDE.find(t => t.code === newVano.tipo);
-    const nome = newVano.nome.trim() || `${tipObj?.label || newVano.tipo} ${(selectedCM.vani?.length || 0) + 1}`;
-    const v = { id: Date.now(), nome, tipo: newVano.tipo, stanza: newVano.stanza, piano: newVano.piano, sistema: newVano.sistema, coloreInt: newVano.coloreInt, coloreEst: newVano.coloreEst, bicolore: newVano.bicolore, coloreAcc: newVano.coloreAcc, vetro: newVano.vetro, telaio: newVano.telaio, telaioAlaZ: newVano.telaioAlaZ, rifilato: newVano.rifilato, rifilSx: newVano.rifilSx, rifilDx: newVano.rifilDx, rifilSopra: newVano.rifilSopra, rifilSotto: newVano.rifilSotto, coprifilo: newVano.coprifilo, lamiera: newVano.lamiera, misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } };
-    setCantieri(cs => cs.map(c => c.id === selectedCM.id ? { ...c, vani: [...c.vani, v], aggiornato: "Oggi" } : c));
-    setSelectedCM(prev => ({ ...prev, vani: [...prev.vani, v] }));
+    const nome = newVano.nome.trim() || `${tipObj?.label || newVano.tipo} ${(selectedRilievo.vani?.length || 0) + 1}`;
+    const v = { id: Date.now(), nome, tipo: newVano.tipo, stanza: newVano.stanza, piano: newVano.piano, sistema: newVano.sistema, pezzi: newVano.pezzi||1, coloreInt: newVano.coloreInt, coloreEst: newVano.coloreEst, bicolore: newVano.bicolore, coloreAcc: newVano.coloreAcc, vetro: newVano.vetro, telaio: newVano.telaio, telaioAlaZ: newVano.telaioAlaZ, rifilato: newVano.rifilato, rifilSx: newVano.rifilSx, rifilDx: newVano.rifilDx, rifilSopra: newVano.rifilSopra, rifilSotto: newVano.rifilSotto, coprifilo: newVano.coprifilo, lamiera: newVano.lamiera, misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } };
+    const updRilievo = { ...selectedRilievo, vani: [...(selectedRilievo.vani || []), v] };
+    setCantieri(cs => cs.map(c => c.id === selectedCM.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRilievo : r), aggiornato: "Oggi" } : c));
+    setSelectedRilievo(updRilievo);
+    setSelectedCM(prev => ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo.id ? updRilievo : r) }));
     setNewVano(prev => ({ nome: "", tipo: prev.tipo, stanza: "Soggiorno", piano: prev.piano, sistema: prev.sistema, coloreInt: prev.coloreInt, coloreEst: prev.coloreEst, bicolore: prev.bicolore, coloreAcc: prev.coloreAcc, vetro: prev.vetro, telaio: prev.telaio, telaioAlaZ: prev.telaioAlaZ, rifilato: prev.rifilato, rifilSx: prev.rifilSx, rifilDx: prev.rifilDx, rifilSopra: prev.rifilSopra, rifilSotto: prev.rifilSotto, coprifilo: prev.coprifilo, lamiera: prev.lamiera }));
     setShowModal(null);
-    setSelectedVano(v);  // ← apre direttamente il vano
+    setSelectedVano(v);
     setVanoStep(0);
   };
 
   const updateMisura = (vanoId, key, value) => {
-    const val = value === "" ? "" : value;
     const numVal = parseInt(value) || 0;
-    setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? {
-      ...c, vani: c.vani.map(v => v.id === vanoId ? { ...v, misure: { ...v.misure, [key]: numVal } } : v)
-    } : c));
-    if (selectedVano?.id === vanoId) {
-      setSelectedVano(prev => ({ ...prev, misure: { ...prev.misure, [key]: numVal } }));
+    if (selectedRilievo) {
+      const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.map(v => v.id === vanoId ? { ...v, misure: { ...v.misure, [key]: numVal } } : v) };
+      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
+      setSelectedRilievo(updRil);
+      setSelectedCM(prev => prev ? ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) }) : prev);
     }
-    setSelectedCM(prev => prev ? ({ ...prev, vani: prev.vani.map(v => v.id === vanoId ? { ...v, misure: { ...v.misure, [key]: numVal } } : v) }) : prev);
+    if (selectedVano?.id === vanoId) setSelectedVano(prev => ({ ...prev, misure: { ...prev.misure, [key]: numVal } }));
   };
 
   const toggleAccessorio = (vanoId, acc) => {
-    setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? {
-      ...c, vani: c.vani.map(v => v.id === vanoId ? { ...v, accessori: { ...v.accessori, [acc]: { ...v.accessori[acc], attivo: !v.accessori[acc].attivo } } } : v)
-    } : c));
-    if (selectedVano?.id === vanoId) {
-      setSelectedVano(prev => ({ ...prev, accessori: { ...prev.accessori, [acc]: { ...prev.accessori[acc], attivo: !prev.accessori[acc].attivo } } }));
+    if (selectedRilievo) {
+      const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.map(v => v.id === vanoId ? { ...v, accessori: { ...v.accessori, [acc]: { ...v.accessori[acc], attivo: !v.accessori[acc].attivo } } } : v) };
+      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
+      setSelectedRilievo(updRil);
     }
+    if (selectedVano?.id === vanoId) setSelectedVano(prev => ({ ...prev, accessori: { ...prev.accessori, [acc]: { ...prev.accessori[acc], attivo: !prev.accessori[acc].attivo } } }));
   };
 
   const updateAccessorio = (vanoId, acc, field, value) => {
-    setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? {
-      ...c, vani: c.vani.map(v => v.id === vanoId ? { ...v, accessori: { ...v.accessori, [acc]: { ...v.accessori[acc], [field]: value } } } : v)
-    } : c));
-    if (selectedVano?.id === vanoId) {
-      setSelectedVano(prev => ({ ...prev, accessori: { ...prev.accessori, [acc]: { ...prev.accessori[acc], [field]: value } } }));
+    if (selectedRilievo) {
+      const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.map(v => v.id === vanoId ? { ...v, accessori: { ...v.accessori, [acc]: { ...v.accessori[acc], [field]: value } } } : v) };
+      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
+      setSelectedRilievo(updRil);
+      setSelectedCM(prev => prev ? ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) }) : prev);
     }
-    setSelectedCM(prev => prev ? ({ ...prev, vani: prev.vani.map(v => v.id === vanoId ? { ...v, accessori: { ...v.accessori, [acc]: { ...v.accessori[acc], [field]: value } } } : v) }) : prev);
+    if (selectedVano?.id === vanoId) setSelectedVano(prev => ({ ...prev, accessori: { ...prev.accessori, [acc]: { ...prev.accessori[acc], [field]: value } } }));
   };
 
   // DELETE functions
   const deleteTask = (taskId) => { if ((()=>{try{return window.confirm("Eliminare questo task?");}catch(e){return false;}})()) setTasks(ts => ts.filter(t => t.id !== taskId)); };
   const deleteVano = (vanoId) => {
     if (!(()=>{try{return window.confirm("Eliminare questo vano e tutte le sue misure?");}catch(e){return false;}})()) return;
-    setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, vani: c.vani.filter(v => v.id !== vanoId) } : c));
-    setSelectedCM(prev => prev ? ({ ...prev, vani: prev.vani.filter(v => v.id !== vanoId) }) : prev);
+    if (selectedRilievo) {
+      const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.filter(v => v.id !== vanoId) };
+      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
+      setSelectedRilievo(updRil);
+      setSelectedCM(prev => prev ? ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) }) : prev);
+    }
     if (selectedVano?.id === vanoId) { setSelectedVano(null); setVanoStep(0); }
   };
   const deleteCommessa = (cmId) => {
@@ -715,8 +952,8 @@ useEffect(()=>{ (()=>{
 
   const addEvent = () => {
     if (!newEvent.text.trim()) return;
-    setEvents(ev => [...ev, { id: Date.now(), ...newEvent, date: newEvent.date || selDate.toISOString().split("T")[0], color: newEvent.tipo === "appuntamento" ? "#007aff" : "#ff9500" }]);
-    setNewEvent({ text: "", time: "", tipo: "appuntamento", cm: "", persona: "", date: "" });
+    setEvents(ev => [...ev, { id: Date.now(), ...newEvent, date: newEvent.date || selDate.toISOString().split("T")[0], addr: newEvent.addr || "", color: newEvent.tipo === "appuntamento" ? "#007aff" : newEvent.tipo === "sopr_riparazione" ? "#FF6B00" : newEvent.tipo === "riparazione" ? "#FF3B30" : newEvent.tipo === "collaudo" ? "#5856D6" : newEvent.tipo === "garanzia" ? "#8E8E93" : "#ff9500" }]);
+    setNewEvent({ text: "", time: "", tipo: "appuntamento", cm: "", persona: "", date: "", reminder: "", addr: "" });
     setShowNewEvent(false);
   };
 
@@ -737,7 +974,7 @@ useEffect(()=>{ (()=>{
     } else if (q.includes("commess") || q.includes("stato") || q.includes("pipeline")) {
       resp = `Hai ${cantieri.length} commesse:\n${cantieri.map(c => `• ${c.code} ${c.cliente} — ${PIPELINE.find(p => p.id === c.fase)?.nome}`).join("\n")}`;
     } else if (q.includes("vani") || q.includes("misur")) {
-      resp = `Totale vani: ${countVani()}\nCommesse con vani da misurare:\n${cantieri.filter(c => c.vani.some(v => Object.keys(v.misure || {}).length < 6)).map(c => `• ${c.code}: ${c.vani.filter(v => Object.keys(v.misure || {}).length < 6).length} vani incompleti`).join("\n")}`;
+      resp = `Totale vani: ${countVani()}\nCommesse con vani da misurare:\n${cantieri.filter(c => getVaniAttivi(c).some(v => Object.keys(v.misure || {}).length < 6)).map(c => `• ${c.code}: ${getVaniAttivi(c).filter(v => Object.keys(v.misure || {}).length < 6).length} vani incompleti`).join("\n")}`;
     } else if (q.includes("urgent") || q.includes("priorit")) {
       const u = tasks.filter(x => x.priority === "alta" && !x.done);
       resp = u.length ? `Task urgenti:\n${u.map(x => `• ${x.text}`).join("\n")}` : "Nessun task urgente!";
@@ -769,7 +1006,7 @@ useEffect(()=>{ (()=>{
     setTimeout(() => w.print(), 500);
   };
 
-  /* ═══════ STYLES ═══════ */
+  /* ======= STYLES ======= */
   const fs = isDesktop ? 1.1 : isTablet ? 1.05 : 1;
   const S = {
     app: { fontFamily: FF, background: T.bg, color: T.text, width: "100%", minHeight: "100vh", position: "relative", WebkitFontSmoothing: "antialiased" },
@@ -803,14 +1040,14 @@ useEffect(()=>{ (()=>{
     pipeLabel: (current) => ({ fontSize: 9*fs, fontWeight: current ? 700 : 500, color: current ? T.text : T.sub, marginTop: 4, textAlign: "center", maxWidth: 52 }),
   };
 
-  /* ═══════ CALENDAR STRIP ═══════ */
+  /* ======= CALENDAR STRIP ======= */
   const today = new Date();
   const calDays = Array.from({ length: 9 }, (_, i) => {
     const d = new Date(today); d.setDate(d.getDate() + i - 2);
     return { day: d.getDate(), name: ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"][d.getDay()], isToday: i === 2, hasDot: [0, 2, 4, 6].includes(i) };
   });
 
-  /* ═══════ PIPELINE COMPONENT ═══════ */
+  /* ======= PIPELINE COMPONENT ======= */
   const PipelineBar = ({ fase }) => {
     const idx = faseIndex(fase);
     return (
@@ -834,7 +1071,7 @@ useEffect(()=>{ (()=>{
     );
   };
 
-  /* ═══════ VANO SVG SCHEMA ═══════ */
+  /* ======= VANO SVG SCHEMA ======= */
   const VanoSVG = ({ v, onTap }) => {
     const m = v.misure || {};
     return (
@@ -885,18 +1122,18 @@ useEffect(()=>{ (()=>{
     );
   };
 
-  /* ═══════ FILTERED CANTIERI ═══════ */
+  /* ======= FILTERED CANTIERI ======= */
   const filtered = cantieri.filter(c => {
     if (filterFase !== "tutte" && c.fase !== filterFase) return false;
     if (searchQ && !c.cliente.toLowerCase().includes(searchQ.toLowerCase()) && !c.code.toLowerCase().includes(searchQ.toLowerCase())) return false;
     return true;
   });
 
-  /* ════════════════════════════════════ */
-  /* ════       RENDER SECTIONS       ══ */
-  /* ════════════════════════════════════ */
+  /* ==================================== */
+  /* ====       RENDER SECTIONS       == */
+  /* ==================================== */
 
-  /* ── HOME TAB ── */
+  /* == HOME TAB == */
   const renderHome = () => (
     <div style={{ paddingBottom: 80 }}>
       {/* Header */}
@@ -929,7 +1166,7 @@ useEffect(()=>{ (()=>{
         </div>
         {/* Saluto */}
         <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.3 }}>
-          {today.getHours() < 12 ? "Buongiorno" : today.getHours() < 18 ? "Buon pomeriggio" : "Buonasera"}, Fabio
+          {(() => { const h = today.getHours(); return h < 12 ? "Buongiorno" : h < 18 ? "Buon pomeriggio" : "Buonasera"; })()}, Fabio
         </div>
         <div style={{ fontSize: 12, color: T.sub, marginTop: 1 }}>
           {today.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
@@ -953,7 +1190,7 @@ useEffect(()=>{ (()=>{
         {globalSearch.trim().length > 1 && (() => {
           const q = globalSearch.toLowerCase();
           const cmResults = cantieri.filter(c => c.cliente?.toLowerCase().includes(q) || c.code?.toLowerCase().includes(q) || c.indirizzo?.toLowerCase().includes(q));
-          const vanoResults = cantieri.flatMap(c => c.vani.filter(v => v.nome?.toLowerCase().includes(q) || v.tipo?.toLowerCase().includes(q) || v.stanza?.toLowerCase().includes(q)).map(v => ({ ...v, cmCode: c.code, cmCliente: c.cliente, cmId: c.id, cm: c })));
+          const vanoResults = cantieri.flatMap(c => getVaniAttivi(c).filter(v => v.nome?.toLowerCase().includes(q) || v.tipo?.toLowerCase().includes(q) || v.stanza?.toLowerCase().includes(q)).map(v => ({ ...v, cmCode: c.code, cmCliente: c.cliente, cmId: c.id, cm: c })));
           const taskResults = tasks.filter(t => t.text?.toLowerCase().includes(q) || t.meta?.toLowerCase().includes(q));
           const evResults = events.filter(e => e.text?.toLowerCase().includes(q) || e.persona?.toLowerCase().includes(q));
           const total = cmResults.length + vanoResults.length + taskResults.length + evResults.length;
@@ -990,7 +1227,7 @@ useEffect(()=>{ (()=>{
         })()}
       </div>
 
-      {/* ── SEZIONI RIORDINABILI ── */}
+      {/* == SEZIONI RIORDINABILI == */}
       {(() => {
         const sections = {
           banner: (() => {
@@ -1003,14 +1240,14 @@ useEffect(()=>{ (()=>{
             // giorniFermaCM defined at component level
             const SOGLIA_GIORNI = sogliaDays;
             const ferme = cantieri.filter(c => c.fase !== "chiusura" && giorniFermaCM(c) >= SOGLIA_GIORNI);
-            const misureInAttesa = cantieri.filter(c => c.fase === "misure" && c.vani.some(v => Object.keys(v.misure || {}).length < 4));
+            const misureInAttesa = cantieri.filter(c => c.fase === "misure" && getVaniAttivi(c).some(v => Object.keys(v.misure || {}).length < 4));
             const preventiviDaFare = cantieri.filter(c => c.fase === "preventivo");
             const taskUrgenti = tasks.filter(t => !t.done && t.priority === "alta");
             const nextEvent = todayEvents[0];
             let banner = null;
             if (urgenti.length > 0) { const c=urgenti[0]; banner = { color:T.red, bg:"rgba(255,59,48,0.07)", border:"rgba(255,59,48,0.18)", tag:"⚠️ URGENTE", title:c.alert, sub:`${c.code} · ${c.cliente}`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
             else if (nextEvent) { banner = { color:nextEvent.color||T.acc, bg:`${nextEvent.color||T.acc}10`, border:`${nextEvent.color||T.acc}25`, tag:`📅 OGGI ${nextEvent.time?"ALLE "+nextEvent.time:""}`, title:nextEvent.text, sub:[nextEvent.persona,nextEvent.cm,nextEvent.addr].filter(Boolean).join(" · "), act:()=>{setTab("agenda");setAgendaView("giorno");setSelDate(new Date(nextEvent.date));} }; }
-            else if (misureInAttesa.length > 0) { const c=misureInAttesa[0]; const mn=c.vani.filter(v=>Object.keys(v.misure||{}).length<4).length; banner = { color:T.orange, bg:"rgba(255,149,0,0.07)", border:"rgba(255,149,0,0.18)", tag:"📐 MISURE IN ATTESA", title:`${c.code} · ${c.cliente}`, sub:`${mn} ${mn===1?"vano":"vani"} da misurare`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
+            else if (misureInAttesa.length > 0) { const c=misureInAttesa[0]; const mn=getVaniAttivi(c).filter(v=>Object.keys(v.misure||{}).length<4).length; banner = { color:T.orange, bg:"rgba(255,149,0,0.07)", border:"rgba(255,149,0,0.18)", tag:"📐 MISURE IN ATTESA", title:`${c.code} · ${c.cliente}`, sub:`${mn} ${mn===1?"vano":"vani"} da misurare`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
             else if (preventiviDaFare.length > 0) { banner = { color:"#7c3aed", bg:"rgba(124,58,237,0.07)", border:"rgba(124,58,237,0.18)", tag:"📋 PREVENTIVI", title:`${preventiviDaFare.length} ${preventiviDaFare.length===1?"preventivo da inviare":"preventivi da inviare"}`, sub:preventiviDaFare.map(c=>c.code).join(" · "), act:()=>setTab("commesse") }; }
             else if (taskUrgenti.length > 0) { const t=taskUrgenti[0]; banner = { color:T.red, bg:"rgba(255,59,48,0.07)", border:"rgba(255,59,48,0.18)", tag:"⚡ TASK URGENTE", title:t.text, sub:t.cm?`Commessa ${t.cm}`:(t.meta||""), act:()=>{} }; }
             else if (ferme.length > 0) { const c=ferme[0]; const gg=giorniFermaCM(c); banner = { color:"#ff6b00", bg:"rgba(255,107,0,0.07)", border:"rgba(255,107,0,0.18)", tag:`🔔 FERMA DA ${gg} GIORNI`, title:`${c.code} · ${c.cliente}`, sub:`In fase "${PIPELINE.find(p=>p.id===c.fase)?.nome||c.fase}" dal ${c.aggiornato}${ferme.length>1?" · e altre "+(ferme.length-1):""}`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
@@ -1028,7 +1265,125 @@ useEffect(()=>{ (()=>{
             );
           })(),
 
-          calendario: <MastroAgendaWidget events={events} cantieri={cantieri} T={T} onEventClick={() => setTab("agenda")} onAddEvent={() => setTab("agenda")} />,
+          calendario: (() => {
+            const dateStr2 = (d) => d.toISOString().split("T")[0];
+            const todayISO = dateStr2(today);
+            // Stato mese navigabile (usa selDate per il mese corrente)
+            const dashY = selDate.getFullYear(), dashMo = selDate.getMonth();
+            const firstDay = new Date(dashY, dashMo, 1).getDay();
+            const offset = firstDay === 0 ? 6 : firstDay - 1;
+            const daysInMonth = new Date(dashY, dashMo+1, 0).getDate();
+            const cells = Array.from({length: offset + daysInMonth}, (_,i) => i < offset ? null : i - offset + 1);
+            const meseLabel = selDate.toLocaleDateString("it-IT", { month:"long", year:"numeric" });
+            return (
+              <div style={{ marginBottom:12 }}>
+                <div style={S.section}>
+                  <div style={S.sectionTitle}>Calendario</div>
+                  <div onClick={() => { setTab("agenda"); setAgendaView("mese"); }} style={{ padding:"4px 10px", borderRadius:6, fontSize:10, fontWeight:700, cursor:"pointer", color:T.acc }}>
+                    Apri →
+                  </div>
+                </div>
+                <div style={{ padding:"0 16px" }}>
+                  <div style={{ background:T.card, borderRadius:T.r, border:`1px solid ${T.bdr}`, overflow:"hidden" }}>
+                    {/* Navigazione mese */}
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 12px", borderBottom:`1px solid ${T.bdr}` }}>
+                      <div onClick={() => { const d = new Date(selDate); d.setMonth(d.getMonth()-1); setSelDate(d); }} style={{ width:28, height:28, borderRadius:8, background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:14, color:T.sub }}>‹</div>
+                      <div style={{ fontSize:12, fontWeight:700, color:T.text, textTransform:"capitalize" }}>{meseLabel}</div>
+                      <div onClick={() => { const d = new Date(selDate); d.setMonth(d.getMonth()+1); setSelDate(d); }} style={{ width:28, height:28, borderRadius:8, background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:14, color:T.sub }}>›</div>
+                    </div>
+                    {/* Intestazione giorni */}
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", borderBottom:`1px solid ${T.bdr}` }}>
+                      {["Lun","Mar","Mer","Gio","Ven","Sab","Dom"].map((d,i) => (
+                        <div key={i} style={{ textAlign:"center", fontSize:9, fontWeight:700, color: i>=5 ? T.orange : T.sub, padding:"5px 2px", borderRight: i<6 ? `1px solid ${T.bdr}` : "none" }}>{d}</div>
+                      ))}
+                    </div>
+                    {/* Griglia giorni a riquadri */}
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)" }}>
+                      {cells.map((day,i) => {
+                        if (!day) return <div key={i} style={{ borderRight:`1px solid ${T.bdr}`, borderBottom:`1px solid ${T.bdr}`, minHeight:52 }}/>;
+                        const iso = `${dashY}-${String(dashMo+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+                        const isT = iso === todayISO;
+                        const evs = events.filter(e => e.date === iso).sort((a,b) => (a.time||"99").localeCompare(b.time||"99"));
+                        const isExp = expandedDay === iso;
+                        const col = i % 7;
+                        const isWeekend = col >= 5;
+                        return (
+                          <div key={i} onClick={() => { setExpandedDay(isExp ? null : iso); setSelDate(new Date(iso + "T12:00:00")); }}
+                            style={{
+                              minHeight: 52, padding:"4px 3px 2px",
+                              borderRight: col<6 ? `1px solid ${T.bdr}` : "none",
+                              borderBottom:`1px solid ${T.bdr}`,
+                              background: isExp ? T.accLt : isWeekend ? T.bg+"80" : T.card,
+                              cursor:"pointer",
+                              outline: isExp ? `2px solid ${T.acc}40` : "none",
+                              outlineOffset: -1,
+                            }}>
+                            {/* Numero giorno */}
+                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:2 }}>
+                              <div style={{
+                                width:20, height:20, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center",
+                                fontSize:11, fontWeight: isT||isExp ? 800 : 400,
+                                background: isT ? T.acc : "transparent",
+                                color: isT ? "#fff" : isWeekend ? T.orange : T.text,
+                              }}>{day}</div>
+                              {evs.length > 0 && (
+                                <div style={{ fontSize:9, fontWeight:700, color:"#fff", background: isT ? "rgba(255,255,255,0.3)" : (evs[0].color||tipoEvColor(evs[0].tipo)), borderRadius:8, padding:"1px 4px", minWidth:14, textAlign:"center" }}>
+                                  {evs.length}
+                                </div>
+                              )}
+                            </div>
+                            {/* Eventi (max 2) */}
+                            {evs.slice(0,2).map((ev) => (
+                              <div key={ev.id} style={{
+                                fontSize:9, fontWeight:600, padding:"1px 3px", borderRadius:2, marginBottom:1,
+                                background:(ev.color||tipoEvColor(ev.tipo))+"20",
+                                borderLeft:`2px solid ${ev.color||tipoEvColor(ev.tipo)}`,
+                                overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis",
+                                color: ev.color||tipoEvColor(ev.tipo),
+                              }}>
+                                {ev.time?.slice(0,5)} {ev.text}
+                              </div>
+                            ))}
+                            {evs.length > 2 && <div style={{ fontSize:8, color:T.sub }}>+{evs.length-2}</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Pannello eventi giorno espanso */}
+                    {expandedDay && (() => {
+                      const displayEvs = events.filter(e => e.date === expandedDay).sort((a,b) => (a.time||"99").localeCompare(b.time||"99"));
+                      const label = new Date(expandedDay + "T12:00:00").toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" });
+                      return (
+                        <div style={{ borderTop:`1px solid ${T.bdr}` }}>
+                          <div style={{ padding:"7px 12px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                            <div style={{ fontSize:11, fontWeight:700, color:T.text, textTransform:"capitalize" }}>{label}</div>
+                            <span onClick={() => { setTab("agenda"); setAgendaView("giorno"); setSelDate(new Date(expandedDay + "T12:00:00")); }} style={{ color:T.acc, cursor:"pointer", fontSize:10, fontWeight:700 }}>Apri →</span>
+                          </div>
+                          {displayEvs.length === 0 ? (
+                            <div style={{ padding:"10px 12px", fontSize:12, color:T.sub, textAlign:"center" }}>
+                              Nessun evento — <span onClick={()=>setShowModal("event")} style={{ color:T.acc, cursor:"pointer", fontWeight:600 }}>+ Aggiungi</span>
+                            </div>
+                          ) : displayEvs.map((ev,i) => (
+                            <div key={ev.id} style={{ display:"flex", gap:10, padding:"8px 12px", borderBottom:i<displayEvs.length-1?`1px solid ${T.bg}`:"none" }}>
+                              <div style={{ width:3, alignSelf:"stretch", borderRadius:2, background:ev.color||tipoEvColor(ev.tipo), flexShrink:0 }}/>
+                              <div style={{ fontSize:11, color:T.sub, fontFamily:FM, minWidth:36, paddingTop:1 }}>{ev.time||"—"}</div>
+                              <div style={{ flex:1 }}>
+                                <div style={{ fontSize:12, fontWeight:600, color:T.text }}>{ev.text}</div>
+                                <div style={{ display:"flex", gap:4, marginTop:2, flexWrap:"wrap" }}>
+                                  {ev.cm && <span style={S.badge(T.accLt, T.acc)}>📁 {ev.cm}</span>}
+                                  {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {ev.persona}</span>}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            );
+          })(),
 
           email: (() => {
             const emailsOnly = msgs.filter(m => m.canale === "email");
@@ -1067,144 +1422,1023 @@ useEffect(()=>{ (()=>{
             );
           })(),
 
-          commesse: (
-            <div>
-              <div style={S.section}>
-                <div style={S.sectionTitle}>Commesse</div>
-                <button style={S.sectionBtn} onClick={() => setTab("commesse")}>Vedi tutte</button>
+          commesse: (() => {
+            const fasi = ["tutte", ...PIPELINE.filter(p=>p.attiva).map(p=>p.id)];
+            const faseSel = fasi[cmFaseIdx];
+            const cmFiltrate = faseSel === "tutte" ? cantieri : cantieri.filter(c => c.fase === faseSel);
+            let swCmX = 0;
+            const onSwCmStart = (e) => { swCmX = e.touches[0].clientX; };
+            const onSwCmEnd = (e) => {
+              const dx = e.changedTouches[0].clientX - swCmX;
+              if (Math.abs(dx) > 40) setCmFaseIdx(i => Math.max(0, Math.min(fasi.length-1, i+(dx<0?1:-1))));
+            };
+            const oggi = new Date().toISOString().split("T")[0];
+            return (
+              <div>
+                <div style={S.section}>
+                  <div style={S.sectionTitle}>📁 Commesse <span style={{ fontSize:11, color:T.sub, fontWeight:500 }}>{cmFiltrate.length}</span></div>
+                  <button style={S.sectionBtn} onClick={() => setTab("commesse")}>Vedi tutte</button>
+                </div>
+                {/* Filtro fasi swipeable */}
+                <div style={{ display:"flex", gap:5, padding:"0 16px 10px", overflowX:"auto" }} onTouchStart={onSwCmStart} onTouchEnd={onSwCmEnd}>
+                  {fasi.map((f,i) => {
+                    const p = PIPELINE.find(x=>x.id===f);
+                    const n = f==="tutte" ? cantieri.length : cantieri.filter(c=>c.fase===f).length;
+                    return (
+                      <div key={f} onClick={() => setCmFaseIdx(i)} style={{
+                        padding:"5px 10px", borderRadius:20, fontSize:11, fontWeight:700,
+                        cursor:"pointer", flexShrink:0, whiteSpace:"nowrap",
+                        background: cmFaseIdx===i ? (p?.color||T.acc) : T.card,
+                        color: cmFaseIdx===i ? "#fff" : T.sub,
+                        border: `1px solid ${cmFaseIdx===i ? (p?.color||T.acc) : T.bdr}`,
+                      }}>
+                        {p?.ico||"📁"} {p?.nome||"Tutte"} {n>0&&<span style={{fontWeight:800}}>{n}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Lista commesse */}
+                <div style={{ padding:"0 16px" }} onTouchStart={onSwCmStart} onTouchEnd={onSwCmEnd}>
+                  {cmFiltrate.length === 0 ? (
+                    <div style={{ textAlign:"center", padding:"20px", color:T.sub, fontSize:12 }}>Nessuna commessa in questa fase</div>
+                  ) : cmFiltrate.map(c => {
+                    const p = PIPELINE.find(x=>x.id===c.fase);
+                    const vaniA = getVaniAttivi(c);
+                    const vaniMis = vaniA.filter(v => Object.values(v.misure||{}).filter(x=>(x as number)>0).length >= 6).length;
+                    const prog = vaniA.length > 0 ? Math.round(vaniMis/vaniA.length*100) : 0;
+                    const faseIdx = PIPELINE.findIndex(x=>x.id===c.fase);
+                    const progFase = faseIdx >= 0 ? Math.round((faseIdx+1)/PIPELINE.length*100) : 0;
+                    const gg = giorniFermaCM(c);
+                    const isScaduta = c.scadenza && c.scadenza < oggi;
+                    const isFerma = gg >= sogliaDays && c.fase !== "chiusura";
+                    return (
+                      <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); }} style={{
+                        ...S.card, marginBottom:8, padding:"11px 13px", cursor:"pointer",
+                        borderLeft: `3px solid ${isFerma ? T.red : isScaduta ? T.orange : p?.color||T.acc}`,
+                      }}>
+                        <div style={{ display:"flex", alignItems:"flex-start", gap:8 }}>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                              <span style={{ fontSize:11, color:T.sub, fontFamily:FM }}>{c.code}</span>
+                              <span style={{ fontSize:14, fontWeight:700, color:T.text }}>{c.cliente}</span>
+                              {isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.red, background:T.redLt, borderRadius:8, padding:"1px 6px" }}>FERMA {gg}gg</span>}
+                              {isScaduta && !isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.orange, background:T.orangeLt, borderRadius:8, padding:"1px 6px" }}>SCADUTA</span>}
+                            </div>
+                            <div style={{ fontSize:11, color:T.sub, marginTop:2 }}>{c.indirizzo||"—"}</div>
+                            {/* Badge fase + scadenza */}
+                            <div style={{ display:"flex", gap:5, marginTop:5, flexWrap:"wrap", alignItems:"center" }}>
+                              <span style={{ ...S.badge(p?.color+"18"||T.accLt, p?.color||T.acc), fontSize:10 }}>{p?.ico} {p?.nome||c.fase}</span>
+                              {c.scadenza && <span style={{ fontSize:10, color: isScaduta ? T.red : T.sub }}>📅 {c.scadenza}</span>}
+                              {c.importo && <span style={{ fontSize:10, color:T.grn, fontWeight:700 }}>€{c.importo}</span>}
+                            </div>
+                          </div>
+                          <span style={{ color:T.sub, fontSize:16, flexShrink:0 }}>›</span>
+                        </div>
+                        {/* Barra avanzamento fase */}
+                        <div style={{ marginTop:8 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
+                            <span style={{ fontSize:10, color:T.sub }}>Avanzamento pipeline</span>
+                            <span style={{ fontSize:10, fontWeight:700, color: isFerma ? T.red : p?.color||T.acc }}>{progFase}%</span>
+                          </div>
+                          <div style={{ height:4, borderRadius:2, background:T.bg, overflow:"hidden" }}>
+                            <div style={{ height:"100%", width:`${progFase}%`, background: isFerma ? T.red : p?.color||T.acc, borderRadius:2, transition:"width 0.3s" }}/>
+                          </div>
+                          {vaniA.length > 0 && (
+                            <div style={{ fontSize:10, color:T.sub, marginTop:4 }}>
+                              🪟 {vaniMis}/{vaniA.length} vani misurati
+                              {prog === 100 && <span style={{ color:T.grn, fontWeight:700 }}> ✅ Completo</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              {cantieri.slice(0, 3).map(c => renderCMCard(c))}
-            </div>
-          ),
+            );
+          })(),
         };
 
-        const LABELS = { banner:"🔔 Avviso", calendario:"📅 Calendario", email:"📧 Email", commesse:"📁 Commesse" };
+        const LABELS = { banner:"🔔 Avviso", urgenti:"⚠️ Urgenti", calendario:"📅 Calendario", email:"📧 Email", commesse:"📁 Commesse" };
 
-        return homeOrder.map((id, idx) => (
-          <div key={id}
-            draggable={homeEditMode}
-            onDragStart={() => { if(homeEditMode) setDragIdx(idx); }}
-            onDragOver={e => { e.preventDefault(); if(homeEditMode) setDragOverIdx(idx); }}
-            onDrop={() => {
-              if(!homeEditMode || dragIdx === null) return;
-              const newOrder = [...homeOrder];
-              const [moved] = newOrder.splice(dragIdx, 1);
-              newOrder.splice(idx, 0, moved);
-              setHomeOrder(newOrder);
-              setDragIdx(null); setDragOverIdx(null);
-            }}
-            onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
-            style={{ opacity: dragIdx === idx ? 0.4 : 1, transition:"opacity 0.15s",
-              outline: dragOverIdx === idx && dragIdx !== idx ? `2px dashed ${T.acc}` : "none",
-              borderRadius: 12, position:"relative" }}>
-            {homeEditMode && (
-              <div style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", zIndex:10, display:"flex", alignItems:"center", gap:6,
-                background:T.card, border:`1px solid ${T.bdr}`, borderRadius:8, padding:"4px 10px", boxShadow:"0 1px 6px rgba(0,0,0,0.08)", pointerEvents:"none" }}>
-                <span style={{ fontSize:14, color:T.sub }}>☰</span>
-                <span style={{ fontSize:11, fontWeight:700, color:T.sub }}>{LABELS[id]}</span>
+        // Widget urgenti: centro allerta multi-categoria con swipe
+        const urgentiCM = cantieri.filter(c => giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura");
+        const todayEventsUrgenti = events.filter(e => e.date === new Date().toISOString().split("T")[0]).sort((a,b) => (a.time||"99").localeCompare(b.time||"99"));
+        const prevInAttesa = cantieri.filter(c => c.fase === "preventivo" && giorniFermaCM(c) > 5);
+        const vaniBloccatiAll = cantieri.flatMap(c => {
+          const r = c.rilievi?.[c.rilievi.length-1];
+          return (r?.vani||[]).filter(v => v.note?.startsWith("🔴 BLOCCATO")).map(v => ({ ...v, cm: c }));
+        });
+        const vaniIncompleti = cantieri.flatMap(c => {
+          const r = c.rilievi?.[c.rilievi.length-1];
+          return (r?.vani||[]).filter(v => {
+            const n = Object.values(v.misure||{}).filter(x=>(x as number)>0).length;
+            return n > 0 && n < 6 && !v.note?.startsWith("🔴 BLOCCATO");
+          }).map(v => ({ ...v, cm: c }));
+        });
+
+        const allertaCategorie = [
+          { id: "ferme", ico: "⚠️", label: "Ferme", count: urgentiCM.length, color: T.red },
+          { id: "oggi", ico: "📅", label: "Oggi", count: todayEventsUrgenti.length, color: T.blue },
+          { id: "prev", ico: "💰", label: "Preventivi", count: prevInAttesa.length, color: T.orange },
+          { id: "vani", ico: "🪟", label: "Vani", count: vaniBloccatiAll.length + vaniIncompleti.length, color: T.purple },
+        ].filter(c => c.count > 0);
+
+        const totalAllerte = allertaCategorie.reduce((s,c) => s+c.count, 0);
+
+        sections["urgenti"] = totalAllerte > 0 ? (() => {
+          const cat = allertaCategorie[Math.min(catIdx, allertaCategorie.length-1)];
+          let swX = 0;
+          const onSwipeStart = (e) => { swX = e.touches[0].clientX; };
+          const onSwipeEnd = (e) => {
+            const dx = e.changedTouches[0].clientX - swX;
+            if (Math.abs(dx) > 40) setCatIdx(i => Math.max(0, Math.min(allertaCategorie.length-1, i + (dx<0?1:-1))));
+          };
+          return (
+            <div style={{ padding: "0 16px" }}>
+              {/* Header con tab categorie */}
+              <div style={S.section}>
+                <div style={S.sectionTitle}>⚡ Allerte <span style={{ fontSize:11, fontWeight:700, color:"#fff", background:T.red, borderRadius:10, padding:"1px 7px", marginLeft:4 }}>{totalAllerte}</span></div>
               </div>
-            )}
-            <div style={{ filter: homeEditMode ? "brightness(0.97)" : "none", transition:"filter 0.15s" }}>
-              {sections[id]}
+              {/* Tab categorie */}
+              <div style={{ display:"flex", gap:6, marginBottom:10, overflowX:"auto" }}>
+                {allertaCategorie.map((c,i) => (
+                  <div key={c.id} onClick={() => setCatIdx(i)} style={{
+                    padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0,
+                    background: catIdx===i ? c.color : T.card,
+                    color: catIdx===i ? "#fff" : T.sub,
+                    border: `1px solid ${catIdx===i ? c.color : T.bdr}`,
+                  }}>
+                    {c.ico} {c.label} <span style={{ fontWeight:800 }}>{c.count}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Contenuto categoria con swipe */}
+              <div onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd}>
+                {cat?.id === "ferme" && urgentiCM.map(c => (
+                  <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); }} style={{
+                    padding:"11px 13px", borderRadius:10, background:"rgba(255,59,48,0.07)",
+                    border:"1px solid rgba(255,59,48,0.15)", borderLeft:`3px solid ${T.red}`,
+                    cursor:"pointer", marginBottom:6, display:"flex", alignItems:"center", gap:10
+                  }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:9, fontWeight:800, color:T.red, letterSpacing:1 }}>⚠ FERMA DA {giorniFermaCM(c)} GIORNI</div>
+                      <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{c.cliente}</div>
+                      <div style={{ fontSize:11, color:T.sub }}>{c.code} · {c.fase} · {c.indirizzo||"—"}</div>
+                    </div>
+                    <span style={{ color:T.sub, fontSize:16 }}>›</span>
+                  </div>
+                ))}
+                {cat?.id === "oggi" && todayEventsUrgenti.map(ev => (
+                  <div key={ev.id} onClick={() => { setTab("agenda"); setAgendaView("giorno"); setSelDate(new Date()); }} style={{
+                    padding:"11px 13px", borderRadius:10, background:`${ev.color||T.blue}10`,
+                    border:`1px solid ${ev.color||T.blue}25`, borderLeft:`3px solid ${ev.color||T.blue}`,
+                    cursor:"pointer", marginBottom:6, display:"flex", alignItems:"center", gap:10
+                  }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:9, fontWeight:800, color:ev.color||T.blue, letterSpacing:1 }}>📅 OGGI {ev.time||""}</div>
+                      <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{ev.text}</div>
+                      <div style={{ fontSize:11, color:T.sub }}>{[ev.persona, ev.addr, ev.cm].filter(Boolean).join(" · ")}</div>
+                    </div>
+                    {ev.addr && <div onClick={e=>{e.stopPropagation();window.open("https://maps.google.com/?q="+encodeURIComponent(ev.addr));}} style={{ padding:"5px 8px", borderRadius:7, background:T.blueLt, color:T.blue, fontSize:10, fontWeight:700, flexShrink:0 }}>🗺</div>}
+                  </div>
+                ))}
+                {cat?.id === "prev" && prevInAttesa.map(c => (
+                  <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); }} style={{
+                    padding:"11px 13px", borderRadius:10, background:"rgba(255,149,0,0.07)",
+                    border:"1px solid rgba(255,149,0,0.18)", borderLeft:`3px solid ${T.orange}`,
+                    cursor:"pointer", marginBottom:6, display:"flex", alignItems:"center", gap:10
+                  }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:9, fontWeight:800, color:T.orange, letterSpacing:1 }}>💰 PREVENTIVO IN ATTESA {giorniFermaCM(c)}gg</div>
+                      <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{c.cliente}</div>
+                      <div style={{ fontSize:11, color:T.sub }}>{c.code} · {c.sistema||"—"}</div>
+                    </div>
+                    <span style={{ color:T.sub, fontSize:16 }}>›</span>
+                  </div>
+                ))}
+                {cat?.id === "vani" && [
+                  ...vaniBloccatiAll.map(v => ({...v, tipo_alert:"bloccato"})),
+                  ...vaniIncompleti.map(v => ({...v, tipo_alert:"incompleto"}))
+                ].map((v,i) => (
+                  <div key={i} onClick={() => { setSelectedCM(v.cm); setTab("commesse"); }} style={{
+                    padding:"11px 13px", borderRadius:10,
+                    background: v.tipo_alert==="bloccato" ? "rgba(255,59,48,0.07)" : "rgba(255,149,0,0.07)",
+                    border: `1px solid ${v.tipo_alert==="bloccato" ? "rgba(255,59,48,0.18)" : "rgba(255,149,0,0.18)"}`,
+                    borderLeft: `3px solid ${v.tipo_alert==="bloccato" ? T.red : T.orange}`,
+                    cursor:"pointer", marginBottom:6, display:"flex", alignItems:"center", gap:10
+                  }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:9, fontWeight:800, color: v.tipo_alert==="bloccato"?T.red:T.orange, letterSpacing:1 }}>
+                        {v.tipo_alert==="bloccato" ? "🔴 VANO BLOCCATO" : "⚠ MISURE INCOMPLETE"}
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{v.nome} — {v.cm.cliente}</div>
+                      <div style={{ fontSize:11, color:T.sub }}>{v.cm.code} · {v.tipo_alert==="bloccato" ? (v.note||"").replace("🔴 BLOCCATO: ","") : `${Object.values(v.misure||{}).filter(x=>(x as number)>0).length}/6 misure`}</div>
+                    </div>
+                    <span style={{ color:T.sub, fontSize:16 }}>›</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ));
+          );
+        })() : null;
+
+        return drag.order.map((id) => {
+          if (!sections[id]) return null;
+          const isDrag = drag.dragging === id;
+          const isOver = drag.over === id;
+          return (
+            <div key={id}
+              draggable={homeEditMode}
+              onDragStart={() => { if(homeEditMode) drag.start(id); }}
+              onDragOver={e => { e.preventDefault(); if(homeEditMode) drag.onOver(id); }}
+              onDrop={e => { e.preventDefault(); if(homeEditMode) drag.drop(id); }}
+              onDragEnd={() => { if(homeEditMode) drag.end(); }}
+              style={{ opacity: isDrag ? 0.4 : 1, transition:"opacity 0.15s",
+                outline: isOver ? `2px dashed ${T.acc}` : "none",
+                borderRadius: 12, position:"relative" }}>
+              {homeEditMode && (
+                <div style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", zIndex:10, display:"flex", alignItems:"center", gap:6,
+                  background:T.card, border:`1px solid ${T.bdr}`, borderRadius:8, padding:"4px 10px", boxShadow:"0 1px 6px rgba(0,0,0,0.08)", pointerEvents:"none" }}>
+                  <span style={{ fontSize:14, color:T.sub }}>☰</span>
+                  <span style={{ fontSize:11, fontWeight:700, color:T.sub }}>{LABELS[id]}</span>
+                </div>
+              )}
+              <div style={{ filter: homeEditMode ? "brightness(0.97)" : "none", transition:"filter 0.15s" }}>
+                {sections[id]}
+              </div>
+            </div>
+          );
+        });
       })()}
     </div>
   );
-  /* ── COMMESSA CARD ── */
+// =======================================================
+// MASTRO ERP v2 — PARTE 2/5
+// Righe 1281-2638: renderCMCard (con AFASE+euro+scadenza+borderLeft),
+//                 renderCommesse, renderCMDetail (wizard 4-step + 3 tab
+//                 sopralluoghi/misure/info + cronologia visite),
+//                 renderRiepilogo, renderFasePanel
+// =======================================================
+  /* == COMMESSA CARD == */
   const renderCMCard = (c, inGrid) => {
     const fase = PIPELINE.find(p => p.id === c.fase);
     const progress = ((faseIndex(c.fase) + 1) / PIPELINE.length) * 100;
+    const az = AFASE[c.fase] || AFASE["sopralluogo"];
+    const TODAY_ISO = new Date().toISOString().split("T")[0];
+    const isScad = c.scadenza && c.scadenza < TODAY_ISO;
+    const isUrgente = (giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura") || isScad;
+    // Conta vani misurati da visite
+    const vaniMisurati = c.vaniList?.length > 0
+      ? [...new Set((c.visite || []).flatMap(v => v.vaniMisurati))].length
+      : null;
     return (
-      <div key={c.id} style={{ ...S.card, margin: inGrid ? "0" : "0 16px 8px" }} onClick={() => { setSelectedCM(c); setTab("commesse"); }}>
+      <div key={c.id} style={{
+        ...S.card,
+        margin: inGrid ? "0" : "0 16px 8px",
+        borderLeft: `3px solid ${isUrgente ? T.red : progress > 50 ? T.grn : T.blue}`
+      }} onClick={() => { setSelectedCM(c); setTab("commesse"); }}>
         <div style={S.cardInner}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: T.sub, fontFamily: FM }}>{c.code}</span>
                 <span style={{ fontSize: 15, fontWeight: 600 }}>{c.cliente}</span>
               </div>
-              <div style={{ fontSize: 12, color: T.sub, marginTop: 3 }}>{c.indirizzo} · {c.vani.length} vani</div>
+              <div style={{ fontSize: 12, color: T.sub, marginTop: 3 }}>
+                {c.indirizzo}
+                {vaniMisurati !== null
+                  ? ` · ${vaniMisurati}/${c.vaniList.length} vani rilevati`
+                  : ` · ${(c.rilievi||[]).length} rilievi`}
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+              {isUrgente && <span style={{ ...S.badge(T.redLt, T.red), fontSize: 9 }}>FERMA</span>}
               {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>🔧</span>}
               <span style={S.badge(fase?.color + "18", fase?.color)}>{fase?.nome}</span>
             </div>
           </div>
           {c.alert && <div style={{ ...S.badge(c.alert.includes("Nessun") ? T.orangeLt : T.redLt, c.alert.includes("Nessun") ? T.orange : T.red), marginTop: 6 }}>{c.alert}</div>}
           <div style={{ height: 3, background: T.bdr, borderRadius: 2, marginTop: 8 }}>
-            <div style={{ height: "100%", borderRadius: 2, background: fase?.color, width: `${progress}%`, transition: "width 0.3s" }} />
+            <div style={{ height: "100%", borderRadius: 2, background: isUrgente ? T.red : fase?.color, width: `${progress}%`, transition: "width 0.3s" }} />
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-            <span style={{ fontSize: 10, color: T.sub2, display:"flex", alignItems:"center", gap:4 }}>
-                  {c.creato} · agg. {c.aggiornato}
-                  {giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura" &&
-                    <span style={{background:"#ff6b00",color:"#fff",fontSize:8,padding:"1px 5px",borderRadius:3,fontWeight:800,marginLeft:3}}>FERMA</span>}
-                </span>
-            <span style={{ fontSize: 10, color: T.sub2 }}>{Math.round(progress)}%</span>
+          {/* Box azione suggerita per fase */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "7px 10px", borderRadius: 7, marginTop: 8,
+            background: isUrgente ? T.redLt : az.c + "12",
+            border: `1px solid ${isUrgente ? T.red + "30" : az.c + "30"}`
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 14 }}>{isUrgente ? "🔴" : az.i}</span>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: isUrgente ? T.red : az.c }}>
+                  {isUrgente ? "Commessa bloccata" : az.t}
+                </div>
+                <div style={{ fontSize: 10, color: T.sub, marginTop: 1 }}>
+                  {Math.round(progress)}%
+                  {c.euro ? ` · €${c.euro.toLocaleString("it-IT")}` : ""}
+                  {c.scadenza ? <span style={{ color: isScad ? T.red : T.sub }}>
+                    {` · scad. ${new Date(c.scadenza + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" })}`}
+                  </span> : null}
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: "5px 10px", borderRadius: 6, background: isUrgente ? T.red : az.c, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
+              {isUrgente ? "Sblocca" : "→"}
+            </div>
           </div>
         </div>
       </div>
     );
   };
 
-  /* ── COMMESSE TAB ── */
+  /* == COMMESSE TAB == */
+  // ============================================================
+  // RENDER LISTA RILIEVI (livello intermedio: commessa → rilievi)
+  // ============================================================
+  const renderRilieviList = () => {
+    const c = selectedCM;
+    const rilievi = c.rilievi || [];
+
+    const salvaRilievo = () => {
+      const n = rilievi.length + 1;
+      const nr = {
+        id: Date.now(), n,
+        data: nuovoRilData.data || new Date().toISOString().split("T")[0],
+        ora: nuovoRilData.ora || "",
+        rilevatore: nuovoRilData.rilevatore || "",
+        tipo: nuovoRilTipo,
+        motivoModifica: nuovoRilData.motivoModifica || "",
+        note: nuovoRilData.note || "",
+        stato: "nuovo",
+        vani: [],
+      };
+      const updCM = { ...c, rilievi: [...rilievi, nr], aggiornato: "Oggi" };
+      setCantieri(cs => cs.map(x => x.id === c.id ? updCM : x));
+      setSelectedCM(updCM);
+      setShowNuovoRilievo(false);
+      setNuovoRilData({ data: "", ora: "", rilevatore: "", note: "", motivoModifica: "" });
+      setNuovoRilTipo("rilievo");
+      setSelectedRilievo(nr);
+    };
+
+    // == WIZARD NUOVO RILIEVO ==
+    if (showNuovoRilievo) return (
+      <div style={{ paddingBottom: 80 }}>
+        <div style={S.header}>
+          <div onClick={() => setShowNuovoRilievo(false)} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
+          <div style={{ flex: 1 }}>
+            <div style={S.headerTitle}>Nuovo Rilievo</div>
+            <div style={S.headerSub}>{c.code} · {c.cliente} {c.cognome}</div>
+          </div>
+        </div>
+        <div style={{ padding: 16 }}>
+          {/* Tipo */}
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Tipo di visita</div>
+          {[
+            { k: "rilievo",    ico: "📐", l: "Rilievo misure",    d: "Misuri i vani del cantiere" },
+            { k: "definitiva", ico: "✅", l: "Misure definitive", d: "Conferma finale — si va in produzione" },
+            { k: "modifica",   ico: "🔧", l: "Modifica",          d: "Cliente cambia configurazione o aggiunge vani" },
+          ].map(t => (
+            <div key={t.k} onClick={() => setNuovoRilTipo(t.k)}
+              style={{ ...S.card, padding: "12px 14px", marginBottom: 8, cursor: "pointer",
+                border: `1.5px solid ${nuovoRilTipo === t.k ? T.acc : T.bdr}`,
+                background: nuovoRilTipo === t.k ? T.accLt : T.card,
+                display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ fontSize: 22 }}>{t.ico}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: nuovoRilTipo === t.k ? T.acc : T.text }}>{t.l}</div>
+                <div style={{ fontSize: 11, color: T.sub }}>{t.d}</div>
+              </div>
+              {nuovoRilTipo === t.k && <div style={{ width: 18, height: 18, borderRadius: "50%", background: T.acc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11 }}>✓</div>}
+            </div>
+          ))}
+          {nuovoRilTipo === "modifica" && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>MOTIVO MODIFICA</div>
+              <input style={S.input} placeholder="Es: cliente cambia 3 balconi in finestre..." value={nuovoRilData.motivoModifica} onChange={e => setNuovoRilData(d => ({...d, motivoModifica: e.target.value}))} />
+            </div>
+          )}
+          {/* Dati */}
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, marginBottom: 8, marginTop: 16, textTransform: "uppercase", letterSpacing: 0.5 }}>Data e rilevatore</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>DATA</div>
+              <input style={S.input} type="date" value={nuovoRilData.data} onChange={e => setNuovoRilData(d => ({...d, data: e.target.value}))} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>ORA</div>
+              <input style={S.input} type="time" value={nuovoRilData.ora} onChange={e => setNuovoRilData(d => ({...d, ora: e.target.value}))} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>RILEVATORE</div>
+            <input style={S.input} placeholder="Chi esegue il rilievo..." value={nuovoRilData.rilevatore} onChange={e => setNuovoRilData(d => ({...d, rilevatore: e.target.value}))} />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>NOTE</div>
+            <textarea style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="Note preliminari..." value={nuovoRilData.note} onChange={e => setNuovoRilData(d => ({...d, note: e.target.value}))} />
+          </div>
+          <button onClick={salvaRilievo} style={{ ...S.btn, width: "100%", marginTop: 20, background: T.grn }}>✓ Crea Rilievo</button>
+        </div>
+      </div>
+    );
+
+    // == REPORT DIFFERENZE ==
+    const renderReportDiff = () => {
+      if (rilievi.length < 2) return (
+        <div style={{ padding: 20, textAlign: "center", color: T.sub, fontSize: 12 }}>
+          Servono almeno 2 rilievi per generare il report differenze.
+        </div>
+      );
+      return (
+        <div style={{ padding: "0 16px 80px" }}>
+          {rilievi.slice(1).map((r, idx) => {
+            const prev = rilievi[idx];
+            const prevVani = prev?.vani || [];
+            const currVani = r.vani || [];
+            const aggiunti = currVani.filter(v => !prevVani.some(p => p.nome.replace(" ❌","") === v.nome.replace(" ❌","")));
+            const rimossi  = prevVani.filter(p => !currVani.some(v => v.nome.replace(" ❌","") === p.nome.replace(" ❌","")));
+            const modificati = currVani.filter(v => {
+              const match = prevVani.find(p => p.nome.replace(" ❌","") === v.nome.replace(" ❌",""));
+              if (!match) return false;
+              return JSON.stringify(v.misure) !== JSON.stringify(match.misure) ||
+                     v.sistema !== match.sistema || v.tipo !== match.tipo;
+            });
+            return (
+              <div key={r.id} style={{ ...S.card, marginBottom: 12 }}>
+                <div style={{ padding: "11px 14px", borderBottom: `1px solid ${T.bdr}`, display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ fontSize: 20 }}>🔀</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>R{prev.n} → R{r.n}</div>
+                    <div style={{ fontSize: 11, color: T.sub }}>
+                      {new Date(prev.data + "T12:00:00").toLocaleDateString("it-IT", { day:"numeric", month:"short" })} → {new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { day:"numeric", month:"short" })}
+                    </div>
+                  </div>
+                  {aggiunti.length + rimossi.length + modificati.length === 0
+                    ? <span style={S.badge(T.grnLt, T.grn)}>Nessuna differenza</span>
+                    : <span style={S.badge(T.orangeLt, T.orange)}>{aggiunti.length + rimossi.length + modificati.length} diff</span>}
+                </div>
+                <div style={{ padding: "10px 14px" }}>
+                  {aggiunti.length > 0 && (
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.grn, marginBottom: 4 }}>+ AGGIUNTI</div>
+                      {aggiunti.map(v => <span key={v.id} style={{ ...S.badge(T.grnLt, T.grn), marginRight: 4, marginBottom: 4, display: "inline-block" }}>+ {v.nome.replace(" ❌","")}</span>)}
+                    </div>
+                  )}
+                  {rimossi.length > 0 && (
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.red, marginBottom: 4 }}>- RIMOSSI</div>
+                      {rimossi.map(v => <span key={v.id} style={{ ...S.badge(T.redLt, T.red), marginRight: 4, marginBottom: 4, display: "inline-block" }}>- {v.nome.replace(" ❌","")}</span>)}
+                    </div>
+                  )}
+                  {modificati.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.orange, marginBottom: 6 }}>~ MODIFICATI</div>
+                      {modificati.map(v => {
+                        const match = prevVani.find(p => p.nome.replace(" ❌","") === v.nome.replace(" ❌",""));
+                        const diffMisure = Object.entries(v.misure || {}).filter(([k, val]) => match?.misure?.[k] !== val);
+                        return (
+                          <div key={v.id} style={{ marginBottom: 8, padding: "8px 10px", background: T.orangeLt, borderRadius: 8, border: `1px solid ${T.orange}30` }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: T.orange, marginBottom: 4 }}>~ {v.nome.replace(" ❌","")}</div>
+                            {v.sistema !== match?.sistema && <div style={{ fontSize: 11, color: T.text, marginBottom: 2 }}>Sistema: <strong>{match?.sistema || "—"}</strong> → <strong>{v.sistema}</strong></div>}
+                            {v.tipo !== match?.tipo && <div style={{ fontSize: 11, color: T.text, marginBottom: 2 }}>Tipo: <strong>{match?.tipo || "—"}</strong> → <strong>{v.tipo}</strong></div>}
+                            {diffMisure.slice(0, 5).map(([k, val]) => (
+                              <div key={k} style={{ fontSize: 11, color: T.sub }}>
+                                {k}: <span style={{ color: T.red }}>{match?.misure?.[k] || 0}</span> → <span style={{ color: T.grn }}>{val as any}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {aggiunti.length + rimossi.length + modificati.length === 0 && (
+                    <div style={{ fontSize: 12, color: T.sub }}>Nessuna variazione tra i due rilievi.</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
+    // == LISTA RILIEVI ==
+    const tipoColor = { rilievo: T.blue, definitiva: T.grn, modifica: T.orange };
+    const tipoIco   = { rilievo: "📐", definitiva: "✅", modifica: "🔧" };
+    const [rilTab, setRilTab] = (window as any).__rilTab__ || [null, null];
+    // Use local state via component trick: riutilizza cmSubTab per il tab rilievi/report
+    return (
+      <div style={{ paddingBottom: 80 }}>
+        {/* Header */}
+        <div style={S.header}>
+          <div onClick={() => { setSelectedCM(null); setSelectedRilievo(null); }} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
+          <div style={{ flex: 1 }}>
+            <div style={S.headerTitle}>{c.code} · {c.cliente} {c.cognome || ""}</div>
+            <div style={S.headerSub}>{c.indirizzo}</div>
+          </div>
+          <div onClick={() => setShowNuovoRilievo(true)}
+            style={{ padding: "7px 14px", borderRadius: 9, background: T.acc, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            + Rilievo
+          </div>
+        </div>
+
+        {/* Info badges */}
+        <div style={{ padding: "8px 16px", display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <PipelineBar fase={c.fase} />
+        </div>
+        <div style={{ padding: "0 16px 8px", display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {c.sistema && <span style={S.badge(T.blueLt, T.blue)}>{c.sistema}</span>}
+          {c.tipo === "nuova" && <span style={S.badge(T.grnLt, T.grn)}>🆕 Nuova</span>}
+          {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>🔧 Riparazione</span>}
+          {c.telefono && <span onClick={() => window.open(`tel:${c.telefono}`)} style={{ ...S.badge(T.grnLt, T.grn), cursor: "pointer" }}>📞 {c.telefono}</span>}
+          {c.euro > 0 && <span style={S.badge(T.accLt, T.acc)}>€{c.euro.toLocaleString("it-IT")}</span>}
+        </div>
+
+        {/* Tab: Rilievi | Report */}
+        <div style={{ display: "flex", borderBottom: `1px solid ${T.bdr}`, margin: "0 0 4px 0" }}>
+          {["rilievi", "report"].map(t => (
+            <div key={t} onClick={() => setCmSubTab(t)}
+              style={{ flex: 1, padding: "9px 4px", textAlign: "center", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                borderBottom: `2px solid ${cmSubTab === t ? T.acc : "transparent"}`,
+                color: cmSubTab === t ? T.acc : T.sub, textTransform: "capitalize" }}>
+              {t === "rilievi" ? `📁 Rilievi (${rilievi.length})` : "📊 Report Differenze"}
+            </div>
+          ))}
+        </div>
+
+        {/* TAB REPORT */}
+        {cmSubTab === "report" && renderReportDiff()}
+
+        {/* TAB RILIEVI */}
+        {cmSubTab !== "report" && (
+          <div style={{ padding: "8px 16px" }}>
+            {rilievi.length === 0 && (
+              <div style={{ textAlign: "center", padding: "32px 16px" }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 6 }}>Nessun rilievo ancora</div>
+                <div style={{ fontSize: 12, color: T.sub, marginBottom: 20 }}>Crea il primo rilievo per iniziare a misurare i vani</div>
+                <button onClick={() => setShowNuovoRilievo(true)} style={{ ...S.btn, margin: "0 auto" }}>+ Crea primo rilievo</button>
+              </div>
+            )}
+            {[...rilievi].reverse().map((r, idx) => {
+              const vaniCount = (r.vani || []).length;
+              const vaniMisurati = (r.vani || []).filter(v => Object.values(v.misure || {}).filter(x => (x as number) > 0).length >= 6).length;
+              const colore = tipoColor[r.tipo] || T.blue;
+              const ico = tipoIco[r.tipo] || "📐";
+              const isUltimo = idx === 0;
+              return (
+                <div key={r.id} onClick={() => { setSelectedRilievo(r); setCmSubTab("sopralluoghi"); }}
+                  style={{ ...S.card, marginBottom: 10, cursor: "pointer", overflow: "hidden",
+                    border: `1.5px solid ${isUltimo ? colore + "50" : T.bdr}`,
+                    background: isUltimo ? colore + "06" : T.card }}>
+                  {/* Header rilievo */}
+                  <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 10, background: colore + "15", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0, border: `1.5px solid ${colore}30` }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: colore, fontFamily: FM }}>R{r.n}</div>
+                      <div style={{ fontSize: 14 }}>{ico}</div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700 }}>
+                          {new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}
+                        </div>
+                        {isUltimo && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: colore, color: "#fff" }}>ULTIMO</span>}
+                      </div>
+                      <div style={{ fontSize: 11, color: T.sub }}>
+                        {r.ora && `🕐 ${r.ora} · `}👤 {r.rilevatore || "—"}
+                      </div>
+                      {r.motivoModifica && <div style={{ fontSize: 11, color: T.orange, marginTop: 2 }}>🔧 {r.motivoModifica}</div>}
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: colore }}>{vaniCount}</div>
+                      <div style={{ fontSize: 10, color: T.sub }}>vani</div>
+                    </div>
+                    <span style={{ transform: "rotate(180deg)", display:"inline-flex", marginLeft: 4 }}><Ico d={ICO.back} s={14} c={T.sub} /></span>
+                  </div>
+                  {/* Barra progresso vani */}
+                  {vaniCount > 0 && (
+                    <div style={{ padding: "0 14px 12px" }}>
+                      <div style={{ height: 4, background: T.bdr, borderRadius: 2, overflow: "hidden", marginBottom: 3 }}>
+                        <div style={{ height: "100%", width: `${Math.round(vaniMisurati / vaniCount * 100)}%`, background: vaniMisurati === vaniCount ? T.grn : colore, borderRadius: 2 }} />
+                      </div>
+                      <div style={{ fontSize: 10, color: T.sub }}>{vaniMisurati}/{vaniCount} vani con misure</div>
+                    </div>
+                  )}
+                  {/* Note */}
+                  {r.note && <div style={{ padding: "0 14px 10px", fontSize: 11, color: T.sub, fontStyle: "italic" }}>"{r.note}"</div>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Card compatta per vista lista
+  const renderCMCardCompact = (c) => {
+    const fase = PIPELINE.find(p => p.id === c.fase);
+    const TODAY_ISO = new Date().toISOString().split("T")[0];
+    const isScad = c.scadenza && c.scadenza < TODAY_ISO;
+    const isFerma = giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura";
+    const vaniA = getVaniAttivi(c);
+    const vaniMis = vaniA.filter(v => Object.values(v.misure||{}).filter(x=>(x as number)>0).length >= 6).length;
+    const vaniInc = vaniA.filter(v => { const n=Object.values(v.misure||{}).filter(x=>(x as number)>0).length; return n>0&&n<6; }).length;
+    const vaniBloc = vaniA.filter(v => v.note?.startsWith("🔴 BLOCCATO")).length;
+    const az = AFASE[c.fase] || AFASE["sopralluogo"];
+    const faseIdx = PIPELINE.findIndex(x => x.id === c.fase);
+    const progFase = faseIdx >= 0 ? Math.round((faseIdx+1)/PIPELINE.length*100) : 0;
+    return (
+      <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); }}
+        style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:`1px solid ${T.bdr}`,
+          borderLeft:`3px solid ${isFerma?T.red:isScad?T.orange:fase?.color||T.acc}`,
+          background: isFerma ? "rgba(255,59,48,0.03)" : T.card, cursor:"pointer" }}>
+        {/* Colonna sinistra: codice + cliente */}
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+            <span style={{ fontSize:10, color:T.sub, fontFamily:FM }}>{c.code}</span>
+            <span style={{ fontSize:14, fontWeight:700 }}>{c.cliente}</span>
+            {isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.red, background:T.redLt, borderRadius:6, padding:"1px 5px" }}>FERMA {giorniFermaCM(c)}gg</span>}
+            {isScad && !isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.orange, background:T.orangeLt, borderRadius:6, padding:"1px 5px" }}>SCAD</span>}
+          </div>
+          <div style={{ display:"flex", gap:8, marginTop:3, alignItems:"center", flexWrap:"wrap" }}>
+            <span style={{ ...S.badge(fase?.color+"18"||T.accLt, fase?.color||T.acc), fontSize:10 }}>{fase?.ico} {fase?.nome}</span>
+            {c.euro && <span style={{ fontSize:11, color:T.grn, fontWeight:700 }}>€{c.euro.toLocaleString("it-IT")}</span>}
+            {c.scadenza && <span style={{ fontSize:10, color: isScad ? T.red : T.sub }}>📅 {c.scadenza}</span>}
+          </div>
+        </div>
+        {/* Colonna destra: info mancanti */}
+        <div style={{ textAlign:"right", flexShrink:0, minWidth:80 }}>
+          {vaniA.length > 0 ? (
+            <div style={{ fontSize:11, fontWeight:600 }}>
+              {vaniBloc > 0 && <div style={{ color:T.red }}>🔴 {vaniBloc} bloccati</div>}
+              {vaniInc > 0 && <div style={{ color:T.orange }}>⚠ {vaniInc} incompleti</div>}
+              {vaniBloc===0 && vaniInc===0 && <div style={{ color:T.grn }}>✅ {vaniMis}/{vaniA.length}</div>}
+            </div>
+          ) : (
+            <div style={{ fontSize:10, color:T.sub }}>Nessun vano</div>
+          )}
+          <div style={{ marginTop:4, fontSize:10, color: isFerma?T.red:fase?.color||T.acc, fontWeight:700 }}>{progFase}%</div>
+          <div style={{ marginTop:3, height:3, width:60, background:T.bdr, borderRadius:2, marginLeft:"auto" }}>
+            <div style={{ height:"100%", width:`${progFase}%`, background:isFerma?T.red:fase?.color||T.acc, borderRadius:2 }}/>
+          </div>
+        </div>
+        <span style={{ color:T.sub, fontSize:16 }}>›</span>
+      </div>
+    );
+  };
+
   const renderCommesse = () => {
     if (showRiepilogo && selectedCM) return renderRiepilogo();
     if (selectedVano) return renderVanoDetail();
-    if (selectedCM) return renderCMDetail();
+    if (selectedRilievo) return renderCMDetail();
+    if (selectedCM) return renderRilieviList();
     return (
       <div style={{ paddingBottom: 80 }}>
         <div style={S.header}>
           <div style={{ flex: 1 }}>
             <div style={S.headerTitle}>Commesse</div>
-            <div style={S.headerSub}>{cantieri.length} totali</div>
+            <div style={S.headerSub}>{cantieri.length} totali · {filtered.length} visibili</div>
           </div>
-          <div onClick={() => setShowModal("commessa")} style={{ width: 36, height: 36, borderRadius: 10, background: T.acc, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 20, fontWeight: 300 }}>+</div>
+          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+            {/* Toggle vista */}
+            <div style={{ display:"flex", background:T.bg, borderRadius:8, padding:2, gap:1 }}>
+              <div onClick={() => setCmView("list")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="list"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Lista compatta">☰</div>
+              <div onClick={() => setCmView("card")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="card"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Card grandi">▦</div>
+            </div>
+            <div onClick={() => setShowModal("commessa")} style={{ width:36, height:36, borderRadius:10, background:T.acc, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:20, fontWeight:300 }}>+</div>
+          </div>
         </div>
 
-        {/* Filters */}
-        <div style={{ display: "flex", gap: 6, padding: "10px 16px", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+        {/* Filtri fase */}
+        <div style={{ display:"flex", gap:6, padding:"4px 16px 10px", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
           <div style={S.chip(filterFase === "tutte")} onClick={() => setFilterFase("tutte")}>Tutte ({cantieri.length})</div>
           {PIPELINE.map(p => {
             const n = cantieri.filter(c => c.fase === p.id).length;
-            return n > 0 ? <div key={p.id} style={S.chip(filterFase === p.id)} onClick={() => setFilterFase(p.id)}>{p.nome} ({n})</div> : null;
+            return n > 0 ? <div key={p.id} style={S.chip(filterFase === p.id)} onClick={() => setFilterFase(p.id)}>{p.ico} {p.nome} ({n})</div> : null;
           })}
         </div>
 
         {/* Search */}
-        <div style={{ display: "flex", gap: 8, padding: "0 16px", marginBottom: 10 }}>
-          <input style={{ ...S.input, flex: 1 }} placeholder="Cerca commessa..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
+        <div style={{ padding:"0 16px", marginBottom:10 }}>
+          <input style={{ ...S.input, width:"100%", boxSizing:"border-box" }} placeholder="Cerca per cliente, codice, indirizzo..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
         </div>
 
-        <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, padding: "0 16px" } : isTablet ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 16px" } : {}}>
-          {filtered.map(c => renderCMCard(c, isTablet || isDesktop))}
-        </div>
+        {/* Lista o Card */}
+        {cmView === "list" ? (
+          <div style={{ background:T.card, margin:"0 16px", borderRadius:T.r, border:`1px solid ${T.bdr}`, overflow:"hidden" }}>
+            {filtered.length === 0
+              ? <div style={{ padding:"24px", textAlign:"center", color:T.sub }}>Nessuna commessa trovata</div>
+              : filtered.map(c => renderCMCardCompact(c))
+            }
+          </div>
+        ) : (
+          <div style={isDesktop ? { display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, padding:"0 16px" } : isTablet ? { display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, padding:"0 16px" } : {}}>
+            {filtered.map(c => renderCMCard(c, isTablet || isDesktop))}
+          </div>
+        )}
       </div>
     );
   };
 
-  /* ── COMMESSA DETAIL ── */
+  /* == COMMESSA DETAIL == */
   const renderCMDetail = () => {
     const c = selectedCM;
+    const r = selectedRilievo; // rilievo corrente
     const fase = PIPELINE.find(p => p.id === c.fase);
+
+    // Vani del rilievo corrente
+    const vaniList = r?.vani || [];
+    // Compatibilità wizard vecchio
+    const viste = []; // non più usato con nuova arch
+    const vaniM: number[] = [];
+    const vaniA = vaniList;
+    const tipoRil = r?.tipo || "rilievo";
+    const tipoColRil = tipoRil === "definitiva" ? T.grn : tipoRil === "modifica" ? T.orange : T.blue;
+    const tipoIcoRil = tipoRil === "definitiva" ? "✅" : tipoRil === "modifica" ? "🔧" : "📐";
+    const tipoLblRil = tipoRil === "definitiva" ? "Misure Definitive" : tipoRil === "modifica" ? "Modifica" : "Rilievo Misure";
+
+    // Calcolo avanzamento misure
+    const vaniMisurati = vaniList.filter(v => Object.values(v.misure || {}).filter(x => (x as number) > 0).length >= 6);
+    const vaniBloccati = vaniList.filter(v => v.note?.startsWith("🔴 BLOCCATO"));
+    const vaniDaFare   = vaniList.filter(v => vaniMisurati.every(m => m.id !== v.id));
+    const progVani = vaniList.length > 0 ? Math.round(vaniMisurati.length / vaniList.length * 100) : 0;
+    const tutteMis = vaniMisurati.length === vaniList.length && vaniList.length > 0;
+
+    // == Wizard helpers (legacy) ==
+    function togV(id) { setNvVani(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]); }
+    function togB(id) {
+      setNvBlocchi(b => b[id]
+        ? (()=>{ const n = {...b}; delete n[id]; return n; })()
+        : { ...b, [id]: { motivo: "", note: "" } }
+      );
+    }
+    function sbF(id, f, v) { setNvBlocchi(b => ({ ...b, [id]: { ...b[id], [f]: v } })); }
+    function salvaVisita() {
+      const vaniBloccati = Object.entries(nvBlocchi).map(([id, b]) => ({
+        vanoId: parseInt(id), motivo: b.motivo || "Altro", note: b.note || ""
+      }));
+      const stato = nvTipo === "modifica" ? "modifica" :
+        nvVani.length === vaniA.length && vaniBloccati.length === 0 ? "completo" : "parziale";
+      const nuova = {
+        id: Date.now(), n: viste.length + 1,
+        data: nvData.data || new Date().toISOString().split("T")[0],
+        ora: nvData.ora || "", rilevatore: nvData.rilevatore || "",
+        tipo: nvTipo, motivoModifica: nvMotivoModifica,
+        stato, vaniMisurati: nvVani.map(Number), vaniBloccati, note: nvNote
+      };
+      setCantieri(cs => cs.map(x => x.id === c.id ? { ...x, visite: [...(x.visite||[]), nuova] } : x));
+      setSelectedCM(prev => ({ ...prev, visite: [...(prev.visite||[]), nuova] }));
+      setNvView(false); setNvStep(1);
+      setNvData({ data: "", ora: "", rilevatore: "" });
+      setNvTipo("rilievo"); setNvMotivoModifica("");
+      setNvVani([]); setNvBlocchi({}); setNvNote("");
+    }
+
+    // == VISTA WIZARD ==
+    if (nvView) return (
+      <div style={{ paddingBottom: 80 }}>
+        {/* Header wizard */}
+        <div style={{ ...S.header }}>
+          <div onClick={() => { setNvView(false); setNvStep(1); }} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
+          <div style={{ flex: 1 }}>
+            <div style={S.headerTitle}>Nuova visita</div>
+            <div style={S.headerSub}>{c.code} · {c.cliente}</div>
+          </div>
+          <div style={{ fontSize: 11, color: T.sub }}>Step {nvStep}/5</div>
+        </div>
+        {/* Tab step */}
+        <div style={{ display: "flex", background: T.card, borderBottom: `1px solid ${T.bdr}` }}>
+          {["Tipo", "Dati", "Vani", "Blocchi", "Salva"].map((l, i) => (
+            <div key={i} onClick={() => i < nvStep && setNvStep(i+1)}
+              style={{ flex: 1, padding: "8px 4px", textAlign: "center", fontSize: 10, fontWeight: 600,
+                borderBottom: `2px solid ${nvStep===i+1 ? T.acc : "transparent"}`,
+                color: nvStep===i+1 ? T.acc : T.sub, cursor: i < nvStep ? "pointer" : "default" }}>
+              {l}
+            </div>
+          ))}
+        </div>
+        <div style={{ padding: "16px" }}>
+          {/* STEP 1 — Tipo visita */}
+          {nvStep === 1 && <>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>🏷 Tipo di visita</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 16 }}>Seleziona il tipo di sopralluogo</div>
+            {[
+              { k: "rilievo",    ico: "📐", label: "Rilievo misure",     desc: "Prima visita o misure di vani mancanti" },
+              { k: "definitiva", ico: "✅", label: "Misure definitive",  desc: "Conferma finale di tutte le misure" },
+              { k: "modifica",   ico: "🔧", label: "Modifica cantiere",  desc: "Variazione, problema o sopralluogo post-vendita" },
+            ].map(t => (
+              <div key={t.k} onClick={() => setNvTipo(t.k)}
+                style={{ ...S.card, padding: "13px 14px", marginBottom: 10, cursor: "pointer",
+                  border: `1.5px solid ${nvTipo === t.k ? T.acc : T.bdr}`,
+                  background: nvTipo === t.k ? T.accLt : T.card,
+                  display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ fontSize: 24 }}>{t.ico}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: nvTipo === t.k ? T.acc : T.text }}>{t.label}</div>
+                  <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{t.desc}</div>
+                </div>
+                <div style={{ width: 20, height: 20, borderRadius: "50%",
+                  border: `2px solid ${nvTipo === t.k ? T.acc : T.bdr}`,
+                  background: nvTipo === t.k ? T.acc : "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#fff", fontSize: 12 }}>{nvTipo === t.k ? "✓" : ""}</div>
+              </div>
+            ))}
+            {nvTipo === "modifica" && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>MOTIVO MODIFICA</div>
+                <input style={S.input} placeholder="Es: cliente ha cambiato idea su un vano, problema rilevato..." value={nvMotivoModifica} onChange={e => setNvMotivoModifica(e.target.value)} />
+              </div>
+            )}
+            <button onClick={() => setNvStep(2)} style={{ ...S.btn, marginTop: 12, width: "100%" }}>Avanti →</button>
+          </>}
+          {/* STEP 2 — Dati */}
+          {nvStep === 2 && <>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>📋 Dati della visita</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>DATA</div>
+                <input style={S.input} type="date" value={nvData.data} onChange={e => setNvData(d => ({...d, data: e.target.value}))} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>ORA</div>
+                <input style={S.input} type="time" value={nvData.ora} onChange={e => setNvData(d => ({...d, ora: e.target.value}))} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>RILEVATORE</div>
+                <input style={S.input} placeholder="Chi ha eseguito il rilievo..." value={nvData.rilevatore} onChange={e => setNvData(d => ({...d, rilevatore: e.target.value}))} />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+              <button onClick={() => setNvStep(1)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>← Indietro</button>
+              <button onClick={() => setNvStep(3)} style={{ ...S.btn, flex: 2 }}>Avanti →</button>
+            </div>
+          </>}
+          {/* STEP 2 — Vani misurati */}
+          {nvStep === 3 && <>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>✅ Vani misurati</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 14 }}>Seleziona i vani che hai misurato</div>
+            {vaniA.length === 0
+              ? <div style={{ textAlign: "center", padding: "20px", color: T.sub }}>Tutti già misurati!</div>
+              : vaniA.map(v => (
+                <div key={v.id} onClick={() => togV(v.id)} style={{
+                  ...S.card, padding: "12px 14px", marginBottom: 8, cursor: "pointer",
+                  border: `1.5px solid ${nvVani.includes(v.id) ? T.grn : T.bdr}`,
+                  background: nvVani.includes(v.id) ? T.grnLt : T.card,
+                  display: "flex", alignItems: "center", justifyContent: "space-between"
+                }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{v.nome}</div>
+                    <div style={{ fontSize: 11, color: T.sub }}>~{v.mq}m²</div>
+                  </div>
+                  <div style={{ width: 24, height: 24, borderRadius: 6,
+                    border: `2px solid ${nvVani.includes(v.id) ? T.grn : T.bdr}`,
+                    background: nvVani.includes(v.id) ? T.grn : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#fff", fontSize: 14 }}>
+                    {nvVani.includes(v.id) ? "✓" : ""}
+                  </div>
+                </div>
+              ))
+            }
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button onClick={() => setNvStep(2)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>← Indietro</button>
+              <button onClick={() => setNvStep(4)} style={{ ...S.btn, flex: 2 }}>Avanti →</button>
+            </div>
+          </>}
+          {/* STEP 4 — Vani bloccati */}
+          {nvStep === 4 && <>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>🔴 Vani non misurati</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 14 }}>Indica il motivo per ogni vano saltato</div>
+            {vaniA.filter(v => !nvVani.includes(v.id)).map(v => {
+              const hB = !!nvBlocchi[v.id];
+              return (
+                <div key={v.id} style={{ ...S.card, marginBottom: 10, overflow: "hidden", border: `1.5px solid ${hB ? T.red : T.bdr}` }}>
+                  <div onClick={() => togB(v.id)} style={{ padding: "11px 14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", background: hB ? T.redLt : T.card }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{v.nome}</div>
+                      <div style={{ fontSize: 11, color: T.sub }}>{hB ? "Indica motivo" : "Tocca per segnare bloccato"}</div>
+                    </div>
+                    <div style={{ width: 24, height: 24, borderRadius: 6, border: `2px solid ${hB ? T.red : T.bdr}`, background: hB ? T.red : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14 }}>
+                      {hB ? "✓" : ""}
+                    </div>
+                  </div>
+                  {hB && (
+                    <div style={{ padding: "0 14px 12px", background: T.redLt }}>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8, paddingTop: 8 }}>
+                        {MOTIVI_BLOCCO.map(m => (
+                          <div key={m} onClick={() => sbF(v.id, "motivo", m)} style={{
+                            padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: "pointer",
+                            background: nvBlocchi[v.id]?.motivo === m ? T.red : T.card,
+                            border: `1.5px solid ${nvBlocchi[v.id]?.motivo === m ? T.red : T.bdr}`,
+                            color: nvBlocchi[v.id]?.motivo === m ? "#fff" : T.sub
+                          }}>{m}</div>
+                        ))}
+                      </div>
+                      <input style={S.input} placeholder="Note aggiuntive..." value={nvBlocchi[v.id]?.note || ""} onChange={e => sbF(v.id, "note", e.target.value)} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>NOTE GENERALI</div>
+              <textarea style={{ ...S.input, minHeight: 70, resize: "vertical" }} placeholder="Osservazioni sull'intera visita..." value={nvNote} onChange={e => setNvNote(e.target.value)} />
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button onClick={() => setNvStep(3)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>← Indietro</button>
+              <button onClick={() => setNvStep(5)} style={{ ...S.btn, flex: 2 }}>Avanti →</button>
+            </div>
+          </>}
+          {/* STEP 5 — Riepilogo */}
+          {nvStep === 5 && <>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>📋 Riepilogo</div>
+            <div style={{ ...S.card, padding: "12px 14px", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, color: T.sub }}>📅 {nvData.data ? new Date(nvData.data + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" }) : "—"} · 🕐 {nvData.ora || "--:--"}</div>
+              <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>👤 {nvData.rilevatore || "Non specificato"}</div>
+            </div>
+            {nvVani.length > 0 && (
+              <div style={{ ...S.card, padding: "12px 14px", marginBottom: 10, border: `1px solid ${T.grn}40` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.grn, marginBottom: 7 }}>✅ Misurati</div>
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  {nvVani.map(id => { const v = vaniA.find(x => x.id === id); return <span key={id} style={S.badge(T.grnLt, T.grn)}>{v?.nome}</span>; })}
+                </div>
+              </div>
+            )}
+            {Object.keys(nvBlocchi).length > 0 && (
+              <div style={{ ...S.card, padding: "12px 14px", marginBottom: 10, border: `1px solid ${T.red}40` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.red, marginBottom: 7 }}>🔴 Bloccati</div>
+                {Object.entries(nvBlocchi).map(([id, b]) => {
+                  const v = vaniA.find(x => x.id === parseInt(id));
+                  return <div key={id} style={{ fontSize: 11, marginBottom: 4 }}><strong>{v?.nome}</strong>: {b.motivo || "—"}{b.note && ` — ${b.note}`}</div>;
+                })}
+              </div>
+            )}
+            {nvNote && <div style={{ ...S.card, padding: "12px 14px", marginBottom: 10, fontStyle: "italic", fontSize: 11, color: T.sub }}>"{nvNote}"</div>}
+            <div style={{ ...S.card, padding: "10px 14px", marginBottom: 10, background: T.accLt, border: `1px solid ${T.acc}30` }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: T.acc, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>Tipo visita</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.acc }}>
+                {nvTipo === "rilievo" ? "📐 Rilievo misure" : nvTipo === "definitiva" ? "✅ Misure definitive" : "🔧 Modifica cantiere"}
+              </div>
+              {nvTipo === "modifica" && nvMotivoModifica && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{nvMotivoModifica}</div>}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setNvStep(4)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>← Modifica</button>
+              <button onClick={salvaVisita} style={{ ...S.btn, flex: 2, background: T.grn }}>✓ Salva visita</button>
+            </div>
+          </>}
+        </div>
+      </div>
+    );
+
+    // == VISTA RILIEVO CON VANI ==
     return (
       <div style={{ paddingBottom: 80 }}>
-        {/* Header */}
-        <div style={S.header}>
-          <div onClick={goBack} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
+        {/* Header rilievo */}
+        <div style={{ ...S.header }}>
+          <div onClick={() => { setSelectedRilievo(null); setCmSubTab("rilievi"); }} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
           <div style={{ flex: 1 }}>
-            <div style={S.headerTitle}>{c.code} · {c.cliente}</div>
-            <div style={S.headerSub}>{c.indirizzo}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 14 }}>{tipoIcoRil}</span>
+              <div style={S.headerTitle}>{tipoLblRil} — R{r?.n}</div>
+            </div>
+            <div style={S.headerSub}>{c.code} · {c.cliente} {c.cognome || ""} · {r?.data ? new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { day:"numeric", month:"short", year:"numeric" }) : ""}</div>
           </div>
-          <div onClick={() => setShowRiepilogo(true)} style={{ padding: "6px 10px", borderRadius: 6, background: T.accLt, cursor: "pointer", marginRight: 6 }}>
+          {vaniList.length > 0 && (
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: tipoColRil }}>{progVani}%</div>
+              <div style={{ fontSize: 10, color: T.sub }}>{vaniMisurati.length}/{vaniList.length} vani</div>
+            </div>
+          )}
+          <div onClick={() => setShowRiepilogo(true)} style={{ padding: "6px 10px", borderRadius: 6, background: T.accLt, cursor: "pointer", marginLeft: 6 }}>
             <span style={{ fontSize: 14 }}>📋</span>
           </div>
           <div onClick={exportPDF} style={{ padding: "6px 10px", borderRadius: 6, background: T.redLt, cursor: "pointer" }}>
             <Ico d={ICO.file} s={16} c={T.red} />
           </div>
         </div>
+
+        {/* Banner rilievo info */}
+        {r?.motivoModifica && (
+          <div style={{ margin: "4px 16px 0", padding: "8px 12px", background: T.orangeLt, borderRadius: 8, border: `1px solid ${T.orange}30`, fontSize: 12, color: T.orange }}>
+            🔧 <strong>Modifica:</strong> {r.motivoModifica}
+          </div>
+        )}
+
+        {/* Barra progresso vani */}
+        {vaniList.length > 0 && (
+          <div style={{ padding: "8px 16px" }}>
+            <div style={{ height: 5, background: T.bdr, borderRadius: 3, overflow: "hidden", marginBottom: 4 }}>
+              <div style={{ height: "100%", width: `${progVani}%`, background: progVani === 100 ? T.grn : tipoColRil, borderRadius: 3 }} />
+            </div>
+            {vaniDaFare.filter(v => !v.note?.startsWith("🔴")).length > 0 && <div style={{ fontSize: 11, color: T.red, fontWeight: 600 }}>Mancano misure: {vaniDaFare.filter(v => !v.note?.startsWith("🔴")).map(v => v.nome).join(", ")}</div>}
+            {tutteMis && <div style={{ fontSize: 11, color: T.grn, fontWeight: 600 }}>✅ Tutte le misure raccolte</div>}
+          </div>
+        )}
 
         {/* Info badges */}
         <div style={{ padding: "8px 16px", display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -1217,19 +2451,16 @@ useEffect(()=>{ (()=>{
           {c.foroScale && <span style={S.badge(T.redLt, T.red)}>Foro: {c.foroScale}</span>}
           {c.telefono && <span onClick={() => window.open(`tel:${c.telefono}`)} style={{ ...S.badge(T.grnLt, T.grn), cursor: "pointer" }}>📞 {c.telefono}</span>}
         </div>
-        {/* Note commessa */}
         {c.note && <div style={{ padding: "0 16px", marginBottom: 6 }}><div style={{ padding: "8px 12px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, fontSize: 12, color: T.sub, lineHeight: 1.4 }}>📝 {c.note}</div></div>}
 
         {/* Pipeline */}
         <div style={{ padding: "4px 16px 0" }}>
           <PipelineBar fase={c.fase} />
         </div>
-
-        {/* Advance button */}
         <div style={{ marginTop: 8 }}>{renderFasePanel(c)}</div>
         {faseIndex(c.fase) < PIPELINE.length - 1 && (
           <div style={{ padding: "0 16px", marginTop: 4, marginBottom: 4 }}>
-            <button onClick={() => advanceFase(c.id)} style={{ ...S.btn, background: fase?.color, fontSize: 13, padding: 10, width:"100%" }}>
+            <button onClick={() => advanceFase(c.id)} style={{ ...S.btn, background: fase?.color, fontSize: 13, padding: 10, width: "100%" }}>
               ✓ Avanza a {PIPELINE[faseIndex(c.fase) + 1]?.nome} →
             </button>
           </div>
@@ -1238,9 +2469,9 @@ useEffect(()=>{ (()=>{
         {/* Contact actions */}
         <div style={{ display: "flex", gap: 8, padding: "12px 16px" }}>
           {[
-            { ico: ICO.phone, label: "Chiama", col: T.grn, act: () => window.open(`tel:${c.telefono || "+39000000000"}`) },
-            { ico: ICO.map, label: "Naviga", col: T.blue, act: () => window.open(`https://maps.google.com/?q=${encodeURIComponent(c.indirizzo || "")}`) },
-            { ico: ICO.send, label: "WhatsApp", col: "#25d366", act: () => window.open(`https://wa.me/?text=${encodeURIComponent(`Commessa ${c.code} - ${c.cliente}`)}`) },
+            { ico: ICO.phone, label: "Chiama",   col: T.grn,  act: () => window.open(`tel:${c.telefono || ""}`) },
+            { ico: ICO.map,   label: "Naviga",   col: T.blue, act: () => window.open(`https://maps.google.com/?q=${encodeURIComponent(c.indirizzo || "")}`) },
+            { ico: ICO.send,  label: "WhatsApp", col: "#25d366", act: () => window.open(`https://wa.me/?text=${encodeURIComponent(`Commessa ${c.code} - ${c.cliente}`)}`) },
           ].map((a, i) => (
             <div key={i} onClick={a.act} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "10px 0", background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, cursor: "pointer" }}>
               <Ico d={a.ico} s={18} c={a.col} />
@@ -1249,13 +2480,172 @@ useEffect(()=>{ (()=>{
           ))}
         </div>
 
+        {/* == TAB: vani / info == */}
+        <div style={{ display: "flex", borderBottom: `1px solid ${T.bdr}`, margin: "0 0 0 0" }}>
+          {[{k:"sopralluoghi",l:`🪟 Vani (${vaniList.length})`},{k:"info",l:"ℹ Info rilievo"}].map(t => (
+            <div key={t.k} onClick={() => setCmSubTab(t.k)} style={{
+              flex: 1, padding: "8px 4px", textAlign: "center", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              borderBottom: `2px solid ${cmSubTab === t.k ? T.acc : "transparent"}`,
+              color: cmSubTab === t.k ? T.acc : T.sub
+            }}>{t.l}</div>
+          ))}
+        </div>
+
+        {/* == TAB VANI (lista vani del rilievo) == */}
+        {cmSubTab === "sopralluoghi" && (
+          <div style={{ padding: "0 16px 14px" }}>
+            {vaniList.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "28px 16px" }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>🪟</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>Nessun vano in questo rilievo</div>
+                <div style={{ fontSize: 12, color: T.sub, marginBottom: 18 }}>Aggiungi i vani da misurare</div>
+                <button onClick={() => setShowModal("vano")} style={{ ...S.btn, margin: "0 auto" }}>+ Aggiungi vano</button>
+              </div>
+            ) : vaniList.map(v => {
+              const nMisure = Object.values(v.misure||{}).filter(x=>(x as number)>0).length;
+              const completo = nMisure >= 6;
+              const bloccato = v.note?.startsWith("🔴 BLOCCATO");
+              const colore = bloccato ? T.red : completo ? T.grn : T.orange;
+              return (
+                <div key={v.id} onClick={() => { setSelectedVano(v); setVanoStep(0); }}
+                  style={{ ...S.card, marginBottom: 8, padding: "12px 14px", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 12,
+                    borderLeft: `3px solid ${colore}` }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{v.nome}</span>
+                      {/* Badge rilievo di appartenenza */}
+                      {(() => {
+                        const rIdx = c.rilievi?.findIndex(r => r.vani?.some(vv => vv.id === v.id));
+                        if (rIdx < 0) return null;
+                        const ril = c.rilievi[rIdx];
+                        const questoBloccato = v.note?.startsWith("🔴 BLOCCATO");
+                        const questoIncompleto = !questoBloccato && Object.values(v.misure||{}).filter(x=>(x as number)>0).length > 0 && Object.values(v.misure||{}).filter(x=>(x as number)>0).length < 6;
+                        const haProblema = questoBloccato || questoIncompleto;
+                        return (
+                          <span style={{
+                            fontSize: 9, fontWeight: 800, borderRadius: 6, padding: "1px 6px",
+                            background: haProblema ? T.redLt : T.bg,
+                            color: haProblema ? T.red : T.sub,
+                            border: `1px solid ${haProblema ? T.red+"40" : T.bdr}`
+                          }}>
+                            R{rIdx + 1} · {ril.data || ril.dataRilievo || "—"}
+                            {haProblema && " ⚠"}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <div style={{ fontSize: 11, color: T.sub }}>{v.tipo} · {v.stanza} · {v.piano}</div>
+                    {bloccato && <div style={{ fontSize: 11, color: T.red, marginTop: 2 }}>{v.note?.replace("🔴 BLOCCATO: ","")}</div>}
+                  </div>
+                  <div style={{ textAlign: "right", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+                    {/* Badge pezzi */}
+                    <span style={{ fontSize:12, fontWeight:800, color:"#fff",
+                      background: bloccato ? T.red : completo ? T.grn : T.orange,
+                      borderRadius:8, padding:"2px 8px", minWidth:28, textAlign:"center" }}>
+                      {v.pezzi||1} pz
+                    </span>
+                    {bloccato
+                      ? <span style={S.badge(T.redLt, T.red)}>🔴 Bloccato</span>
+                      : completo
+                      ? <span style={S.badge(T.grnLt, T.grn)}>✅ {nMisure} mis.</span>
+                      : <span style={S.badge(T.orangeLt, T.orange)}>⚠ {nMisure} mis.</span>}
+                  </div>
+                  <span style={{ color: T.sub, fontSize: 14 }}>›</span>
+                </div>
+              );
+            })}
+            {vaniList.length > 0 && (
+              <div onClick={() => setShowModal("vano")}
+                style={{ ...S.card, padding: "11px 14px", marginTop: 6, cursor: "pointer",
+                  border: `1px dashed ${T.bdr}`, background: "transparent",
+                  display: "flex", alignItems: "center", gap: 10, justifyContent: "center" }}>
+                <span style={{ fontSize: 18, color: T.acc }}>+</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: T.acc }}>Aggiungi vano</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* == TAB MISURE (stato per vano) == */}
+        {vaniList.length > 0 && cmSubTab === "misure_tab" && (
+          <div style={{ padding: "14px 16px" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Stato per vano</div>
+            {vaniList.map(v => {
+              const mis = vaniM.includes(v.id);
+              const blk = !mis && ulB(v.id);
+              let daV = null;
+              for (let i = viste.length - 1; i >= 0; i--) {
+                if (viste[i].vaniMisurati?.includes(v.id)) { daV = viste[i]; break; }
+              }
+              return (
+                <div key={v.id} style={{ ...S.card, marginBottom: 8 }}>
+                  <div style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: mis ? T.grnLt : blk ? T.redLt : T.bdr, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+                      {mis ? "✅" : blk ? "🔴" : "⏳"}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700 }}>{v.nome}</div>
+                        <span style={{ fontSize: 10, color: T.sub }}>~{v.mq}m²</span>
+                      </div>
+                      {mis && daV && <div style={{ fontSize: 11, color: T.sub }}>{daV.n}ª visita · {new Date(daV.data + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" })}</div>}
+                      {!mis && blk && <div style={{ fontSize: 11, color: T.red }}>{blk.motivo}{blk.note && <span style={{ color: T.sub }}> — {blk.note}</span>}</div>}
+                      {!mis && !blk && <div style={{ fontSize: 11, color: T.sub }}>Non ancora visitato</div>}
+                    </div>
+                    {!mis && <span style={{ ...S.badge(T.redLt, T.red), flexShrink: 0, fontSize: 9 }}>DA FARE</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* == TAB INFO RILIEVO == */}
+        {cmSubTab === "info" && (
+          <div style={{ padding: "14px 16px" }}>
+            {/* Info rilievo */}
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Dettagli Rilievo</div>
+            {[
+              ["Tipo",       tipoLblRil],
+              ["Data",       r?.data ? new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) : "—"],
+              ["Ora",        r?.ora || "—"],
+              ["Rilevatore", r?.rilevatore || "—"],
+              ["N. vani",    `${vaniList.length} vani`],
+              ["Avanzamento",`${progVani}% (${vaniMisurati.length}/${vaniList.length})`],
+              ...(r?.motivoModifica ? [["Motivo", r.motivoModifica]] : []),
+              ...(r?.note ? [["Note", r.note]] : []),
+            ].map(([k, v]) => (
+              <div key={k} style={{ ...S.card, padding: "11px 14px", marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div style={{ fontSize: 12, color: T.sub, fontWeight: 600, flexShrink: 0 }}>{k}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, textAlign: "right" }}>{v}</div>
+              </div>
+            ))}
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8, marginTop: 16 }}>Commessa</div>
+            {[
+              ["Cliente",   `${c.cliente} ${c.cognome || ""}`],
+              ["Codice",    c.code],
+              ["Indirizzo", c.indirizzo],
+              ["Telefono",  c.telefono || "—"],
+              ["Sistema",   c.sistema || "—"],
+              ...(c.euro ? [["Importo", `€${c.euro.toLocaleString("it-IT")}`]] : []),
+              ["Rilievi",   `${(c.rilievi||[]).length} totali`],
+            ].map(([k, v]) => (
+              <div key={k} style={{ ...S.card, padding: "11px 14px", marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div style={{ fontSize: 12, color: T.sub, fontWeight: 600, flexShrink: 0 }}>{k}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, textAlign: "right" }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* PREVENTIVO + INVIA */}
         <div style={{ padding: "0 16px", marginBottom: 8, display:"flex", gap:8 }}>
           <input ref={fileInputRef} type="file" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const a={id:Date.now(),tipo:"file",nome:f.name,data:new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}),dataUrl:ev.target.result};setCantieri(cs=>cs.map(x=>x.id===selectedCM.id?{...x,allegati:[...(x.allegati||[]),a]}:x));setSelectedCM(p=>({...p,allegati:[...(p.allegati||[]),a]}));};r.readAsDataURL(f);e.target.value="";}}/>
           <input ref={fotoInputRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const a={id:Date.now(),tipo:"foto",nome:f.name,data:new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}),dataUrl:ev.target.result};setCantieri(cs=>cs.map(x=>x.id===selectedCM.id?{...x,allegati:[...(x.allegati||[]),a]}:x));setSelectedCM(p=>({...p,allegati:[...(p.allegati||[]),a]}));};r.readAsDataURL(f);e.target.value="";}}/>
           <button onClick={() => setShowPreventivoModal(true)} style={{ flex:1, padding: "12px", borderRadius: 10, border: "1.5px solid #ff9500", background: c.firmaCliente ? "#fff8ec" : "#fff", color: "#ff9500", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FF, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, position:"relative" }}>
             📄 {c.firmaCliente ? "Preventivo ✅" : "Crea Preventivo"}
-            {(c.vani||[]).some(v=>!v.sistema) && !c.firmaCliente && <span style={{position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",background:"#ff3b30",color:"#fff",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>!</span>}
+            {(vaniList||[]).some(v=>!v.sistema) && !c.firmaCliente && <span style={{position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",background:"#ff3b30",color:"#fff",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>!</span>}
           </button>
           <button onClick={() => setShowSendModal(true)} style={{ flex:1, padding: "12px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #007aff, #0055cc)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FF, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: "0 2px 8px rgba(0,122,255,0.3)" }}>
             <Ico d={ICO.send} s={14} c="#fff" sw={2} /> Invia
@@ -1314,31 +2704,33 @@ useEffect(()=>{ (()=>{
 
         {/* Vani */}
         <div style={S.section}>
-          <div style={S.sectionTitle}>Vani ({c.vani.length})</div>
+          <div style={S.sectionTitle}>Vani R{r?.n} ({vaniList.length})</div>
           <button style={S.sectionBtn} onClick={() => {
               if (!selectedCM) return;
               const tipObj = TIPOLOGIE_RAPIDE[0];
-              const v = { id: Date.now(), nome: `Vano ${(selectedCM.vani?.length||0)+1}`, tipo: "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", difficoltaSalita: "", mezzoSalita: "", misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } };
-              setCantieri(cs => cs.map(c => c.id === selectedCM.id ? { ...c, vani: [...c.vani, v], aggiornato: "Oggi" } : c));
-              setSelectedCM(prev => ({ ...prev, vani: [...prev.vani, v] }));
+              if (!selectedRilievo) return;
+              const v = { id: Date.now(), nome: `Vano ${(selectedRilievo.vani?.length||0)+1}`, tipo: "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", difficoltaSalita: "", mezzoSalita: "", misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } };
+              const updR1 = { ...selectedRilievo, vani: [...(selectedRilievo.vani||[]), v] };
+              setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo.id ? updR1 : r2), aggiornato: "Oggi" } : c));
+              setSelectedRilievo(updR1);
+              setSelectedCM(prev => ({ ...prev, rilievi: prev.rilievi.map(r2 => r2.id === selectedRilievo.id ? updR1 : r2) }));
               setSelectedVano(v);
               setVanoStep(0);
             }}>+ Nuovo vano</button>
         </div>
-        <div style={{ padding: "0 16px", ...((isTablet || isDesktop) && c.vani.length > 0 ? { display: "grid", gridTemplateColumns: isDesktop ? "1fr 1fr 1fr" : "1fr 1fr", gap: 8 } : {}) }}>
-          {c.vani.length === 0 ? (
+        <div style={{ padding: "0 16px", ...((isTablet || isDesktop) && vaniList.length > 0 ? { display: "grid", gridTemplateColumns: isDesktop ? "1fr 1fr 1fr" : "1fr 1fr", gap: 8 } : {}) }}>
+          {vaniList.length === 0 ? (
             <div onClick={() => {
               if (!selectedCM) return;
               const v = { id: Date.now(), nome: `Vano 1`, tipo: "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", difficoltaSalita: "", mezzoSalita: "", misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } };
-              setCantieri(cs => cs.map(c => c.id === selectedCM.id ? { ...c, vani: [...c.vani, v] } : c));
-              setSelectedCM(prev => ({ ...prev, vani: [...prev.vani, v] }));
+              if (selectedRilievo) { const updR2 = { ...selectedRilievo, vani: [...(selectedRilievo.vani||[]), v] }; setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo.id ? updR2 : r2) } : c)); setSelectedRilievo(updR2); setSelectedCM(prev => ({ ...prev, rilievi: prev.rilievi.map(r2 => r2.id === selectedRilievo.id ? updR2 : r2) })); }
               setSelectedVano(v);
               setVanoStep(0);
             }} style={{ padding: "20px", textAlign: "center", background: T.card, borderRadius: T.r, border: `1px dashed ${T.bdr}`, cursor: "pointer", color: T.sub, fontSize: 13 }}>
               Nessun vano. Tocca per aggiungerne uno.
             </div>
-          ) : c.vani.map(v => {
-            const filled = Object.values(v.misure || {}).filter(x => x > 0).length;
+          ) : vaniList.map(v => {
+            const filled = Object.values(v.misure || {}).filter(x => (x as number) > 0).length;
             const total = 8;
             const fotoCount = Object.values(v.foto || {}).filter(Boolean).length;
             return (
@@ -1408,15 +2800,15 @@ useEffect(()=>{ (()=>{
     );
   };
 
-  /* ── RIEPILOGO COMMESSA — SCHERMATA INVIO ── */
+  /* == RIEPILOGO COMMESSA — SCHERMATA INVIO == */
   const [showRiepilogo, setShowRiepilogo] = useState(false);
   const [riepilogoSending, setRiepilogoSending] = useState(false);
 
-  /* ═══════════════════════════════════════════════
+  /* ===============================================
      PANNELLI DI FASE — renderFasePanel(c)
      Appare nella commessa detail, sotto la pipeline
      Un pannello specifico per ogni fase
-  ═══════════════════════════════════════════════ */
+  =============================================== */
   const renderFasePanel = (c) => {
     const fi = faseIndex(c.fase);
     const nextFase = PIPELINE[fi + 1];
@@ -1466,24 +2858,53 @@ useEffect(()=>{ (()=>{
       display:"flex", alignItems:"center", gap:8
     };
 
-    // ─── SOPRALLUOGO ───
+    // Toggle accordion per id fase
+    const isOpen = (id) => fasePanelOpen[id] !== false; // default aperto
+    const togglePanel = (id) => setFasePanelOpen(s => ({...s, [id]: !isOpen(id)}));
+
+    // Wrapper accordion semplice — stessa UI di prima, solo con toggle
+    const FasePanel = ({ id, children, taskNonFatti = 0 }) => (
+      <div style={panelStyle}>
+        <div onClick={() => togglePanel(id)} style={{ ...headerStyle, cursor:"pointer",
+          borderBottom: isOpen(id) ? `1px solid ${fase?.color}25` : "none", userSelect:"none" }}>
+          {/* Contenuto header originale passato come primo child */}
+          <div style={{display:"flex",alignItems:"center",gap:8,flex:1,pointerEvents:"none"}}>
+            {(children as any[])[0]}
+          </div>
+          {/* Badge alert se task non completati */}
+          {taskNonFatti > 0 && (
+            <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6,flexShrink:0}}/>
+          )}
+          <span style={{fontSize:13,color:T.sub,transform:isOpen(id)?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s",flexShrink:0}}>▾</span>
+        </div>
+        {isOpen(id) && (
+          <div style={{padding:"12px 14px"}}>
+            {(children as any[]).slice(1)}
+          </div>
+        )}
+      </div>
+    );
+
+    // === SOPRALLUOGO ===
     if (c.fase === "sopralluogo") {
-      const vaniCompletati = c.vani.filter(v => Object.values(v.misure||{}).filter(x=>x>0).length >= 6).length;
-      const tuttiCompletati = vaniCompletati === c.vani.length && c.vani.length > 0;
+      const vaniAttivi2 = getVaniAttivi(c); const vaniCompletati = vaniAttivi2.filter(v => Object.values(v.misure||{}).filter(x=>(x as number)>0).length >= 6).length;
+      const tuttiCompletati = vaniCompletati === vaniAttivi2.length && vaniAttivi2.length > 0;
+      const ndone = [!c.ck_foto, !c.ck_accesso, !c.ck_riepilogo_inviato, !tuttiCompletati].filter(Boolean).length;
+      const open_sopr = fasePanelOpen["sopralluogo"] !== false;
       return (
         <div style={panelStyle}>
-          <div style={headerStyle}>
+          <div onClick={()=>togglePanel("sopralluogo")} style={{...headerStyle,cursor:"pointer",borderBottom:open_sopr?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
             <span style={{fontSize:16}}>🔍</span>
-            <span style={{fontSize:13,fontWeight:700,color:T.text}}>Sopralluogo</span>
-            <span style={{marginLeft:"auto",fontSize:11,fontWeight:700,color: tuttiCompletati ? T.grn : T.orange}}>
-              {vaniCompletati}/{c.vani.length} vani ✓
-            </span>
+            <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Sopralluogo</span>
+            <span style={{fontSize:11,fontWeight:700,color:tuttiCompletati?T.grn:T.orange,marginRight:4}}>{vaniCompletati}/{vaniAttivi2.length} vani ✓</span>
+            {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
+            <span style={{fontSize:13,color:T.sub,transform:open_sopr?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
           </div>
-          <div style={{padding:"12px 14px"}}>
+          {open_sopr && <div style={{padding:"12px 14px"}}>
             <Chip label="Fotografie scattate" done={c.ck_foto} onClick={()=>updateCM("ck_foto",!c.ck_foto)}/>
             <Chip label="Difficoltà accesso rilevata" done={c.ck_accesso} onClick={()=>updateCM("ck_accesso",!c.ck_accesso)}/>
             <Chip label="Riepilogo inviato al cliente" done={c.ck_riepilogo_inviato} onClick={()=>updateCM("ck_riepilogo_inviato",!c.ck_riepilogo_inviato)}/>
-            <Chip label={`Tutte le misure inserite (${vaniCompletati}/${c.vani.length})`} done={tuttiCompletati} onClick={()=>{}}/>
+            <Chip label={`Tutte le misure inserite (${vaniCompletati}/${vaniAttivi2.length})`} done={tuttiCompletati} onClick={()=>{}}/>
             <Field label="Data sopralluogo" field="dataSopralluogo" type="date"/>
             <Field label="Note sopralluogo" field="noteSopralluogo" placeholder="Annotazioni rapide..."/>
             {tuttiCompletati && (
@@ -1491,14 +2912,14 @@ useEffect(()=>{ (()=>{
                 ✅ Pronto per il preventivo
               </div>
             )}
-          </div>
+          </div>}
         </div>
       );
     }
 
-    // ─── PREVENTIVO ───
+    // === PREVENTIVO ===
     if (c.fase === "preventivo") {
-      const totale = c.vani.reduce((sum, v) => {
+      const vaniCalc = vaniList.length > 0 ? vaniList : getVaniAttivi(c); const totale = vaniCalc.reduce((sum, v) => {
         const m = v.misure||{};
         const lc = (m.lCentro||0)/1000;
         const hc = (m.hCentro||0)/1000;
@@ -1541,7 +2962,7 @@ useEffect(()=>{ (()=>{
       );
     }
 
-    // ─── CONFERMA ───
+    // === CONFERMA ===
     if (c.fase === "conferma") {
       return (
         <div style={panelStyle}>
@@ -1562,97 +2983,128 @@ useEffect(()=>{ (()=>{
       );
     }
 
-    // ─── MISURE ───
+    // === MISURE ===
     if (c.fase === "misure") {
-      const vaniOk = c.vani.filter(v => Object.values(v.misure||{}).filter(x=>x>0).length >= 9).length;
+      const vaniCalc = getVaniAttivi(c);
+      const vaniOk = vaniCalc.filter(v => Object.values(v.misure||{}).filter(x=>(x as number)>0).length >= 9).length;
       return (
-        <div style={panelStyle}>
-          <div style={headerStyle}>
-            <span style={{fontSize:16}}>📐</span>
-            <span style={{fontSize:13,fontWeight:700,color:T.text}}>Rilievo Misure Definitivo</span>
-            <span style={{marginLeft:"auto",fontSize:11,fontWeight:700,color: vaniOk===c.vani.length ? T.grn : T.orange}}>
-              {vaniOk}/{c.vani.length}
-            </span>
-          </div>
-          <div style={{padding:"12px 14px"}}>
-            <Chip label="Tutte le misure verificate" done={c.ck_misure_ok} onClick={()=>updateCM("ck_misure_ok",!c.ck_misure_ok)}/>
-            <Chip label="Diagonali controllate" done={c.ck_diag_ok} onClick={()=>updateCM("ck_diag_ok",!c.ck_diag_ok)}/>
-            <Chip label="Riepilogo PDF inviato a produzione" done={c.ck_pdf_prod} onClick={()=>updateCM("ck_pdf_prod",!c.ck_pdf_prod)}/>
-            <Chip label="Conferma sistema/colori approvata" done={c.ck_sistema_ok} onClick={()=>updateCM("ck_sistema_ok",!c.ck_sistema_ok)}/>
-            <Field label="Tecnico misuratore" field="tecnicoMisure" placeholder="Nome tecnico..."/>
-            <Field label="Data rilievo definitivo" field="dataRilievo" type="date"/>
-          </div>
-        </div>
+        (() => {
+          const ndone = [!c.ck_misure_ok,!c.ck_diag_ok,!c.ck_pdf_prod,!c.ck_sistema_ok].filter(Boolean).length;
+          const open = fasePanelOpen["misure"] !== false;
+          return (
+            <div style={panelStyle}>
+              <div onClick={()=>togglePanel("misure")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
+                <span style={{fontSize:16}}>📐</span>
+                <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Rilievo Misure Definitivo</span>
+                <span style={{fontSize:11,fontWeight:700,color:vaniOk===vaniCalc.length?T.grn:T.orange,marginRight:4}}>{vaniOk}/{vaniCalc.length}</span>
+                {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
+                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+              </div>
+              {open && <div style={{padding:"12px 14px"}}>
+                <Chip label="Tutte le misure verificate" done={c.ck_misure_ok} onClick={()=>updateCM("ck_misure_ok",!c.ck_misure_ok)}/>
+                <Chip label="Diagonali controllate" done={c.ck_diag_ok} onClick={()=>updateCM("ck_diag_ok",!c.ck_diag_ok)}/>
+                <Chip label="Riepilogo PDF inviato a produzione" done={c.ck_pdf_prod} onClick={()=>updateCM("ck_pdf_prod",!c.ck_pdf_prod)}/>
+                <Chip label="Conferma sistema/colori approvata" done={c.ck_sistema_ok} onClick={()=>updateCM("ck_sistema_ok",!c.ck_sistema_ok)}/>
+                <Field label="Tecnico misuratore" field="tecnicoMisure" placeholder="Nome tecnico..."/>
+                <Field label="Data rilievo definitivo" field="dataRilievo" type="date"/>
+              </div>}
+            </div>
+          );
+        })()
       );
     }
 
-    // ─── ORDINI ───
+    // === ORDINI ===
     if (c.fase === "ordini") {
       return (
-        <div style={panelStyle}>
-          <div style={headerStyle}>
-            <span style={{fontSize:16}}>📦</span>
-            <span style={{fontSize:13,fontWeight:700,color:T.text}}>Ordini Fornitore</span>
-          </div>
-          <div style={{padding:"12px 14px"}}>
-            <Field label="Fornitore" field="fornitore" placeholder="Es. Schüco, Rehau..."/>
-            <Field label="N° Ordine fornitore" field="numOrdine" placeholder="ORD-2026-XXXX"/>
-            <Field label="Data ordine" field="dataOrdine" type="date"/>
-            <Field label="Data consegna prevista" field="dataConsegna" type="date"/>
-            <Chip label="Ordine inviato" done={c.ck_ordine_inviato} onClick={()=>updateCM("ck_ordine_inviato",!c.ck_ordine_inviato)}/>
-            <Chip label="Conferma ricezione da fornitore" done={c.ck_ordine_confermato} onClick={()=>updateCM("ck_ordine_confermato",!c.ck_ordine_confermato)}/>
-            <Chip label="Materiale in arrivo comunicato al cliente" done={c.ck_cliente_avvisato} onClick={()=>updateCM("ck_cliente_avvisato",!c.ck_cliente_avvisato)}/>
-          </div>
-        </div>
+        (() => {
+          const ndone = [!c.ck_ordine_inviato,!c.ck_ordine_confermato,!c.ck_cliente_avvisato].filter(Boolean).length;
+          const open = fasePanelOpen["ordini"] !== false;
+          return (
+            <div style={panelStyle}>
+              <div onClick={()=>togglePanel("ordini")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
+                <span style={{fontSize:16}}>📦</span>
+                <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Ordini Fornitore</span>
+                {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
+                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+              </div>
+              {open && <div style={{padding:"12px 14px"}}>
+                <Field label="Fornitore" field="fornitore" placeholder="Es. Schüco, Rehau..."/>
+                <Field label="N° Ordine fornitore" field="numOrdine" placeholder="ORD-2026-XXXX"/>
+                <Field label="Data ordine" field="dataOrdine" type="date"/>
+                <Field label="Data consegna prevista" field="dataConsegna" type="date"/>
+                <Chip label="Ordine inviato" done={c.ck_ordine_inviato} onClick={()=>updateCM("ck_ordine_inviato",!c.ck_ordine_inviato)}/>
+                <Chip label="Conferma ricezione da fornitore" done={c.ck_ordine_confermato} onClick={()=>updateCM("ck_ordine_confermato",!c.ck_ordine_confermato)}/>
+                <Chip label="Materiale in arrivo comunicato al cliente" done={c.ck_cliente_avvisato} onClick={()=>updateCM("ck_cliente_avvisato",!c.ck_cliente_avvisato)}/>
+              </div>}
+            </div>
+          );
+        })()
       );
     }
 
-    // ─── PRODUZIONE ───
+    // === PRODUZIONE ===
     if (c.fase === "produzione") {
       return (
-        <div style={panelStyle}>
-          <div style={headerStyle}>
-            <span style={{fontSize:16}}>🏭</span>
-            <span style={{fontSize:13,fontWeight:700,color:T.text}}>Produzione</span>
-          </div>
-          <div style={{padding:"12px 14px"}}>
-            <Field label="Data consegna in magazzino" field="dataInMagazzino" type="date"/>
-            <Chip label="Materiale ricevuto e controllato" done={c.ck_mat_ricevuto} onClick={()=>updateCM("ck_mat_ricevuto",!c.ck_mat_ricevuto)}/>
-            <Chip label="Colori verificati" done={c.ck_colori_ok} onClick={()=>updateCM("ck_colori_ok",!c.ck_colori_ok)}/>
-            <Chip label="Accessori completi (maniglie, guarnizioni)" done={c.ck_accessori_ok} onClick={()=>updateCM("ck_accessori_ok",!c.ck_accessori_ok)}/>
-            <Chip label="Data posa confermata al cliente" done={c.ck_posa_confermata} onClick={()=>updateCM("ck_posa_confermata",!c.ck_posa_confermata)}/>
-            <Field label="Note magazzino" field="noteMagazzino" placeholder="Anomalie, sostituzioni..."/>
-          </div>
-        </div>
+        (() => {
+          const ndone = [!c.ck_mat_ricevuto,!c.ck_colori_ok,!c.ck_accessori_ok,!c.ck_posa_confermata].filter(Boolean).length;
+          const open = fasePanelOpen["produzione"] !== false;
+          return (
+            <div style={panelStyle}>
+              <div onClick={()=>togglePanel("produzione")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
+                <span style={{fontSize:16}}>🏭</span>
+                <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Produzione</span>
+                {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
+                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+              </div>
+              {open && <div style={{padding:"12px 14px"}}>
+                <Field label="Data consegna in magazzino" field="dataInMagazzino" type="date"/>
+                <Chip label="Materiale ricevuto e controllato" done={c.ck_mat_ricevuto} onClick={()=>updateCM("ck_mat_ricevuto",!c.ck_mat_ricevuto)}/>
+                <Chip label="Colori verificati" done={c.ck_colori_ok} onClick={()=>updateCM("ck_colori_ok",!c.ck_colori_ok)}/>
+                <Chip label="Accessori completi (maniglie, guarnizioni)" done={c.ck_accessori_ok} onClick={()=>updateCM("ck_accessori_ok",!c.ck_accessori_ok)}/>
+                <Chip label="Data posa confermata al cliente" done={c.ck_posa_confermata} onClick={()=>updateCM("ck_posa_confermata",!c.ck_posa_confermata)}/>
+                <Field label="Note magazzino" field="noteMagazzino" placeholder="Anomalie, sostituzioni..."/>
+              </div>}
+            </div>
+          );
+        })()
       );
     }
 
-    // ─── POSA ───
+    // === POSA ===
     if (c.fase === "posa") {
       return (
-        <div style={panelStyle}>
-          <div style={headerStyle}>
-            <span style={{fontSize:16}}>🔧</span>
-            <span style={{fontSize:13,fontWeight:700,color:T.text}}>Posa in Opera</span>
-          </div>
-          <div style={{padding:"12px 14px"}}>
-            <Field label="Data posa effettiva" field="dataPosa" type="date"/>
-            <Field label="Squadra posatori" field="squadraPosa" placeholder="Marco + Luigi..."/>
-            <Chip label="Tutti i vani posati" done={c.ck_posati} onClick={()=>updateCM("ck_posati",!c.ck_posati)}/>
-            <Chip label="Sigillature e finiture completate" done={c.ck_finiture} onClick={()=>updateCM("ck_finiture",!c.ck_finiture)}/>
-            <Chip label="Pulizia cantiere" done={c.ck_pulizia} onClick={()=>updateCM("ck_pulizia",!c.ck_pulizia)}/>
-            <Chip label="Test funzionamento maniglie/chiusure" done={c.ck_test} onClick={()=>updateCM("ck_test",!c.ck_test)}/>
-            <Chip label="Foto lavoro completato scattate" done={c.ck_foto_posa} onClick={()=>updateCM("ck_foto_posa",!c.ck_foto_posa)}/>
-            <Chip label="Cliente presente e soddisfatto" done={c.ck_cliente_ok} onClick={()=>updateCM("ck_cliente_ok",!c.ck_cliente_ok)}/>
-            <Field label="Note posa" field="notePosa" placeholder="Problemi riscontrati, extra..."/>
-          </div>
-        </div>
+        (() => {
+          const ndone = [!c.ck_posati,!c.ck_finiture,!c.ck_pulizia,!c.ck_test,!c.ck_foto_posa,!c.ck_cliente_ok].filter(Boolean).length;
+          const open = fasePanelOpen["posa"] !== false;
+          return (
+            <div style={panelStyle}>
+              <div onClick={()=>togglePanel("posa")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
+                <span style={{fontSize:16}}>🔧</span>
+                <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Posa in Opera</span>
+                {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
+                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+              </div>
+              {open && <div style={{padding:"12px 14px"}}>
+                <Field label="Data posa effettiva" field="dataPosa" type="date"/>
+                <Field label="Squadra posatori" field="squadraPosa" placeholder="Marco + Luigi..."/>
+                <Chip label="Tutti i vani posati" done={c.ck_posati} onClick={()=>updateCM("ck_posati",!c.ck_posati)}/>
+                <Chip label="Sigillature e finiture completate" done={c.ck_finiture} onClick={()=>updateCM("ck_finiture",!c.ck_finiture)}/>
+                <Chip label="Pulizia cantiere" done={c.ck_pulizia} onClick={()=>updateCM("ck_pulizia",!c.ck_pulizia)}/>
+                <Chip label="Test funzionamento maniglie/chiusure" done={c.ck_test} onClick={()=>updateCM("ck_test",!c.ck_test)}/>
+                <Chip label="Foto lavoro completato scattate" done={c.ck_foto_posa} onClick={()=>updateCM("ck_foto_posa",!c.ck_foto_posa)}/>
+                <Chip label="Cliente presente e soddisfatto" done={c.ck_cliente_ok} onClick={()=>updateCM("ck_cliente_ok",!c.ck_cliente_ok)}/>
+                <Field label="Note posa" field="notePosa" placeholder="Problemi riscontrati, extra..."/>
+              </div>}
+            </div>
+          );
+        })()
       );
     }
 
-    // ─── CHIUSURA ───
+    // === CHIUSURA ===
     if (c.fase === "chiusura") {
-      const totale = c.vani.reduce((sum, v) => {
+      const vaniCalc2 = vaniList.length > 0 ? vaniList : getVaniAttivi(c); const totale = vaniCalc2.reduce((sum, v) => {
         const m = v.misure||{};
         const mq = ((m.lCentro||0)/1000) * ((m.hCentro||0)/1000);
         return sum + mq * parseFloat(c.prezzoMq||350);
@@ -1704,8 +3156,8 @@ useEffect(()=>{ (()=>{
     const c = selectedCM;
     if (!c) return null;
     const today = new Date().toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
-    const vaniFilled = c.vani.filter(v=>Object.values(v.misure||{}).filter(x=>x>0).length>=6).length;
-    const fuoriSqN = c.vani.filter(v=>{const d=v.misure?.d1>0&&v.misure?.d2>0?Math.abs(v.misure.d1-v.misure.d2):null;return d>5;}).length;
+    const vaniR = getVaniAttivi(c); const vaniFilled = vaniR.filter(v=>Object.values(v.misure||{}).filter(x=>(x as number)>0).length>=6).length;
+    const fuoriSqN = vaniR.filter(v=>{const d=(v.misure?.d1 as number)>0&&(v.misure?.d2 as number)>0?Math.abs(v.misure.d1-v.misure.d2):null;return (d as number)>5;}).length;
 
     const SEP = "━━━━━━━━━━━━━━━━━━━━━";
     const waMsg = [
@@ -1715,11 +3167,11 @@ useEffect(()=>{ (()=>{
       [c.pianoEdificio, c.mezzoSalita, c.foroScale].filter(Boolean).map((x,i)=>i===0?"🏢 "+x:x).join(" · "),
       c.sistema?"⚙️ "+c.sistema+" · "+(c.tipo==="nuova"?"Nuova costruzione":"Ristrutturazione"):"",
       "",
-      ...c.vani.map((v,i)=>{
+      ...vaniR.map((v,i)=>{
         const m=v.misure||{};
         const tl=TIPOLOGIE_RAPIDE.find(tp=>tp.code===v.tipo)?.label||v.tipo||"—";
         const diff=m.d1>0&&m.d2>0?Math.abs(m.d1-m.d2):null;
-        const fuori=diff!==null&&diff>5;
+        const fuori=diff!==null&&(diff as number)>5;
         const ok=!fuori;
         const lines=[
           SEP,
@@ -1921,7 +3373,7 @@ useEffect(()=>{ (()=>{
             <div style={{fontSize:15,fontWeight:800,color:"white"}}>Riepilogo Sopralluogo</div>
             <div style={{fontSize:10,color:"#64748b"}}>{c.code} · {c.cliente} {c.cognome||""} · {today}</div>
           </div>
-          <div style={{padding:"4px 8px",borderRadius:6,background:vaniFilled===c.vani.length?"#16a34a":"#d97706",fontSize:10,fontWeight:700,color:"white"}}>{vaniFilled}/{c.vani.length} ✓</div>
+          <div style={{padding:"4px 8px",borderRadius:6,background:vaniFilled===vaniR.length?"#16a34a":"#d97706",fontSize:10,fontWeight:700,color:"white"}}>{vaniFilled}/{vaniR.length} ✓</div>
         </div>
 
         <div style={{padding:"10px 12px"}}>
@@ -1940,12 +3392,12 @@ useEffect(()=>{ (()=>{
           </div>
 
           {/* Vani */}
-          {c.vani.map((v,vi)=>{
+          {vaniR.map((v,vi)=>{
             const m=v.misure||{};
             const lc=m.lCentro||0, hc=m.hCentro||0;
             const diff=m.d1>0&&m.d2>0?Math.abs(m.d1-m.d2):null;
-            const fuori=diff!==null&&diff>5;
-            const misN=Object.values(m).filter(x=>x>0).length;
+            const fuori=diff!==null&&(diff as number)>5;
+            const misN=Object.values(m).filter(x=>(x as number)>0).length;
             const tipLabel=TIPOLOGIE_RAPIDE.find(tp=>tp.code===v.tipo)?.label||v.tipo||"—";
             return (
               <div key={v.id} style={{background:"white",borderRadius:10,border:"1.5px solid "+(fuori?"#fca5a5":"#e2e8f0"),marginBottom:10,overflow:"hidden"}}>
@@ -2036,7 +3488,7 @@ useEffect(()=>{ (()=>{
           <div style={{background:"#0f172a",borderRadius:10,padding:"12px 14px",marginBottom:12}}>
             <div style={{fontSize:9,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Sommario</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-              {[["Vani",c.vani.length,"#60a5fa"],["Misure ✓",vaniFilled,"#4ade80"],["⚠ Fuori sq.",fuoriSqN,fuoriSqN>0?"#fbbf24":"#4ade80"]].map(([l,val,col])=>(
+              {[["Vani",vaniR.length,"#60a5fa"],["Misure ✓",vaniFilled,"#4ade80"],["⚠ Fuori sq.",fuoriSqN,fuoriSqN>0?"#fbbf24":"#4ade80"]].map(([l,val,col])=>(
                 <div key={l} style={{textAlign:"center",padding:"8px 4px",background:"rgba(255,255,255,0.05)",borderRadius:8}}>
                   <div style={{fontSize:22,fontWeight:800,color:col,fontFamily:"'DM Mono',monospace"}}>{val}</div>
                   <div style={{fontSize:8,color:"#94a3b8",marginTop:2}}>{l}</div>
@@ -2068,7 +3520,11 @@ useEffect(()=>{ (()=>{
     );
   };
 
-  /* ── VANO DETAIL — WIZARD A STEP ── */
+// =======================================================
+// MASTRO ERP v2 — PARTE 3/5
+// Righe 2639-3594: Vano Detail Wizard completo
+// =======================================================
+  /* == VANO DETAIL — WIZARD A STEP == */
   const STEPS = [
     { id: "larghezze", title: "LARGHEZZE", desc: "Misura la larghezza in 3 punti: alto, centro, basso", color: "#507aff", icon: "📏", fields: ["lAlto", "lCentro", "lBasso"], labels: ["Larghezza ALTO", "Larghezza CENTRO (luce netta)", "Larghezza BASSO"] },
     { id: "altezze", title: "ALTEZZE", desc: "Misura l'altezza in 3 punti: sinistra, centro, destra", color: "#34c759", icon: "📐", fields: ["hSx", "hCentro", "hDx"], labels: ["Altezza SINISTRA", "Altezza CENTRO", "Altezza DESTRA"] },
@@ -2084,7 +3540,7 @@ useEffect(()=>{ (()=>{
     const v = selectedVano;
     const m = v.misure || {};
     const step = STEPS[vanoStep];
-    const filled = Object.values(m).filter(x => x > 0).length;
+    const filled = Object.values(m).filter(x => (x as number) > 0).length;
     const TIPO_TIPS = { Scorrevole: { t: "Scorrevole (alzante/traslante)", dim: "2000 × 2200 mm", w: ["Binario inferiore: serve spazio incasso", "Verifica portata parete"] }, Portafinestra: { t: "Portafinestra standard", dim: "800-900 × 2200 mm", w: ["Soglia a taglio termico", "Verifica altezza architrave"] }, Finestra: { t: "Finestra", dim: "1200 × 1400 mm", w: ["Verifica spazio per anta"] } };
     const tip = TIPO_TIPS[v.tipo] || null;
     const hasWarnings = !m.lAlto && !m.lCentro && !m.lBasso;
@@ -2151,11 +3607,11 @@ useEffect(()=>{ (()=>{
           </div>
         </div>
 
-        {/* ── INFO VANO — fisarmoniche (solo step 0) ── */}
+        {/* == INFO VANO — fisarmoniche (solo step 0) == */}
         {vanoStep === 0 && (() => {
           const updateV = (field, val) => {
             setCantieri(cs => cs.map(c => c.id === selectedCM?.id
-              ? { ...c, vani: c.vani.map(vn => vn.id === v.id ? { ...vn, [field]: val } : vn) } : c));
+              ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, [field]: val } : vn) } : r2) } : c));
             setSelectedVano(prev => ({ ...prev, [field]: val }));
           };
           const cats = ["Finestre","Balconi","Scorrevoli","Persiane","Altro"];
@@ -2217,6 +3673,14 @@ useEffect(()=>{ (()=>{
                   <select style={S.select} value={v.piano||""} onChange={e=>updateV("piano",e.target.value)}>
                     {pianiList.map(p=><option key={p} value={p}>{p==="S2"?"S2 — 2° Seminterrato":p==="S1"?"S1 — Seminterrato":p==="PT"?"PT — Piano Terra":p==="M"?"M — Mansarda":`${p} — ${p.replace("P","")}° Piano`}</option>)}
                   </select>
+                </div>
+                <div style={{width:80}}>
+                  <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>PEZZI</div>
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <div onClick={()=>updateV("pezzi",Math.max(1,(v.pezzi||1)-1))} style={{width:28,height:32,borderRadius:6,background:T.bg,border:`1px solid ${T.bdr}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:16,fontWeight:700,color:T.sub}}>−</div>
+                    <div style={{flex:1,textAlign:"center",fontSize:16,fontWeight:800,color:T.acc}}>{v.pezzi||1}</div>
+                    <div onClick={()=>updateV("pezzi",(v.pezzi||1)+1)} style={{width:28,height:32,borderRadius:6,background:T.bg,border:`1px solid ${T.bdr}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:16,fontWeight:700,color:T.sub}}>+</div>
+                  </div>
                 </div>
               </div>
             },
@@ -2379,7 +3843,7 @@ useEffect(()=>{ (()=>{
             </div>
           )}
 
-          {/* ═══ STEP 0: LARGHEZZE ═══ */}
+          {/* === STEP 0: LARGHEZZE === */}
           {vanoStep === 0 && (
             <>
               {bInput("Larghezza ALTO", "lAlto")}
@@ -2395,7 +3859,7 @@ useEffect(()=>{ (()=>{
             </>
           )}
 
-          {/* ═══ STEP 1: ALTEZZE ═══ */}
+          {/* === STEP 1: ALTEZZE === */}
           {vanoStep === 1 && (
             <>
               {bInput("Altezza SINISTRA", "hSx")}
@@ -2411,7 +3875,7 @@ useEffect(()=>{ (()=>{
             </>
           )}
 
-          {/* ═══ STEP 2: DIAGONALI ═══ */}
+          {/* === STEP 2: DIAGONALI === */}
           {vanoStep === 2 && (
             <>
               {bInput("Diagonale 1 ↗", "d1")}
@@ -2437,7 +3901,7 @@ useEffect(()=>{ (()=>{
             </>
           )}
 
-          {/* ═══ STEP 3: SPALLETTE ═══ */}
+          {/* === STEP 3: SPALLETTE === */}
           {vanoStep === 3 && (
             <>
               {bInput("Spalletta SINISTRA", "spSx")}
@@ -2475,7 +3939,7 @@ useEffect(()=>{ (()=>{
             </>
           )}
 
-          {/* ═══ STEP 4: DAVANZALE ═══ */}
+          {/* === STEP 4: DAVANZALE === */}
           {vanoStep === 4 && (
             <>
               {bInput("Davanzale PROFONDITÀ", "davProf")}
@@ -2485,7 +3949,7 @@ useEffect(()=>{ (()=>{
               <div style={{ marginTop: 8, padding: "12px 16px", borderRadius: 12, border: `1px dashed ${T.bdr}`, display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => {
                 const nv = { ...v, cassonetto: !v.cassonetto };
                 setSelectedVano(nv);
-                setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, vani: c.vani.map(x => x.id === v.id ? nv : x) } : c));
+                if(selectedRilievo){const updR3={...selectedRilievo,vani:selectedRilievo.vani.map(x=>x.id===v.id?nv:x)};setCantieri(cs=>cs.map(c=>c.id===selectedCM?.id?{...c,rilievi:c.rilievi.map(r2=>r2.id===selectedRilievo.id?updR3:r2)}:c));setSelectedRilievo(updR3);}
               }}>
                 <span style={{ fontSize: 12, color: T.sub }}>+</span>
                 <span style={{ fontSize: 14 }}>🧊</span>
@@ -2500,7 +3964,7 @@ useEffect(()=>{ (()=>{
             </>
           )}
 
-          {/* ═══ STEP 5: ACCESSORI ═══ */}
+          {/* === STEP 5: ACCESSORI === */}
           {vanoStep === 5 && (
             <>
               {["tapparella", "persiana", "zanzariera", "cassonetto"].map(acc => {
@@ -2509,7 +3973,7 @@ useEffect(()=>{ (()=>{
                     <div key={acc} onClick={() => {
                       const nv = { ...v, cassonetto: !v.cassonetto };
                       setSelectedVano(nv);
-                      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, vani: c.vani.map(x => x.id === v.id ? nv : x) } : c));
+                      if(selectedRilievo){const updR3={...selectedRilievo,vani:selectedRilievo.vani.map(x=>x.id===v.id?nv:x)};setCantieri(cs=>cs.map(c=>c.id===selectedCM?.id?{...c,rilievi:c.rilievi.map(r2=>r2.id===selectedRilievo.id?updR3:r2)}:c));setSelectedRilievo(updR3);}
                     }} style={{ padding: "14px 16px", borderRadius: 12, border: `1px dashed ${v.cassonetto ? "#ff9500" : T.bdr}`, background: v.cassonetto ? "#fff8e1" : T.card, marginBottom: 8, cursor: "pointer", textAlign: "center" }}>
                       <span style={{ fontSize: 12, color: v.cassonetto ? "#ff9500" : T.sub }}>+ 🧊 {v.cassonetto ? "Cassonetto attivo — tocca per rimuovere" : "Aggiungi Cassonetto"}</span>
                     </div>
@@ -2578,7 +4042,7 @@ useEffect(()=>{ (()=>{
             </>
           )}
 
-          {/* ═══ STEP 6: DISEGNO + FOTO + NOTE ═══ */}
+          {/* === STEP 6: DISEGNO + FOTO + NOTE === */}
           {vanoStep === 6 && (
             <>
               {/* Disegno mano libera */}
@@ -2633,7 +4097,7 @@ useEffect(()=>{ (()=>{
                       r.onload = ev => {
                         const key = "foto_" + Date.now() + "_" + file.name;
                         const fotoObj = { dataUrl: ev.target.result, nome: file.name, tipo: "foto", categoria: cat || null };
-                        setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, vani: c.vani.map(vn => vn.id === v.id ? { ...vn, foto: { ...(vn.foto||{}), [key]: fotoObj } } : vn) } : c));
+                        setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: { ...(vn.foto||{}), [key]: fotoObj } } : vn) } : r2) } : c));
                         setSelectedVano(prev => ({ ...prev, foto: { ...(prev.foto||{}), [key]: fotoObj } }));
                       };
                       r.readAsDataURL(file);
@@ -2645,7 +4109,7 @@ useEffect(()=>{ (()=>{
                   onChange={e => {
                     const file = e.target.files?.[0]; if (!file) return;
                     const key = "video_" + Date.now();
-                    setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, vani: c.vani.map(vn => vn.id === v.id ? { ...vn, foto: { ...(vn.foto||{}), [key]: { nome: file.name, tipo: "video" } } } : vn) } : c));
+                    setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: { ...(vn.foto||{}), [key]: { nome: file.name, tipo: "video" } } } : vn) } : r2) } : c));
                     setSelectedVano(prev => ({ ...prev, foto: { ...(prev.foto||{}), [key]: { nome: file.name, tipo: "video" } } }));
                     e.target.value = "";
                   }}/>
@@ -2681,7 +4145,7 @@ useEffect(()=>{ (()=>{
                           {f.categoria && <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,0.6)",color:"#fff",fontSize:7,fontWeight:700,padding:"2px 3px",textAlign:"center",lineHeight:1.2}}>{f.categoria}</div>}
                           <div onClick={() => {
                             const newFoto = { ...(v.foto||{}) }; delete newFoto[k];
-                            setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, vani: c.vani.map(vn => vn.id === v.id ? { ...vn, foto: newFoto } : vn) } : c));
+                            setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: newFoto } : vn) } : r2) } : c));
                             setSelectedVano(prev => ({ ...prev, foto: newFoto }));
                           }} style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%", background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>✕</div>
                         </div>
@@ -2698,7 +4162,7 @@ useEffect(()=>{ (()=>{
             </>
           )}
 
-          {/* ═══ STEP 7: RIEPILOGO ═══ */}
+          {/* === STEP 7: RIEPILOGO === */}
           {vanoStep === 7 && (
             <>
               <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 16, marginBottom: 12 }}>
@@ -2769,7 +4233,7 @@ useEffect(()=>{ (()=>{
             </>
           )}
 
-          {/* ═══ NAV BUTTONS ═══ */}
+          {/* === NAV BUTTONS === */}
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             {vanoStep > 0 && (
               <button onClick={() => setVanoStep(s => s - 1)} style={{ flex: 1, padding: "14px", borderRadius: 12, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: FF, color: T.text }}>← Indietro</button>
@@ -2782,7 +4246,7 @@ useEffect(()=>{ (()=>{
             )}
           </div>
 
-          {/* ═══ RIEPILOGO RAPIDO ═══ */}
+          {/* === RIEPILOGO RAPIDO === */}
           <div style={{ marginTop: 12, padding: "8px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Riepilogo rapido</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -2804,13 +4268,7 @@ useEffect(()=>{ (()=>{
     );
   };
 
-  /* ── AGENDA TAB — Giorno / Settimana / Mese ── */
-
-  /* ── CHAT / AI TAB ── */
-
-  /* ── SETTINGS TAB ── */
-
-  /* ── AGENDA TAB — Giorno / Settimana / Mese ── */
+  /* == AGENDA TAB — Giorno / Settimana / Mese == */
   const renderAgenda = () => {
     const dateStr = (d) => d.toISOString().split("T")[0];
     const dayEvents = events.filter(e => e.date === dateStr(selDate)).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
@@ -2821,6 +4279,16 @@ useEffect(()=>{ (()=>{
     const isSameDay = (a, b) => dateStr(a) === dateStr(b);
     const isToday2 = (d) => isSameDay(d, new Date());
     const eventsOn = (d) => events.filter(e => e.date === dateStr(d));
+  // Helper: colore per tipo evento
+  const tipoEvColor = (tipo) => {
+    if (tipo === "appuntamento") return "#007aff";
+    if (tipo === "sopr_riparazione") return "#FF6B00";
+    if (tipo === "riparazione") return "#FF3B30";
+    if (tipo === "collaudo") return "#5856D6";
+    if (tipo === "garanzia") return "#8E8E93";
+    return "#ff9500"; // sopralluogo default
+  };
+
 
     const navDate = (dir) => {
       const d = new Date(selDate);
@@ -2829,6 +4297,30 @@ useEffect(()=>{ (()=>{
       else d.setMonth(d.getMonth() + dir);
       setSelDate(d);
     };
+
+    // Swipe handlers
+    let touchStartX = 0;
+    const onTouchStart = (e) => { touchStartX = e.touches[0].clientX; };
+    const onTouchEnd = (e) => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 50) navDate(dx < 0 ? 1 : -1);
+    };
+
+    // Prossimi eventi (dal giorno di oggi in avanti, max 3)
+    const todayStr = dateStr(new Date());
+    const prossimiEventi = events
+      .filter(e => e.date >= todayStr)
+      .sort((a, b) => a.date.localeCompare(b.date) || (a.time||"99").localeCompare(b.time||"99"))
+      .slice(0, 3);
+
+    // Ore rimanenti agli eventi di oggi
+    const now = new Date();
+    const oraOra = now.getHours() * 60 + now.getMinutes();
+    const eventiOggi = events.filter(e => e.date === todayStr && e.time).map(e => {
+      const [hh, mm] = e.time.split(":").map(Number);
+      const minuti = hh * 60 + mm - oraOra;
+      return { ...e, minutiAlEvento: minuti };
+    }).filter(e => e.minutiAlEvento > 0).sort((a,b) => a.minutiAlEvento - b.minutiAlEvento);
 
     const renderEventCard = (ev) => (
       <div key={ev.id} style={{ ...S.card, margin: "0 0 8px" }} onClick={() => setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)}>
@@ -2841,7 +4333,8 @@ useEffect(()=>{ (()=>{
             <div style={{ display: "flex", gap: 4, marginTop: 3, flexWrap: "wrap" }}>
               {ev.cm && <span onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); } }} style={{ ...S.badge(T.accLt, T.acc), cursor: "pointer" }}>{ev.cm}</span>}
               {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>{ev.persona}</span>}
-              <span style={S.badge(ev.tipo === "appuntamento" ? T.blueLt : T.orangeLt, ev.tipo === "appuntamento" ? T.blue : T.orange)}>{ev.tipo}</span>
+              {ev.reminder && <span style={S.badge(ev.reminderSent ? T.grnLt : "#FF950015", ev.reminderSent ? T.grn : "#FF9500")}>{ev.reminderSent ? "✓ Reminder inviato" : `⏰ ${ev.reminder}`}</span>}
+              <span style={S.badge(ev.tipo==="appuntamento"?T.blueLt:ev.tipo==="sopr_riparazione"?"#FF6B0018":ev.tipo==="riparazione"?"#FF3B3018":ev.tipo==="collaudo"?"#5856D618":"#8E8E9318", ev.tipo==="appuntamento"?T.blue:ev.tipo==="sopr_riparazione"?"#FF6B00":ev.tipo==="riparazione"?"#FF3B30":ev.tipo==="collaudo"?"#5856D6":ev.tipo==="garanzia"?"#8E8E93":T.orange)}>{ev.tipo}</span>
             </div>
           </div>
           <div style={{ alignSelf: "center", transition: "transform 0.2s", transform: selectedEvent?.id === ev.id ? "rotate(90deg)" : "rotate(0deg)" }}>
@@ -2878,7 +4371,29 @@ useEffect(()=>{ (()=>{
             <div style={{ display: "flex", gap: 6 }}>
               <div onClick={(e) => { e.stopPropagation(); if (ev.addr) window.open("https://maps.google.com/?q=" + encodeURIComponent(ev.addr)); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.blue }}>🗺 Mappa</div>
               <div onClick={(e) => { e.stopPropagation(); if (ev.persona) window.open("tel:"); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.grn }}>📞 Chiama</div>
-              <div onClick={(e) => { e.stopPropagation(); deleteEvent(ev.id); setSelectedEvent(null); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.redLt, border: `1px solid ${T.red}30`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.red }}>🗑 Elimina</div>
+              <div onClick={(e) => {
+                e.stopPropagation();
+                const cmObj = cantieri.find(c => c.code === ev.cm) || null;
+                const cliente = cmObj ? `${cmObj.cliente} ${cmObj.cognome||""}`.trim() : (ev.persona || "Cliente");
+                const dataFmt = new Date(ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" });
+                const tpl = `Gentile ${cliente},
+
+Le confermo l'appuntamento:
+
+📅 ${dataFmt}${ev.time ? " alle " + ev.time : ""}
+📍 ${ev.addr || "da concordare"}
+
+${ev.text}
+
+Per qualsiasi necessità non esiti a contattarmi.
+
+Cordiali saluti,
+Fabio Cozza
+Walter Cozza Serramenti`;
+                setMailBody(tpl);
+                setShowMailModal({ ev, cm: cmObj });
+              }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.accLt, border: `1px solid ${T.acc}30`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.acc }}>✉️ Mail</div>
+              <div onClick={(e) => { e.stopPropagation(); deleteEvent(ev.id); setSelectedEvent(null); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.redLt, border: `1px solid ${T.red}30`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.red }}>🗑</div>
             </div>
           </div>
         )}
@@ -2915,30 +4430,234 @@ useEffect(()=>{ (()=>{
           <div onClick={() => navDate(1)} style={{ cursor: "pointer", padding: "4px 8px", transform: "rotate(180deg)" }}><Ico d={ICO.back} s={18} c={T.sub} /></div>
         </div>
 
+        {/* === BANNER REMINDER PENDENTI === */}
+        {(() => {
+          const today = dateStr(new Date());
+          const tomorrow = dateStr(new Date(Date.now() + 86400000));
+          const reminderPendenti = events.filter(ev => {
+            if (!ev.reminder || ev.reminderSent) return false;
+            if (ev.reminder === "giorno" && ev.date === today) return true;
+            if (ev.reminder === "24h" && ev.date === tomorrow) return true;
+            if (ev.reminder === "1h") {
+              if (ev.date !== today) return false;
+              if (!ev.time) return true;
+              const [hh, mm] = ev.time.split(":").map(Number);
+              const evMin = hh * 60 + mm;
+              const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+              return evMin - nowMin <= 60 && evMin - nowMin > 0;
+            }
+            return false;
+          });
+          if (reminderPendenti.length === 0) return null;
+          return (
+            <div style={{ margin: "0 16px 10px", padding: "10px 12px", borderRadius: 10, background: "#FF950010", border: "1px solid #FF950040", borderLeft: "3px solid #FF9500" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 18 }}>⏰</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#FF9500" }}>
+                    {reminderPendenti.length} reminder da inviare
+                  </div>
+                  <div style={{ fontSize: 10, color: T.sub }}>Avvisa i clienti con 1 click</div>
+                </div>
+              </div>
+              {reminderPendenti.map(ev => {
+                const cmObj = cantieri.find(c => c.code === ev.cm);
+                const cliente = cmObj ? `${cmObj.cliente} ${cmObj.cognome||""}`.trim() : ev.persona || "Cliente";
+                const dataFmt = new Date(ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" });
+                const tpl = `Gentile ${cliente},
+
+Le ricordiamo l'appuntamento:
+
+📅 ${dataFmt}${ev.time ? " alle " + ev.time : ""}
+📍 ${ev.addr || "da concordare"}
+
+${ev.text}
+
+Per qualsiasi necessità non esiti a contattarci.
+
+Cordiali saluti,
+Fabio Cozza
+Walter Cozza Serramenti`;
+                return (
+                  <div key={ev.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 8px", background:"#fff", borderRadius:8, marginBottom:4, border:"1px solid #FF950030" }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{ev.text}</div>
+                      <div style={{ fontSize:10, color:T.sub }}>{cliente} · {ev.time || "tutto il giorno"}</div>
+                    </div>
+                    <div onClick={() => {
+                      setMailBody(tpl);
+                      setShowMailModal({ ev: { ...ev, addr: ev.addr || "" }, cm: cmObj || null });
+                      setEvents(es => es.map(x => x.id === ev.id ? { ...x, reminderSent: true } : x));
+                    }} style={{ padding:"5px 10px", borderRadius:7, background:"#FF9500", color:"#fff", fontSize:11, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap" }}>
+                      ✉️ Invia
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
         <div style={{ padding: "0 16px" }}>
 
-          {/* ═══ VISTA MESE ═══ */}
+          {/* === VISTA MESE === */}
           {agendaView === "mese" && (
             <>
-              <div style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: 12, marginBottom: 12 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, textAlign: "center" }}>
-                  {["L", "M", "M", "G", "V", "S", "D"].map((d, i) => (
-                    <div key={i} style={{ fontSize: 10, fontWeight: 600, color: T.sub, padding: "4px 0" }}>{d}</div>
+              {/* Banner prossimo evento di oggi */}
+              {eventiOggi.length > 0 && (
+                <div style={{ ...S.card, marginBottom: 10, padding: "10px 14px", borderLeft: `3px solid ${eventiOggi[0].color || tipoEvColor(eventiOggi[0].tipo)}`, display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, color: T.sub, fontWeight: 600 }}>
+                      Prossimo evento tra {eventiOggi[0].minutiAlEvento < 60
+                        ? `${eventiOggi[0].minutiAlEvento} min`
+                        : `${Math.floor(eventiOggi[0].minutiAlEvento/60)}h ${eventiOggi[0].minutiAlEvento%60>0?eventiOggi[0].minutiAlEvento%60+"min":""}`}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>{eventiOggi[0].text}</div>
+                    {eventiOggi[0].addr && <div style={{ fontSize: 11, color: T.sub }}>📍 {eventiOggi[0].addr}</div>}
+                  </div>
+                  {eventiOggi[0].addr && (
+                    <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(eventiOggi[0].addr))}
+                      style={{ padding: "6px 10px", borderRadius: 8, background: T.blueLt, color: T.blue, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      🗺 Naviga
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* GRIGLIA MENSILE A RIQUADRI */}
+              <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
+                style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, overflow: "hidden", marginBottom: 12 }}>
+                {/* Intestazione giorni */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: `1px solid ${T.bdr}` }}>
+                  {["Lun","Mar","Mer","Gio","Ven","Sab","Dom"].map((d, i) => (
+                    <div key={i} style={{ fontSize: 10, fontWeight: 700, color: T.sub, padding: "7px 4px", textAlign: "center", borderRight: i < 6 ? `1px solid ${T.bdr}` : "none" }}>{d}</div>
                   ))}
+                </div>
+                {/* Celle mese */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
                   {monthDays.map((d, i) => {
                     const inMonth = d.getMonth() === selDate.getMonth();
                     const sel = isSameDay(d, selDate);
                     const tod = isToday2(d);
-                    const hasEv = eventsOn(d).length > 0;
+                    const evs = eventsOn(d);
+                    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                    const isExp = expandedDay === dateStr(d);
+                    const col = Math.floor(i % 7);
                     return (
-                      <div key={i} onClick={() => setSelDate(new Date(d))} style={{ padding: "6px 2px", borderRadius: 8, fontSize: 12, fontWeight: sel || tod ? 700 : 400, background: sel ? T.acc : tod ? T.accLt : "transparent", color: sel ? "#fff" : !inMonth ? T.sub2 : T.text, cursor: "pointer", position: "relative" }}>
-                        {d.getDate()}
-                        {hasEv && <div style={{ width: 4, height: 4, borderRadius: "50%", background: sel ? "#fff" : T.red, margin: "1px auto 0" }} />}
+                      <div key={i}
+                        onClick={() => { setSelDate(new Date(d)); setExpandedDay(isExp ? null : dateStr(d)); }}
+                        onDoubleClick={() => { setSelDate(new Date(d)); setNewEvent(prev => ({...prev, date: dateStr(d)})); setShowNewEvent(true); }}
+                        style={{
+                        minHeight: 72, padding: "5px 6px",
+                        borderRight: col < 6 ? `1px solid ${T.bdr}` : "none",
+                        borderBottom: `1px solid ${T.bdr}`,
+                        background: sel ? T.acc + "18" : isExp ? T.accLt : isWeekend && inMonth ? T.bg : T.card,
+                        cursor: "pointer", position: "relative",
+                        outline: sel ? `2px solid ${T.acc}` : isExp ? `1.5px solid ${T.acc}50` : "none",
+                        outlineOffset: -1,
+                      }}>
+                        {/* Numero giorno */}
+                        <div style={{
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          width: 22, height: 22, borderRadius: "50%", fontSize: 12, fontWeight: sel || tod ? 800 : 400,
+                          background: tod ? T.acc : "transparent",
+                          color: tod ? "#fff" : !inMonth ? T.sub2 : sel ? T.acc : T.text,
+                          marginBottom: 3,
+                        }}>{d.getDate()}</div>
+                        {/* Eventi (max 3 visibili) */}
+                        {evs.slice(0, 3).map((ev, ei) => (
+                          <div key={ev.id} onClick={(e) => { e.stopPropagation(); setSelectedEvent(ev); setSelDate(new Date(d)); }} style={{
+                            display: "flex", alignItems: "center", gap: 3, marginBottom: 1,
+                            padding: "1px 4px", borderRadius: 3, fontSize: 10, fontWeight: 600,
+                            background: (ev.color || tipoEvColor(ev.tipo)) + "20",
+                            borderLeft: `2px solid ${ev.color || tipoEvColor(ev.tipo)}`,
+                            overflow: "hidden", whiteSpace: "nowrap",
+                          }}>
+                            <span style={{ color: ev.color || tipoEvColor(ev.tipo), overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
+                              {ev.time ? ev.time.slice(0,5) + " " : ""}{ev.text}
+                            </span>
+                          </div>
+                        ))}
+                        {evs.length > 3 && (
+                          <div style={{ fontSize: 9, color: T.sub, fontWeight: 600 }}>+{evs.length - 3} altri</div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               </div>
+              {/* Sezione prossimi eventi */}
+              {prossimiEventi.length > 0 && (
+                <div style={{ ...S.card, marginBottom: 10, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Prossimi eventi</div>
+                  {prossimiEventi.map((ev, i) => {
+                    const evDate = new Date(ev.date + "T12:00:00");
+                    const isEvToday = ev.date === todayStr;
+                    const isEvTomorrow = ev.date === dateStr(new Date(Date.now() + 86400000));
+                    const labelData = isEvToday ? "Oggi" : isEvTomorrow ? "Domani" : evDate.toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" });
+                    return (
+                      <div key={ev.id} onClick={() => { setSelDate(evDate); setSelectedEvent(ev); }}
+                        style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: i < prossimiEventi.length-1 ? `1px solid ${T.bdr}` : "none", cursor: "pointer", alignItems: "center" }}>
+                        <div style={{ width: 3, alignSelf: "stretch", borderRadius: 2, background: ev.color || tipoEvColor(ev.tipo), flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600 }}>{ev.text}</div>
+                          <div style={{ display: "flex", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
+                            {ev.cm && <span style={S.badge(T.accLt, T.acc)}>{ev.cm}</span>}
+                            {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {ev.persona}</span>}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: isEvToday ? T.acc : T.sub }}>{labelData}</div>
+                          {ev.time && <div style={{ fontSize: 11, color: T.sub }}>{ev.time}</div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Pannello evento selezionato (click su evento nella griglia) */}
+              {selectedEvent && isSameDay(new Date(selectedEvent.date), selDate) && (
+                <div style={{ ...S.card, padding: "12px 14px", marginBottom: 8, borderLeft: `3px solid ${selectedEvent.color || T.acc}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{selectedEvent.text}</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {selectedEvent.time && <span style={S.badge(T.bg, T.sub)}>🕐 {selectedEvent.time}</span>}
+                        {selectedEvent.cm && <span style={S.badge(T.accLt, T.acc)}>{selectedEvent.cm}</span>}
+                        {selectedEvent.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {selectedEvent.persona}</span>}
+                        {selectedEvent.addr && <span style={S.badge(T.grnLt, T.grn)}>📍 {selectedEvent.addr}</span>}
+                      </div>
+                    </div>
+                    <div onClick={() => setSelectedEvent(null)} style={{ padding: 4, cursor: "pointer", color: T.sub, fontSize: 16 }}>×</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                    {selectedEvent.addr && <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(selectedEvent.addr))} style={{ flex:1, padding:"6px", borderRadius:6, background:T.blueLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.blue }}>🗺 Mappa</div>}
+                    <div onClick={() => {
+                      const ev = selectedEvent;
+                      const cmObj = cantieri.find(c => c.code === ev.cm) || null;
+                      const cliente = cmObj ? `${cmObj.cliente} ${cmObj.cognome||""}`.trim() : (ev.persona || "Cliente");
+                      const dataFmt = new Date(ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" });
+                      const tpl = `Gentile ${cliente},
+
+Le confermo l'appuntamento:
+
+📅 ${dataFmt}${ev.time ? " alle " + ev.time : ""}
+📍 ${ev.addr || "da concordare"}
+
+${ev.text}
+
+Per qualsiasi necessità non esiti a contattarmi.
+
+Cordiali saluti,
+Fabio Cozza
+Walter Cozza Serramenti`;
+                      setMailBody(tpl);
+                      setShowMailModal({ ev, cm: cmObj });
+                    }} style={{ flex:1, padding:"6px", borderRadius:6, background:T.accLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.acc }}>✉️ Mail</div>
+                    <div onClick={() => deleteEvent(selectedEvent.id)} style={{ flex:1, padding:"6px", borderRadius:6, background:T.redLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.red }}>🗑 Elimina</div>
+                  </div>
+                </div>
+              )}
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
                 {selDate.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}
               </div>
@@ -2948,7 +4667,7 @@ useEffect(()=>{ (()=>{
             </>
           )}
 
-          {/* ═══ VISTA SETTIMANA ═══ */}
+          {/* === VISTA SETTIMANA === */}
           {agendaView === "settimana" && (
             <>
               <div style={{ display: "flex", gap: 2, marginBottom: 12 }}>
@@ -2976,12 +4695,12 @@ useEffect(()=>{ (()=>{
             </>
           )}
 
-          {/* ═══ VISTA GIORNO ═══ */}
+          {/* === VISTA GIORNO === */}
           {agendaView === "giorno" && (
             <>
-              {/* Timeline ore */}
-              <div style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, overflow: "hidden", marginBottom: 12 }}>
-                {Array.from({ length: 12 }, (_, i) => i + 7).map(h => {
+              {/* Timeline ore — scrollabile con dito */}
+              <div style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, overflowY: "auto", overflowX: "hidden", marginBottom: 12, maxHeight: "60vh" } as any}>
+                {Array.from({ length: 15 }, (_, i) => i + 6).map(h => {
                   const hour = `${String(h).padStart(2, "0")}:00`;
                   const hourEvents = dayEvents.filter(e => e.time && e.time.startsWith(String(h).padStart(2, "0")));
                   return (
@@ -3000,7 +4719,7 @@ useEffect(()=>{ (()=>{
                                   {ev.addr && <div style={{ fontSize: 11, color: T.text }}>📍 {ev.addr}</div>}
                                   {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {ev.persona}</span>}
                                   {ev.cm && <span onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); } }} style={{ ...S.badge(T.accLt, T.acc), cursor: "pointer" }}>📁 {ev.cm}</span>}
-                                  <span style={S.badge(ev.tipo === "appuntamento" ? T.blueLt : T.orangeLt, ev.tipo === "appuntamento" ? T.blue : T.orange)}>{ev.tipo}</span>
+                                  <span style={S.badge(ev.tipo==="appuntamento"?T.blueLt:ev.tipo==="sopr_riparazione"?"#FF6B0018":ev.tipo==="riparazione"?"#FF3B3018":ev.tipo==="collaudo"?"#5856D618":"#8E8E9318", ev.tipo==="appuntamento"?T.blue:ev.tipo==="sopr_riparazione"?"#FF6B00":ev.tipo==="riparazione"?"#FF3B30":ev.tipo==="collaudo"?"#5856D6":ev.tipo==="garanzia"?"#8E8E93":T.orange)}>{ev.tipo}</span>
                                 </div>
                                 <div style={{ display: "flex", gap: 4 }}>
                                   {ev.addr && <div onClick={(e) => { e.stopPropagation(); window.open("https://maps.google.com/?q=" + encodeURIComponent(ev.addr)); }} style={{ flex: 1, padding: "6px", borderRadius: 6, background: T.blueLt, textAlign: "center", cursor: "pointer", fontSize: 10, fontWeight: 600, color: T.blue }}>🗺 Mappa</div>}
@@ -3030,7 +4749,11 @@ useEffect(()=>{ (()=>{
     );
   };
 
-  /* ── CHAT / AI TAB ── */
+// =======================================================
+// MASTRO ERP v2 — PARTE 4/5
+// Righe 3595-4130: Agenda (Giorno/Settimana/Mese), Chat AI, Settings
+// =======================================================
+  /* == CHAT / AI TAB == */
   const renderMessaggi = () => {
     const chIco = { email: "📧", whatsapp: "💬", sms: "📱", telegram: "✈️" };
     const chCol = { email: T.blue, whatsapp: "#25d366", sms: T.orange, telegram: "#0088cc" };
@@ -3060,16 +4783,21 @@ useEffect(()=>{ (()=>{
           </div>
         </div>
 
-        {/* Sub-tabs: Chat / Rubrica */}
+        {/* Sub-tabs: Chat / Rubrica / AI */}
         <div style={{ display: "flex", margin: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, overflow: "hidden" }}>
-          {[{ id: "chat", l: "💬 Chat", count: unread }, { id: "rubrica", l: "📒 Rubrica", count: contatti.length + team.length }].map(st => (
-            <div key={st.id} onClick={() => setMsgSubTab(st.id)} style={{ flex: 1, padding: "10px 0", textAlign: "center", fontSize: 13, fontWeight: 700, cursor: "pointer", background: msgSubTab === st.id ? T.acc : T.card, color: msgSubTab === st.id ? "#fff" : T.sub, transition: "all 0.2s" }}>
-              {st.l} {st.count > 0 && msgSubTab !== st.id && <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 5px", borderRadius: 8, background: st.id === "chat" && unread > 0 ? T.red : T.bdr, color: st.id === "chat" && unread > 0 ? "#fff" : T.sub, marginLeft: 4 }}>{st.count}</span>}
+          {[
+            { id: "chat", l: "💬 Chat", count: unread },
+            { id: "ai", l: "🤖 AI Inbox", count: aiInbox.filter(m => !m.read).length },
+            { id: "rubrica", l: "📒 Rubrica", count: 0 }
+          ].map(st => (
+            <div key={st.id} onClick={() => setMsgSubTab(st.id)} style={{ flex: 1, padding: "10px 4px", textAlign: "center", fontSize: 12, fontWeight: 700, cursor: "pointer", background: msgSubTab === st.id ? T.acc : T.card, color: msgSubTab === st.id ? "#fff" : T.sub, transition: "all 0.2s", position: "relative" }}>
+              {st.l}
+              {st.count > 0 && <span style={{ marginLeft: 4, fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 8, background: msgSubTab === st.id ? "rgba(255,255,255,0.3)" : T.red, color: "#fff" }}>{st.count}</span>}
             </div>
           ))}
         </div>
 
-        {/* ── CHAT TAB ── */}
+        {/* == CHAT TAB == */}
         {msgSubTab === "chat" && (<>
           <div style={{ padding: "4px 16px 8px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
@@ -3122,7 +4850,125 @@ useEffect(()=>{ (()=>{
           </div>
         </>)}
 
-        {/* ── RUBRICA TAB ── */}
+        {/* == AI INBOX TAB == */}
+        {msgSubTab === "ai" && (<>
+          {/* Header spiegazione */}
+          <div style={{ margin: "0 16px 10px", padding: "10px 12px", borderRadius: 10, background: "linear-gradient(135deg, #1A1A1C, #2A2008)", border: `1px solid ${T.acc}30`, display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 22 }}>🤖</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>AI classifica le tue email</div>
+              <div style={{ fontSize: 10, color: "#888", marginTop: 1 }}>Collegata al tuo indirizzo mail — suggerisce dove archiviare ogni messaggio</div>
+            </div>
+          </div>
+
+          {/* Lista email classificate */}
+          <div style={{ padding: "0 16px" }}>
+            {aiInbox.map(m => {
+              const isSelected = selectedAiMsg?.id === m.id;
+              return (
+                <div key={m.id} style={{ ...S.card, marginBottom: 8, padding: 0, overflow: "hidden", opacity: m.archiviata ? 0.5 : 1 }}>
+                  {/* Header messaggio */}
+                  <div onClick={() => setSelectedAiMsg(isSelected ? null : m)}
+                    style={{ padding: "11px 13px", display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer", background: m.read ? T.card : T.acc + "06" }}>
+                    {/* Avatar */}
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: m.ai.color + "20", border: `2px solid ${m.ai.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: m.ai.color, flexShrink: 0 }}>
+                      {m.from.charAt(0)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 4 }}>
+                        <div style={{ fontSize: 12, fontWeight: m.read ? 500 : 700, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{m.from}</div>
+                        <div style={{ fontSize: 10, color: T.sub, flexShrink: 0 }}>{m.time}</div>
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: m.read ? 400 : 600, color: T.text, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.subject}</div>
+                      {/* Badge AI */}
+                      <div style={{ display: "flex", gap: 4, marginTop: 4, alignItems: "center", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 8, background: m.ai.color + "18", color: m.ai.color, border: `1px solid ${m.ai.color}30` }}>
+                          {m.ai.emoji} {m.ai.label}
+                        </span>
+                        <span style={{ fontSize: 9, fontWeight: 700, color: T.sub }}>
+                          🤖 {m.ai.confidenza}% sicuro
+                        </span>
+                        {m.ai.cmSuggerita && <span style={{ ...S.badge(T.accLt, T.acc) }}>{m.ai.cmSuggerita}</span>}
+                        {m.archiviata && <span style={{ fontSize: 9, fontWeight: 700, color: T.grn }}>✓ Archiviata</span>}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 13, color: T.sub, transform: isSelected ? "rotate(90deg)" : "rotate(0)", transition: "transform 0.2s", flexShrink: 0, marginTop: 2 }}>›</span>
+                  </div>
+
+                  {/* Dettaglio espanso */}
+                  {isSelected && (
+                    <div style={{ borderTop: `1px solid ${T.bdr}`, padding: "12px 13px" }}>
+                      {/* Testo email */}
+                      <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.6, marginBottom: 10, padding: "8px 10px", background: T.bg, borderRadius: 8 }}>
+                        {m.body}
+                      </div>
+
+                      {/* Analisi AI */}
+                      <div style={{ background: m.ai.color + "10", border: `1px solid ${m.ai.color}30`, borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: m.ai.color, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>🤖 Analisi AI</div>
+                        <div style={{ fontSize: 12, color: T.text, marginBottom: 4 }}><strong>Tipo:</strong> {m.ai.emoji} {m.ai.label} ({m.ai.confidenza}% confidenza)</div>
+                        <div style={{ fontSize: 12, color: T.text, marginBottom: 4 }}><strong>Azione suggerita:</strong> {m.ai.azione}</div>
+                        {m.ai.note && <div style={{ fontSize: 11, color: T.sub, fontStyle: "italic" }}>"{m.ai.note}"</div>}
+                      </div>
+
+                      {/* Dati estratti (se nuova commessa) */}
+                      {m.ai.estratto && (
+                        <div style={{ background: T.grnLt, border: `1px solid ${T.grn}30`, borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: T.grn, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>📋 Dati estratti automaticamente</div>
+                          {m.ai.estratto.cliente && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>👤 <strong>Cliente:</strong> {m.ai.estratto.cliente}</div>}
+                          {m.ai.estratto.indirizzo && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>📍 <strong>Indirizzo:</strong> {m.ai.estratto.indirizzo}</div>}
+                          {m.ai.estratto.email && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>✉️ <strong>Email:</strong> {m.ai.estratto.email}</div>}
+                          {m.ai.estratto.note && <div style={{ fontSize: 12, color: T.text }}>📝 <strong>Note:</strong> {m.ai.estratto.note}</div>}
+                        </div>
+                      )}
+
+                      {/* Azioni */}
+                      {!m.archiviata && (
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <div onClick={() => {
+                            setAiInbox(ai => ai.map(x => x.id === m.id ? { ...x, archiviata: true, read: true } : x));
+                            setSelectedAiMsg(null);
+                            if (m.ai.cmSuggerita) {
+                              const cm = cantieri.find(c => c.code === m.ai.cmSuggerita);
+                              if (cm) { setSelectedCM(cm); setTab("commesse"); }
+                            }
+                          }} style={{ flex: 2, padding: "10px", borderRadius: 9, background: m.ai.color, color: "#fff", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                            {m.ai.cmNuova ? "➕ Crea Commessa" : `🔗 ${m.ai.azione.split(" ").slice(0,3).join(" ")}`}
+                          </div>
+                          <div onClick={() => {
+                            setAiInbox(ai => ai.map(x => x.id === m.id ? { ...x, archiviata: true, read: true } : x));
+                            setSelectedAiMsg(null);
+                          }} style={{ flex: 1, padding: "10px", borderRadius: 9, background: T.bg, border: `1px solid ${T.bdr}`, color: T.sub, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                            Ignora
+                          </div>
+                          <div onClick={() => {
+                            const dest = m.email || "";
+                            const tpl = `Gentile ${m.from.split(" ")[0]},
+
+Grazie per il suo messaggio.
+
+`;
+                            setMailBody(tpl);
+                            setShowMailModal({ ev: { text: m.subject, date: new Date().toISOString().slice(0,10), time: "", addr: "" }, cm: null, emailOverride: dest });
+                          }} style={{ flex: 1, padding: "10px", borderRadius: 9, background: T.accLt, border: `1px solid ${T.acc}30`, color: T.acc, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                            ✉️
+                          </div>
+                        </div>
+                      )}
+                      {m.archiviata && (
+                        <div style={{ padding: "8px 12px", background: T.grnLt, borderRadius: 8, textAlign: "center", fontSize: 12, fontWeight: 700, color: T.grn }}>
+                          ✓ Archiviata con successo
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>)}
+
+        {/* == RUBRICA TAB == */}
         {msgSubTab === "rubrica" && (<>
           <div style={{ padding: "4px 16px 8px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
@@ -3224,7 +5070,7 @@ useEffect(()=>{ (()=>{
     );
   };
 
-  /* ── SETTINGS TAB ── */
+  /* == SETTINGS TAB == */
   const renderSettings = () => (
     <div style={{ paddingBottom: 80 }}>
       <div style={S.header}>
@@ -3232,7 +5078,7 @@ useEffect(()=>{ (()=>{
           <div style={S.headerTitle}>Impostazioni</div>
         </div>
         {/* FIX: rimosso supabase.auth.signOut() — usa localStorage clear */}
-        <div onClick={() => { try { localStorage.clear(); } catch(e) {} window.location.reload(); }}
+        <div onClick={async () => { try { localStorage.clear(); const { createClient } = await import("@/lib/supabase"); await createClient().auth.signOut(); } catch(e) {} window.location.href = "/login"; }}
           style={{padding:"6px 12px",borderRadius:8,border:"1px solid #e5e5ea",background:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",color:"#86868b"}}>
           Esci
         </div>
@@ -3251,7 +5097,7 @@ useEffect(()=>{ (()=>{
 
       <div style={{ padding: "0 16px" }}>
 
-        {/* ═══ AZIENDA ═══ */}
+        {/* === AZIENDA === */}
         {settingsTab === "azienda" && (
           <div style={{background:"#fff",borderRadius:12,overflow:"hidden",border:`1px solid ${T.bdr}`}}>
             <div style={{padding:"12px 14px",background:T.acc,color:"#fff"}}>
@@ -3315,7 +5161,7 @@ useEffect(()=>{ (()=>{
           </div>
         )}
 
-        {/* ═══ GENERALI ═══ */}
+        {/* === GENERALI === */}
         {settingsTab === "generali" && (
           <>
             <div style={{...S.card,marginBottom:8}}><div style={S.cardInner}>
@@ -3365,7 +5211,7 @@ useEffect(()=>{ (()=>{
           </>
         )}
 
-        {/* ═══ TEAM ═══ */}
+        {/* === TEAM === */}
         {settingsTab === "team" && (
           <>
             {team.map(m => (
@@ -3382,7 +5228,7 @@ useEffect(()=>{ (()=>{
           </>
         )}
 
-        {/* ═══ SISTEMI E SOTTOSISTEMI ═══ */}
+        {/* === SISTEMI E SOTTOSISTEMI === */}
         {settingsTab === "sistemi" && (
           <>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Configura marche, sistemi e sottosistemi con colori collegati</div>
@@ -3419,7 +5265,7 @@ useEffect(()=>{ (()=>{
           </>
         )}
 
-        {/* ═══ COLORI ═══ */}
+        {/* === COLORI === */}
         {settingsTab === "colori" && (
           <>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Colori disponibili — collegati ai sistemi</div>
@@ -3438,7 +5284,7 @@ useEffect(()=>{ (()=>{
           </>
         )}
 
-        {/* ═══ VETRI ═══ */}
+        {/* === VETRI === */}
         {settingsTab === "vetri" && (
           <>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Tipologie vetro disponibili per i vani</div>
@@ -3458,7 +5304,7 @@ useEffect(()=>{ (()=>{
           </>
         )}
 
-        {/* ═══ TIPOLOGIE ═══ */}
+        {/* === TIPOLOGIE === */}
         {settingsTab === "tipologie" && (
           <>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Tipologie serramento — trascina ⭐ per i preferiti</div>
@@ -3482,7 +5328,7 @@ useEffect(()=>{ (()=>{
           </>
         )}
 
-        {/* ═══ COPRIFILI ═══ */}
+        {/* === COPRIFILI === */}
         {settingsTab === "coprifili" && (
           <>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Lista coprifili disponibili nella creazione vano</div>
@@ -3499,7 +5345,7 @@ useEffect(()=>{ (()=>{
           </>
         )}
 
-        {/* ═══ LAMIERE ═══ */}
+        {/* === LAMIERE === */}
         {settingsTab === "lamiere" && (
           <>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Lista lamiere e scossaline</div>
@@ -3516,7 +5362,7 @@ useEffect(()=>{ (()=>{
           </>
         )}
 
-        {/* ═══ SALITA ═══ */}
+        {/* === SALITA === */}
         {settingsTab === "salita" && (
           <>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Configura i mezzi di salita disponibili</div>
@@ -3533,7 +5379,7 @@ useEffect(()=>{ (()=>{
           </>
         )}
 
-        {/* ═══ PIPELINE ═══ */}
+        {/* === PIPELINE === */}
         {settingsTab === "pipeline" && (
           <>
             <div style={{fontSize:12,color:T.sub,padding:"0 4px 10px",lineHeight:1.5}}>Personalizza il flusso di lavoro. Disattiva le fasi che non usi, rinominale o riordinale.</div>
@@ -3566,13 +5412,147 @@ useEffect(()=>{ (()=>{
     </div>
   );
 
-  /* ═══════ MODALS ═══════ */
+// =======================================================
+// MASTRO ERP v2 — PARTE 5/5
+// Righe 4131-5248: Modals (Task, Commessa, Vano, Allegati, Firma, AI Photo),
+//                 Main Render finale
+// =======================================================
+  /* ======= MODALS ======= */
   const renderModal = () => {
     if (!showModal) return null;
     return (
       <div style={S.modal} onClick={e => e.target === e.currentTarget && setShowModal(null)}>
         <div style={S.modalInner}>
           {/* TASK MODAL */}
+          {/* === MODAL MANDA MAIL === */}
+          {showMailModal && (
+            <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end", justifyContent:"center" }}
+              onClick={e => e.target === e.currentTarget && setShowMailModal(null)}>
+              <div style={{ background:T.bg, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, maxHeight:"85vh", overflow:"auto", paddingBottom:24 }}>
+                {/* Header */}
+                <div style={{ padding:"16px 16px 10px", display:"flex", alignItems:"center", gap:10, position:"sticky", top:0, background:T.bg, zIndex:1, borderBottom:`1px solid ${T.bdr}` }}>
+                  <span style={{ fontSize:22 }}>✉️</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:15, fontWeight:800, color:T.text }}>Manda Mail</div>
+                    <div style={{ fontSize:11, color:T.sub }}>
+                      {showMailModal.cm ? `${showMailModal.cm.cliente} ${showMailModal.cm.cognome||""}`.trim() : showMailModal.ev.persona || "Cliente"}
+                      {showMailModal.cm?.email ? ` · ${showMailModal.cm.email}` : ""}
+                    </div>
+                  </div>
+                  <div onClick={() => setShowMailModal(null)} style={{ width:30, height:30, borderRadius:"50%", background:T.bdr, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16, color:T.sub }}>×</div>
+                </div>
+
+                <div style={{ padding:"14px 16px" }}>
+                  {/* Info evento */}
+                  <div style={{ background:T.accLt, borderRadius:10, padding:"10px 12px", marginBottom:12, borderLeft:`3px solid ${T.acc}` }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:T.acc, marginBottom:2 }}>{showMailModal.ev.text}</div>
+                    <div style={{ fontSize:11, color:T.sub }}>
+                      {new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"short", day:"numeric", month:"short" })}
+                      {showMailModal.ev.time ? " · " + showMailModal.ev.time : ""}
+                      {showMailModal.ev.addr ? " · 📍 " + showMailModal.ev.addr : ""}
+                    </div>
+                  </div>
+
+                  {/* Campo email destinatario */}
+                  {!showMailModal.cm?.email && (
+                    <div style={{ marginBottom:10 }}>
+                      <div style={{ fontSize:10, fontWeight:700, color:T.sub, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:4 }}>Email destinatario</div>
+                      <input
+                        type="email" placeholder="cliente@email.com"
+                        style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:`1px solid ${T.bdr}`, background:T.card, fontSize:13, color:T.text, fontFamily:"inherit", boxSizing:"border-box" as any }}
+                        onChange={e => {
+                          const v = e.target.value;
+                          setShowMailModal(prev => prev ? { ...prev, emailOverride: v } : prev);
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Testo mail modificabile */}
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:T.sub, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:4 }}>Testo della mail</div>
+                    <textarea
+                      value={mailBody}
+                      onChange={e => setMailBody(e.target.value)}
+                      rows={10}
+                      style={{ width:"100%", padding:"10px 12px", borderRadius:8, border:`1px solid ${T.bdr}`, background:T.card, fontSize:12, color:T.text, fontFamily:"inherit", resize:"vertical" as any, boxSizing:"border-box" as any, lineHeight:1.6 }}
+                    />
+                  </div>
+
+                  {/* Template rapidi */}
+                  <div style={{ marginBottom:14 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:T.sub, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:6 }}>Template rapidi</div>
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                      {[
+                        { lbl:"📅 Conferma", tpl: `Gentile Cliente,
+
+Le confermo l'appuntamento del ${new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" })}${showMailModal.ev.time ? " alle " + showMailModal.ev.time : ""}.
+
+📍 ${showMailModal.ev.addr || "Luogo da concordare"}
+
+Cordiali saluti,
+Fabio Cozza - Walter Cozza Serramenti` },
+                        { lbl:"⏰ Reminder", tpl: `Gentile Cliente,
+
+Le ricordiamo che domani, ${new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" })}${showMailModal.ev.time ? " alle " + showMailModal.ev.time : ""}, è previsto il nostro appuntamento.
+
+📍 ${showMailModal.ev.addr || "Luogo da concordare"}
+
+In caso di impedimento la preghiamo di avvertirci il prima possibile.
+
+Cordiali saluti,
+Fabio Cozza - Walter Cozza Serramenti` },
+                        { lbl:"✅ Preventivo pronto", tpl: `Gentile Cliente,
+
+Siamo lieti di comunicarle che il preventivo relativo alla fornitura e posa è pronto.
+
+Può contattarci per concordare un incontro o richiedere il documento via mail.
+
+Cordiali saluti,
+Fabio Cozza - Walter Cozza Serramenti` },
+                        { lbl:"🔧 Posa confermata", tpl: `Gentile Cliente,
+
+Confermiamo la data di posa in opera per il ${new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" })}${showMailModal.ev.time ? " a partire dalle " + showMailModal.ev.time : ""}.
+
+La preghiamo di assicurarsi che i locali siano accessibili.
+
+Cordiali saluti,
+Fabio Cozza - Walter Cozza Serramenti` },
+                      ].map(({ lbl, tpl }) => (
+                        <div key={lbl} onClick={() => setMailBody(tpl)}
+                          style={{ padding:"5px 10px", borderRadius:20, border:`1px solid ${T.bdr}`, background:T.card, fontSize:11, fontWeight:600, color:T.text, cursor:"pointer" }}>
+                          {lbl}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Bottoni azione */}
+                  <div style={{ display:"flex", gap:8 }}>
+                    <div
+                      onClick={() => {
+                        const dest = (showMailModal as any).emailOverride || showMailModal.cm?.email || "";
+                        const sogg = encodeURIComponent(`Appuntamento - ${showMailModal.ev.text}`);
+                        const corpo = encodeURIComponent(mailBody);
+                        window.open(`mailto:${dest}?subject=${sogg}&body=${corpo}`);
+                      }}
+                      style={{ flex:1, padding:"12px", borderRadius:10, background:T.acc, color:"#fff", textAlign:"center", cursor:"pointer", fontSize:13, fontWeight:700 }}>
+                      ✉️ Apri in Mail
+                    </div>
+                    <div
+                      onClick={() => {
+                        navigator.clipboard?.writeText(mailBody);
+                        alert("Testo copiato negli appunti!");
+                      }}
+                      style={{ padding:"12px 14px", borderRadius:10, background:T.bg, border:`1px solid ${T.bdr}`, color:T.sub, cursor:"pointer", fontSize:13, fontWeight:600 }}>
+                      📋 Copia
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {showModal === "task" && (
             <>
               <div style={S.modalTitle}>Nuovo task</div>
@@ -3657,7 +5637,7 @@ useEffect(()=>{ (()=>{
                 ))}
               </div>
 
-              {/* ── FLUSSO RIPARAZIONE ── */}
+              {/* == FLUSSO RIPARAZIONE == */}
               {newCM.tipo === "riparazione" && (() => {
                 const addRipFoto = (e) => {
                   const file = e.target.files?.[0]; if(!file) return;
@@ -3715,7 +5695,7 @@ useEffect(()=>{ (()=>{
                               <div>
                                 <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{c.cliente}</div>
                                 <div style={{ fontSize:11, color:T.sub, marginTop:1 }}>{c.code} · {c.indirizzo}</div>
-                                {c.vani.length>0 && <div style={{ fontSize:10, color:T.sub }}>{c.vani.length} vani</div>}
+                                {getVaniAttivi(c).length>0 && <div style={{ fontSize:10, color:T.sub }}>{getVaniAttivi(c).length} vani</div>}
                               </div>
                               <div style={{ fontSize:10, fontWeight:600, color:T.acc }}>Collega →</div>
                             </div>
@@ -3873,7 +5853,7 @@ useEffect(()=>{ (()=>{
                 );
               })()}
 
-              {/* ── FLUSSO NUOVA INSTALLAZIONE ── */}
+              {/* == FLUSSO NUOVA INSTALLAZIONE == */}
               {newCM.tipo === "nuova" && (() => {
                 const AccordionSection = ({ id, icon, label, badge, children }) => {
                   const open = newCM._open === id;
@@ -3993,14 +5973,14 @@ useEffect(()=>{ (()=>{
       const zanz=v.accessori?.zanzariera; if(zanz?.attivo&&c.prezzoZanzariera){const zmq=((zanz.l||m.lCentro||0)/1000)*((zanz.h||m.hCentro||0)/1000);tot+=zmq*parseFloat(c.prezzoZanzariera);}
       return { tot, mq };
     };
-    const totale = c.vani.reduce((s,v)=>s+calcolaVanoPDF(v).tot, 0);
+    const vaniPDF = getVaniAttivi(c); const totale = vaniPDF.reduce((s,v)=>s+calcolaVanoPDF(v).tot, 0);
     const sconto = parseFloat(c.sconto||0);
     const scontoVal = totale * sconto / 100;
     const imponibile = totale - scontoVal;
     const iva = imponibile * 0.10;
     const totIva = imponibile + iva;
     const oggi = new Date().toLocaleDateString("it-IT");
-    const righeVani = c.vani.map((v, i) => {
+    const righeVani = vaniPDF.map((v, i) => {
       const { tot: sub, mq } = calcolaVanoPDF(v);
       const m = v.misure||{};
       return '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">'+(i+1)+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">'+(v.nome||"Vano "+(i+1))+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;color:#666;">'+(v.tipo||"")+" — "+(v.stanza||"")+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;color:#666;">'+(v.sistema||c.sistema||"")+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">'+(m.lCentro||0)+" × "+(m.hCentro||0)+' mm</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">'+mq.toFixed(2)+' mq</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:700;">€ '+sub.toFixed(2)+'</td></tr>';
@@ -4011,7 +5991,7 @@ useEffect(()=>{ (()=>{
     const dataFirmaHtml = c.dataFirma ? ' — '+c.dataFirma : '';
     const html = '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"/><title>Preventivo '+c.code+'</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,Arial,sans-serif;color:#1a1a1c;font-size:13px;padding:40px;max-width:900px;margin:0 auto;}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #007aff;}.azienda{font-size:22px;font-weight:900;color:#007aff;}.doc-title{text-align:right;}.doc-title h1{font-size:28px;font-weight:900;}table{width:100%;border-collapse:collapse;margin-bottom:20px;}thead{background:#007aff;color:white;}thead th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;}thead th:last-child,thead th:nth-last-child(-n+3){text-align:right;}.totali{max-width:340px;margin-left:auto;background:#f5f5f7;border-radius:10px;padding:16px 20px;margin-bottom:24px;}.totali .row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;}.totali .row.main{font-size:16px;font-weight:900;padding-top:10px;border-top:2px solid #1a1a1c;margin-top:4px;color:#007aff;}.cliente-box{background:#f5f5f7;border-radius:10px;padding:16px 20px;margin-bottom:24px;display:flex;gap:40px;}.cliente-box .label{font-size:10px;font-weight:700;color:#999;text-transform:uppercase;margin-bottom:4px;}.cliente-box .val{font-size:14px;font-weight:700;}.validita{background:#fff8ec;border:1px solid #ffb800;border-radius:8px;padding:10px 16px;font-size:11px;color:#7a5000;margin-bottom:20px;}.firma{display:flex;gap:40px;margin-top:40px;padding-top:20px;border-top:1px solid #eee;}.firma .box{flex:1;text-align:center;}.firma .linea{border-bottom:1px solid #999;margin-bottom:6px;height:50px;}.firma .label{font-size:10px;color:#666;text-transform:uppercase;}.footer{font-size:10px;color:#999;text-align:center;padding-top:20px;border-top:1px solid #eee;}@media print{body{padding:20px;}button{display:none!important;}}</style></head><body>'
       +(aziendaInfo.logo?'<div class="header" style="display:flex;justify-content:space-between;align-items:flex-start;"><div style="display:flex;align-items:center;gap:14px;"><img src="'+aziendaInfo.logo+'" style="height:56px;max-width:120px;object-fit:contain;" alt="logo"/><div>':'<div class="header"><div>')+'<div style="font-size:20px;font-weight:900;color:#007aff;">'+aziendaInfo.ragione+'</div>'+'<div style="font-size:11px;color:#666;">'+aziendaInfo.indirizzo+'</div>'+'<div style="font-size:11px;color:#666;">'+aziendaInfo.telefono+(aziendaInfo.email?' · '+aziendaInfo.email:'')+'</div>'+(aziendaInfo.piva?'<div style="font-size:10px;color:#999;">P.IVA '+aziendaInfo.piva+(aziendaInfo.cciaa?' · CCIAA '+aziendaInfo.cciaa:'')+'</div>':'')+(aziendaInfo.logo?'</div></div>':'</div>')+'<div style="text-align:right">'+'<h1 style="font-size:28px;font-weight:900;">PREVENTIVO</h1>'+'<div style="font-size:14px;color:#007aff;font-weight:700;">'+c.code+'</div>'+'<div style="font-size:11px;color:#666;">Data: '+oggi+'</div>'+'</div></div>'
-      +'<div class="cliente-box"><div><div class="label">Cliente</div><div class="val">'+c.cliente+' '+(c.cognome||'')+'</div><div style="font-size:12px;color:#444;">'+(c.indirizzo||'')+'</div></div><div><div class="label">Contatto</div><div class="val">'+(c.telefono||'—')+'</div></div><div><div class="label">Vani</div><div class="val">'+c.vani.length+'</div></div></div>'
+      +'<div class="cliente-box"><div><div class="label">Cliente</div><div class="val">'+c.cliente+' '+(c.cognome||'')+'</div><div style="font-size:12px;color:#444;">'+(c.indirizzo||'')+'</div></div><div><div class="label">Contatto</div><div class="val">'+(c.telefono||'—')+'</div></div><div><div class="label">Vani</div><div class="val">'+vaniPDF.length+'</div></div></div>'
       +'<button onclick="window.print()" style="margin-bottom:16px;padding:10px 24px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">🖨 Stampa / Salva PDF</button>'
       +'<table><thead><tr><th>#</th><th>Vano</th><th>Tipologia</th><th>Sistema</th><th>Misura</th><th>Mq</th><th>Importo</th></tr></thead><tbody>'+righeVani+'</tbody></table>'
       +'<div class="totali"><div class="row"><span>Totale imponibile</span><span>€ '+totale.toFixed(2)+'</span></div>'+scontoHtml+'<div class="row"><span>IVA 10%</span><span>€ '+iva.toFixed(2)+'</span></div><div class="row main"><span>TOTALE</span><span>€ '+totIva.toFixed(2)+'</span></div></div>'
@@ -4161,7 +6141,22 @@ useEffect(()=>{ (()=>{
     );
   };
 
-  /* ═══════ MAIN RENDER ═══════ */
+  /* == AI PHOTO MODAL VARS == */
+  const _aiVt = selectedVano?.tipo || "F1A";
+  const _aiSizes: Record<string, [number, number]> = {
+    "F1A": [700, 1200], "F2A": [1200, 1400], "F3A": [1800, 1400],
+    "PF1A": [800, 2200], "PF2A": [1400, 2200], "PF3A": [2100, 2200],
+    "VAS": [700, 500], "SOPR": [800, 400], "FIS": [600, 1000], "FISTONDO": [600, 600],
+    "SC2A": [1600, 2200], "SC4A": [2800, 2200], "ALZSC": [3000, 2200],
+    "BLI": [900, 2100], "TRIANG": [800, 800], "OBLICA": [700, 1200]
+  };
+  const [_aiStdW, _aiStdH] = _aiSizes[_aiVt] || [1100, 1300];
+  const _aiEx = (selectedVano?.misure || {}) as any;
+  const _aiBaseW = (_aiEx.lCentro ?? 0) > 0 ? (_aiEx.lCentro + Math.floor(Math.random() * 7 - 3)) : (_aiStdW + Math.floor(Math.random() * 11 - 5));
+  const _aiBaseH = (_aiEx.hCentro ?? 0) > 0 ? (_aiEx.hCentro + Math.floor(Math.random() * 7 - 3)) : (_aiStdH + Math.floor(Math.random() * 11 - 5));
+  const _aiTip = TIPOLOGIE_RAPIDE.find(t => t.code === _aiVt)?.label || _aiVt;
+
+  /* ======= MAIN RENDER ======= */
   return (
     <>
       <link href={FONT} rel="stylesheet" />
@@ -4331,9 +6326,9 @@ useEffect(()=>{ (()=>{
           <div style={S.tabBar}>
             {[
               { id: "home", ico: ICO.home, label: "Home" },
-              { id: "commesse", ico: ICO.filter, label: "Commesse" },
-              { id: "messaggi", ico: ICO.chat, label: "Email" },
               { id: "agenda", ico: ICO.calendar, label: "Agenda" },
+              { id: "commesse", ico: ICO.filter, label: "Commesse" },
+              { id: "messaggi", ico: ICO.chat, label: "Messaggi" },
               { id: "settings", ico: ICO.settings, label: "Impost." },
             ].map(t => (
               <div key={t.id} style={S.tabItem(tab === t.id)} onClick={() => { setTab(t.id); setSelectedCM(null); setSelectedVano(null); setSelectedMsg(null); }}>
@@ -4421,7 +6416,7 @@ useEffect(()=>{ (()=>{
               <div style={{ marginBottom: 14 }}>
                 <label style={S.fieldLabel}>Tipo</label>
                 <div style={{ display: "flex", gap: 6 }}>
-                  {[{ id: "appuntamento", l: "📅 Appuntamento", c: T.blue }, { id: "task", l: "✅ Task", c: T.orange }].map(t => (
+                  {[{ id: "appuntamento", l: "📅 Appuntamento", c: T.blue }, { id: "task", l: "✅ Task", c: T.orange }, { id: "sopr_riparazione", l: "🔩 Sopr. Riparazione", c: "#FF6B00" }, { id: "riparazione", l: "🛠 Riparazione", c: "#FF3B30" }, { id: "collaudo", l: "✔️ Collaudo", c: "#5856D6" }, { id: "garanzia", l: "🔒 Garanzia", c: "#8E8E93" }].map(t => (
                     <div key={t.id} onClick={() => setNewEvent(ev => ({ ...ev, tipo: t.id }))} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: `1px solid ${newEvent.tipo === t.id ? t.c : T.bdr}`, background: newEvent.tipo === t.id ? t.c + "18" : "transparent", textAlign: "center", fontSize: 12, fontWeight: 600, color: newEvent.tipo === t.id ? t.c : T.sub, cursor: "pointer" }}>
                       {t.l}
                     </div>
@@ -4441,6 +6436,36 @@ useEffect(()=>{ (()=>{
                   <option value="">— Nessuno —</option>
                   {team.map(m => <option key={m.id} value={m.nome}>{m.nome} — {m.ruolo}</option>)}
                 </select>
+              </div>
+              {/* Indirizzo */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Indirizzo (opz.)</label>
+                <input style={S.input} placeholder="Via Roma 12, Cosenza..." value={newEvent.addr||""} onChange={e => setNewEvent(ev => ({ ...ev, addr: e.target.value }))} />
+              </div>
+              {/* Reminder */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={S.fieldLabel}>⏰ Reminder al cliente</label>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[
+                    { id: "", l: "Nessuno" },
+                    { id: "24h", l: "24h prima" },
+                    { id: "1h", l: "1h prima" },
+                    { id: "giorno", l: "Il giorno" },
+                  ].map(r => (
+                    <div key={r.id} onClick={() => setNewEvent(ev => ({ ...ev, reminder: r.id }))}
+                      style={{ flex: 1, padding: "8px 4px", borderRadius: 8, textAlign: "center", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                        border: `1px solid ${newEvent.reminder === r.id ? T.acc : T.bdr}`,
+                        background: newEvent.reminder === r.id ? T.accLt : "transparent",
+                        color: newEvent.reminder === r.id ? T.acc : T.sub }}>
+                      {r.l}
+                    </div>
+                  ))}
+                </div>
+                {newEvent.reminder && (
+                  <div style={{ marginTop: 6, fontSize: 10, color: T.sub, padding: "5px 8px", background: T.accLt, borderRadius: 6 }}>
+                    📧 MASTRO ti avviserà di inviare il reminder — lo farai con 1 click dal banner in agenda
+                  </div>
+                )}
               </div>
               <button style={S.btn} onClick={addEvent}>Crea evento</button>
               <button style={S.btnCancel} onClick={() => setShowNewEvent(false)}>Annulla</button>
@@ -4598,22 +6623,8 @@ useEffect(()=>{ (()=>{
         )}
 
         {/* AI PHOTO MODAL */}
-        {showAIPhoto && (() => {
-          const vt = selectedVano?.tipo || "F1A";
-          const sizes = {
-            "F1A": [700, 1200], "F2A": [1200, 1400], "F3A": [1800, 1400],
-            "PF1A": [800, 2200], "PF2A": [1400, 2200], "PF3A": [2100, 2200],
-            "VAS": [700, 500], "SOPR": [800, 400], "FIS": [600, 1000], "FISTONDO": [600, 600],
-            "SC2A": [1600, 2200], "SC4A": [2800, 2200], "ALZSC": [3000, 2200],
-            "BLI": [900, 2100], "TRIANG": [800, 800], "OBLICA": [700, 1200]
-          };
-          const [stdW, stdH] = sizes[vt] || [1100, 1300];
-          const existing = selectedVano?.misure || {};
-          const hasExisting = existing.lCentro > 0 || existing.hCentro > 0;
-          const baseW = hasExisting && existing.lCentro > 0 ? existing.lCentro + Math.floor(Math.random() * 7 - 3) : stdW + Math.floor(Math.random() * 11 - 5);
-          const baseH = hasExisting && existing.hCentro > 0 ? existing.hCentro + Math.floor(Math.random() * 7 - 3) : stdH + Math.floor(Math.random() * 11 - 5);
-          const tipLabel = TIPOLOGIE_RAPIDE.find(t => t.code === vt)?.label || vt;
-          return (
+        {/* AI PHOTO MODAL */}
+        {showAIPhoto && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={e => e.target === e.currentTarget && setShowAIPhoto(false)}>
             <div style={{ background: T.card, borderRadius: 16, width: "100%", maxWidth: 380, padding: 20, maxHeight: "80vh", overflowY: "auto" }}>
               {aiPhotoStep === 0 && (
@@ -4652,10 +6663,10 @@ useEffect(()=>{ (()=>{
                     <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>Misure suggerite per "{selectedVano?.nome}" (verifica con metro)</div>
                   </div>
                   <div style={{ borderRadius: 10, border: `1px solid ${T.bdr}`, overflow: "hidden", marginBottom: 12 }}>
-                    {[["Larghezza stimata", `~${baseW} mm`, T.acc], ["Altezza stimata", `~${baseH} mm`, T.blue], ["Tipo rilevato", tipLabel, T.purple]].map(([l, val, col]) => (
-                      <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "10px 14px", borderBottom: `1px solid ${T.bdr}`, alignItems: "center" }}>
+                    {[["Larghezza stimata", `~${_aiBaseW} mm`, T.acc], ["Altezza stimata", `~${_aiBaseH} mm`, T.blue], ["Tipo rilevato", _aiTip, T.purple]].map(([l, val, col]) => (
+                      <div key={String(l)} style={{ display: "flex", justifyContent: "space-between", padding: "10px 14px", borderBottom: `1px solid ${T.bdr}`, alignItems: "center" }}>
                         <span style={{ fontSize: 12, color: T.sub }}>{l}</span>
-                        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: FM, color: col }}>{val}</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: FM, color: String(col) }}>{val}</span>
                       </div>
                     ))}
                   </div>
@@ -4664,12 +6675,12 @@ useEffect(()=>{ (()=>{
                   </div>
                   <button onClick={() => {
                     if (selectedVano) {
-                      updateMisura(selectedVano.id, "lAlto", baseW + Math.floor(Math.random() * 5 - 2));
-                      updateMisura(selectedVano.id, "lCentro", baseW);
-                      updateMisura(selectedVano.id, "lBasso", baseW - Math.floor(Math.random() * 4));
-                      updateMisura(selectedVano.id, "hSx", baseH);
-                      updateMisura(selectedVano.id, "hCentro", baseH + Math.floor(Math.random() * 3 - 1));
-                      updateMisura(selectedVano.id, "hDx", baseH - Math.floor(Math.random() * 4));
+                      updateMisura(selectedVano.id, "lAlto", _aiBaseW + Math.floor(Math.random() * 5 - 2));
+                      updateMisura(selectedVano.id, "lCentro", _aiBaseW);
+                      updateMisura(selectedVano.id, "lBasso", _aiBaseW - Math.floor(Math.random() * 4));
+                      updateMisura(selectedVano.id, "hSx", _aiBaseH);
+                      updateMisura(selectedVano.id, "hCentro", _aiBaseH + Math.floor(Math.random() * 3 - 1));
+                      updateMisura(selectedVano.id, "hDx", _aiBaseH - Math.floor(Math.random() * 4));
                     }
                     setShowAIPhoto(false);
                   }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: "linear-gradient(135deg, #af52de, #007aff)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF, marginBottom: 8 }}>
@@ -4680,8 +6691,7 @@ useEffect(()=>{ (()=>{
               )}
             </div>
           </div>
-          );
-        })()}
+        )}
       </div>
     </>
   );
