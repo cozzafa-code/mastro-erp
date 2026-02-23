@@ -1,16 +1,16 @@
-// =======================================================
-// MASTRO ERP v2 — PARTE 1/5
+﻿// =======================================================
+// MASTRO ERP v2 â€” PARTE 1/5
 // Righe 1-1280: Costanti, Dati Demo (incluse visite/vaniList/euro/scadenza),
 //               MOTIVI_BLOCCO, AFASE, useDragOrder hook, Home, Helpers, Stili
 // Continuazione in PARTE2
 // =======================================================
 // components/MastroERP.tsx
-// MASTRO ERP — adattato per Next.js + Supabase
+// MASTRO ERP â€” adattato per Next.js + Supabase
 "use client";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 
 /* =======================================================
-   MASTRO MISURE — v15 COMPLETE REBUILD
+   MASTRO MISURE â€” v15 COMPLETE REBUILD
    Tutte le feature recuperate + design Apple chiaro
    ======================================================= */
 
@@ -21,7 +21,7 @@ const FM = "'JetBrains Mono',monospace";
 /* == TEMI == */
 const THEMES = {
   chiaro: {
-    name: "Chiaro", emoji: "☀️",
+    name: "Chiaro", emoji: "â˜€ï¸",
     bg: "#f5f5f7", bg2: "#ffffff", card: "#ffffff", card2: "#f8f8fa",
     bdr: "#e5e5ea", bdrL: "#d1d1d6", text: "#1d1d1f", sub: "#86868b", sub2: "#aeaeb2",
     acc: "#0066cc", accD: "#0055aa", accLt: "rgba(0,102,204,0.08)", accBg: "linear-gradient(135deg,#0066cc,#0055aa)",
@@ -36,7 +36,7 @@ const THEMES = {
     r: 12, r2: 16
   },
   scuro: {
-    name: "Scuro", emoji: "🌙",
+    name: "Scuro", emoji: "ðŸŒ™",
     bg: "#000000", bg2: "#1c1c1e", card: "#1c1c1e", card2: "#2c2c2e",
     bdr: "#38383a", bdrL: "#48484a", text: "#f2f2f7", sub: "#8e8e93", sub2: "#636366",
     acc: "#0a84ff", accD: "#0070e0", accLt: "rgba(10,132,255,0.12)", accBg: "linear-gradient(135deg,#0a84ff,#0070e0)",
@@ -51,7 +51,7 @@ const THEMES = {
     r: 12, r2: 16
   },
   oceano: {
-    name: "Oceano", emoji: "🌊",
+    name: "Oceano", emoji: "ðŸŒŠ",
     bg: "#0f1923", bg2: "#162231", card: "#1a2a3a", card2: "#1f3040",
     bdr: "#2a3f55", bdrL: "#345070", text: "#e8ecf0", sub: "#7a90a5", sub2: "#4a6070",
     acc: "#4fc3f7", accD: "#29b6f6", accLt: "rgba(79,195,247,0.12)", accBg: "linear-gradient(135deg,#4fc3f7,#29b6f6)",
@@ -69,14 +69,14 @@ const THEMES = {
 
 /* == PIPELINE 7+1 FASI == */
 const PIPELINE_DEFAULT = [
-  { id: "sopralluogo", nome: "Sopralluogo", ico: "🔍", color: "#007aff", attiva: true },
-  { id: "preventivo", nome: "Preventivo", ico: "📋", color: "#ff9500", attiva: true },
-  { id: "conferma", nome: "Conferma", ico: "✍️", color: "#af52de", attiva: true },
-  { id: "misure", nome: "Misure", ico: "📐", color: "#5856d6", attiva: true },
-  { id: "ordini", nome: "Ordini", ico: "📦", color: "#ff2d55", attiva: true },
-  { id: "produzione", nome: "Produzione", ico: "🏭", color: "#ff9500", attiva: true },
-  { id: "posa", nome: "Posa", ico: "🔧", color: "#34c759", attiva: true },
-  { id: "chiusura", nome: "Chiusura", ico: "✅", color: "#30b0c7", attiva: true },
+  { id: "sopralluogo", nome: "Sopralluogo", ico: "ðŸ”", color: "#007aff", attiva: true },
+  { id: "preventivo", nome: "Preventivo", ico: "ðŸ“‹", color: "#ff9500", attiva: true },
+  { id: "conferma", nome: "Conferma", ico: "âœï¸", color: "#af52de", attiva: true },
+  { id: "misure", nome: "Misure", ico: "ðŸ“", color: "#5856d6", attiva: true },
+  { id: "ordini", nome: "Ordini", ico: "ðŸ“¦", color: "#ff2d55", attiva: true },
+  { id: "produzione", nome: "Produzione", ico: "ðŸ­", color: "#ff9500", attiva: true },
+  { id: "posa", nome: "Posa", ico: "ðŸ”§", color: "#34c759", attiva: true },
+  { id: "chiusura", nome: "Chiusura", ico: "âœ…", color: "#30b0c7", attiva: true },
 ];
 
 /* == MOTIVI BLOCCO SOPRALLUOGO == */
@@ -91,21 +91,21 @@ const MOTIVI_BLOCCO = [
 
 /* == AZIONE SUGGERITA PER FASE == */
 const AFASE = {
-  sopralluogo: { i: "📐", t: "Pianifica sopralluogo",  c: "#007aff" },
-  preventivo:  { i: "📝", t: "Invia preventivo",        c: "#ff9500" },
-  conferma:    { i: "✍️", t: "Fai firmare contratto",   c: "#af52de" },
-  misure:      { i: "📏", t: "Esegui rilievo misure",   c: "#5856d6" },
-  ordini:      { i: "🛒", t: "Conferma ordine",          c: "#ff2d55" },
-  produzione:  { i: "🏭", t: "Monitora produzione",      c: "#ff9500" },
-  posa:        { i: "🔧", t: "Schedula posa",            c: "#34c759" },
-  chiusura:    { i: "✅", t: "Richiedi saldo finale",    c: "#30b0c7" },
+  sopralluogo: { i: "ðŸ“", t: "Pianifica sopralluogo",  c: "#007aff" },
+  preventivo:  { i: "ðŸ“", t: "Invia preventivo",        c: "#ff9500" },
+  conferma:    { i: "âœï¸", t: "Fai firmare contratto",   c: "#af52de" },
+  misure:      { i: "ðŸ“", t: "Esegui rilievo misure",   c: "#5856d6" },
+  ordini:      { i: "ðŸ›’", t: "Conferma ordine",          c: "#ff2d55" },
+  produzione:  { i: "ðŸ­", t: "Monitora produzione",      c: "#ff9500" },
+  posa:        { i: "ðŸ”§", t: "Schedula posa",            c: "#34c759" },
+  chiusura:    { i: "âœ…", t: "Richiedi saldo finale",    c: "#30b0c7" },
 };
 
 /* == DATI DEMO == */
 const CANTIERI_INIT = [
   { id: 1, code: "S-0004", cliente: "Fabio", cognome: "Cozza", indirizzo: "Via Gabriele Barrio 12, Cosenza", fase: "sopralluogo",
-    sistema: "Schüco CT70", tipo: "nuova", telefono: "338 1234567",
-    difficoltaSalita: "media", mezzoSalita: "Scala interna", pianoEdificio: "P2 — 2° Piano", foroScale: "80×200",
+    sistema: "SchÃ¼co CT70", tipo: "nuova", telefono: "338 1234567",
+    difficoltaSalita: "media", mezzoSalita: "Scala interna", pianoEdificio: "P2 â€” 2Â° Piano", foroScale: "80Ã—200",
     note: "Attenzione: muro portante in soggiorno. Portare spessimetro.",
     euro: 4200, scadenza: (() => { const d = new Date(); d.setDate(d.getDate()+10); return d.toISOString().split("T")[0]; })(),
     rilievi: [
@@ -115,25 +115,25 @@ const CANTIERI_INIT = [
         vani: [
           { id: 1, nome: "Cucina", tipo: "F2A", stanza: "Cucina", piano: "PT",
             pezzi: 1,
-            sistema: "Schüco CT70", vetro: "4/16/4 Basso-emissivo", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
+            sistema: "SchÃ¼co CT70", vetro: "4/16/4 Basso-emissivo", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
             telaio: "Z", telaioAlaZ: "35", rifilato: true, rifilSx: "10", rifilDx: "10", rifilSopra: "5", rifilSotto: "0",
             coprifilo: "CP40", lamiera: "LD200",
             misure: { lAlto: 1202, lCentro: 1198, lBasso: 1195, hSx: 1402, hCentro: 1400, hDx: 1398, d1: 1825, d2: 1823, spSx: 120, spDx: 115, spSopra: 80, imbotte: 180, davInt: 200, davEst: 50, davProf: 200, davSporg: 40, soglia: 0 },
             cassonetto: true, casH: 250, casP: 300,
             accessori: { tapparella: { attivo: true, colore: "RAL 9010", l: 1240, h: 1650 }, persiana: { attivo: false }, zanzariera: { attivo: true, colore: "RAL 9010", l: 1180, h: 1370 } },
-            foto: {}, note: "Muro portante lato sinistro — spalletta ridotta di 5mm rispetto destra" },
+            foto: {}, note: "Muro portante lato sinistro â€” spalletta ridotta di 5mm rispetto destra" },
           { id: 2, nome: "Salone PF", tipo: "PF2A", stanza: "Soggiorno", piano: "PT",
             pezzi: 1,
-            sistema: "Schüco CT70", vetro: "6/16/6", coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "Come profili",
+            sistema: "SchÃ¼co CT70", vetro: "6/16/6", coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "Come profili",
             telaio: "L", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
             coprifilo: "CP50", lamiera: "LD250",
             misure: { lAlto: 1405, lCentro: 1402, lBasso: 1400, hSx: 2202, hCentro: 2200, hDx: 2198, d1: 2616, d2: 2626, spSx: 150, spDx: 150, spSopra: 90, imbotte: 200, davInt: 0, davEst: 0, davProf: 0, davSporg: 0, soglia: 15 },
             cassonetto: false, casH: 0, casP: 0,
             accessori: { tapparella: { attivo: true, colore: "RAL 7016", l: 1440, h: 2450 }, persiana: { attivo: true, l: 1402, h: 2200, colore: "RAL 7016" }, zanzariera: { attivo: true, colore: "RAL 9010", l: 1390, h: 2190 } },
-            foto: {}, note: "Fuori squadra 10mm — verificare architrave. Soglia esistente da mantenere h=15mm" },
+            foto: {}, note: "Fuori squadra 10mm â€” verificare architrave. Soglia esistente da mantenere h=15mm" },
           { id: 3, nome: "Camera F1A", tipo: "F1A", stanza: "Camera", piano: "P1",
             pezzi: 1,
-            sistema: "Schüco CT70", vetro: "4/16/4 Basso-emissivo", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
+            sistema: "SchÃ¼co CT70", vetro: "4/16/4 Basso-emissivo", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
             telaio: "Z", telaioAlaZ: "35", rifilato: true, rifilSx: "8", rifilDx: "8", rifilSopra: "5", rifilSotto: "0",
             coprifilo: "CP40", lamiera: "LD200",
             misure: { lAlto: 900, lCentro: 898, lBasso: 900, hSx: 1202, hCentro: 1200, hDx: 1200, d1: 1505, d2: 1504, spSx: 100, spDx: 100, spSopra: 75, imbotte: 160, davInt: 180, davEst: 40, davProf: 180, davSporg: 35, soglia: 0 },
@@ -142,7 +142,7 @@ const CANTIERI_INIT = [
             foto: {}, note: "" },
           { id: 4, nome: "Bagno VAS", tipo: "VAS", stanza: "Bagno", piano: "P1",
             pezzi: 1,
-            sistema: "Schüco CT70", vetro: "Acidato", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
+            sistema: "SchÃ¼co CT70", vetro: "Acidato", coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false, coloreAcc: "RAL 9010",
             telaio: "Z", telaioAlaZ: "35", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
             coprifilo: "CP40", lamiera: "",
             misure: { lAlto: 702, lCentro: 700, lBasso: 700, hSx: 502, hCentro: 500, hDx: 500, d1: 862, d2: 861, spSx: 95, spDx: 95, spSopra: 70, imbotte: 150, davInt: 150, davEst: 30, davProf: 150, davSporg: 25, soglia: 0 },
@@ -151,13 +151,13 @@ const CANTIERI_INIT = [
             foto: {}, note: "Vetro acidato per privacy" },
           { id: 5, nome: "Salone SC2A", tipo: "SC2A", stanza: "Soggiorno", piano: "PT",
             pezzi: 1,
-            sistema: "Schüco ASS80", vetro: "6/16/6", coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "Come profili",
+            sistema: "SchÃ¼co ASS80", vetro: "6/16/6", coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "Come profili",
             telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
             coprifilo: "", lamiera: "",
             misure: { lAlto: 2402, lCentro: 2400, lBasso: 2398, hSx: 2202, hCentro: 2200, hDx: 2200, d1: 3204, d2: 3202, spSx: 160, spDx: 160, spSopra: 100, imbotte: 220, davInt: 0, davEst: 0, davProf: 0, davSporg: 0, soglia: 20 },
             cassonetto: false, casH: 0, casP: 0,
             accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: true, colore: "RAL 9010", l: 2390, h: 2190 } },
-            foto: {}, note: "Alzante scorrevole — verificare spazio binario a pavimento min 30mm" },
+            foto: {}, note: "Alzante scorrevole â€” verificare spazio binario a pavimento min 30mm" },
         ]
       }
     ],
@@ -168,9 +168,9 @@ const CANTIERI_INIT = [
       { chi: "Fabio", cosa: "iniziato sopralluogo", quando: "Oggi, 09:00", color: "#ff9500" },
     ]
   },
-  { id: 2, code: "CM-0002", cliente: "Teresa", cognome: "Greco", indirizzo: "Via Roma 45, interno 3 — Cosenza", fase: "misure",
+  { id: 2, code: "CM-0002", cliente: "Teresa", cognome: "Greco", indirizzo: "Via Roma 45, interno 3 â€” Cosenza", fase: "misure",
     sistema: "Rehau S80", tipo: "nuova", telefono: "+39 333 456 7890",
-    difficoltaSalita: "facile", mezzoSalita: "Scala a mano", pianoEdificio: "P1 — 1° Piano", foroScale: "85×200",
+    difficoltaSalita: "facile", mezzoSalita: "Scala a mano", pianoEdificio: "P1 â€” 1Â° Piano", foroScale: "85Ã—200",
     note: "Cliente preferisce colori chiari. Confermare campioni RAL prima dell'ordine.",
     euro: 8900, scadenza: (() => { const d = new Date(); d.setDate(d.getDate()-2); return d.toISOString().split("T")[0]; })(),
     rilievi: [
@@ -205,26 +205,26 @@ const CANTIERI_INIT = [
             cassonetto: false, casH: 0, casP: 0,
             accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
             foto: {}, note: "" },
-          { id: 14, nome: "Camera 2 ❌", tipo: "F1A", stanza: "Camera", piano: "P1",
+          { id: 14, nome: "Camera 2 âŒ", tipo: "F1A", stanza: "Camera", piano: "P1",
             pezzi: 1,
             sistema: "Rehau S80", vetro: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "",
             telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
             coprifilo: "", lamiera: "",
             misure: {}, cassonetto: false, casH: 0, casP: 0,
             accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-            foto: {}, note: "🔴 BLOCCATO: Arredo da spostare — Armadio enorme davanti alla finestra" },
-          { id: 15, nome: "Bagno ❌", tipo: "VAS", stanza: "Bagno", piano: "P1",
+            foto: {}, note: "ðŸ”´ BLOCCATO: Arredo da spostare â€” Armadio enorme davanti alla finestra" },
+          { id: 15, nome: "Bagno âŒ", tipo: "VAS", stanza: "Bagno", piano: "P1",
             pezzi: 1,
             sistema: "Rehau S80", vetro: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "",
             telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
             coprifilo: "", lamiera: "",
             misure: {}, cassonetto: false, casH: 0, casP: 0,
             accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-            foto: {}, note: "🔴 BLOCCATO: Lavori in corso — Idraulico presente, pavimento aperto" },
+            foto: {}, note: "ðŸ”´ BLOCCATO: Lavori in corso â€” Idraulico presente, pavimento aperto" },
         ]
       },
       { id: 102, n: 2, data: "2026-01-28", ora: "14:00", rilevatore: "Marco Ferraro",
-        tipo: "rilievo", motivoModifica: "", note: "Recuperato camera 2 e bagno. Ripostiglio ancora inaccessibile perché cliente assente.",
+        tipo: "rilievo", motivoModifica: "", note: "Recuperato camera 2 e bagno. Ripostiglio ancora inaccessibile perchÃ© cliente assente.",
         stato: "parziale",
         vani: [
           { id: 21, nome: "Camera 2", tipo: "F1A", stanza: "Camera", piano: "P1",
@@ -243,20 +243,20 @@ const CANTIERI_INIT = [
             cassonetto: false, casH: 0, casP: 0,
             accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
             foto: {}, note: "Vetro acidato per privacy" },
-          { id: 23, nome: "Ripostiglio ❌", tipo: "F1A", stanza: "Ripostiglio", piano: "P1",
+          { id: 23, nome: "Ripostiglio âŒ", tipo: "F1A", stanza: "Ripostiglio", piano: "P1",
             sistema: "", vetro: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "",
             telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "",
             coprifilo: "", lamiera: "",
             misure: {}, cassonetto: false, casH: 0, casP: 0,
             accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-            foto: {}, note: "🔴 BLOCCATO: Cliente assente — Appuntamento dimenticato, ripostiglio chiuso a chiave" },
+            foto: {}, note: "ðŸ”´ BLOCCATO: Cliente assente â€” Appuntamento dimenticato, ripostiglio chiuso a chiave" },
         ]
       },
     ],
     allegati: [], creato: "10 Gen", aggiornato: "28 Gen",
     log: [
-      { chi: "Marco Ferraro", cosa: "2° sopralluogo — Camera 2 e Bagno misurati", quando: "28 Gen, 14:00", color: "#34c759" },
-      { chi: "Fabio Cozza", cosa: "1° sopralluogo — Soggiorno, Cucina, Camera 1", quando: "23 Gen, 09:30", color: "#007aff" },
+      { chi: "Marco Ferraro", cosa: "2Â° sopralluogo â€” Camera 2 e Bagno misurati", quando: "28 Gen, 14:00", color: "#34c759" },
+      { chi: "Fabio Cozza", cosa: "1Â° sopralluogo â€” Soggiorno, Cucina, Camera 1", quando: "23 Gen, 09:30", color: "#007aff" },
       { chi: "Fabio Cozza", cosa: "creato la commessa", quando: "10 Gen, 08:00", color: "#86868b" },
     ]},
   { id: 3, code: "CM-0003", cliente: "Mario", cognome: "Ferraro", indirizzo: "Via Gabriele Barrio, Cosenza", fase: "sopralluogo",
@@ -274,28 +274,28 @@ const CANTIERI_INIT = [
 const TASKS_INIT = [
   { id: 1, text: "Sopralluogo Via G. Barrio", meta: "Portare metro laser + modulo", time: "09:00", priority: "alta", cm: "CM-0003", done: false },
   { id: 2, text: "Inserire misure vani CM-0001", meta: "Cliente aspetta preventivo", time: "", priority: "media", cm: "CM-0001", done: false },
-  { id: 3, text: "Chiamare fornitore Schüco", meta: "Confermare data consegna ordine", time: "15:00", priority: "bassa", cm: "CM-0002", done: false },
-  { id: 4, text: "Comprare viti inox 5x60", meta: "Brico — fatto", time: "08:00", priority: "bassa", cm: "", done: true },
+  { id: 3, text: "Chiamare fornitore SchÃ¼co", meta: "Confermare data consegna ordine", time: "15:00", priority: "bassa", cm: "CM-0002", done: false },
+  { id: 4, text: "Comprare viti inox 5x60", meta: "Brico â€” fatto", time: "08:00", priority: "bassa", cm: "", done: true },
 ];
 
 
-// === AI INBOX — email in arrivo con classificazione AI ===
+// === AI INBOX â€” email in arrivo con classificazione AI ===
 const AI_INBOX_INIT = [
   {
     id: "ai1", from: "Luigi Martino", email: "martino@gmail.com",
     subject: "Richiesta preventivo finestre",
-    body: "Buongiorno, vi scrivo perché devo sostituire 6 finestre al piano terra della mia abitazione a Cosenza, via Panebianco 12. Ho sentito parlare bene di voi. Potete mandarmi un preventivo? Grazie.",
+    body: "Buongiorno, vi scrivo perchÃ© devo sostituire 6 finestre al piano terra della mia abitazione a Cosenza, via Panebianco 12. Ho sentito parlare bene di voi. Potete mandarmi un preventivo? Grazie.",
     time: "09:14", date: "23/02/2026", read: false,
     ai: {
       tipo: "richiesta_preventivo",
       label: "Richiesta preventivo",
-      emoji: "💰",
+      emoji: "ðŸ’°",
       color: "#34C759",
       confidenza: 97,
       cmSuggerita: null,
       cmNuova: true,
       azione: "Crea nuova commessa",
-      note: "Nuovo cliente — 6 finestre via Panebianco 12, Cosenza",
+      note: "Nuovo cliente â€” 6 finestre via Panebianco 12, Cosenza",
       estratto: { cliente: "Luigi Martino", indirizzo: "Via Panebianco 12, Cosenza", telefono: "", email: "martino@gmail.com", note: "6 finestre piano terra" }
     }
   },
@@ -307,77 +307,77 @@ const AI_INBOX_INIT = [
     ai: {
       tipo: "conferma_ordine",
       label: "Conferma ordine",
-      emoji: "✅",
+      emoji: "âœ…",
       color: "#007AFF",
       confidenza: 94,
       cmSuggerita: "CM-0002",
       cmNuova: false,
-      azione: "Collega a CM-0002 · Avanza a Conferma",
+      azione: "Collega a CM-0002 Â· Avanza a Conferma",
       note: "Cliente Teresa Greco conferma il preventivo e chiede appuntamento misure",
       estratto: null
     }
   },
   {
     id: "ai3", from: "Fornitore Rehau", email: "ordini@rehau.it",
-    subject: "Ritardo consegna ordine #7821 — 5 giorni lavorativi",
-    body: "Gentile cliente, la informiamo che l'ordine #7821 relativo al profilo S80 subirà un ritardo di 5 giorni lavorativi causa problemi di produzione. Nuova data di consegna prevista: 03/03/2026. Ci scusiamo per l'inconveniente.",
+    subject: "Ritardo consegna ordine #7821 â€” 5 giorni lavorativi",
+    body: "Gentile cliente, la informiamo che l'ordine #7821 relativo al profilo S80 subirÃ  un ritardo di 5 giorni lavorativi causa problemi di produzione. Nuova data di consegna prevista: 03/03/2026. Ci scusiamo per l'inconveniente.",
     time: "14:05", date: "22/02/2026", read: false,
     ai: {
       tipo: "ritardo_fornitore",
       label: "Ritardo fornitore",
-      emoji: "⚠️",
+      emoji: "âš ï¸",
       color: "#FF9500",
       confidenza: 99,
       cmSuggerita: "CM-0002",
       cmNuova: false,
       azione: "Segnala ritardo su CM-0002",
-      note: "Rehau comunica ritardo di 5gg — consegna slittata al 03/03",
+      note: "Rehau comunica ritardo di 5gg â€” consegna slittata al 03/03",
       estratto: null
     }
   },
   {
     id: "ai4", from: "Rosario Bianchi", email: "bianchi@libero.it",
-    subject: "Problema dopo la posa — finestra non chiude bene",
-    body: "Buongiorno, vi scrivo perché una delle finestre posate la settimana scorsa (camera da letto) non si chiude correttamente. Si sente aria da un lato. Potete venire a vedere? Grazie.",
+    subject: "Problema dopo la posa â€” finestra non chiude bene",
+    body: "Buongiorno, vi scrivo perchÃ© una delle finestre posate la settimana scorsa (camera da letto) non si chiude correttamente. Si sente aria da un lato. Potete venire a vedere? Grazie.",
     time: "08:50", date: "22/02/2026", read: true,
     ai: {
       tipo: "reclamo_garanzia",
       label: "Reclamo / Garanzia",
-      emoji: "🔴",
+      emoji: "ðŸ”´",
       color: "#FF3B30",
       confidenza: 91,
       cmSuggerita: "CM-0003",
       cmNuova: false,
       azione: "Apri ticket garanzia su CM-0003",
-      note: "Camera da letto — finestra non chiude, aria laterale. Intervento urgente.",
+      note: "Camera da letto â€” finestra non chiude, aria laterale. Intervento urgente.",
       estratto: null
     }
   },
   {
     id: "ai5", from: "Comune di Cosenza", email: "sportello@comune.cosenza.it",
     subject: "Risposta pratica CILA n.2024/1823",
-    body: "Spett.le ditta, la informiamo che la pratica CILA n.2024/1823 presentata in data 15/01/2024 è stata approvata. Può procedere con i lavori. Allego ricevuta di approvazione.",
+    body: "Spett.le ditta, la informiamo che la pratica CILA n.2024/1823 presentata in data 15/01/2024 Ã¨ stata approvata. PuÃ² procedere con i lavori. Allego ricevuta di approvazione.",
     time: "16:20", date: "21/02/2026", read: true,
     ai: {
       tipo: "pratica_burocratica",
       label: "Pratica burocratica",
-      emoji: "🏛️",
+      emoji: "ðŸ›ï¸",
       color: "#AF52DE",
       confidenza: 88,
       cmSuggerita: null,
       cmNuova: false,
       azione: "Archivia nella commessa correlata",
-      note: "CILA approvata — allegare ai documenti della commessa",
+      note: "CILA approvata â€” allegare ai documenti della commessa",
       estratto: null
     }
   },
 ];
 
 const MSGS_INIT = [
-  { id: 1, from: "Fornitore Schüco", preview: "Conferma ordine #4521 — materiale pronto per spedizione il 20/02", time: "14:32", cm: "CM-0002", read: false, canale: "email", thread: [
+  { id: 1, from: "Fornitore SchÃ¼co", preview: "Conferma ordine #4521 â€” materiale pronto per spedizione il 20/02", time: "14:32", cm: "CM-0002", read: false, canale: "email", thread: [
     { who: "Tu", text: "Buongiorno, stato ordine #4521?", time: "09:15", date: "18/02", canale: "email" },
-    { who: "Fornitore Schüco", text: "Ordine in lavorazione, consegna prevista 20/02", time: "10:40", date: "18/02", canale: "email" },
-    { who: "Fornitore Schüco", text: "Conferma ordine #4521 — materiale pronto per spedizione il 20/02. Maniglie satinate incluse.", time: "14:32", date: "19/02", canale: "email" },
+    { who: "Fornitore SchÃ¼co", text: "Ordine in lavorazione, consegna prevista 20/02", time: "10:40", date: "18/02", canale: "email" },
+    { who: "Fornitore SchÃ¼co", text: "Conferma ordine #4521 â€” materiale pronto per spedizione il 20/02. Maniglie satinate incluse.", time: "14:32", date: "19/02", canale: "email" },
   ]},
   { id: 2, from: "Mario (posatore)", preview: "Fabio, per la CM-0004 servono i controtelai speciali?", time: "12:15", cm: "CM-0004", read: false, canale: "whatsapp", thread: [
     { who: "Mario", text: "Ciao Fabio, domani vado a posare CM-0004", time: "08:30", date: "19/02", canale: "whatsapp" },
@@ -399,7 +399,7 @@ const MSGS_INIT = [
 const TEAM_INIT = [
   { id: 1, nome: "Fabio Cozza", ruolo: "Titolare", compiti: "Gestione commesse, preventivi, rapporti clienti", colore: "#007aff" },
   { id: 2, nome: "Marco Ferraro", ruolo: "Posatore", compiti: "Sopralluoghi, misure, installazione", colore: "#34c759" },
-  { id: 3, nome: "Sara Greco", ruolo: "Ufficio", compiti: "Ordini, contabilità, assistenza clienti", colore: "#af52de" },
+  { id: 3, nome: "Sara Greco", ruolo: "Ufficio", compiti: "Ordini, contabilitÃ , assistenza clienti", colore: "#af52de" },
 ];
 
 const CONTATTI_INIT = [
@@ -407,10 +407,10 @@ const CONTATTI_INIT = [
   { id: 2, nome: "Teresa Bruno", tipo: "cliente", tel: "338 9876543", email: "bruno@pec.it", preferito: true, canali: ["whatsapp", "sms"], cm: "CM-0002" },
   { id: 3, nome: "Lucia Ferraro", tipo: "cliente", tel: "333 4567890", email: "", preferito: false, canali: ["whatsapp"], cm: "CM-0003" },
   { id: 4, nome: "Antonio Mancini", tipo: "cliente", tel: "340 1112233", email: "mancini@gmail.com", preferito: false, canali: ["whatsapp", "email"], cm: "CM-0004" },
-  { id: 5, nome: "Fornitore Schüco", tipo: "fornitore", tel: "0984 123456", email: "ordini@schuco.it", preferito: true, canali: ["email", "telegram"], cm: "" },
+  { id: 5, nome: "Fornitore SchÃ¼co", tipo: "fornitore", tel: "0984 123456", email: "ordini@schuco.it", preferito: true, canali: ["email", "telegram"], cm: "" },
   { id: 6, nome: "Vetreria Milano", tipo: "fornitore", tel: "02 9876543", email: "info@vetreriami.it", preferito: true, canali: ["email", "telegram"], cm: "" },
   { id: 7, nome: "Ferramenta Cosenza", tipo: "fornitore", tel: "0984 555666", email: "ordini@ferracosenza.it", preferito: false, canali: ["email", "whatsapp"], cm: "" },
-  { id: 8, nome: "Geom. Calabrò", tipo: "professionista", tel: "339 7778899", email: "calabro@studio.it", preferito: false, canali: ["email", "whatsapp"], cm: "" },
+  { id: 8, nome: "Geom. CalabrÃ²", tipo: "professionista", tel: "339 7778899", email: "calabro@studio.it", preferito: false, canali: ["email", "whatsapp"], cm: "" },
 ];
 
 const COLORI_INIT = [
@@ -424,7 +424,7 @@ const COLORI_INIT = [
 
 const SISTEMI_INIT = [
   { id: 1, marca: "Aluplast", sistema: "Ideal 4000", euroMq: 180, prezzoMq: 180, sovRAL: 12, sovLegno: 22, colori: ["RAL 9010", "RAL 7016", "RAL 9005", "Noce"], sottosistemi: ["Classicline", "Roundline"] },
-  { id: 2, marca: "Schüco", sistema: "CT70", euroMq: 280, prezzoMq: 280, sovRAL: 15, sovLegno: 25, colori: ["RAL 9010", "RAL 7016", "RAL 9005"], sottosistemi: ["Classic", "Rondo"] },
+  { id: 2, marca: "SchÃ¼co", sistema: "CT70", euroMq: 280, prezzoMq: 280, sovRAL: 15, sovLegno: 25, colori: ["RAL 9010", "RAL 7016", "RAL 9005"], sottosistemi: ["Classic", "Rondo"] },
   { id: 3, marca: "Rehau", sistema: "S80", euroMq: 220, prezzoMq: 220, sovRAL: 12, sovLegno: 20, colori: ["RAL 9010", "RAL 7016", "Noce"], sottosistemi: ["Geneo", "Synego"] },
   { id: 4, marca: "Finstral", sistema: "FIN-Project", euroMq: 350, prezzoMq: 350, sovRAL: 18, sovLegno: 30, colori: ["RAL 9010", "RAL 7016", "RAL 9005", "Rovere"], sottosistemi: ["Nova-line", "Step-line"] },
 ];
@@ -440,39 +440,39 @@ const VETRI_INIT = [
 
 const TIPOLOGIE_RAPIDE = [
   // Finestre
-  { code: "F1A",    label: "Finestra 1 anta",           icon: "🪟", cat: "Finestre" },
-  { code: "F2A",    label: "Finestra 2 ante",            icon: "🪟", cat: "Finestre" },
-  { code: "F3A",    label: "Finestra 3 ante",            icon: "🪟", cat: "Finestre" },
-  { code: "F4A",    label: "Finestra 4 ante",            icon: "🪟", cat: "Finestre" },
-  { code: "F2AFISDX", label: "Finestra 2A + Fisso DX",  icon: "🪟", cat: "Finestre" },
-  { code: "F2AFISSX", label: "Finestra 2A + Fisso SX",  icon: "🪟", cat: "Finestre" },
-  { code: "FISDX",  label: "Fisso DX",                  icon: "▮",  cat: "Finestre" },
-  { code: "FISSX",  label: "Fisso SX",                  icon: "▮",  cat: "Finestre" },
-  { code: "VAS",    label: "Vasistas",                  icon: "⬇",  cat: "Finestre" },
-  { code: "RIBALTA",label: "Ribalta",                   icon: "⬆",  cat: "Finestre" },
+  { code: "F1A",    label: "Finestra 1 anta",           icon: "ðŸªŸ", cat: "Finestre" },
+  { code: "F2A",    label: "Finestra 2 ante",            icon: "ðŸªŸ", cat: "Finestre" },
+  { code: "F3A",    label: "Finestra 3 ante",            icon: "ðŸªŸ", cat: "Finestre" },
+  { code: "F4A",    label: "Finestra 4 ante",            icon: "ðŸªŸ", cat: "Finestre" },
+  { code: "F2AFISDX", label: "Finestra 2A + Fisso DX",  icon: "ðŸªŸ", cat: "Finestre" },
+  { code: "F2AFISSX", label: "Finestra 2A + Fisso SX",  icon: "ðŸªŸ", cat: "Finestre" },
+  { code: "FISDX",  label: "Fisso DX",                  icon: "â–®",  cat: "Finestre" },
+  { code: "FISSX",  label: "Fisso SX",                  icon: "â–®",  cat: "Finestre" },
+  { code: "VAS",    label: "Vasistas",                  icon: "â¬‡",  cat: "Finestre" },
+  { code: "RIBALTA",label: "Ribalta",                   icon: "â¬†",  cat: "Finestre" },
   // Balconi / Portafinestre
-  { code: "PF1A",   label: "Balcone 1 anta",            icon: "🚪", cat: "Balconi" },
-  { code: "PF2A",   label: "Balcone 2 ante",            icon: "🚪", cat: "Balconi" },
-  { code: "PF3A",   label: "Balcone 3 ante",            icon: "🚪", cat: "Balconi" },
-  { code: "PF4A",   label: "Balcone 4 ante",            icon: "🚪", cat: "Balconi" },
-  { code: "PF2AFISDX", label: "Balcone 2A + Fisso DX", icon: "🚪", cat: "Balconi" },
-  { code: "PF2AFISSX", label: "Balcone 2A + Fisso SX", icon: "🚪", cat: "Balconi" },
+  { code: "PF1A",   label: "Balcone 1 anta",            icon: "ðŸšª", cat: "Balconi" },
+  { code: "PF2A",   label: "Balcone 2 ante",            icon: "ðŸšª", cat: "Balconi" },
+  { code: "PF3A",   label: "Balcone 3 ante",            icon: "ðŸšª", cat: "Balconi" },
+  { code: "PF4A",   label: "Balcone 4 ante",            icon: "ðŸšª", cat: "Balconi" },
+  { code: "PF2AFISDX", label: "Balcone 2A + Fisso DX", icon: "ðŸšª", cat: "Balconi" },
+  { code: "PF2AFISSX", label: "Balcone 2A + Fisso SX", icon: "ðŸšª", cat: "Balconi" },
   // Scorrevoli / Alzanti
-  { code: "SC2A",   label: "Scorrevole 2 ante",         icon: "↔️", cat: "Scorrevoli" },
-  { code: "SC4A",   label: "Scorrevole 4 ante",         icon: "↔️", cat: "Scorrevoli" },
-  { code: "SCRDX",  label: "Scorrevole DX",             icon: "▶",  cat: "Scorrevoli" },
-  { code: "SCRSX",  label: "Scorrevole SX",             icon: "◀",  cat: "Scorrevoli" },
-  { code: "ALZDX",  label: "Alzante DX",                icon: "⬆",  cat: "Scorrevoli" },
-  { code: "ALZSX",  label: "Alzante SX",                icon: "⬆",  cat: "Scorrevoli" },
+  { code: "SC2A",   label: "Scorrevole 2 ante",         icon: "â†”ï¸", cat: "Scorrevoli" },
+  { code: "SC4A",   label: "Scorrevole 4 ante",         icon: "â†”ï¸", cat: "Scorrevoli" },
+  { code: "SCRDX",  label: "Scorrevole DX",             icon: "â–¶",  cat: "Scorrevoli" },
+  { code: "SCRSX",  label: "Scorrevole SX",             icon: "â—€",  cat: "Scorrevoli" },
+  { code: "ALZDX",  label: "Alzante DX",                icon: "â¬†",  cat: "Scorrevoli" },
+  { code: "ALZSX",  label: "Alzante SX",                icon: "â¬†",  cat: "Scorrevoli" },
   // Persiane
-  { code: "PERS1A", label: "Persiana 1 anta",           icon: "🌂", cat: "Persiane" },
-  { code: "PERS2A", label: "Persiana 2 ante",           icon: "🌂", cat: "Persiane" },
-  { code: "TAPP",   label: "Tapparella",                icon: "⬇",  cat: "Persiane" },
-  { code: "ZANZ",   label: "Zanzariera",                icon: "🕸",  cat: "Persiane" },
+  { code: "PERS1A", label: "Persiana 1 anta",           icon: "ðŸŒ‚", cat: "Persiane" },
+  { code: "PERS2A", label: "Persiana 2 ante",           icon: "ðŸŒ‚", cat: "Persiane" },
+  { code: "TAPP",   label: "Tapparella",                icon: "â¬‡",  cat: "Persiane" },
+  { code: "ZANZ",   label: "Zanzariera",                icon: "ðŸ•¸",  cat: "Persiane" },
   // Altro
-  { code: "SOPR",   label: "Sopraluce",                 icon: "△",  cat: "Altro" },
-  { code: "MONO",   label: "Monoblocco",                icon: "⬜",  cat: "Altro" },
-  { code: "BLI",    label: "Porta blindata",            icon: "🛡",  cat: "Altro" },
+  { code: "SOPR",   label: "Sopraluce",                 icon: "â–³",  cat: "Altro" },
+  { code: "MONO",   label: "Monoblocco",                icon: "â¬œ",  cat: "Altro" },
+  { code: "BLI",    label: "Porta blindata",            icon: "ðŸ›¡",  cat: "Altro" },
 ];
 
 const COPRIFILI_INIT = [
@@ -526,8 +526,8 @@ const PUNTI_MISURE = [
   { key: "hSx", label: "H sx", x: 8, y: 125, color: "blue", rot: true },
   { key: "hCentro", label: "H centro", x: 95, y: 170, color: "blue" },
   { key: "hDx", label: "H dx", x: 182, y: 125, color: "blue", rot: true },
-  { key: "d1", label: "D1 ↗", x: 50, y: 55, color: "purple" },
-  { key: "d2", label: "D2 ↘", x: 140, y: 55, color: "purple" },
+  { key: "d1", label: "D1 â†—", x: 50, y: 55, color: "purple" },
+  { key: "d2", label: "D2 â†˜", x: 140, y: 55, color: "purple" },
 ];
 
 /* ====================================== */
@@ -646,7 +646,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     return [
       { id: 1, text: "Sopralluogo Ferraro", time: "09:00", date: td, tipo: "appuntamento", cm: "CM-0003", persona: "Fabio Cozza", color: "#ff3b30", addr: "Via G. Barrio" },
       { id: 2, text: "Consegna materiale Bruno", time: "14:00", date: td, tipo: "appuntamento", cm: "CM-0002", persona: "Sara Greco", color: "#007aff", addr: "Via Roma 45, Rende" },
-      { id: 3, text: "Posa Cozza — Camera", time: "16:30", date: td, tipo: "appuntamento", cm: "CM-0004", persona: "Marco Ferraro", color: "#34c759", addr: "Via G. Barrio" },
+      { id: 3, text: "Posa Cozza â€” Camera", time: "16:30", date: td, tipo: "appuntamento", cm: "CM-0004", persona: "Marco Ferraro", color: "#34c759", addr: "Via G. Barrio" },
       { id: 4, text: "Ritiro vetri Finstral", time: "10:00", date: tmStr, tipo: "task", cm: "", persona: "Marco Ferraro", color: "#ff9500" },
       { id: 5, text: "Preventivo Rossi", time: "", date: t2Str, tipo: "task", cm: "CM-0001", persona: "Sara Greco", color: "#af52de" },
     ];
@@ -911,7 +911,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     } else if (settingsModal === "lamiera" && f.nome && f.cod) {
       setLamiereDB(l => [...l, { id: Date.now(), nome: f.nome, cod: f.cod, prezzoMl: parseFloat(f.prezzoMl)||0 }]);
     } else if (settingsModal === "tipologia" && f.code && f.label) {
-      TIPOLOGIE_RAPIDE.push({ code: f.code, label: f.label, icon: f.icon || "🪟" });
+      TIPOLOGIE_RAPIDE.push({ code: f.code, label: f.label, icon: f.icon || "ðŸªŸ" });
     } else if (settingsModal === "membro" && f.nome) {
       const colori = ["#007aff","#34c759","#af52de","#ff9500","#ff3b30","#5ac8fa"];
       setTeam(t => [...t, { id: Date.now(), nome: f.nome, ruolo: f.ruolo || "Posatore", compiti: f.compiti || "", colore: colori[t.length % colori.length] }]);
@@ -972,12 +972,12 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       const t = tasks.filter(x => !x.done);
       resp = `Oggi hai ${t.length} task aperti:\n${t.map((x, i) => `${i + 1}. ${x.text}${x.time ? ` (${x.time})` : ""}`).join("\n")}`;
     } else if (q.includes("commess") || q.includes("stato") || q.includes("pipeline")) {
-      resp = `Hai ${cantieri.length} commesse:\n${cantieri.map(c => `• ${c.code} ${c.cliente} — ${PIPELINE.find(p => p.id === c.fase)?.nome}`).join("\n")}`;
+      resp = `Hai ${cantieri.length} commesse:\n${cantieri.map(c => `â€¢ ${c.code} ${c.cliente} â€” ${PIPELINE.find(p => p.id === c.fase)?.nome}`).join("\n")}`;
     } else if (q.includes("vani") || q.includes("misur")) {
-      resp = `Totale vani: ${countVani()}\nCommesse con vani da misurare:\n${cantieri.filter(c => getVaniAttivi(c).some(v => Object.keys(v.misure || {}).length < 6)).map(c => `• ${c.code}: ${getVaniAttivi(c).filter(v => Object.keys(v.misure || {}).length < 6).length} vani incompleti`).join("\n")}`;
+      resp = `Totale vani: ${countVani()}\nCommesse con vani da misurare:\n${cantieri.filter(c => getVaniAttivi(c).some(v => Object.keys(v.misure || {}).length < 6)).map(c => `â€¢ ${c.code}: ${getVaniAttivi(c).filter(v => Object.keys(v.misure || {}).length < 6).length} vani incompleti`).join("\n")}`;
     } else if (q.includes("urgent") || q.includes("priorit")) {
       const u = tasks.filter(x => x.priority === "alta" && !x.done);
-      resp = u.length ? `Task urgenti:\n${u.map(x => `• ${x.text}`).join("\n")}` : "Nessun task urgente!";
+      resp = u.length ? `Task urgenti:\n${u.map(x => `â€¢ ${x.text}`).join("\n")}` : "Nessun task urgente!";
     }
     setTimeout(() => setAiMsgs(m => [...m, { role: "ai", text: resp }]), 300);
   };
@@ -985,21 +985,21 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const exportPDF = () => {
     if (!selectedCM) return;
     const cm = selectedCM;
-    let html = `<html><head><title>MASTRO MISURE — ${cm.code}</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px}h1{color:#0066cc;border-bottom:3px solid #0066cc;padding-bottom:10px}h2{color:#333;margin-top:30px}.vano{border:1px solid #ddd;border-radius:8px;padding:15px;margin:10px 0;page-break-inside:avoid}.misure-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.m-item{background:#f5f5f7;padding:6px 10px;border-radius:4px;font-size:13px}.m-label{color:#666;font-size:11px}.m-val{font-weight:700;color:#1d1d1f}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.info{color:#666;font-size:13px}@media print{body{padding:0}}</style></head><body>`;
-    html += `<div class="header"><div><h1>MASTRO MISURE</h1><p class="info">Report Misure — ${cm.code}</p></div><div style="text-align:right"><p><strong>${cm.cliente}</strong></p><p class="info">${cm.indirizzo}</p><p class="info">Sistema: ${cm.sistema || "N/D"} | Tipo: ${cm.tipo === "riparazione" ? "Riparazione" : "Nuova"}</p></div></div>`;
+    let html = `<html><head><title>MASTRO MISURE â€” ${cm.code}</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px}h1{color:#0066cc;border-bottom:3px solid #0066cc;padding-bottom:10px}h2{color:#333;margin-top:30px}.vano{border:1px solid #ddd;border-radius:8px;padding:15px;margin:10px 0;page-break-inside:avoid}.misure-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.m-item{background:#f5f5f7;padding:6px 10px;border-radius:4px;font-size:13px}.m-label{color:#666;font-size:11px}.m-val{font-weight:700;color:#1d1d1f}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.info{color:#666;font-size:13px}@media print{body{padding:0}}</style></head><body>`;
+    html += `<div class="header"><div><h1>MASTRO MISURE</h1><p class="info">Report Misure â€” ${cm.code}</p></div><div style="text-align:right"><p><strong>${cm.cliente}</strong></p><p class="info">${cm.indirizzo}</p><p class="info">Sistema: ${cm.sistema || "N/D"} | Tipo: ${cm.tipo === "riparazione" ? "Riparazione" : "Nuova"}</p></div></div>`;
     cm.vani.forEach((v, i) => {
       const m = v.misure || {};
-      html += `<div class="vano"><h3>${i + 1}. ${v.nome} — ${v.tipo} (${v.stanza}, ${v.piano})</h3><div class="misure-grid">`;
+      html += `<div class="vano"><h3>${i + 1}. ${v.nome} â€” ${v.tipo} (${v.stanza}, ${v.piano})</h3><div class="misure-grid">`;
       [["L alto", m.lAlto], ["L centro", m.lCentro], ["L basso", m.lBasso], ["H sinistra", m.hSx], ["H centro", m.hCentro], ["H destra", m.hDx], ["Diag. 1", m.d1], ["Diag. 2", m.d2], ["Spall. SX", m.spSx], ["Spall. DX", m.spDx], ["Architrave", m.arch], ["Dav. int.", m.davInt], ["Dav. est.", m.davEst]].forEach(([l, val]) => {
-        html += `<div class="m-item"><div class="m-label">${l}</div><div class="m-val">${val || "—"} mm</div></div>`;
+        html += `<div class="m-item"><div class="m-label">${l}</div><div class="m-val">${val || "â€”"} mm</div></div>`;
       });
       html += `</div>`;
-      if (v.cassonetto) html += `<p style="margin-top:8px;font-size:13px">Cassonetto: ${v.casH || "—"} × ${v.casP || "—"} mm</p>`;
+      if (v.cassonetto) html += `<p style="margin-top:8px;font-size:13px">Cassonetto: ${v.casH || "â€”"} Ã— ${v.casP || "â€”"} mm</p>`;
       if (v.note) html += `<p style="margin-top:4px;font-size:12px;color:#666">Note: ${v.note}</p>`;
       html += `</div>`;
     });
     html += `<div style="margin-top:40px;border-top:1px solid #ddd;padding-top:20px;display:flex;justify-content:space-between"><div><p class="info">Firma tecnico</p><div style="border-bottom:1px solid #333;width:200px;height:40px"></div></div><div><p class="info">Firma cliente</p><div style="border-bottom:1px solid #333;width:200px;height:40px"></div></div></div>`;
-    html += `<p style="text-align:center;margin-top:30px;color:#999;font-size:11px">Generato da MASTRO MISURE — ${new Date().toLocaleDateString("it-IT")}</p></body></html>`;
+    html += `<p style="text-align:center;margin-top:30px;color:#999;font-size:11px">Generato da MASTRO MISURE â€” ${new Date().toLocaleDateString("it-IT")}</p></body></html>`;
     const w = window.open("", "_blank");
     w.document.write(html);
     w.document.close();
@@ -1059,7 +1059,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             <div key={p.id} style={{ display: "flex", alignItems: "flex-start", flex: i < PIPELINE.length - 1 ? 1 : "none" }}>
               <div style={S.pipeStep(done, current)}>
                 <div style={S.pipeCircle(done, current, p.color)}>
-                  {done ? <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span> : <span>{p.ico}</span>}
+                  {done ? <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>âœ“</span> : <span>{p.ico}</span>}
                 </div>
                 <div style={S.pipeLabel(current)}>{p.nome}</div>
               </div>
@@ -1141,7 +1141,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         {/* Logo row */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* Logo — quadrato nero con M bianca, uguale in tutte le app MASTRO */}
+            {/* Logo â€” quadrato nero con M bianca, uguale in tutte le app MASTRO */}
             <div style={{ width: 44, height: 44, borderRadius: 10, background: T.text, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <span style={{ fontSize: 22, fontWeight: 800, color: T.card, fontFamily: FF, letterSpacing: -1 }}>M</span>
             </div>
@@ -1153,14 +1153,14 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
             <div style={{ textAlign: "right" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 20 }}>⛅</span>
-                <span style={{ fontSize: 18, fontWeight: 600 }}>12°</span>
+                <span style={{ fontSize: 20 }}>â›…</span>
+                <span style={{ fontSize: 18, fontWeight: 600 }}>12Â°</span>
               </div>
               <div style={{ fontSize: 11, color: T.sub }}>Cosenza</div>
             </div>
             <div onClick={() => setHomeEditMode(e => !e)}
               style={{ padding: "4px 10px", borderRadius: 7, background: homeEditMode ? T.acc : T.bg, border: `1px solid ${homeEditMode ? T.acc : T.bdr}`, fontSize: 11, fontWeight: 700, color: homeEditMode ? "#fff" : T.sub, cursor: "pointer" }}>
-              {homeEditMode ? "✓ Fine" : "✏ Riordina"}
+              {homeEditMode ? "âœ“ Fine" : "âœ Riordina"}
             </div>
           </div>
         </div>
@@ -1185,7 +1185,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             value={globalSearch}
             onChange={e => setGlobalSearch(e.target.value)}
           />
-          {globalSearch && <div onClick={() => setGlobalSearch("")} style={{ cursor: "pointer", fontSize: 14, color: T.sub }}>✕</div>}
+          {globalSearch && <div onClick={() => setGlobalSearch("")} style={{ cursor: "pointer", fontSize: 14, color: T.sub }}>âœ•</div>}
         </div>
         {globalSearch.trim().length > 1 && (() => {
           const q = globalSearch.toLowerCase();
@@ -1198,26 +1198,26 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             <div style={{ background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}`, marginTop: 6, maxHeight: 280, overflowY: "auto" }}>
               {cmResults.map(c => (
                 <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); setGlobalSearch(""); }} style={{ padding: "10px 14px", borderBottom: `1px solid ${T.bg}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 16 }}>📁</span>
-                  <div><div style={{ fontSize: 12, fontWeight: 600 }}>{c.cliente}</div><div style={{ fontSize: 10, color: T.sub }}>{c.code} · {c.indirizzo}</div></div>
+                  <span style={{ fontSize: 16 }}>ðŸ“</span>
+                  <div><div style={{ fontSize: 12, fontWeight: 600 }}>{c.cliente}</div><div style={{ fontSize: 10, color: T.sub }}>{c.code} Â· {c.indirizzo}</div></div>
                 </div>
               ))}
               {vanoResults.map(v => (
                 <div key={v.id} onClick={() => { setSelectedCM(v.cm); setSelectedVano(v); setTab("commesse"); setGlobalSearch(""); }} style={{ padding: "10px 14px", borderBottom: `1px solid ${T.bg}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 16 }}>🪟</span>
-                  <div><div style={{ fontSize: 12, fontWeight: 600 }}>{v.nome}</div><div style={{ fontSize: 10, color: T.sub }}>{v.cmCode} · {v.stanza} · {v.tipo}</div></div>
+                  <span style={{ fontSize: 16 }}>ðŸªŸ</span>
+                  <div><div style={{ fontSize: 12, fontWeight: 600 }}>{v.nome}</div><div style={{ fontSize: 10, color: T.sub }}>{v.cmCode} Â· {v.stanza} Â· {v.tipo}</div></div>
                 </div>
               ))}
               {taskResults.map(t => (
                 <div key={t.id} onClick={() => { setGlobalSearch(""); }} style={{ padding: "10px 14px", borderBottom: `1px solid ${T.bg}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 16 }}>☑️</span>
-                  <div><div style={{ fontSize: 12, fontWeight: 600 }}>{t.text}</div><div style={{ fontSize: 10, color: T.sub }}>{t.cm || "Task"} · {t.meta}</div></div>
+                  <span style={{ fontSize: 16 }}>â˜‘ï¸</span>
+                  <div><div style={{ fontSize: 12, fontWeight: 600 }}>{t.text}</div><div style={{ fontSize: 10, color: T.sub }}>{t.cm || "Task"} Â· {t.meta}</div></div>
                 </div>
               ))}
               {evResults.map(e => (
                 <div key={e.id} onClick={() => { setTab("agenda"); setAgendaView("giorno"); setSelDate(new Date(e.date)); setGlobalSearch(""); }} style={{ padding: "10px 14px", borderBottom: `1px solid ${T.bg}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 16 }}>📅</span>
-                  <div><div style={{ fontSize: 12, fontWeight: 600 }}>{e.text}</div><div style={{ fontSize: 10, color: T.sub }}>{e.date} {e.time} · {e.persona}</div></div>
+                  <span style={{ fontSize: 16 }}>ðŸ“…</span>
+                  <div><div style={{ fontSize: 12, fontWeight: 600 }}>{e.text}</div><div style={{ fontSize: 10, color: T.sub }}>{e.date} {e.time} Â· {e.persona}</div></div>
                 </div>
               ))}
             </div>
@@ -1245,13 +1245,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             const taskUrgenti = tasks.filter(t => !t.done && t.priority === "alta");
             const nextEvent = todayEvents[0];
             let banner = null;
-            if (urgenti.length > 0) { const c=urgenti[0]; banner = { color:T.red, bg:"rgba(255,59,48,0.07)", border:"rgba(255,59,48,0.18)", tag:"⚠️ URGENTE", title:c.alert, sub:`${c.code} · ${c.cliente}`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
-            else if (nextEvent) { banner = { color:nextEvent.color||T.acc, bg:`${nextEvent.color||T.acc}10`, border:`${nextEvent.color||T.acc}25`, tag:`📅 OGGI ${nextEvent.time?"ALLE "+nextEvent.time:""}`, title:nextEvent.text, sub:[nextEvent.persona,nextEvent.cm,nextEvent.addr].filter(Boolean).join(" · "), act:()=>{setTab("agenda");setAgendaView("giorno");setSelDate(new Date(nextEvent.date));} }; }
-            else if (misureInAttesa.length > 0) { const c=misureInAttesa[0]; const mn=getVaniAttivi(c).filter(v=>Object.keys(v.misure||{}).length<4).length; banner = { color:T.orange, bg:"rgba(255,149,0,0.07)", border:"rgba(255,149,0,0.18)", tag:"📐 MISURE IN ATTESA", title:`${c.code} · ${c.cliente}`, sub:`${mn} ${mn===1?"vano":"vani"} da misurare`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
-            else if (preventiviDaFare.length > 0) { banner = { color:"#7c3aed", bg:"rgba(124,58,237,0.07)", border:"rgba(124,58,237,0.18)", tag:"📋 PREVENTIVI", title:`${preventiviDaFare.length} ${preventiviDaFare.length===1?"preventivo da inviare":"preventivi da inviare"}`, sub:preventiviDaFare.map(c=>c.code).join(" · "), act:()=>setTab("commesse") }; }
-            else if (taskUrgenti.length > 0) { const t=taskUrgenti[0]; banner = { color:T.red, bg:"rgba(255,59,48,0.07)", border:"rgba(255,59,48,0.18)", tag:"⚡ TASK URGENTE", title:t.text, sub:t.cm?`Commessa ${t.cm}`:(t.meta||""), act:()=>{} }; }
-            else if (ferme.length > 0) { const c=ferme[0]; const gg=giorniFermaCM(c); banner = { color:"#ff6b00", bg:"rgba(255,107,0,0.07)", border:"rgba(255,107,0,0.18)", tag:`🔔 FERMA DA ${gg} GIORNI`, title:`${c.code} · ${c.cliente}`, sub:`In fase "${PIPELINE.find(p=>p.id===c.fase)?.nome||c.fase}" dal ${c.aggiornato}${ferme.length>1?" · e altre "+(ferme.length-1):""}`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
-            else { banner = { color:T.grn, bg:"rgba(52,199,89,0.07)", border:"rgba(52,199,89,0.18)", tag:"✅ TUTTO IN ORDINE", title:"Nessuna azione urgente", sub:`${cantieri.length} commesse attive`, act:null }; }
+            if (urgenti.length > 0) { const c=urgenti[0]; banner = { color:T.red, bg:"rgba(255,59,48,0.07)", border:"rgba(255,59,48,0.18)", tag:"âš ï¸ URGENTE", title:c.alert, sub:`${c.code} Â· ${c.cliente}`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
+            else if (nextEvent) { banner = { color:nextEvent.color||T.acc, bg:`${nextEvent.color||T.acc}10`, border:`${nextEvent.color||T.acc}25`, tag:`ðŸ“… OGGI ${nextEvent.time?"ALLE "+nextEvent.time:""}`, title:nextEvent.text, sub:[nextEvent.persona,nextEvent.cm,nextEvent.addr].filter(Boolean).join(" Â· "), act:()=>{setTab("agenda");setAgendaView("giorno");setSelDate(new Date(nextEvent.date));} }; }
+            else if (misureInAttesa.length > 0) { const c=misureInAttesa[0]; const mn=getVaniAttivi(c).filter(v=>Object.keys(v.misure||{}).length<4).length; banner = { color:T.orange, bg:"rgba(255,149,0,0.07)", border:"rgba(255,149,0,0.18)", tag:"ðŸ“ MISURE IN ATTESA", title:`${c.code} Â· ${c.cliente}`, sub:`${mn} ${mn===1?"vano":"vani"} da misurare`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
+            else if (preventiviDaFare.length > 0) { banner = { color:"#7c3aed", bg:"rgba(124,58,237,0.07)", border:"rgba(124,58,237,0.18)", tag:"ðŸ“‹ PREVENTIVI", title:`${preventiviDaFare.length} ${preventiviDaFare.length===1?"preventivo da inviare":"preventivi da inviare"}`, sub:preventiviDaFare.map(c=>c.code).join(" Â· "), act:()=>setTab("commesse") }; }
+            else if (taskUrgenti.length > 0) { const t=taskUrgenti[0]; banner = { color:T.red, bg:"rgba(255,59,48,0.07)", border:"rgba(255,59,48,0.18)", tag:"âš¡ TASK URGENTE", title:t.text, sub:t.cm?`Commessa ${t.cm}`:(t.meta||""), act:()=>{} }; }
+            else if (ferme.length > 0) { const c=ferme[0]; const gg=giorniFermaCM(c); banner = { color:"#ff6b00", bg:"rgba(255,107,0,0.07)", border:"rgba(255,107,0,0.18)", tag:`ðŸ”” FERMA DA ${gg} GIORNI`, title:`${c.code} Â· ${c.cliente}`, sub:`In fase "${PIPELINE.find(p=>p.id===c.fase)?.nome||c.fase}" dal ${c.aggiornato}${ferme.length>1?" Â· e altre "+(ferme.length-1):""}`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
+            else { banner = { color:T.grn, bg:"rgba(52,199,89,0.07)", border:"rgba(52,199,89,0.18)", tag:"âœ… TUTTO IN ORDINE", title:"Nessuna azione urgente", sub:`${cantieri.length} commesse attive`, act:null }; }
             return (
               <div onClick={banner.act} style={{ margin:"0 16px 12px", borderRadius:12, background:banner.bg, border:`1px solid ${banner.border}`, padding:"12px 14px", cursor:banner.act?"pointer":"default", position:"relative", overflow:"hidden" }}>
                 <div style={{ position:"absolute", left:0, top:0, bottom:0, width:3, background:banner.color, borderRadius:"12px 0 0 12px" }}/>
@@ -1259,7 +1259,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   <div style={{ fontSize:9, fontWeight:800, color:banner.color, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4, fontFamily:FM }}>{banner.tag}</div>
                   <div style={{ fontSize:15, fontWeight:700, color:T.text, lineHeight:1.3, marginBottom:2 }}>{banner.title}</div>
                   {banner.sub && <div style={{ fontSize:12, color:T.sub, lineHeight:1.4 }}>{banner.sub}</div>}
-                  {banner.act && <div style={{ marginTop:6, fontSize:11, fontWeight:700, color:banner.color }}>Tocca per aprire →</div>}
+                  {banner.act && <div style={{ marginTop:6, fontSize:11, fontWeight:700, color:banner.color }}>Tocca per aprire â†’</div>}
                 </div>
               </div>
             );
@@ -1288,11 +1288,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             const calOff = firstDay === 0 ? 6 : firstDay - 1;
             const dIM = new Date(dashY, dashMo+1, 0).getDate();
             const cells = Array.from({length: calOff + dIM}, (_,i) => i < calOff ? null : i - calOff + 1);
-            const hdrL = agendaView === "giorno" ? selDate.toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" }) : agendaView === "settimana" ? weekDays[0].getDate() + "\u2013" + weekDays[6].getDate() + " " + selDate.toLocaleDateString("it-IT", { month:"long", year:"numeric" }) : selDate.toLocaleDateString("it-IT", { month:"long", year:"numeric" });
+            const hdrL = agendaView === "giorno" ? selDate.toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" }) : agendaView === "settimana" ? weekDays[0].getDate() + "–" +  weekDays[6].getDate() + " " + selDate.toLocaleDateString("it-IT", { month:"long", year:"numeric" }) : selDate.toLocaleDateString("it-IT", { month:"long", year:"numeric" });
             const hours = [7,8,9,10,11,12,13,14,15,16,17,18,19];
             const dayEvs = events.filter(e => e.date === dateStr2(selDate)).sort((a,b) => (a.time||"99").localeCompare(b.time||"99"));
             return (<div style={{ marginBottom:12 }}>
-                <div style={S.section}><div style={S.sectionTitle}>Calendario</div><div onClick={() => { setTab("agenda"); }} style={{ padding:"4px 10px", borderRadius:6, fontSize:10, fontWeight:700, cursor:"pointer", color:T.acc }}>Apri \u2192</div></div>
+                <div style={S.section}><div style={S.sectionTitle}>Calendario</div><div onClick={() => { setTab("agenda"); }} style={{ padding:"4px 10px", borderRadius:6, fontSize:10, fontWeight:700, cursor:"pointer", color:T.acc }}> Apri  </div></div>
                 <div style={{ padding:"0 16px" }}>
                   <div style={{ background:T.card, borderRadius:T.r, border:`1px solid ${T.bdr}`, overflow:"hidden" }}
                     onTouchStart={(e) => { calTouchStartRef.current = e.targetTouches[0].clientX; }}
@@ -1302,9 +1302,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                       {["giorno","settimana","mese"].map(v => (<div key={v} onClick={() => setAgendaView(v)} style={{ flex:1, padding:"8px 4px", textAlign:"center", fontSize:11, fontWeight:700, background: agendaView === v ? T.acc : "transparent", color: agendaView === v ? "#fff" : T.sub, cursor:"pointer", textTransform:"capitalize", transition:"all 0.2s" }}>{v}</div>))}
                     </div>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 12px", borderBottom:`1px solid ${T.bdr}` }}>
-                      <div onClick={navPrev} style={{ width:28, height:28, borderRadius:8, background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:14, color:T.sub }}>\u2039</div>
-                      <div onClick={() => setSelDate(new Date())} style={{ fontSize:12, fontWeight:700, color:T.text, textTransform:"capitalize", cursor:"pointer" }}>{hdrL}</div>
-                      <div onClick={navNext} style={{ width:28, height:28, borderRadius:8, background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:14, color:T.sub }}>\u203a</div>
+                      <div onClick={navPrev} style={{ width:28, height:28, borderRadius:8, background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:14, color:T.sub }}>‹</div>
+                      <div onClick={() => setSelDate(new Date())} style={{ fontSize:12, fontWeight:700, color:T.text, textTransform:"capitalize", cursor:"pointer" }}>{hdrL}</div><div onClick={() => setSelDate(new Date())} style={{ fontSize:10, fontWeight:700, color:"#fff", background:T.acc, cursor:"pointer", padding:"3px 10px", borderRadius:12, marginLeft:8 }}>Oggi</div>
+                      <div onClick={navNext} style={{ width:28, height:28, borderRadius:8, background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:14, color:T.sub }}>›</div>
                     </div>
                     {agendaView === "giorno" && (<div style={{ maxHeight:360, overflowY:"auto" }}>
                         {dayEvs.length === 0 ? (<div style={{ padding:"24px 16px", textAlign:"center", color:T.sub, fontSize:13 }}>Nessun evento</div>) : (<div style={{ padding:"8px 0" }}>
@@ -1314,7 +1314,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                                   <div style={{ flex:1, padding:"2px 8px 2px 0" }}>
                                     {hEvs.map(ev => (<div key={ev.id} onClick={() => setSelectedEvent(ev)} style={{ padding:"6px 10px", borderRadius:8, marginBottom:2, background:(ev.color||T.acc)+"15", borderLeft:`3px solid ${ev.color||T.acc}`, cursor:"pointer" }}>
                                         <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{ev.text}</div>
-                                        <div style={{ fontSize:10, color:T.sub }}>{[ev.time, ev.persona, ev.cm, ev.addr].filter(Boolean).join(" \u00b7 ")}</div>
+                                        <div style={{ fontSize:10, color:T.sub }}>{[ev.time, ev.persona, ev.cm, ev.addr].filter(Boolean).join("  ")}</div>
                                       </div>))}
                                   </div></div>); })}
                           </div>)}
@@ -1336,7 +1336,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                                 style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 12px", cursor:"pointer", borderBottom:`1px solid ${T.bdr}20` }}>
                                 <div style={{ width:4, height:24, borderRadius:2, background:ev.color||T.acc, flexShrink:0 }}/>
                                 <div style={{ flex:1, minWidth:0 }}><div style={{ fontSize:11, fontWeight:700, color:T.text, overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis" }}>{ev.text}</div>
-                                  <div style={{ fontSize:10, color:T.sub }}>{wd.toLocaleDateString("it-IT",{weekday:"short",day:"numeric"}).slice(0,6)} {ev.time ? "\u00b7 "+ev.time : ""}</div></div>
+                                  <div style={{ fontSize:10, color:T.sub }}>{wd.toLocaleDateString("it-IT",{weekday:"short",day:"numeric"}).slice(0,6)} {ev.time ? " "+ev.time : ""}</div></div>
                               </div>)); })}
                         </div></div>)}
                     {agendaView === "mese" && (<div>
@@ -1411,7 +1411,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             return (
               <div>
                 <div style={S.section}>
-                  <div style={S.sectionTitle}>📁 Commesse <span style={{ fontSize:11, color:T.sub, fontWeight:500 }}>{cmFiltrate.length}</span></div>
+                  <div style={S.sectionTitle}>ðŸ“ Commesse <span style={{ fontSize:11, color:T.sub, fontWeight:500 }}>{cmFiltrate.length}</span></div>
                   <button style={S.sectionBtn} onClick={() => setTab("commesse")}>Vedi tutte</button>
                 </div>
                 {/* Filtro fasi swipeable */}
@@ -1427,7 +1427,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                         color: cmFaseIdx===i ? "#fff" : T.sub,
                         border: `1px solid ${cmFaseIdx===i ? (p?.color||T.acc) : T.bdr}`,
                       }}>
-                        {p?.ico||"📁"} {p?.nome||"Tutte"} {n>0&&<span style={{fontWeight:800}}>{n}</span>}
+                        {p?.ico||"ðŸ“"} {p?.nome||"Tutte"} {n>0&&<span style={{fontWeight:800}}>{n}</span>}
                       </div>
                     );
                   })}
@@ -1459,15 +1459,15 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                               {isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.red, background:T.redLt, borderRadius:8, padding:"1px 6px" }}>FERMA {gg}gg</span>}
                               {isScaduta && !isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.orange, background:T.orangeLt, borderRadius:8, padding:"1px 6px" }}>SCADUTA</span>}
                             </div>
-                            <div style={{ fontSize:11, color:T.sub, marginTop:2 }}>{c.indirizzo||"—"}</div>
+                            <div style={{ fontSize:11, color:T.sub, marginTop:2 }}>{c.indirizzo||"â€”"}</div>
                             {/* Badge fase + scadenza */}
                             <div style={{ display:"flex", gap:5, marginTop:5, flexWrap:"wrap", alignItems:"center" }}>
                               <span style={{ ...S.badge(p?.color+"18"||T.accLt, p?.color||T.acc), fontSize:10 }}>{p?.ico} {p?.nome||c.fase}</span>
-                              {c.scadenza && <span style={{ fontSize:10, color: isScaduta ? T.red : T.sub }}>📅 {c.scadenza}</span>}
-                              {c.importo && <span style={{ fontSize:10, color:T.grn, fontWeight:700 }}>€{c.importo}</span>}
+                              {c.scadenza && <span style={{ fontSize:10, color: isScaduta ? T.red : T.sub }}>ðŸ“… {c.scadenza}</span>}
+                              {c.importo && <span style={{ fontSize:10, color:T.grn, fontWeight:700 }}>â‚¬{c.importo}</span>}
                             </div>
                           </div>
-                          <span style={{ color:T.sub, fontSize:16, flexShrink:0 }}>›</span>
+                          <span style={{ color:T.sub, fontSize:16, flexShrink:0 }}>â€º</span>
                         </div>
                         {/* Barra avanzamento fase */}
                         <div style={{ marginTop:8 }}>
@@ -1480,8 +1480,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                           </div>
                           {vaniA.length > 0 && (
                             <div style={{ fontSize:10, color:T.sub, marginTop:4 }}>
-                              🪟 {vaniMis}/{vaniA.length} vani misurati
-                              {prog === 100 && <span style={{ color:T.grn, fontWeight:700 }}> ✅ Completo</span>}
+                              ðŸªŸ {vaniMis}/{vaniA.length} vani misurati
+                              {prog === 100 && <span style={{ color:T.grn, fontWeight:700 }}> âœ… Completo</span>}
                             </div>
                           )}
                         </div>
@@ -1494,7 +1494,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           })(),
         };
 
-        const LABELS = { banner:"🔔 Avviso", urgenti:"⚠️ Urgenti", calendario:"📅 Calendario", email:"📧 Email", commesse:"📁 Commesse" };
+        const LABELS = { banner:"ðŸ”” Avviso", urgenti:"âš ï¸ Urgenti", calendario:"ðŸ“… Calendario", email:"ðŸ“§ Email", commesse:"ðŸ“ Commesse" };
 
         // Widget urgenti: centro allerta multi-categoria con swipe
         const urgentiCM = cantieri.filter(c => giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura");
@@ -1502,21 +1502,21 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         const prevInAttesa = cantieri.filter(c => c.fase === "preventivo" && giorniFermaCM(c) > 5);
         const vaniBloccatiAll = cantieri.flatMap(c => {
           const r = c.rilievi?.[c.rilievi.length-1];
-          return (r?.vani||[]).filter(v => v.note?.startsWith("🔴 BLOCCATO")).map(v => ({ ...v, cm: c }));
+          return (r?.vani||[]).filter(v => v.note?.startsWith("ðŸ”´ BLOCCATO")).map(v => ({ ...v, cm: c }));
         });
         const vaniIncompleti = cantieri.flatMap(c => {
           const r = c.rilievi?.[c.rilievi.length-1];
           return (r?.vani||[]).filter(v => {
             const n = Object.values(v.misure||{}).filter(x=>(x as number)>0).length;
-            return n > 0 && n < 6 && !v.note?.startsWith("🔴 BLOCCATO");
+            return n > 0 && n < 6 && !v.note?.startsWith("ðŸ”´ BLOCCATO");
           }).map(v => ({ ...v, cm: c }));
         });
 
         const allertaCategorie = [
-          { id: "ferme", ico: "⚠️", label: "Ferme", count: urgentiCM.length, color: T.red },
-          { id: "oggi", ico: "📅", label: "Oggi", count: todayEventsUrgenti.length, color: T.blue },
-          { id: "prev", ico: "💰", label: "Preventivi", count: prevInAttesa.length, color: T.orange },
-          { id: "vani", ico: "🪟", label: "Vani", count: vaniBloccatiAll.length + vaniIncompleti.length, color: T.purple },
+          { id: "ferme", ico: "âš ï¸", label: "Ferme", count: urgentiCM.length, color: T.red },
+          { id: "oggi", ico: "ðŸ“…", label: "Oggi", count: todayEventsUrgenti.length, color: T.blue },
+          { id: "prev", ico: "ðŸ’°", label: "Preventivi", count: prevInAttesa.length, color: T.orange },
+          { id: "vani", ico: "ðŸªŸ", label: "Vani", count: vaniBloccatiAll.length + vaniIncompleti.length, color: T.purple },
         ].filter(c => c.count > 0);
 
         const totalAllerte = allertaCategorie.reduce((s,c) => s+c.count, 0);
@@ -1533,7 +1533,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             <div style={{ padding: "0 16px" }}>
               {/* Header con tab categorie */}
               <div style={S.section}>
-                <div style={S.sectionTitle}>⚡ Allerte <span style={{ fontSize:11, fontWeight:700, color:"#fff", background:T.red, borderRadius:10, padding:"1px 7px", marginLeft:4 }}>{totalAllerte}</span></div>
+                <div style={S.sectionTitle}>âš¡ Allerte <span style={{ fontSize:11, fontWeight:700, color:"#fff", background:T.red, borderRadius:10, padding:"1px 7px", marginLeft:4 }}>{totalAllerte}</span></div>
               </div>
               {/* Tab categorie */}
               <div style={{ display:"flex", gap:6, marginBottom:10, overflowX:"auto" }}>
@@ -1557,11 +1557,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     cursor:"pointer", marginBottom:6, display:"flex", alignItems:"center", gap:10
                   }}>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontSize:9, fontWeight:800, color:T.red, letterSpacing:1 }}>⚠ FERMA DA {giorniFermaCM(c)} GIORNI</div>
+                      <div style={{ fontSize:9, fontWeight:800, color:T.red, letterSpacing:1 }}>âš  FERMA DA {giorniFermaCM(c)} GIORNI</div>
                       <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{c.cliente}</div>
-                      <div style={{ fontSize:11, color:T.sub }}>{c.code} · {c.fase} · {c.indirizzo||"—"}</div>
+                      <div style={{ fontSize:11, color:T.sub }}>{c.code} Â· {c.fase} Â· {c.indirizzo||"â€”"}</div>
                     </div>
-                    <span style={{ color:T.sub, fontSize:16 }}>›</span>
+                    <span style={{ color:T.sub, fontSize:16 }}>â€º</span>
                   </div>
                 ))}
                 {cat?.id === "oggi" && todayEventsUrgenti.map(ev => (
@@ -1571,11 +1571,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     cursor:"pointer", marginBottom:6, display:"flex", alignItems:"center", gap:10
                   }}>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontSize:9, fontWeight:800, color:ev.color||T.blue, letterSpacing:1 }}>📅 OGGI {ev.time||""}</div>
+                      <div style={{ fontSize:9, fontWeight:800, color:ev.color||T.blue, letterSpacing:1 }}>ðŸ“… OGGI {ev.time||""}</div>
                       <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{ev.text}</div>
-                      <div style={{ fontSize:11, color:T.sub }}>{[ev.persona, ev.addr, ev.cm].filter(Boolean).join(" · ")}</div>
+                      <div style={{ fontSize:11, color:T.sub }}>{[ev.persona, ev.addr, ev.cm].filter(Boolean).join(" Â· ")}</div>
                     </div>
-                    {ev.addr && <div onClick={e=>{e.stopPropagation();window.open("https://maps.google.com/?q="+encodeURIComponent(ev.addr));}} style={{ padding:"5px 8px", borderRadius:7, background:T.blueLt, color:T.blue, fontSize:10, fontWeight:700, flexShrink:0 }}>🗺</div>}
+                    {ev.addr && <div onClick={e=>{e.stopPropagation();window.open("https://maps.google.com/?q="+encodeURIComponent(ev.addr));}} style={{ padding:"5px 8px", borderRadius:7, background:T.blueLt, color:T.blue, fontSize:10, fontWeight:700, flexShrink:0 }}>ðŸ—º</div>}
                   </div>
                 ))}
                 {cat?.id === "prev" && prevInAttesa.map(c => (
@@ -1585,11 +1585,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     cursor:"pointer", marginBottom:6, display:"flex", alignItems:"center", gap:10
                   }}>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontSize:9, fontWeight:800, color:T.orange, letterSpacing:1 }}>💰 PREVENTIVO IN ATTESA {giorniFermaCM(c)}gg</div>
+                      <div style={{ fontSize:9, fontWeight:800, color:T.orange, letterSpacing:1 }}>ðŸ’° PREVENTIVO IN ATTESA {giorniFermaCM(c)}gg</div>
                       <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{c.cliente}</div>
-                      <div style={{ fontSize:11, color:T.sub }}>{c.code} · {c.sistema||"—"}</div>
+                      <div style={{ fontSize:11, color:T.sub }}>{c.code} Â· {c.sistema||"â€”"}</div>
                     </div>
-                    <span style={{ color:T.sub, fontSize:16 }}>›</span>
+                    <span style={{ color:T.sub, fontSize:16 }}>â€º</span>
                   </div>
                 ))}
                 {cat?.id === "vani" && [
@@ -1605,12 +1605,12 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   }}>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:9, fontWeight:800, color: v.tipo_alert==="bloccato"?T.red:T.orange, letterSpacing:1 }}>
-                        {v.tipo_alert==="bloccato" ? "🔴 VANO BLOCCATO" : "⚠ MISURE INCOMPLETE"}
+                        {v.tipo_alert==="bloccato" ? "ðŸ”´ VANO BLOCCATO" : "âš  MISURE INCOMPLETE"}
                       </div>
-                      <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{v.nome} — {v.cm.cliente}</div>
-                      <div style={{ fontSize:11, color:T.sub }}>{v.cm.code} · {v.tipo_alert==="bloccato" ? (v.note||"").replace("🔴 BLOCCATO: ","") : `${Object.values(v.misure||{}).filter(x=>(x as number)>0).length}/6 misure`}</div>
+                      <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{v.nome} â€” {v.cm.cliente}</div>
+                      <div style={{ fontSize:11, color:T.sub }}>{v.cm.code} Â· {v.tipo_alert==="bloccato" ? (v.note||"").replace("ðŸ”´ BLOCCATO: ","") : `${Object.values(v.misure||{}).filter(x=>(x as number)>0).length}/6 misure`}</div>
                     </div>
-                    <span style={{ color:T.sub, fontSize:16 }}>›</span>
+                    <span style={{ color:T.sub, fontSize:16 }}>â€º</span>
                   </div>
                 ))}
               </div>
@@ -1635,7 +1635,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               {homeEditMode && (
                 <div style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", zIndex:10, display:"flex", alignItems:"center", gap:6,
                   background:T.card, border:`1px solid ${T.bdr}`, borderRadius:8, padding:"4px 10px", boxShadow:"0 1px 6px rgba(0,0,0,0.08)", pointerEvents:"none" }}>
-                  <span style={{ fontSize:14, color:T.sub }}>☰</span>
+                  <span style={{ fontSize:14, color:T.sub }}>â˜°</span>
                   <span style={{ fontSize:11, fontWeight:700, color:T.sub }}>{LABELS[id]}</span>
                 </div>
               )}
@@ -1649,7 +1649,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     </div>
   );
 // =======================================================
-// MASTRO ERP v2 — PARTE 2/5
+// MASTRO ERP v2 â€” PARTE 2/5
 // Righe 1281-2638: renderCMCard (con AFASE+euro+scadenza+borderLeft),
 //                 renderCommesse, renderCMDetail (wizard 4-step + 3 tab
 //                 sopralluoghi/misure/info + cronologia visite),
@@ -1683,13 +1683,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               <div style={{ fontSize: 12, color: T.sub, marginTop: 3 }}>
                 {c.indirizzo}
                 {vaniMisurati !== null
-                  ? ` · ${vaniMisurati}/${c.vaniList.length} vani rilevati`
-                  : ` · ${(c.rilievi||[]).length} rilievi`}
+                  ? ` Â· ${vaniMisurati}/${c.vaniList.length} vani rilevati`
+                  : ` Â· ${(c.rilievi||[]).length} rilievi`}
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
               {isUrgente && <span style={{ ...S.badge(T.redLt, T.red), fontSize: 9 }}>FERMA</span>}
-              {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>🔧</span>}
+              {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>ðŸ”§</span>}
               <span style={S.badge(fase?.color + "18", fase?.color)}>{fase?.nome}</span>
             </div>
           </div>
@@ -1705,22 +1705,22 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             border: `1px solid ${isUrgente ? T.red + "30" : az.c + "30"}`
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 14 }}>{isUrgente ? "🔴" : az.i}</span>
+              <span style={{ fontSize: 14 }}>{isUrgente ? "ðŸ”´" : az.i}</span>
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: isUrgente ? T.red : az.c }}>
                   {isUrgente ? "Commessa bloccata" : az.t}
                 </div>
                 <div style={{ fontSize: 10, color: T.sub, marginTop: 1 }}>
                   {Math.round(progress)}%
-                  {c.euro ? ` · €${c.euro.toLocaleString("it-IT")}` : ""}
+                  {c.euro ? ` Â· â‚¬${c.euro.toLocaleString("it-IT")}` : ""}
                   {c.scadenza ? <span style={{ color: isScad ? T.red : T.sub }}>
-                    {` · scad. ${new Date(c.scadenza + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" })}`}
+                    {` Â· scad. ${new Date(c.scadenza + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" })}`}
                   </span> : null}
                 </div>
               </div>
             </div>
             <div style={{ padding: "5px 10px", borderRadius: 6, background: isUrgente ? T.red : az.c, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
-              {isUrgente ? "Sblocca" : "→"}
+              {isUrgente ? "Sblocca" : "â†’"}
             </div>
           </div>
         </div>
@@ -1730,7 +1730,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
   /* == COMMESSE TAB == */
   // ============================================================
-  // RENDER LISTA RILIEVI (livello intermedio: commessa → rilievi)
+  // RENDER LISTA RILIEVI (livello intermedio: commessa â†’ rilievi)
   // ============================================================
   const renderRilieviList = () => {
     const c = selectedCM;
@@ -1765,16 +1765,16 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           <div onClick={() => setShowNuovoRilievo(false)} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
           <div style={{ flex: 1 }}>
             <div style={S.headerTitle}>Nuovo Rilievo</div>
-            <div style={S.headerSub}>{c.code} · {c.cliente} {c.cognome}</div>
+            <div style={S.headerSub}>{c.code} Â· {c.cliente} {c.cognome}</div>
           </div>
         </div>
         <div style={{ padding: 16 }}>
           {/* Tipo */}
           <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Tipo di visita</div>
           {[
-            { k: "rilievo",    ico: "📐", l: "Rilievo misure",    d: "Misuri i vani del cantiere" },
-            { k: "definitiva", ico: "✅", l: "Misure definitive", d: "Conferma finale — si va in produzione" },
-            { k: "modifica",   ico: "🔧", l: "Modifica",          d: "Cliente cambia configurazione o aggiunge vani" },
+            { k: "rilievo",    ico: "ðŸ“", l: "Rilievo misure",    d: "Misuri i vani del cantiere" },
+            { k: "definitiva", ico: "âœ…", l: "Misure definitive", d: "Conferma finale â€” si va in produzione" },
+            { k: "modifica",   ico: "ðŸ”§", l: "Modifica",          d: "Cliente cambia configurazione o aggiunge vani" },
           ].map(t => (
             <div key={t.k} onClick={() => setNuovoRilTipo(t.k)}
               style={{ ...S.card, padding: "12px 14px", marginBottom: 8, cursor: "pointer",
@@ -1786,7 +1786,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 <div style={{ fontSize: 13, fontWeight: 700, color: nuovoRilTipo === t.k ? T.acc : T.text }}>{t.l}</div>
                 <div style={{ fontSize: 11, color: T.sub }}>{t.d}</div>
               </div>
-              {nuovoRilTipo === t.k && <div style={{ width: 18, height: 18, borderRadius: "50%", background: T.acc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11 }}>✓</div>}
+              {nuovoRilTipo === t.k && <div style={{ width: 18, height: 18, borderRadius: "50%", background: T.acc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11 }}>âœ“</div>}
             </div>
           ))}
           {nuovoRilTipo === "modifica" && (
@@ -1815,7 +1815,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>NOTE</div>
             <textarea style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="Note preliminari..." value={nuovoRilData.note} onChange={e => setNuovoRilData(d => ({...d, note: e.target.value}))} />
           </div>
-          <button onClick={salvaRilievo} style={{ ...S.btn, width: "100%", marginTop: 20, background: T.grn }}>✓ Crea Rilievo</button>
+          <button onClick={salvaRilievo} style={{ ...S.btn, width: "100%", marginTop: 20, background: T.grn }}>âœ“ Crea Rilievo</button>
         </div>
       </div>
     );
@@ -1833,10 +1833,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             const prev = rilievi[idx];
             const prevVani = prev?.vani || [];
             const currVani = r.vani || [];
-            const aggiunti = currVani.filter(v => !prevVani.some(p => p.nome.replace(" ❌","") === v.nome.replace(" ❌","")));
-            const rimossi  = prevVani.filter(p => !currVani.some(v => v.nome.replace(" ❌","") === p.nome.replace(" ❌","")));
+            const aggiunti = currVani.filter(v => !prevVani.some(p => p.nome.replace(" âŒ","") === v.nome.replace(" âŒ","")));
+            const rimossi  = prevVani.filter(p => !currVani.some(v => v.nome.replace(" âŒ","") === p.nome.replace(" âŒ","")));
             const modificati = currVani.filter(v => {
-              const match = prevVani.find(p => p.nome.replace(" ❌","") === v.nome.replace(" ❌",""));
+              const match = prevVani.find(p => p.nome.replace(" âŒ","") === v.nome.replace(" âŒ",""));
               if (!match) return false;
               return JSON.stringify(v.misure) !== JSON.stringify(match.misure) ||
                      v.sistema !== match.sistema || v.tipo !== match.tipo;
@@ -1844,11 +1844,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             return (
               <div key={r.id} style={{ ...S.card, marginBottom: 12 }}>
                 <div style={{ padding: "11px 14px", borderBottom: `1px solid ${T.bdr}`, display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ fontSize: 20 }}>🔀</div>
+                  <div style={{ fontSize: 20 }}>ðŸ”€</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700 }}>R{prev.n} → R{r.n}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>R{prev.n} â†’ R{r.n}</div>
                     <div style={{ fontSize: 11, color: T.sub }}>
-                      {new Date(prev.data + "T12:00:00").toLocaleDateString("it-IT", { day:"numeric", month:"short" })} → {new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { day:"numeric", month:"short" })}
+                      {new Date(prev.data + "T12:00:00").toLocaleDateString("it-IT", { day:"numeric", month:"short" })} â†’ {new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { day:"numeric", month:"short" })}
                     </div>
                   </div>
                   {aggiunti.length + rimossi.length + modificati.length === 0
@@ -1859,29 +1859,29 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   {aggiunti.length > 0 && (
                     <div style={{ marginBottom: 8 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: T.grn, marginBottom: 4 }}>+ AGGIUNTI</div>
-                      {aggiunti.map(v => <span key={v.id} style={{ ...S.badge(T.grnLt, T.grn), marginRight: 4, marginBottom: 4, display: "inline-block" }}>+ {v.nome.replace(" ❌","")}</span>)}
+                      {aggiunti.map(v => <span key={v.id} style={{ ...S.badge(T.grnLt, T.grn), marginRight: 4, marginBottom: 4, display: "inline-block" }}>+ {v.nome.replace(" âŒ","")}</span>)}
                     </div>
                   )}
                   {rimossi.length > 0 && (
                     <div style={{ marginBottom: 8 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: T.red, marginBottom: 4 }}>- RIMOSSI</div>
-                      {rimossi.map(v => <span key={v.id} style={{ ...S.badge(T.redLt, T.red), marginRight: 4, marginBottom: 4, display: "inline-block" }}>- {v.nome.replace(" ❌","")}</span>)}
+                      {rimossi.map(v => <span key={v.id} style={{ ...S.badge(T.redLt, T.red), marginRight: 4, marginBottom: 4, display: "inline-block" }}>- {v.nome.replace(" âŒ","")}</span>)}
                     </div>
                   )}
                   {modificati.length > 0 && (
                     <div>
                       <div style={{ fontSize: 10, fontWeight: 700, color: T.orange, marginBottom: 6 }}>~ MODIFICATI</div>
                       {modificati.map(v => {
-                        const match = prevVani.find(p => p.nome.replace(" ❌","") === v.nome.replace(" ❌",""));
+                        const match = prevVani.find(p => p.nome.replace(" âŒ","") === v.nome.replace(" âŒ",""));
                         const diffMisure = Object.entries(v.misure || {}).filter(([k, val]) => match?.misure?.[k] !== val);
                         return (
                           <div key={v.id} style={{ marginBottom: 8, padding: "8px 10px", background: T.orangeLt, borderRadius: 8, border: `1px solid ${T.orange}30` }}>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: T.orange, marginBottom: 4 }}>~ {v.nome.replace(" ❌","")}</div>
-                            {v.sistema !== match?.sistema && <div style={{ fontSize: 11, color: T.text, marginBottom: 2 }}>Sistema: <strong>{match?.sistema || "—"}</strong> → <strong>{v.sistema}</strong></div>}
-                            {v.tipo !== match?.tipo && <div style={{ fontSize: 11, color: T.text, marginBottom: 2 }}>Tipo: <strong>{match?.tipo || "—"}</strong> → <strong>{v.tipo}</strong></div>}
+                            <div style={{ fontSize: 12, fontWeight: 700, color: T.orange, marginBottom: 4 }}>~ {v.nome.replace(" âŒ","")}</div>
+                            {v.sistema !== match?.sistema && <div style={{ fontSize: 11, color: T.text, marginBottom: 2 }}>Sistema: <strong>{match?.sistema || "â€”"}</strong> â†’ <strong>{v.sistema}</strong></div>}
+                            {v.tipo !== match?.tipo && <div style={{ fontSize: 11, color: T.text, marginBottom: 2 }}>Tipo: <strong>{match?.tipo || "â€”"}</strong> â†’ <strong>{v.tipo}</strong></div>}
                             {diffMisure.slice(0, 5).map(([k, val]) => (
                               <div key={k} style={{ fontSize: 11, color: T.sub }}>
-                                {k}: <span style={{ color: T.red }}>{match?.misure?.[k] || 0}</span> → <span style={{ color: T.grn }}>{val as any}</span>
+                                {k}: <span style={{ color: T.red }}>{match?.misure?.[k] || 0}</span> â†’ <span style={{ color: T.grn }}>{val as any}</span>
                               </div>
                             ))}
                           </div>
@@ -1902,7 +1902,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
     // == LISTA RILIEVI ==
     const tipoColor = { rilievo: T.blue, definitiva: T.grn, modifica: T.orange };
-    const tipoIco   = { rilievo: "📐", definitiva: "✅", modifica: "🔧" };
+    const tipoIco   = { rilievo: "ðŸ“", definitiva: "âœ…", modifica: "ðŸ”§" };
     const [rilTab, setRilTab] = (window as any).__rilTab__ || [null, null];
     // Use local state via component trick: riutilizza cmSubTab per il tab rilievi/report
     return (
@@ -1911,7 +1911,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         <div style={S.header}>
           <div onClick={() => { setSelectedCM(null); setSelectedRilievo(null); }} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
           <div style={{ flex: 1 }}>
-            <div style={S.headerTitle}>{c.code} · {c.cliente} {c.cognome || ""}</div>
+            <div style={S.headerTitle}>{c.code} Â· {c.cliente} {c.cognome || ""}</div>
             <div style={S.headerSub}>{c.indirizzo}</div>
           </div>
           <div onClick={() => setShowNuovoRilievo(true)}
@@ -1926,10 +1926,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         </div>
         <div style={{ padding: "0 16px 8px", display: "flex", gap: 6, flexWrap: "wrap" }}>
           {c.sistema && <span style={S.badge(T.blueLt, T.blue)}>{c.sistema}</span>}
-          {c.tipo === "nuova" && <span style={S.badge(T.grnLt, T.grn)}>🆕 Nuova</span>}
-          {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>🔧 Riparazione</span>}
-          {c.telefono && <span onClick={() => window.open(`tel:${c.telefono}`)} style={{ ...S.badge(T.grnLt, T.grn), cursor: "pointer" }}>📞 {c.telefono}</span>}
-          {c.euro > 0 && <span style={S.badge(T.accLt, T.acc)}>€{c.euro.toLocaleString("it-IT")}</span>}
+          {c.tipo === "nuova" && <span style={S.badge(T.grnLt, T.grn)}>ðŸ†• Nuova</span>}
+          {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>ðŸ”§ Riparazione</span>}
+          {c.telefono && <span onClick={() => window.open(`tel:${c.telefono}`)} style={{ ...S.badge(T.grnLt, T.grn), cursor: "pointer" }}>ðŸ“ž {c.telefono}</span>}
+          {c.euro > 0 && <span style={S.badge(T.accLt, T.acc)}>â‚¬{c.euro.toLocaleString("it-IT")}</span>}
         </div>
 
         {/* Tab: Rilievi | Report */}
@@ -1939,7 +1939,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               style={{ flex: 1, padding: "9px 4px", textAlign: "center", fontSize: 12, fontWeight: 600, cursor: "pointer",
                 borderBottom: `2px solid ${cmSubTab === t ? T.acc : "transparent"}`,
                 color: cmSubTab === t ? T.acc : T.sub, textTransform: "capitalize" }}>
-              {t === "rilievi" ? `📁 Rilievi (${rilievi.length})` : "📊 Report Differenze"}
+              {t === "rilievi" ? `ðŸ“ Rilievi (${rilievi.length})` : "ðŸ“Š Report Differenze"}
             </div>
           ))}
         </div>
@@ -1952,7 +1952,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           <div style={{ padding: "8px 16px" }}>
             {rilievi.length === 0 && (
               <div style={{ textAlign: "center", padding: "32px 16px" }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>ðŸ“‚</div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 6 }}>Nessun rilievo ancora</div>
                 <div style={{ fontSize: 12, color: T.sub, marginBottom: 20 }}>Crea il primo rilievo per iniziare a misurare i vani</div>
                 <button onClick={() => setShowNuovoRilievo(true)} style={{ ...S.btn, margin: "0 auto" }}>+ Crea primo rilievo</button>
@@ -1962,7 +1962,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               const vaniCount = (r.vani || []).length;
               const vaniMisurati = (r.vani || []).filter(v => Object.values(v.misure || {}).filter(x => (x as number) > 0).length >= 6).length;
               const colore = tipoColor[r.tipo] || T.blue;
-              const ico = tipoIco[r.tipo] || "📐";
+              const ico = tipoIco[r.tipo] || "ðŸ“";
               const isUltimo = idx === 0;
               return (
                 <div key={r.id} onClick={() => { setSelectedRilievo(r); setCmSubTab("sopralluoghi"); }}
@@ -1983,9 +1983,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                         {isUltimo && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: colore, color: "#fff" }}>ULTIMO</span>}
                       </div>
                       <div style={{ fontSize: 11, color: T.sub }}>
-                        {r.ora && `🕐 ${r.ora} · `}👤 {r.rilevatore || "—"}
+                        {r.ora && `ðŸ• ${r.ora} Â· `}ðŸ‘¤ {r.rilevatore || "â€”"}
                       </div>
-                      {r.motivoModifica && <div style={{ fontSize: 11, color: T.orange, marginTop: 2 }}>🔧 {r.motivoModifica}</div>}
+                      {r.motivoModifica && <div style={{ fontSize: 11, color: T.orange, marginTop: 2 }}>ðŸ”§ {r.motivoModifica}</div>}
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: colore }}>{vaniCount}</div>
@@ -2022,7 +2022,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     const vaniA = getVaniAttivi(c);
     const vaniMis = vaniA.filter(v => Object.values(v.misure||{}).filter(x=>(x as number)>0).length >= 6).length;
     const vaniInc = vaniA.filter(v => { const n=Object.values(v.misure||{}).filter(x=>(x as number)>0).length; return n>0&&n<6; }).length;
-    const vaniBloc = vaniA.filter(v => v.note?.startsWith("🔴 BLOCCATO")).length;
+    const vaniBloc = vaniA.filter(v => v.note?.startsWith("ðŸ”´ BLOCCATO")).length;
     const az = AFASE[c.fase] || AFASE["sopralluogo"];
     const faseIdx = PIPELINE.findIndex(x => x.id === c.fase);
     const progFase = faseIdx >= 0 ? Math.round((faseIdx+1)/PIPELINE.length*100) : 0;
@@ -2041,17 +2041,17 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           </div>
           <div style={{ display:"flex", gap:8, marginTop:3, alignItems:"center", flexWrap:"wrap" }}>
             <span style={{ ...S.badge(fase?.color+"18"||T.accLt, fase?.color||T.acc), fontSize:10 }}>{fase?.ico} {fase?.nome}</span>
-            {c.euro && <span style={{ fontSize:11, color:T.grn, fontWeight:700 }}>€{c.euro.toLocaleString("it-IT")}</span>}
-            {c.scadenza && <span style={{ fontSize:10, color: isScad ? T.red : T.sub }}>📅 {c.scadenza}</span>}
+            {c.euro && <span style={{ fontSize:11, color:T.grn, fontWeight:700 }}>â‚¬{c.euro.toLocaleString("it-IT")}</span>}
+            {c.scadenza && <span style={{ fontSize:10, color: isScad ? T.red : T.sub }}>ðŸ“… {c.scadenza}</span>}
           </div>
         </div>
         {/* Colonna destra: info mancanti */}
         <div style={{ textAlign:"right", flexShrink:0, minWidth:80 }}>
           {vaniA.length > 0 ? (
             <div style={{ fontSize:11, fontWeight:600 }}>
-              {vaniBloc > 0 && <div style={{ color:T.red }}>🔴 {vaniBloc} bloccati</div>}
-              {vaniInc > 0 && <div style={{ color:T.orange }}>⚠ {vaniInc} incompleti</div>}
-              {vaniBloc===0 && vaniInc===0 && <div style={{ color:T.grn }}>✅ {vaniMis}/{vaniA.length}</div>}
+              {vaniBloc > 0 && <div style={{ color:T.red }}>ðŸ”´ {vaniBloc} bloccati</div>}
+              {vaniInc > 0 && <div style={{ color:T.orange }}>âš  {vaniInc} incompleti</div>}
+              {vaniBloc===0 && vaniInc===0 && <div style={{ color:T.grn }}>âœ… {vaniMis}/{vaniA.length}</div>}
             </div>
           ) : (
             <div style={{ fontSize:10, color:T.sub }}>Nessun vano</div>
@@ -2061,7 +2061,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             <div style={{ height:"100%", width:`${progFase}%`, background:isFerma?T.red:fase?.color||T.acc, borderRadius:2 }}/>
           </div>
         </div>
-        <span style={{ color:T.sub, fontSize:16 }}>›</span>
+        <span style={{ color:T.sub, fontSize:16 }}>â€º</span>
       </div>
     );
   };
@@ -2076,13 +2076,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         <div style={S.header}>
           <div style={{ flex: 1 }}>
             <div style={S.headerTitle}>Commesse</div>
-            <div style={S.headerSub}>{cantieri.length} totali · {filtered.length} visibili</div>
+            <div style={S.headerSub}>{cantieri.length} totali Â· {filtered.length} visibili</div>
           </div>
           <div style={{ display:"flex", gap:6, alignItems:"center" }}>
             {/* Toggle vista */}
             <div style={{ display:"flex", background:T.bg, borderRadius:8, padding:2, gap:1 }}>
-              <div onClick={() => setCmView("list")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="list"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Lista compatta">☰</div>
-              <div onClick={() => setCmView("card")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="card"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Card grandi">▦</div>
+              <div onClick={() => setCmView("list")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="list"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Lista compatta">â˜°</div>
+              <div onClick={() => setCmView("card")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="card"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Card grandi">â–¦</div>
             </div>
             <div onClick={() => setShowModal("commessa")} style={{ width:36, height:36, borderRadius:10, background:T.acc, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:20, fontWeight:300 }}>+</div>
           </div>
@@ -2127,18 +2127,18 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
     // Vani del rilievo corrente
     const vaniList = r?.vani || [];
-    // Compatibilità wizard vecchio
-    const viste = []; // non più usato con nuova arch
+    // CompatibilitÃ  wizard vecchio
+    const viste = []; // non piÃ¹ usato con nuova arch
     const vaniM: number[] = [];
     const vaniA = vaniList;
     const tipoRil = r?.tipo || "rilievo";
     const tipoColRil = tipoRil === "definitiva" ? T.grn : tipoRil === "modifica" ? T.orange : T.blue;
-    const tipoIcoRil = tipoRil === "definitiva" ? "✅" : tipoRil === "modifica" ? "🔧" : "📐";
+    const tipoIcoRil = tipoRil === "definitiva" ? "âœ…" : tipoRil === "modifica" ? "ðŸ”§" : "ðŸ“";
     const tipoLblRil = tipoRil === "definitiva" ? "Misure Definitive" : tipoRil === "modifica" ? "Modifica" : "Rilievo Misure";
 
     // Calcolo avanzamento misure
     const vaniMisurati = vaniList.filter(v => Object.values(v.misure || {}).filter(x => (x as number) > 0).length >= 6);
-    const vaniBloccati = vaniList.filter(v => v.note?.startsWith("🔴 BLOCCATO"));
+    const vaniBloccati = vaniList.filter(v => v.note?.startsWith("ðŸ”´ BLOCCATO"));
     const vaniDaFare   = vaniList.filter(v => vaniMisurati.every(m => m.id !== v.id));
     const progVani = vaniList.length > 0 ? Math.round(vaniMisurati.length / vaniList.length * 100) : 0;
     const tutteMis = vaniMisurati.length === vaniList.length && vaniList.length > 0;
@@ -2181,7 +2181,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           <div onClick={() => { setNvView(false); setNvStep(1); }} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
           <div style={{ flex: 1 }}>
             <div style={S.headerTitle}>Nuova visita</div>
-            <div style={S.headerSub}>{c.code} · {c.cliente}</div>
+            <div style={S.headerSub}>{c.code} Â· {c.cliente}</div>
           </div>
           <div style={{ fontSize: 11, color: T.sub }}>Step {nvStep}/5</div>
         </div>
@@ -2197,14 +2197,14 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           ))}
         </div>
         <div style={{ padding: "16px" }}>
-          {/* STEP 1 — Tipo visita */}
+          {/* STEP 1 â€” Tipo visita */}
           {nvStep === 1 && <>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>🏷 Tipo di visita</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>ðŸ· Tipo di visita</div>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 16 }}>Seleziona il tipo di sopralluogo</div>
             {[
-              { k: "rilievo",    ico: "📐", label: "Rilievo misure",     desc: "Prima visita o misure di vani mancanti" },
-              { k: "definitiva", ico: "✅", label: "Misure definitive",  desc: "Conferma finale di tutte le misure" },
-              { k: "modifica",   ico: "🔧", label: "Modifica cantiere",  desc: "Variazione, problema o sopralluogo post-vendita" },
+              { k: "rilievo",    ico: "ðŸ“", label: "Rilievo misure",     desc: "Prima visita o misure di vani mancanti" },
+              { k: "definitiva", ico: "âœ…", label: "Misure definitive",  desc: "Conferma finale di tutte le misure" },
+              { k: "modifica",   ico: "ðŸ”§", label: "Modifica cantiere",  desc: "Variazione, problema o sopralluogo post-vendita" },
             ].map(t => (
               <div key={t.k} onClick={() => setNvTipo(t.k)}
                 style={{ ...S.card, padding: "13px 14px", marginBottom: 10, cursor: "pointer",
@@ -2220,7 +2220,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   border: `2px solid ${nvTipo === t.k ? T.acc : T.bdr}`,
                   background: nvTipo === t.k ? T.acc : "transparent",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#fff", fontSize: 12 }}>{nvTipo === t.k ? "✓" : ""}</div>
+                  color: "#fff", fontSize: 12 }}>{nvTipo === t.k ? "âœ“" : ""}</div>
               </div>
             ))}
             {nvTipo === "modifica" && (
@@ -2229,11 +2229,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 <input style={S.input} placeholder="Es: cliente ha cambiato idea su un vano, problema rilevato..." value={nvMotivoModifica} onChange={e => setNvMotivoModifica(e.target.value)} />
               </div>
             )}
-            <button onClick={() => setNvStep(2)} style={{ ...S.btn, marginTop: 12, width: "100%" }}>Avanti →</button>
+            <button onClick={() => setNvStep(2)} style={{ ...S.btn, marginTop: 12, width: "100%" }}>Avanti â†’</button>
           </>}
-          {/* STEP 2 — Dati */}
+          {/* STEP 2 â€” Dati */}
           {nvStep === 2 && <>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>📋 Dati della visita</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>ðŸ“‹ Dati della visita</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div>
                 <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>DATA</div>
@@ -2249,16 +2249,16 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-              <button onClick={() => setNvStep(1)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>← Indietro</button>
-              <button onClick={() => setNvStep(3)} style={{ ...S.btn, flex: 2 }}>Avanti →</button>
+              <button onClick={() => setNvStep(1)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>â† Indietro</button>
+              <button onClick={() => setNvStep(3)} style={{ ...S.btn, flex: 2 }}>Avanti â†’</button>
             </div>
           </>}
-          {/* STEP 2 — Vani misurati */}
+          {/* STEP 2 â€” Vani misurati */}
           {nvStep === 3 && <>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>✅ Vani misurati</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>âœ… Vani misurati</div>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 14 }}>Seleziona i vani che hai misurato</div>
             {vaniA.length === 0
-              ? <div style={{ textAlign: "center", padding: "20px", color: T.sub }}>Tutti già misurati!</div>
+              ? <div style={{ textAlign: "center", padding: "20px", color: T.sub }}>Tutti giÃ  misurati!</div>
               : vaniA.map(v => (
                 <div key={v.id} onClick={() => togV(v.id)} style={{
                   ...S.card, padding: "12px 14px", marginBottom: 8, cursor: "pointer",
@@ -2268,26 +2268,26 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{v.nome}</div>
-                    <div style={{ fontSize: 11, color: T.sub }}>~{v.mq}m²</div>
+                    <div style={{ fontSize: 11, color: T.sub }}>~{v.mq}mÂ²</div>
                   </div>
                   <div style={{ width: 24, height: 24, borderRadius: 6,
                     border: `2px solid ${nvVani.includes(v.id) ? T.grn : T.bdr}`,
                     background: nvVani.includes(v.id) ? T.grn : "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     color: "#fff", fontSize: 14 }}>
-                    {nvVani.includes(v.id) ? "✓" : ""}
+                    {nvVani.includes(v.id) ? "âœ“" : ""}
                   </div>
                 </div>
               ))
             }
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-              <button onClick={() => setNvStep(2)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>← Indietro</button>
-              <button onClick={() => setNvStep(4)} style={{ ...S.btn, flex: 2 }}>Avanti →</button>
+              <button onClick={() => setNvStep(2)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>â† Indietro</button>
+              <button onClick={() => setNvStep(4)} style={{ ...S.btn, flex: 2 }}>Avanti â†’</button>
             </div>
           </>}
-          {/* STEP 4 — Vani bloccati */}
+          {/* STEP 4 â€” Vani bloccati */}
           {nvStep === 4 && <>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>🔴 Vani non misurati</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>ðŸ”´ Vani non misurati</div>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 14 }}>Indica il motivo per ogni vano saltato</div>
             {vaniA.filter(v => !nvVani.includes(v.id)).map(v => {
               const hB = !!nvBlocchi[v.id];
@@ -2299,7 +2299,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                       <div style={{ fontSize: 11, color: T.sub }}>{hB ? "Indica motivo" : "Tocca per segnare bloccato"}</div>
                     </div>
                     <div style={{ width: 24, height: 24, borderRadius: 6, border: `2px solid ${hB ? T.red : T.bdr}`, background: hB ? T.red : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14 }}>
-                      {hB ? "✓" : ""}
+                      {hB ? "âœ“" : ""}
                     </div>
                   </div>
                   {hB && (
@@ -2325,20 +2325,20 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               <textarea style={{ ...S.input, minHeight: 70, resize: "vertical" }} placeholder="Osservazioni sull'intera visita..." value={nvNote} onChange={e => setNvNote(e.target.value)} />
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <button onClick={() => setNvStep(3)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>← Indietro</button>
-              <button onClick={() => setNvStep(5)} style={{ ...S.btn, flex: 2 }}>Avanti →</button>
+              <button onClick={() => setNvStep(3)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>â† Indietro</button>
+              <button onClick={() => setNvStep(5)} style={{ ...S.btn, flex: 2 }}>Avanti â†’</button>
             </div>
           </>}
-          {/* STEP 5 — Riepilogo */}
+          {/* STEP 5 â€” Riepilogo */}
           {nvStep === 5 && <>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>📋 Riepilogo</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>ðŸ“‹ Riepilogo</div>
             <div style={{ ...S.card, padding: "12px 14px", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: T.sub }}>📅 {nvData.data ? new Date(nvData.data + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" }) : "—"} · 🕐 {nvData.ora || "--:--"}</div>
-              <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>👤 {nvData.rilevatore || "Non specificato"}</div>
+              <div style={{ fontSize: 11, color: T.sub }}>ðŸ“… {nvData.data ? new Date(nvData.data + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" }) : "â€”"} Â· ðŸ• {nvData.ora || "--:--"}</div>
+              <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>ðŸ‘¤ {nvData.rilevatore || "Non specificato"}</div>
             </div>
             {nvVani.length > 0 && (
               <div style={{ ...S.card, padding: "12px 14px", marginBottom: 10, border: `1px solid ${T.grn}40` }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: T.grn, marginBottom: 7 }}>✅ Misurati</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.grn, marginBottom: 7 }}>âœ… Misurati</div>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                   {nvVani.map(id => { const v = vaniA.find(x => x.id === id); return <span key={id} style={S.badge(T.grnLt, T.grn)}>{v?.nome}</span>; })}
                 </div>
@@ -2346,10 +2346,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             )}
             {Object.keys(nvBlocchi).length > 0 && (
               <div style={{ ...S.card, padding: "12px 14px", marginBottom: 10, border: `1px solid ${T.red}40` }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: T.red, marginBottom: 7 }}>🔴 Bloccati</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.red, marginBottom: 7 }}>ðŸ”´ Bloccati</div>
                 {Object.entries(nvBlocchi).map(([id, b]) => {
                   const v = vaniA.find(x => x.id === parseInt(id));
-                  return <div key={id} style={{ fontSize: 11, marginBottom: 4 }}><strong>{v?.nome}</strong>: {b.motivo || "—"}{b.note && ` — ${b.note}`}</div>;
+                  return <div key={id} style={{ fontSize: 11, marginBottom: 4 }}><strong>{v?.nome}</strong>: {b.motivo || "â€”"}{b.note && ` â€” ${b.note}`}</div>;
                 })}
               </div>
             )}
@@ -2357,13 +2357,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             <div style={{ ...S.card, padding: "10px 14px", marginBottom: 10, background: T.accLt, border: `1px solid ${T.acc}30` }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: T.acc, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>Tipo visita</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: T.acc }}>
-                {nvTipo === "rilievo" ? "📐 Rilievo misure" : nvTipo === "definitiva" ? "✅ Misure definitive" : "🔧 Modifica cantiere"}
+                {nvTipo === "rilievo" ? "ðŸ“ Rilievo misure" : nvTipo === "definitiva" ? "âœ… Misure definitive" : "ðŸ”§ Modifica cantiere"}
               </div>
               {nvTipo === "modifica" && nvMotivoModifica && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{nvMotivoModifica}</div>}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setNvStep(4)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>← Modifica</button>
-              <button onClick={salvaVisita} style={{ ...S.btn, flex: 2, background: T.grn }}>✓ Salva visita</button>
+              <button onClick={() => setNvStep(4)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>â† Modifica</button>
+              <button onClick={salvaVisita} style={{ ...S.btn, flex: 2, background: T.grn }}>âœ“ Salva visita</button>
             </div>
           </>}
         </div>
@@ -2379,9 +2379,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ fontSize: 14 }}>{tipoIcoRil}</span>
-              <div style={S.headerTitle}>{tipoLblRil} — R{r?.n}</div>
+              <div style={S.headerTitle}>{tipoLblRil} â€” R{r?.n}</div>
             </div>
-            <div style={S.headerSub}>{c.code} · {c.cliente} {c.cognome || ""} · {r?.data ? new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { day:"numeric", month:"short", year:"numeric" }) : ""}</div>
+            <div style={S.headerSub}>{c.code} Â· {c.cliente} {c.cognome || ""} Â· {r?.data ? new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { day:"numeric", month:"short", year:"numeric" }) : ""}</div>
           </div>
           {vaniList.length > 0 && (
             <div style={{ textAlign: "right" }}>
@@ -2390,7 +2390,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             </div>
           )}
           <div onClick={() => setShowRiepilogo(true)} style={{ padding: "6px 10px", borderRadius: 6, background: T.accLt, cursor: "pointer", marginLeft: 6 }}>
-            <span style={{ fontSize: 14 }}>📋</span>
+            <span style={{ fontSize: 14 }}>ðŸ“‹</span>
           </div>
           <div onClick={exportPDF} style={{ padding: "6px 10px", borderRadius: 6, background: T.redLt, cursor: "pointer" }}>
             <Ico d={ICO.file} s={16} c={T.red} />
@@ -2400,7 +2400,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         {/* Banner rilievo info */}
         {r?.motivoModifica && (
           <div style={{ margin: "4px 16px 0", padding: "8px 12px", background: T.orangeLt, borderRadius: 8, border: `1px solid ${T.orange}30`, fontSize: 12, color: T.orange }}>
-            🔧 <strong>Modifica:</strong> {r.motivoModifica}
+            ðŸ”§ <strong>Modifica:</strong> {r.motivoModifica}
           </div>
         )}
 
@@ -2410,23 +2410,23 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             <div style={{ height: 5, background: T.bdr, borderRadius: 3, overflow: "hidden", marginBottom: 4 }}>
               <div style={{ height: "100%", width: `${progVani}%`, background: progVani === 100 ? T.grn : tipoColRil, borderRadius: 3 }} />
             </div>
-            {vaniDaFare.filter(v => !v.note?.startsWith("🔴")).length > 0 && <div style={{ fontSize: 11, color: T.red, fontWeight: 600 }}>Mancano misure: {vaniDaFare.filter(v => !v.note?.startsWith("🔴")).map(v => v.nome).join(", ")}</div>}
-            {tutteMis && <div style={{ fontSize: 11, color: T.grn, fontWeight: 600 }}>✅ Tutte le misure raccolte</div>}
+            {vaniDaFare.filter(v => !v.note?.startsWith("ðŸ”´")).length > 0 && <div style={{ fontSize: 11, color: T.red, fontWeight: 600 }}>Mancano misure: {vaniDaFare.filter(v => !v.note?.startsWith("ðŸ”´")).map(v => v.nome).join(", ")}</div>}
+            {tutteMis && <div style={{ fontSize: 11, color: T.grn, fontWeight: 600 }}>âœ… Tutte le misure raccolte</div>}
           </div>
         )}
 
         {/* Info badges */}
         <div style={{ padding: "8px 16px", display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>🔧 Riparazione</span>}
-          {c.tipo === "nuova" && <span style={S.badge(T.grnLt, T.grn)}>🆕 Nuova</span>}
+          {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>ðŸ”§ Riparazione</span>}
+          {c.tipo === "nuova" && <span style={S.badge(T.grnLt, T.grn)}>ðŸ†• Nuova</span>}
           {c.sistema && <span style={S.badge(T.blueLt, T.blue)}>{c.sistema}</span>}
           {c.difficoltaSalita && <span style={S.badge(c.difficoltaSalita === "facile" ? T.grnLt : c.difficoltaSalita === "media" ? T.orangeLt : T.redLt, c.difficoltaSalita === "facile" ? T.grn : c.difficoltaSalita === "media" ? T.orange : T.red)}>Salita: {c.difficoltaSalita}</span>}
-          {c.mezzoSalita && <span style={S.badge(T.purpleLt, T.purple)}>🪜 {c.mezzoSalita}</span>}
+          {c.mezzoSalita && <span style={S.badge(T.purpleLt, T.purple)}>ðŸªœ {c.mezzoSalita}</span>}
           {c.pianoEdificio && <span style={S.badge(T.blueLt, T.blue)}>Piano: {c.pianoEdificio}</span>}
           {c.foroScale && <span style={S.badge(T.redLt, T.red)}>Foro: {c.foroScale}</span>}
-          {c.telefono && <span onClick={() => window.open(`tel:${c.telefono}`)} style={{ ...S.badge(T.grnLt, T.grn), cursor: "pointer" }}>📞 {c.telefono}</span>}
+          {c.telefono && <span onClick={() => window.open(`tel:${c.telefono}`)} style={{ ...S.badge(T.grnLt, T.grn), cursor: "pointer" }}>ðŸ“ž {c.telefono}</span>}
         </div>
-        {c.note && <div style={{ padding: "0 16px", marginBottom: 6 }}><div style={{ padding: "8px 12px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, fontSize: 12, color: T.sub, lineHeight: 1.4 }}>📝 {c.note}</div></div>}
+        {c.note && <div style={{ padding: "0 16px", marginBottom: 6 }}><div style={{ padding: "8px 12px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, fontSize: 12, color: T.sub, lineHeight: 1.4 }}>ðŸ“ {c.note}</div></div>}
 
         {/* Pipeline */}
         <div style={{ padding: "4px 16px 0" }}>
@@ -2436,7 +2436,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         {faseIndex(c.fase) < PIPELINE.length - 1 && (
           <div style={{ padding: "0 16px", marginTop: 4, marginBottom: 4 }}>
             <button onClick={() => advanceFase(c.id)} style={{ ...S.btn, background: fase?.color, fontSize: 13, padding: 10, width: "100%" }}>
-              ✓ Avanza a {PIPELINE[faseIndex(c.fase) + 1]?.nome} →
+              âœ“ Avanza a {PIPELINE[faseIndex(c.fase) + 1]?.nome} â†’
             </button>
           </div>
         )}
@@ -2457,7 +2457,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
         {/* == TAB: vani / info == */}
         <div style={{ display: "flex", borderBottom: `1px solid ${T.bdr}`, margin: "0 0 0 0" }}>
-          {[{k:"sopralluoghi",l:`🪟 Vani (${vaniList.length})`},{k:"info",l:"ℹ Info rilievo"}].map(t => (
+          {[{k:"sopralluoghi",l:`ðŸªŸ Vani (${vaniList.length})`},{k:"info",l:"â„¹ Info rilievo"}].map(t => (
             <div key={t.k} onClick={() => setCmSubTab(t.k)} style={{
               flex: 1, padding: "8px 4px", textAlign: "center", fontSize: 12, fontWeight: 600, cursor: "pointer",
               borderBottom: `2px solid ${cmSubTab === t.k ? T.acc : "transparent"}`,
@@ -2471,7 +2471,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           <div style={{ padding: "0 16px 14px" }}>
             {vaniList.length === 0 ? (
               <div style={{ textAlign: "center", padding: "28px 16px" }}>
-                <div style={{ fontSize: 36, marginBottom: 10 }}>🪟</div>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>ðŸªŸ</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>Nessun vano in questo rilievo</div>
                 <div style={{ fontSize: 12, color: T.sub, marginBottom: 18 }}>Aggiungi i vani da misurare</div>
                 <button onClick={() => setShowModal("vano")} style={{ ...S.btn, margin: "0 auto" }}>+ Aggiungi vano</button>
@@ -2479,7 +2479,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             ) : vaniList.map(v => {
               const nMisure = Object.values(v.misure||{}).filter(x=>(x as number)>0).length;
               const completo = nMisure >= 6;
-              const bloccato = v.note?.startsWith("🔴 BLOCCATO");
+              const bloccato = v.note?.startsWith("ðŸ”´ BLOCCATO");
               const colore = bloccato ? T.red : completo ? T.grn : T.orange;
               return (
                 <div key={v.id} onClick={() => { setSelectedVano(v); setVanoStep(0); }}
@@ -2494,7 +2494,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                         const rIdx = c.rilievi?.findIndex(r => r.vani?.some(vv => vv.id === v.id));
                         if (rIdx < 0) return null;
                         const ril = c.rilievi[rIdx];
-                        const questoBloccato = v.note?.startsWith("🔴 BLOCCATO");
+                        const questoBloccato = v.note?.startsWith("ðŸ”´ BLOCCATO");
                         const questoIncompleto = !questoBloccato && Object.values(v.misure||{}).filter(x=>(x as number)>0).length > 0 && Object.values(v.misure||{}).filter(x=>(x as number)>0).length < 6;
                         const haProblema = questoBloccato || questoIncompleto;
                         return (
@@ -2504,14 +2504,14 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                             color: haProblema ? T.red : T.sub,
                             border: `1px solid ${haProblema ? T.red+"40" : T.bdr}`
                           }}>
-                            R{rIdx + 1} · {ril.data || ril.dataRilievo || "—"}
-                            {haProblema && " ⚠"}
+                            R{rIdx + 1} Â· {ril.data || ril.dataRilievo || "â€”"}
+                            {haProblema && " âš "}
                           </span>
                         );
                       })()}
                     </div>
-                    <div style={{ fontSize: 11, color: T.sub }}>{v.tipo} · {v.stanza} · {v.piano}</div>
-                    {bloccato && <div style={{ fontSize: 11, color: T.red, marginTop: 2 }}>{v.note?.replace("🔴 BLOCCATO: ","")}</div>}
+                    <div style={{ fontSize: 11, color: T.sub }}>{v.tipo} Â· {v.stanza} Â· {v.piano}</div>
+                    {bloccato && <div style={{ fontSize: 11, color: T.red, marginTop: 2 }}>{v.note?.replace("ðŸ”´ BLOCCATO: ","")}</div>}
                   </div>
                   <div style={{ textAlign: "right", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
                     {/* Badge pezzi */}
@@ -2521,12 +2521,12 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                       {v.pezzi||1} pz
                     </span>
                     {bloccato
-                      ? <span style={S.badge(T.redLt, T.red)}>🔴 Bloccato</span>
+                      ? <span style={S.badge(T.redLt, T.red)}>ðŸ”´ Bloccato</span>
                       : completo
-                      ? <span style={S.badge(T.grnLt, T.grn)}>✅ {nMisure} mis.</span>
-                      : <span style={S.badge(T.orangeLt, T.orange)}>⚠ {nMisure} mis.</span>}
+                      ? <span style={S.badge(T.grnLt, T.grn)}>âœ… {nMisure} mis.</span>
+                      : <span style={S.badge(T.orangeLt, T.orange)}>âš  {nMisure} mis.</span>}
                   </div>
-                  <span style={{ color: T.sub, fontSize: 14 }}>›</span>
+                  <span style={{ color: T.sub, fontSize: 14 }}>â€º</span>
                 </div>
               );
             })}
@@ -2557,15 +2557,15 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 <div key={v.id} style={{ ...S.card, marginBottom: 8 }}>
                   <div style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: mis ? T.grnLt : blk ? T.redLt : T.bdr, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-                      {mis ? "✅" : blk ? "🔴" : "⏳"}
+                      {mis ? "âœ…" : blk ? "ðŸ”´" : "â³"}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                         <div style={{ fontSize: 14, fontWeight: 700 }}>{v.nome}</div>
-                        <span style={{ fontSize: 10, color: T.sub }}>~{v.mq}m²</span>
+                        <span style={{ fontSize: 10, color: T.sub }}>~{v.mq}mÂ²</span>
                       </div>
-                      {mis && daV && <div style={{ fontSize: 11, color: T.sub }}>{daV.n}ª visita · {new Date(daV.data + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" })}</div>}
-                      {!mis && blk && <div style={{ fontSize: 11, color: T.red }}>{blk.motivo}{blk.note && <span style={{ color: T.sub }}> — {blk.note}</span>}</div>}
+                      {mis && daV && <div style={{ fontSize: 11, color: T.sub }}>{daV.n}Âª visita Â· {new Date(daV.data + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" })}</div>}
+                      {!mis && blk && <div style={{ fontSize: 11, color: T.red }}>{blk.motivo}{blk.note && <span style={{ color: T.sub }}> â€” {blk.note}</span>}</div>}
                       {!mis && !blk && <div style={{ fontSize: 11, color: T.sub }}>Non ancora visitato</div>}
                     </div>
                     {!mis && <span style={{ ...S.badge(T.redLt, T.red), flexShrink: 0, fontSize: 9 }}>DA FARE</span>}
@@ -2583,9 +2583,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Dettagli Rilievo</div>
             {[
               ["Tipo",       tipoLblRil],
-              ["Data",       r?.data ? new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) : "—"],
-              ["Ora",        r?.ora || "—"],
-              ["Rilevatore", r?.rilevatore || "—"],
+              ["Data",       r?.data ? new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) : "â€”"],
+              ["Ora",        r?.ora || "â€”"],
+              ["Rilevatore", r?.rilevatore || "â€”"],
               ["N. vani",    `${vaniList.length} vani`],
               ["Avanzamento",`${progVani}% (${vaniMisurati.length}/${vaniList.length})`],
               ...(r?.motivoModifica ? [["Motivo", r.motivoModifica]] : []),
@@ -2601,9 +2601,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               ["Cliente",   `${c.cliente} ${c.cognome || ""}`],
               ["Codice",    c.code],
               ["Indirizzo", c.indirizzo],
-              ["Telefono",  c.telefono || "—"],
-              ["Sistema",   c.sistema || "—"],
-              ...(c.euro ? [["Importo", `€${c.euro.toLocaleString("it-IT")}`]] : []),
+              ["Telefono",  c.telefono || "â€”"],
+              ["Sistema",   c.sistema || "â€”"],
+              ...(c.euro ? [["Importo", `â‚¬${c.euro.toLocaleString("it-IT")}`]] : []),
               ["Rilievi",   `${(c.rilievi||[]).length} totali`],
             ].map(([k, v]) => (
               <div key={k} style={{ ...S.card, padding: "11px 14px", marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -2619,7 +2619,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           <input ref={fileInputRef} type="file" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const a={id:Date.now(),tipo:"file",nome:f.name,data:new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}),dataUrl:ev.target.result};setCantieri(cs=>cs.map(x=>x.id===selectedCM.id?{...x,allegati:[...(x.allegati||[]),a]}:x));setSelectedCM(p=>({...p,allegati:[...(p.allegati||[]),a]}));};r.readAsDataURL(f);e.target.value="";}}/>
           <input ref={fotoInputRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const a={id:Date.now(),tipo:"foto",nome:f.name,data:new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}),dataUrl:ev.target.result};setCantieri(cs=>cs.map(x=>x.id===selectedCM.id?{...x,allegati:[...(x.allegati||[]),a]}:x));setSelectedCM(p=>({...p,allegati:[...(p.allegati||[]),a]}));};r.readAsDataURL(f);e.target.value="";}}/>
           <button onClick={() => setShowPreventivoModal(true)} style={{ flex:1, padding: "12px", borderRadius: 10, border: "1.5px solid #ff9500", background: c.firmaCliente ? "#fff8ec" : "#fff", color: "#ff9500", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FF, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, position:"relative" }}>
-            📄 {c.firmaCliente ? "Preventivo ✅" : "Crea Preventivo"}
+            ðŸ“„ {c.firmaCliente ? "Preventivo âœ…" : "Crea Preventivo"}
             {(vaniList||[]).some(v=>!v.sistema) && !c.firmaCliente && <span style={{position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",background:"#ff3b30",color:"#fff",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>!</span>}
           </button>
           <button onClick={() => setShowSendModal(true)} style={{ flex:1, padding: "12px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #007aff, #0055cc)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FF, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: "0 2px 8px rgba(0,122,255,0.3)" }}>
@@ -2631,11 +2631,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         <div style={{ padding: "0 16px", marginBottom: 8 }}>
           <div style={{ display: "flex", gap: 6 }}>
             {[
-              { ico: "📎", label: "File", act: () => fileInputRef.current?.click() },
-              { ico: "📷", label: "Foto", act: () => fotoInputRef.current?.click() },
-              { ico: "📝", label: "Nota", act: () => { setShowAllegatiModal("nota"); setAllegatiText(""); }},
-              { ico: "🎤", label: "Vocale", act: () => { setShowAllegatiModal("vocale"); }},
-              { ico: "🎬", label: "Video", act: () => { setShowAllegatiModal("video"); }},
+              { ico: "ðŸ“Ž", label: "File", act: () => fileInputRef.current?.click() },
+              { ico: "ðŸ“·", label: "Foto", act: () => fotoInputRef.current?.click() },
+              { ico: "ðŸ“", label: "Nota", act: () => { setShowAllegatiModal("nota"); setAllegatiText(""); }},
+              { ico: "ðŸŽ¤", label: "Vocale", act: () => { setShowAllegatiModal("vocale"); }},
+              { ico: "ðŸŽ¬", label: "Video", act: () => { setShowAllegatiModal("video"); }},
             ].map((b, i) => (
               <div key={i} onClick={b.act} style={{ flex: 1, padding: "10px 4px", background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer" }}>
                 <div style={{ fontSize: 18 }}>{b.ico}</div>
@@ -2649,20 +2649,20 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               {(c.allegati || []).map(a => (
                 <div key={a.id} style={{ borderBottom: `1px solid ${T.bg}` }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px" }}>
-                    <span style={{ fontSize: 16 }}>{a.tipo === "nota" ? "📝" : a.tipo === "vocale" ? "🎤" : a.tipo === "video" ? "🎬" : a.tipo === "foto" ? "📷" : "📎"}</span>
+                    <span style={{ fontSize: 16 }}>{a.tipo === "nota" ? "ðŸ“" : a.tipo === "vocale" ? "ðŸŽ¤" : a.tipo === "video" ? "ðŸŽ¬" : a.tipo === "foto" ? "ðŸ“·" : "ðŸ“Ž"}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{a.nome}</div>
-                      <div style={{ fontSize: 10, color: T.sub }}>{a.data}{a.durata ? ` · ${a.durata}` : ""}</div>
-                      {a.dataUrl && (a.tipo==="foto" ? <a href={a.dataUrl} target="_blank" rel="noreferrer" style={{fontSize:10,color:T.acc,fontWeight:600,marginTop:2,display:"block",textDecoration:"none"}}>🔍 Apri</a> : <a href={a.dataUrl} download={a.nome} style={{fontSize:10,color:T.acc,fontWeight:600,marginTop:2,display:"block",textDecoration:"none"}}>⬇ Scarica</a>)}
+                      <div style={{ fontSize: 10, color: T.sub }}>{a.data}{a.durata ? ` Â· ${a.durata}` : ""}</div>
+                      {a.dataUrl && (a.tipo==="foto" ? <a href={a.dataUrl} target="_blank" rel="noreferrer" style={{fontSize:10,color:T.acc,fontWeight:600,marginTop:2,display:"block",textDecoration:"none"}}>ðŸ” Apri</a> : <a href={a.dataUrl} download={a.nome} style={{fontSize:10,color:T.acc,fontWeight:600,marginTop:2,display:"block",textDecoration:"none"}}>â¬‡ Scarica</a>)}
                     </div>
                     {a.tipo==="foto"&&a.dataUrl&&<img src={a.dataUrl} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0}} alt=""/>}
                     {(a.tipo === "vocale" || a.tipo === "video") && (
                       <div onClick={() => playAllegato(a.id)} style={{ padding: "3px 8px", borderRadius: 6, background: playingId === a.id ? T.redLt : T.accLt, fontSize: 10, fontWeight: 600, color: playingId === a.id ? T.red : T.acc, cursor: "pointer" }}>
-                        {playingId === a.id ? "⏸ Stop" : "▶ Play"}
+                        {playingId === a.id ? "â¸ Stop" : "â–¶ Play"}
                       </div>
                     )}
-                    {a.tipo === "foto" && <div onClick={() => alert("📷 Anteprima foto: " + a.nome)} style={{ padding: "3px 8px", borderRadius: 6, background: T.accLt, fontSize: 10, fontWeight: 600, color: T.acc, cursor: "pointer" }}>👁 Vedi</div>}
-                    {a.tipo === "file" && <div onClick={() => alert("📎 Apertura file: " + a.nome)} style={{ padding: "3px 8px", borderRadius: 6, background: T.accLt, fontSize: 10, fontWeight: 600, color: T.acc, cursor: "pointer" }}>📂 Apri</div>}
+                    {a.tipo === "foto" && <div onClick={() => alert("ðŸ“· Anteprima foto: " + a.nome)} style={{ padding: "3px 8px", borderRadius: 6, background: T.accLt, fontSize: 10, fontWeight: 600, color: T.acc, cursor: "pointer" }}>ðŸ‘ Vedi</div>}
+                    {a.tipo === "file" && <div onClick={() => alert("ðŸ“Ž Apertura file: " + a.nome)} style={{ padding: "3px 8px", borderRadius: 6, background: T.accLt, fontSize: 10, fontWeight: 600, color: T.acc, cursor: "pointer" }}>ðŸ“‚ Apri</div>}
                     <div onClick={() => { setCantieri(cs => cs.map(x => x.id === c.id ? { ...x, allegati: (x.allegati || []).filter(al => al.id !== a.id) } : x)); setSelectedCM(p => ({ ...p, allegati: (p.allegati || []).filter(al => al.id !== a.id) })); }} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={12} c={T.sub} /></div>
                   </div>
                   {/* Progress bar for playing */}
@@ -2714,11 +2714,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ width: 36, height: 36, borderRadius: 8, background: T.accLt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                        {TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.icon || "🪟"}
+                        {TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.icon || "ðŸªŸ"}
                       </div>
                       <div>
                         <div style={{ fontSize: 14, fontWeight: 600 }}>{v.nome}</div>
-                        <div style={{ fontSize: 11, color: T.sub }}>{TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.label || v.tipo} · {v.stanza} · {v.piano}</div>
+                        <div style={{ fontSize: 11, color: T.sub }}>{TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.label || v.tipo} Â· {v.stanza} Â· {v.piano}</div>
                       </div>
                     </div>
                     <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 8 }}>
@@ -2767,20 +2767,20 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           </>
         )}
 
-        {/* Elimina — bottom, small */}
+        {/* Elimina â€” bottom, small */}
         <div style={{ padding: "16px", textAlign: "center" }}>
-          <span onClick={() => deleteCommessa(c.id)} style={{ fontSize: 11, color: T.sub2, cursor: "pointer", textDecoration: "underline" }}>🗑 Elimina commessa</span>
+          <span onClick={() => deleteCommessa(c.id)} style={{ fontSize: 11, color: T.sub2, cursor: "pointer", textDecoration: "underline" }}>ðŸ—‘ Elimina commessa</span>
         </div>
       </div>
     );
   };
 
-  /* == RIEPILOGO COMMESSA — SCHERMATA INVIO == */
+  /* == RIEPILOGO COMMESSA â€” SCHERMATA INVIO == */
   const [showRiepilogo, setShowRiepilogo] = useState(false);
   const [riepilogoSending, setRiepilogoSending] = useState(false);
 
   /* ===============================================
-     PANNELLI DI FASE — renderFasePanel(c)
+     PANNELLI DI FASE â€” renderFasePanel(c)
      Appare nella commessa detail, sotto la pipeline
      Un pannello specifico per ogni fase
   =============================================== */
@@ -2807,7 +2807,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         <div style={{ width:18, height:18, borderRadius:"50%", border:`2px solid ${done ? T.grn : T.bdr}`,
           background: done ? T.grn : "transparent", display:"flex", alignItems:"center", justifyContent:"center",
           flexShrink:0 }}>
-          {done && <span style={{fontSize:10,color:"white",fontWeight:800}}>✓</span>}
+          {done && <span style={{fontSize:10,color:"white",fontWeight:800}}>âœ“</span>}
         </div>
         <span style={{fontSize:12, fontWeight:600, color: done ? T.grn : T.text}}>{label}</span>
       </div>
@@ -2837,7 +2837,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     const isOpen = (id) => fasePanelOpen[id] !== false; // default aperto
     const togglePanel = (id) => setFasePanelOpen(s => ({...s, [id]: !isOpen(id)}));
 
-    // Wrapper accordion semplice — stessa UI di prima, solo con toggle
+    // Wrapper accordion semplice â€” stessa UI di prima, solo con toggle
     const FasePanel = ({ id, children, taskNonFatti = 0 }) => (
       <div style={panelStyle}>
         <div onClick={() => togglePanel(id)} style={{ ...headerStyle, cursor:"pointer",
@@ -2850,7 +2850,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           {taskNonFatti > 0 && (
             <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6,flexShrink:0}}/>
           )}
-          <span style={{fontSize:13,color:T.sub,transform:isOpen(id)?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s",flexShrink:0}}>▾</span>
+          <span style={{fontSize:13,color:T.sub,transform:isOpen(id)?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s",flexShrink:0}}>â–¾</span>
         </div>
         {isOpen(id) && (
           <div style={{padding:"12px 14px"}}>
@@ -2869,22 +2869,22 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       return (
         <div style={panelStyle}>
           <div onClick={()=>togglePanel("sopralluogo")} style={{...headerStyle,cursor:"pointer",borderBottom:open_sopr?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
-            <span style={{fontSize:16}}>🔍</span>
+            <span style={{fontSize:16}}>ðŸ”</span>
             <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Sopralluogo</span>
-            <span style={{fontSize:11,fontWeight:700,color:tuttiCompletati?T.grn:T.orange,marginRight:4}}>{vaniCompletati}/{vaniAttivi2.length} vani ✓</span>
+            <span style={{fontSize:11,fontWeight:700,color:tuttiCompletati?T.grn:T.orange,marginRight:4}}>{vaniCompletati}/{vaniAttivi2.length} vani âœ“</span>
             {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
-            <span style={{fontSize:13,color:T.sub,transform:open_sopr?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+            <span style={{fontSize:13,color:T.sub,transform:open_sopr?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>â–¾</span>
           </div>
           {open_sopr && <div style={{padding:"12px 14px"}}>
             <Chip label="Fotografie scattate" done={c.ck_foto} onClick={()=>updateCM("ck_foto",!c.ck_foto)}/>
-            <Chip label="Difficoltà accesso rilevata" done={c.ck_accesso} onClick={()=>updateCM("ck_accesso",!c.ck_accesso)}/>
+            <Chip label="DifficoltÃ  accesso rilevata" done={c.ck_accesso} onClick={()=>updateCM("ck_accesso",!c.ck_accesso)}/>
             <Chip label="Riepilogo inviato al cliente" done={c.ck_riepilogo_inviato} onClick={()=>updateCM("ck_riepilogo_inviato",!c.ck_riepilogo_inviato)}/>
             <Chip label={`Tutte le misure inserite (${vaniCompletati}/${vaniAttivi2.length})`} done={tuttiCompletati} onClick={()=>{}}/>
             <Field label="Data sopralluogo" field="dataSopralluogo" type="date"/>
             <Field label="Note sopralluogo" field="noteSopralluogo" placeholder="Annotazioni rapide..."/>
             {tuttiCompletati && (
               <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,background:T.grn+"15",border:`1px solid ${T.grn}30`,fontSize:12,color:T.grn,fontWeight:600,textAlign:"center"}}>
-                ✅ Pronto per il preventivo
+                âœ… Pronto per il preventivo
               </div>
             )}
           </div>}
@@ -2906,28 +2906,28 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       return (
         <div style={panelStyle}>
           <div style={headerStyle}>
-            <span style={{fontSize:16}}>📋</span>
+            <span style={{fontSize:16}}>ðŸ“‹</span>
             <span style={{fontSize:13,fontWeight:700,color:T.text}}>Preventivo</span>
           </div>
           <div style={{padding:"12px 14px"}}>
-            <Field label="Prezzo base €/mq" field="prezzoMq" placeholder="350" type="number"/>
+            <Field label="Prezzo base â‚¬/mq" field="prezzoMq" placeholder="350" type="number"/>
             <Field label="Sconto %" field="sconto" placeholder="0" type="number"/>
             <Field label="Note preventivo" field="notePreventivo" placeholder="Condizioni, garanzie..."/>
             <div style={{padding:"10px 12px",borderRadius:8,background:T.bg,border:`1px solid ${T.bdr}`,marginBottom:8}}>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:T.sub,marginBottom:4}}>
-                <span>Totale imponibile</span><span style={{fontWeight:700,color:T.text}}>€ {totale.toFixed(2)}</span>
+                <span>Totale imponibile</span><span style={{fontWeight:700,color:T.text}}>â‚¬ {totale.toFixed(2)}</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:T.sub,marginBottom:4}}>
-                <span>IVA 10%</span><span>€ {iva.toFixed(2)}</span>
+                <span>IVA 10%</span><span>â‚¬ {iva.toFixed(2)}</span>
               </div>
               {c.sconto > 0 && (
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:T.orange,marginBottom:4}}>
-                  <span>Sconto {c.sconto}%</span><span>- € {(totale * c.sconto/100).toFixed(2)}</span>
+                  <span>Sconto {c.sconto}%</span><span>- â‚¬ {(totale * c.sconto/100).toFixed(2)}</span>
                 </div>
               )}
               <div style={{borderTop:`1px solid ${T.bdr}`,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between",fontSize:14,fontWeight:800}}>
                 <span>TOTALE IVA inclusa</span>
-                <span style={{color:T.acc}}>€ {(totale + iva - (totale*(c.sconto||0)/100)).toFixed(2)}</span>
+                <span style={{color:T.acc}}>â‚¬ {(totale + iva - (totale*(c.sconto||0)/100)).toFixed(2)}</span>
               </div>
             </div>
             <Chip label="Preventivo inviato al cliente" done={c.ck_prev_inviato} onClick={()=>updateCM("ck_prev_inviato",!c.ck_prev_inviato)}/>
@@ -2942,12 +2942,12 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       return (
         <div style={panelStyle}>
           <div style={headerStyle}>
-            <span style={{fontSize:16}}>✍️</span>
+            <span style={{fontSize:16}}>âœï¸</span>
             <span style={{fontSize:13,fontWeight:700,color:T.text}}>Conferma Ordine</span>
           </div>
           <div style={{padding:"12px 14px"}}>
             <Field label="Data conferma" field="dataConferma" type="date"/>
-            <Field label="Acconto ricevuto €" field="accontoRicevuto" placeholder="0" type="number"/>
+            <Field label="Acconto ricevuto â‚¬" field="accontoRicevuto" placeholder="0" type="number"/>
             <Field label="Metodo pagamento" field="metodoPagamento" placeholder="Bonifico / Contanti / Carta..."/>
             <Field label="Data prevista posa" field="dataPosaPrevista" type="date"/>
             <Chip label="Contratto firmato" done={c.ck_contratto} onClick={()=>updateCM("ck_contratto",!c.ck_contratto)}/>
@@ -2969,11 +2969,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           return (
             <div style={panelStyle}>
               <div onClick={()=>togglePanel("misure")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
-                <span style={{fontSize:16}}>📐</span>
+                <span style={{fontSize:16}}>ðŸ“</span>
                 <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Rilievo Misure Definitivo</span>
                 <span style={{fontSize:11,fontWeight:700,color:vaniOk===vaniCalc.length?T.grn:T.orange,marginRight:4}}>{vaniOk}/{vaniCalc.length}</span>
                 {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
-                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>â–¾</span>
               </div>
               {open && <div style={{padding:"12px 14px"}}>
                 <Chip label="Tutte le misure verificate" done={c.ck_misure_ok} onClick={()=>updateCM("ck_misure_ok",!c.ck_misure_ok)}/>
@@ -2998,14 +2998,14 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           return (
             <div style={panelStyle}>
               <div onClick={()=>togglePanel("ordini")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
-                <span style={{fontSize:16}}>📦</span>
+                <span style={{fontSize:16}}>ðŸ“¦</span>
                 <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Ordini Fornitore</span>
                 {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
-                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>â–¾</span>
               </div>
               {open && <div style={{padding:"12px 14px"}}>
-                <Field label="Fornitore" field="fornitore" placeholder="Es. Schüco, Rehau..."/>
-                <Field label="N° Ordine fornitore" field="numOrdine" placeholder="ORD-2026-XXXX"/>
+                <Field label="Fornitore" field="fornitore" placeholder="Es. SchÃ¼co, Rehau..."/>
+                <Field label="NÂ° Ordine fornitore" field="numOrdine" placeholder="ORD-2026-XXXX"/>
                 <Field label="Data ordine" field="dataOrdine" type="date"/>
                 <Field label="Data consegna prevista" field="dataConsegna" type="date"/>
                 <Chip label="Ordine inviato" done={c.ck_ordine_inviato} onClick={()=>updateCM("ck_ordine_inviato",!c.ck_ordine_inviato)}/>
@@ -3027,10 +3027,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           return (
             <div style={panelStyle}>
               <div onClick={()=>togglePanel("produzione")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
-                <span style={{fontSize:16}}>🏭</span>
+                <span style={{fontSize:16}}>ðŸ­</span>
                 <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Produzione</span>
                 {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
-                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>â–¾</span>
               </div>
               {open && <div style={{padding:"12px 14px"}}>
                 <Field label="Data consegna in magazzino" field="dataInMagazzino" type="date"/>
@@ -3055,10 +3055,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           return (
             <div style={panelStyle}>
               <div onClick={()=>togglePanel("posa")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
-                <span style={{fontSize:16}}>🔧</span>
+                <span style={{fontSize:16}}>ðŸ”§</span>
                 <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Posa in Opera</span>
                 {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
-                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>â–¾</span>
               </div>
               {open && <div style={{padding:"12px 14px"}}>
                 <Field label="Data posa effettiva" field="dataPosa" type="date"/>
@@ -3090,23 +3090,23 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       return (
         <div style={panelStyle}>
           <div style={headerStyle}>
-            <span style={{fontSize:16}}>✅</span>
+            <span style={{fontSize:16}}>âœ…</span>
             <span style={{fontSize:13,fontWeight:700,color:T.text}}>Chiusura Commessa</span>
           </div>
           <div style={{padding:"12px 14px"}}>
             <div style={{padding:"10px 12px",borderRadius:8,background:T.bg,border:`1px solid ${T.bdr}`,marginBottom:10}}>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
-                <span style={{color:T.sub}}>Totale commessa</span><span style={{fontWeight:700}}>€ {totIva.toFixed(2)}</span>
+                <span style={{color:T.sub}}>Totale commessa</span><span style={{fontWeight:700}}>â‚¬ {totIva.toFixed(2)}</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
-                <span style={{color:T.sub}}>Acconto ricevuto</span><span style={{color:T.grn,fontWeight:700}}>- € {parseFloat(c.accontoRicevuto||0).toFixed(2)}</span>
+                <span style={{color:T.sub}}>Acconto ricevuto</span><span style={{color:T.grn,fontWeight:700}}>- â‚¬ {parseFloat(c.accontoRicevuto||0).toFixed(2)}</span>
               </div>
               <div style={{borderTop:`1px solid ${T.bdr}`,paddingTop:6,marginTop:2,display:"flex",justifyContent:"space-between",fontSize:15,fontWeight:800}}>
-                <span>Saldo da incassare</span><span style={{color:saldo>0?T.red:T.grn}}>€ {saldo.toFixed(2)}</span>
+                <span>Saldo da incassare</span><span style={{color:saldo>0?T.red:T.grn}}>â‚¬ {saldo.toFixed(2)}</span>
               </div>
             </div>
             <Field label="Data chiusura" field="dataChiusura" type="date"/>
-            <Field label="Saldo incassato €" field="saldoIncassato" placeholder="0" type="number"/>
+            <Field label="Saldo incassato â‚¬" field="saldoIncassato" placeholder="0" type="number"/>
             <Field label="Metodo saldo" field="metodoSaldo" placeholder="Bonifico / Contanti..."/>
             <Chip label="Saldo incassato" done={c.ck_saldo} onClick={()=>updateCM("ck_saldo",!c.ck_saldo)}/>
             <Chip label="Fattura emessa" done={c.ck_fattura} onClick={()=>updateCM("ck_fattura",!c.ck_fattura)}/>
@@ -3114,9 +3114,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             <Chip label="Scheda commessa archiviata" done={c.ck_archiviata} onClick={()=>updateCM("ck_archiviata",!c.ck_archiviata)}/>
             {c.ck_saldo && c.ck_fattura && (
               <div style={{marginTop:8,padding:"12px",borderRadius:8,background:T.grn+"15",border:`1px solid ${T.grn}30`,textAlign:"center"}}>
-                <div style={{fontSize:22}}>🎉</div>
+                <div style={{fontSize:22}}>ðŸŽ‰</div>
                 <div style={{fontSize:13,fontWeight:800,color:T.grn,marginTop:4}}>Commessa completata!</div>
-                <div style={{fontSize:11,color:T.sub,marginTop:2}}>{c.code} · {c.cliente} {c.cognome||""}</div>
+                <div style={{fontSize:11,color:T.sub,marginTop:2}}>{c.code} Â· {c.cliente} {c.cognome||""}</div>
               </div>
             )}
           </div>
@@ -3134,49 +3134,49 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     const vaniR = getVaniAttivi(c); const vaniFilled = vaniR.filter(v=>Object.values(v.misure||{}).filter(x=>(x as number)>0).length>=6).length;
     const fuoriSqN = vaniR.filter(v=>{const d=(v.misure?.d1 as number)>0&&(v.misure?.d2 as number)>0?Math.abs(v.misure.d1-v.misure.d2):null;return (d as number)>5;}).length;
 
-    const SEP = "━━━━━━━━━━━━━━━━━━━━━";
+    const SEP = "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”";
     const waMsg = [
-      "📋 *SOPRALLUOGO "+c.code+"*",
-      "👤 "+c.cliente+" "+(c.cognome||"")+(c.telefono?" · "+c.telefono:""),
-      "📍 "+c.indirizzo,
-      [c.pianoEdificio, c.mezzoSalita, c.foroScale].filter(Boolean).map((x,i)=>i===0?"🏢 "+x:x).join(" · "),
-      c.sistema?"⚙️ "+c.sistema+" · "+(c.tipo==="nuova"?"Nuova costruzione":"Ristrutturazione"):"",
+      "ðŸ“‹ *SOPRALLUOGO "+c.code+"*",
+      "ðŸ‘¤ "+c.cliente+" "+(c.cognome||"")+(c.telefono?" Â· "+c.telefono:""),
+      "ðŸ“ "+c.indirizzo,
+      [c.pianoEdificio, c.mezzoSalita, c.foroScale].filter(Boolean).map((x,i)=>i===0?"ðŸ¢ "+x:x).join(" Â· "),
+      c.sistema?"âš™ï¸ "+c.sistema+" Â· "+(c.tipo==="nuova"?"Nuova costruzione":"Ristrutturazione"):"",
       "",
       ...vaniR.map((v,i)=>{
         const m=v.misure||{};
-        const tl=TIPOLOGIE_RAPIDE.find(tp=>tp.code===v.tipo)?.label||v.tipo||"—";
+        const tl=TIPOLOGIE_RAPIDE.find(tp=>tp.code===v.tipo)?.label||v.tipo||"â€”";
         const diff=m.d1>0&&m.d2>0?Math.abs(m.d1-m.d2):null;
         const fuori=diff!==null&&(diff as number)>5;
         const ok=!fuori;
         const lines=[
           SEP,
-          "*"+(i+1)+". "+v.nome.toUpperCase()+"* — "+v.tipo+" · "+v.piano+" "+(fuori?"⚠️":"✅"),
+          "*"+(i+1)+". "+v.nome.toUpperCase()+"* â€” "+v.tipo+" Â· "+v.piano+" "+(fuori?"âš ï¸":"âœ…"),
           SEP,
-          "📏 L: "+(m.lAlto||"—")+" / *"+(m.lCentro||"—")+"* / "+(m.lBasso||"—"),
-          "📐 H: "+(m.hSx||"—")+" / *"+(m.hCentro||"—")+"* / "+(m.hDx||"—"),
+          "ðŸ“ L: "+(m.lAlto||"â€”")+" / *"+(m.lCentro||"â€”")+"* / "+(m.lBasso||"â€”"),
+          "ðŸ“ H: "+(m.hSx||"â€”")+" / *"+(m.hCentro||"â€”")+"* / "+(m.hDx||"â€”"),
           (m.d1>0&&m.d2>0)
-            ?(fuori?"⚠️ D: "+m.d1+" / "+m.d2+" — *FUORI SQUADRA +"+diff+"mm*":"↗ D: "+m.d1+" / "+m.d2+" ✅")
+            ?(fuori?"âš ï¸ D: "+m.d1+" / "+m.d2+" â€” *FUORI SQUADRA +"+diff+"mm*":"â†— D: "+m.d1+" / "+m.d2+" âœ…")
             :"",
-          (m.spSx>0||m.spDx>0)?"⬛ Sp: "+(m.spSx?"Sx "+m.spSx:"")+(m.spDx?" · Dx "+m.spDx:"")+(m.spSopra?" · Sop "+m.spSopra:""):"",
+          (m.spSx>0||m.spDx>0)?"â¬› Sp: "+(m.spSx?"Sx "+m.spSx:"")+(m.spDx?" Â· Dx "+m.spDx:"")+(m.spSopra?" Â· Sop "+m.spSopra:""):"",
           "",
-          v.sistema?"🔧 "+v.sistema+(v.vetro?" · "+v.vetro:""):"",
-          v.coloreInt?"🎨 "+(v.bicolore?"INT: "+v.coloreInt+" / EST: "+v.coloreEst:v.coloreInt):"",
-          v.telaio?"📐 Tel "+v.telaio+(v.telaioAlaZ?" "+v.telaioAlaZ+"mm":"")+(v.rifilato&&(v.rifilSx||v.rifilDx)?" · Rif Sx:"+v.rifilSx+" Dx:"+v.rifilDx+(v.rifilSopra?" Sop:"+v.rifilSopra:""):""):"",
-          (v.coprifilo||v.lamiera)?"🔩 "+(v.coprifilo||"")+(v.lamiera?" / "+v.lamiera:""):"",
+          v.sistema?"ðŸ”§ "+v.sistema+(v.vetro?" Â· "+v.vetro:""):"",
+          v.coloreInt?"ðŸŽ¨ "+(v.bicolore?"INT: "+v.coloreInt+" / EST: "+v.coloreEst:v.coloreInt):"",
+          v.telaio?"ðŸ“ Tel "+v.telaio+(v.telaioAlaZ?" "+v.telaioAlaZ+"mm":"")+(v.rifilato&&(v.rifilSx||v.rifilDx)?" Â· Rif Sx:"+v.rifilSx+" Dx:"+v.rifilDx+(v.rifilSopra?" Sop:"+v.rifilSopra:""):""):"",
+          (v.coprifilo||v.lamiera)?"ðŸ”© "+(v.coprifilo||"")+(v.lamiera?" / "+v.lamiera:""):"",
           "",
-          v.cassonetto?"📦 Cass "+v.casH+"×"+v.casP:"",
-          v.accessori?.tapparella?.attivo?"⬇ Tap "+v.accessori.tapparella.colore+" · "+v.accessori.tapparella.l+"×"+v.accessori.tapparella.h:"",
-          v.accessori?.persiana?.attivo?"🪟 Pers "+v.accessori.persiana.colore:"",
-          v.accessori?.zanzariera?.attivo?"🕸 Zan "+v.accessori.zanzariera.l+"×"+v.accessori.zanzariera.h:"",
-          v.note?"📝 "+v.note:"",
-          fuori?"⚠️ Verificare con muratore prima dell'ordine":"",
+          v.cassonetto?"ðŸ“¦ Cass "+v.casH+"Ã—"+v.casP:"",
+          v.accessori?.tapparella?.attivo?"â¬‡ Tap "+v.accessori.tapparella.colore+" Â· "+v.accessori.tapparella.l+"Ã—"+v.accessori.tapparella.h:"",
+          v.accessori?.persiana?.attivo?"ðŸªŸ Pers "+v.accessori.persiana.colore:"",
+          v.accessori?.zanzariera?.attivo?"ðŸ•¸ Zan "+v.accessori.zanzariera.l+"Ã—"+v.accessori.zanzariera.h:"",
+          v.note?"ðŸ“ "+v.note:"",
+          fuori?"âš ï¸ Verificare con muratore prima dell'ordine":"",
         ].filter(x=>x!==undefined&&x!==null&&x!=="");
         return lines.join("\n");
       }),
       SEP,
-      c.note?"📝 *NOTE GENERALI*\n"+c.note+"\n"+SEP:"",
+      c.note?"ðŸ“ *NOTE GENERALI*\n"+c.note+"\n"+SEP:"",
       "",
-      "_Generato con MASTRO · "+today+"_",
+      "_Generato con MASTRO Â· "+today+"_",
     ].filter(Boolean).join("\n");
 
     const BLU="#2563eb", VRD="#059669", ROS="#dc2626", GRY="#94a3b8", AMB="#d97706", VIO="#7c3aed";
@@ -3208,7 +3208,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         elems.push(<rect key="p" x={ax} y={ay} width={aw} height={ah} fill="none" stroke="#333" strokeWidth={1.2}/>);
         // triangolo: apice al centro del lato di apertura (opposto al cardine)
         if(hingeLeft) {
-          // cardine SX → apice centro-DX
+          // cardine SX â†’ apice centro-DX
           elems.push(<line key="t1" x1={ax} y1={ay} x2={ax+aw} y2={ay+ah/2} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>);
           elems.push(<line key="t2" x1={ax} y1={ay+ah} x2={ax+aw} y2={ay+ah/2} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>);
           if(ob) {
@@ -3218,7 +3218,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           }
           elems.push(<rect key="m" x={ax+aw-5} y={ay+ah/2-9} width={5} height={18} fill="white" stroke="#444" strokeWidth={0.8}/>);
         } else {
-          // cardine DX → apice centro-SX
+          // cardine DX â†’ apice centro-SX
           elems.push(<line key="t1" x1={ax+aw} y1={ay} x2={ax} y2={ay+ah/2} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>);
           elems.push(<line key="t2" x1={ax+aw} y1={ay+ah} x2={ax} y2={ay+ah/2} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>);
           if(ob) {
@@ -3312,7 +3312,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         <svg viewBox={"0 0 "+W+" "+H} width="100%" style={{display:"block",background:"white",border:"1px solid #ddd",borderRadius:3}}>
           {/* cassonetto */}
           {v.cassonetto&&<rect x={0} y={-14} width={W} height={14} fill="#fffde7" stroke="#ca8a04" strokeWidth={0.8}/>}
-          {v.cassonetto&&<text x={cx} y={-4} textAnchor="middle" fontSize={6} fill="#92400e" fontFamily={F} fontWeight="700">{"CASS. "+v.casH+"×"+v.casP}</text>}
+          {v.cassonetto&&<text x={cx} y={-4} textAnchor="middle" fontSize={6} fill="#92400e" fontFamily={F} fontWeight="700">{"CASS. "+v.casH+"Ã—"+v.casP}</text>}
           {/* telaio fisso */}
           <rect x={1} y={1} width={W-2} height={H-2} fill="white" stroke="#333" strokeWidth={BW}/>
           {/* soglia */}
@@ -3321,9 +3321,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           {body}
           {/* quadratura: solo badge, no linee */}
           {fuori&&<rect x={cx-26} y={cy-9} width={52} height={18} rx={3} fill="#dc2626"/>}
-          {fuori&&<text x={cx} y={cy+4} textAnchor="middle" fontSize={9} fill="white" fontFamily={F} fontWeight="700">{"⚠ +"+diff+"mm"}</text>}
+          {fuori&&<text x={cx} y={cy+4} textAnchor="middle" fontSize={9} fill="white" fontFamily={F} fontWeight="700">{"âš  +"+diff+"mm"}</text>}
           {!fuori&&diff!==null&&<rect x={cx-18} y={cy-7} width={36} height={14} rx={3} fill="#15803d"/>}
-          {!fuori&&diff!==null&&<text x={cx} y={cy+4} textAnchor="middle" fontSize={8} fill="white" fontFamily={F} fontWeight="700">{"✓ sq."}</text>}
+          {!fuori&&diff!==null&&<text x={cx} y={cy+4} textAnchor="middle" fontSize={8} fill="white" fontFamily={F} fontWeight="700">{"âœ“ sq."}</text>}
           {/* quote */}
           {hasM&&<rect x={cx-26} y={1} width={52} height={14} rx={2} fill="#1d4ed8"/>}
           {hasM&&<text x={cx} y={12} textAnchor="middle" fontSize={10} fill="white" fontFamily={F} fontWeight="700">{lc}</text>}
@@ -3346,15 +3346,15 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           </div>
           <div style={{flex:1}}>
             <div style={{fontSize:15,fontWeight:800,color:"white"}}>Riepilogo Sopralluogo</div>
-            <div style={{fontSize:10,color:"#64748b"}}>{c.code} · {c.cliente} {c.cognome||""} · {today}</div>
+            <div style={{fontSize:10,color:"#64748b"}}>{c.code} Â· {c.cliente} {c.cognome||""} Â· {today}</div>
           </div>
-          <div style={{padding:"4px 8px",borderRadius:6,background:vaniFilled===vaniR.length?"#16a34a":"#d97706",fontSize:10,fontWeight:700,color:"white"}}>{vaniFilled}/{vaniR.length} ✓</div>
+          <div style={{padding:"4px 8px",borderRadius:6,background:vaniFilled===vaniR.length?"#16a34a":"#d97706",fontSize:10,fontWeight:700,color:"white"}}>{vaniFilled}/{vaniR.length} âœ“</div>
         </div>
 
         <div style={{padding:"10px 12px"}}>
           {/* Dati cantiere */}
           <div style={{background:"white",borderRadius:10,border:"1px solid #e2e8f0",padding:"12px 14px",marginBottom:10,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
-            <div style={{fontSize:9,fontWeight:800,color:BLU,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>📍 Dati Cantiere</div>
+            <div style={{fontSize:9,fontWeight:800,color:BLU,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>ðŸ“ Dati Cantiere</div>
             <div style={{display:"grid",gridTemplateColumns:"80px 1fr",gap:"3px 8px",fontSize:11.5}}>
               <span style={{color:GRY,fontWeight:600}}>Cliente</span><span style={{fontWeight:700}}>{c.cliente} {c.cognome||""}</span>
               <span style={{color:GRY,fontWeight:600}}>Indirizzo</span><span>{c.indirizzo}</span>
@@ -3363,7 +3363,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               {c.mezzoSalita&&<><span style={{color:GRY,fontWeight:600}}>Salita</span><span>{c.mezzoSalita}</span></>}
               {c.sistema&&<><span style={{color:GRY,fontWeight:600}}>Sistema</span><span style={{fontWeight:700,color:BLU}}>{c.sistema}</span></>}
             </div>
-            {c.note&&<div style={{marginTop:8,padding:"5px 8px",background:"#fffbeb",borderRadius:6,fontSize:11,color:"#713f12",borderLeft:"3px solid "+AMB}}>📝 {c.note}</div>}
+            {c.note&&<div style={{marginTop:8,padding:"5px 8px",background:"#fffbeb",borderRadius:6,fontSize:11,color:"#713f12",borderLeft:"3px solid "+AMB}}>ðŸ“ {c.note}</div>}
           </div>
 
           {/* Vani */}
@@ -3373,17 +3373,17 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             const diff=m.d1>0&&m.d2>0?Math.abs(m.d1-m.d2):null;
             const fuori=diff!==null&&(diff as number)>5;
             const misN=Object.values(m).filter(x=>(x as number)>0).length;
-            const tipLabel=TIPOLOGIE_RAPIDE.find(tp=>tp.code===v.tipo)?.label||v.tipo||"—";
+            const tipLabel=TIPOLOGIE_RAPIDE.find(tp=>tp.code===v.tipo)?.label||v.tipo||"â€”";
             return (
               <div key={v.id} style={{background:"white",borderRadius:10,border:"1.5px solid "+(fuori?"#fca5a5":"#e2e8f0"),marginBottom:10,overflow:"hidden"}}>
                 {/* Header */}
                 <div style={{padding:"8px 12px",background:fuori?"#fef2f2":"#0f172a",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
                     <span style={{fontSize:13,fontWeight:800,color:fuori?"#991b1b":"white"}}>{vi+1}. {v.nome}</span>
-                    <span style={{fontSize:10,color:fuori?"#b91c1c":"#64748b",marginLeft:6}}>{tipLabel} · {v.stanza} · {v.piano}</span>
+                    <span style={{fontSize:10,color:fuori?"#b91c1c":"#64748b",marginLeft:6}}>{tipLabel} Â· {v.stanza} Â· {v.piano}</span>
                   </div>
                   <div style={{display:"flex",gap:3}}>
-                    {fuori&&<span style={{padding:"2px 6px",borderRadius:3,background:ROS,color:"white",fontSize:8,fontWeight:800}}>⚠ +{diff}mm</span>}
+                    {fuori&&<span style={{padding:"2px 6px",borderRadius:3,background:ROS,color:"white",fontSize:8,fontWeight:800}}>âš  +{diff}mm</span>}
                     <span style={{padding:"2px 6px",borderRadius:3,background:misN>=6?"#16a34a":"#d97706",color:"white",fontSize:8,fontWeight:700}}>{misN}mis</span>
                   </div>
                 </div>
@@ -3398,8 +3398,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   {/* Misure */}
                   <div style={{flex:1,padding:"10px 10px 8px 10px"}}>
                     <div style={{fontSize:7,fontWeight:700,color:GRY,textTransform:"uppercase",marginBottom:5}}>Misure (mm)</div>
-                    {[["LARGH",BLU,[["Alto",m.lAlto],["Centro●",m.lCentro],["Basso",m.lBasso]]],
-                      ["ALT",VRD,[["Sx",m.hSx],["Centro●",m.hCentro],["Dx",m.hDx]]]
+                    {[["LARGH",BLU,[["Alto",m.lAlto],["Centroâ—",m.lCentro],["Basso",m.lBasso]]],
+                      ["ALT",VRD,[["Sx",m.hSx],["Centroâ—",m.hCentro],["Dx",m.hDx]]]
                     ].map(([lbl,col,rows])=>(
                       <div key={lbl} style={{marginBottom:5}}>
                         <div style={{fontSize:7,fontWeight:800,color:col,marginBottom:2,display:"flex",alignItems:"center",gap:2}}>
@@ -3409,17 +3409,17 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                         {rows.map(([l,val])=>(
                           <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:10.5,padding:"1.5px 0",borderBottom:"1px solid #f8fafc"}}>
                             <span style={{color:GRY,fontSize:9.5}}>{l}</span>
-                            <span style={{fontWeight:700,color:val?"#0f172a":"#e2e8f0",fontFamily:"'DM Mono',monospace"}}>{val||"—"}</span>
+                            <span style={{fontWeight:700,color:val?"#0f172a":"#e2e8f0",fontFamily:"'DM Mono',monospace"}}>{val||"â€”"}</span>
                           </div>
                         ))}
                       </div>
                     ))}
                     {(m.d1>0||m.d2>0)&&<div style={{marginBottom:4}}>
-                      <div style={{fontSize:7,fontWeight:800,color:fuori?ROS:VIO,marginBottom:2}}>DIAG. {fuori?"⚠ +"+diff:"✓"}</div>
-                      {[["D1↗",m.d1],["D2↘",m.d2]].map(([l,val])=>(
+                      <div style={{fontSize:7,fontWeight:800,color:fuori?ROS:VIO,marginBottom:2}}>DIAG. {fuori?"âš  +"+diff:"âœ“"}</div>
+                      {[["D1â†—",m.d1],["D2â†˜",m.d2]].map(([l,val])=>(
                         <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:10.5,padding:"1px 0"}}>
                           <span style={{color:GRY,fontSize:9.5}}>{l}</span>
-                          <span style={{fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{val||"—"}</span>
+                          <span style={{fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{val||"â€”"}</span>
                         </div>
                       ))}
                     </div>}
@@ -3438,21 +3438,21 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 {(v.sistema||v.vetro||v.telaio||v.accessori?.tapparella?.attivo||v.accessori?.zanzariera?.attivo||v.accessori?.persiana?.attivo||v.cassonetto||v.note)&&(
                   <div style={{padding:"7px 12px",background:"#f8fafc",borderTop:"1px solid #f1f5f9"}}>
                     <div style={{display:"flex",flexWrap:"wrap",gap:3,marginBottom:3}}>
-                      {v.sistema&&<span style={{padding:"2px 7px",borderRadius:4,background:"#eff6ff",color:"#1d4ed8",fontSize:9.5,fontWeight:700}}>⚙ {v.sistema}</span>}
-                      {v.vetro&&<span style={{padding:"2px 7px",borderRadius:4,background:"#f0fdf4",color:"#15803d",fontSize:9.5,fontWeight:700}}>🔲 {v.vetro}</span>}
-                      {v.coloreInt&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fafafa",border:"1px solid #e2e8f0",color:"#374151",fontSize:9.5}}>🎨 {v.bicolore?"INT:"+v.coloreInt+"/EST:"+v.coloreEst:v.coloreInt}</span>}
-                      {v.telaio&&<span style={{padding:"2px 7px",borderRadius:4,background:"#f5f3ff",color:"#6d28d9",fontSize:9.5,fontWeight:700}}>📐 Tel.{v.telaio}{v.telaio==="Z"&&v.telaioAlaZ?" ("+v.telaioAlaZ+"mm)":""}</span>}
+                      {v.sistema&&<span style={{padding:"2px 7px",borderRadius:4,background:"#eff6ff",color:"#1d4ed8",fontSize:9.5,fontWeight:700}}>âš™ {v.sistema}</span>}
+                      {v.vetro&&<span style={{padding:"2px 7px",borderRadius:4,background:"#f0fdf4",color:"#15803d",fontSize:9.5,fontWeight:700}}>ðŸ”² {v.vetro}</span>}
+                      {v.coloreInt&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fafafa",border:"1px solid #e2e8f0",color:"#374151",fontSize:9.5}}>ðŸŽ¨ {v.bicolore?"INT:"+v.coloreInt+"/EST:"+v.coloreEst:v.coloreInt}</span>}
+                      {v.telaio&&<span style={{padding:"2px 7px",borderRadius:4,background:"#f5f3ff",color:"#6d28d9",fontSize:9.5,fontWeight:700}}>ðŸ“ Tel.{v.telaio}{v.telaio==="Z"&&v.telaioAlaZ?" ("+v.telaioAlaZ+"mm)":""}</span>}
                       {v.rifilato&&(v.rifilSx||v.rifilDx)&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fdf4ff",color:"#7e22ce",fontSize:9.5}}>Rif Sx:{v.rifilSx} Dx:{v.rifilDx} Sop:{v.rifilSopra}</span>}
-                      {v.coprifilo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fefce8",color:"#92400e",fontSize:9.5}}>🔩 {v.coprifilo}</span>}
-                      {v.lamiera&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fff7ed",color:"#9a3412",fontSize:9.5}}>📏 {v.lamiera}</span>}
+                      {v.coprifilo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fefce8",color:"#92400e",fontSize:9.5}}>ðŸ”© {v.coprifilo}</span>}
+                      {v.lamiera&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fff7ed",color:"#9a3412",fontSize:9.5}}>ðŸ“ {v.lamiera}</span>}
                     </div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
-                      {v.cassonetto&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fef3c7",color:"#b45309",fontSize:9.5,fontWeight:700}}>📦 Cass. {v.casH}×{v.casP}</span>}
-                      {v.accessori?.tapparella?.attivo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fef3c7",color:"#b45309",fontSize:9.5,fontWeight:700}}>⬇ Tap. {v.accessori.tapparella.colore} {v.accessori.tapparella.l}×{v.accessori.tapparella.h}</span>}
-                      {v.accessori?.persiana?.attivo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#eff6ff",color:"#1e40af",fontSize:9.5,fontWeight:700}}>🪟 Pers. {v.accessori.persiana.colore}</span>}
-                      {v.accessori?.zanzariera?.attivo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fdf4ff",color:"#6b21a8",fontSize:9.5,fontWeight:700}}>🕸 Zan. {v.accessori.zanzariera.l}×{v.accessori.zanzariera.h}</span>}
+                      {v.cassonetto&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fef3c7",color:"#b45309",fontSize:9.5,fontWeight:700}}>ðŸ“¦ Cass. {v.casH}Ã—{v.casP}</span>}
+                      {v.accessori?.tapparella?.attivo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fef3c7",color:"#b45309",fontSize:9.5,fontWeight:700}}>â¬‡ Tap. {v.accessori.tapparella.colore} {v.accessori.tapparella.l}Ã—{v.accessori.tapparella.h}</span>}
+                      {v.accessori?.persiana?.attivo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#eff6ff",color:"#1e40af",fontSize:9.5,fontWeight:700}}>ðŸªŸ Pers. {v.accessori.persiana.colore}</span>}
+                      {v.accessori?.zanzariera?.attivo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fdf4ff",color:"#6b21a8",fontSize:9.5,fontWeight:700}}>ðŸ•¸ Zan. {v.accessori.zanzariera.l}Ã—{v.accessori.zanzariera.h}</span>}
                     </div>
-                    {v.note&&<div style={{marginTop:5,fontSize:10.5,color:"#475569",fontStyle:"italic",padding:"3px 6px",background:"#fffbeb",borderRadius:4,borderLeft:"2px solid "+AMB}}>📝 {v.note}</div>}
+                    {v.note&&<div style={{marginTop:5,fontSize:10.5,color:"#475569",fontStyle:"italic",padding:"3px 6px",background:"#fffbeb",borderRadius:4,borderLeft:"2px solid "+AMB}}>ðŸ“ {v.note}</div>}
                   </div>
                 )}
               </div>
@@ -3463,7 +3463,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           <div style={{background:"#0f172a",borderRadius:10,padding:"12px 14px",marginBottom:12}}>
             <div style={{fontSize:9,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Sommario</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-              {[["Vani",vaniR.length,"#60a5fa"],["Misure ✓",vaniFilled,"#4ade80"],["⚠ Fuori sq.",fuoriSqN,fuoriSqN>0?"#fbbf24":"#4ade80"]].map(([l,val,col])=>(
+              {[["Vani",vaniR.length,"#60a5fa"],["Misure âœ“",vaniFilled,"#4ade80"],["âš  Fuori sq.",fuoriSqN,fuoriSqN>0?"#fbbf24":"#4ade80"]].map(([l,val,col])=>(
                 <div key={l} style={{textAlign:"center",padding:"8px 4px",background:"rgba(255,255,255,0.05)",borderRadius:8}}>
                   <div style={{fontSize:22,fontWeight:800,color:col,fontFamily:"'DM Mono',monospace"}}>{val}</div>
                   <div style={{fontSize:8,color:"#94a3b8",marginTop:2}}>{l}</div>
@@ -3475,7 +3475,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
           {/* Anteprima messaggio WA */}
           <div style={{background:"#dcf8c6",border:"1.5px solid #16a34a",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
-            <div style={{fontSize:9,fontWeight:800,color:"#166534",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>📱 Anteprima messaggio</div>
+            <div style={{fontSize:9,fontWeight:800,color:"#166534",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>ðŸ“± Anteprima messaggio</div>
             <pre style={{fontFamily:"'DM Mono',monospace",fontSize:9.5,color:"#14532d",whiteSpace:"pre-wrap",lineHeight:1.65,margin:0,maxHeight:220,overflow:"auto"}}>{waMsg}</pre>
           </div>
 
@@ -3484,11 +3484,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           <div style={{fontSize:9,fontWeight:700,color:GRY,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:7,textAlign:"center"}}>Invia riepilogo</div>
           <div style={{display:"flex",gap:8}}>
             <div onClick={()=>window.open("https://wa.me/?text="+encodeURIComponent(waMsg))}
-              style={{flex:1,padding:"13px 8px",borderRadius:11,background:"#16a34a",color:"white",textAlign:"center",cursor:"pointer",fontWeight:800,fontSize:13}}>💬 WhatsApp</div>
+              style={{flex:1,padding:"13px 8px",borderRadius:11,background:"#16a34a",color:"white",textAlign:"center",cursor:"pointer",fontWeight:800,fontSize:13}}>ðŸ’¬ WhatsApp</div>
             <div onClick={()=>window.open("mailto:?subject="+encodeURIComponent("Sopralluogo "+c.code)+"&body="+encodeURIComponent(waMsg.replace(/\*/g,"")))}
-              style={{flex:1,padding:"13px 8px",borderRadius:11,background:BLU,color:"white",textAlign:"center",cursor:"pointer",fontWeight:800,fontSize:13}}>📧 Email</div>
+              style={{flex:1,padding:"13px 8px",borderRadius:11,background:BLU,color:"white",textAlign:"center",cursor:"pointer",fontWeight:800,fontSize:13}}>ðŸ“§ Email</div>
             <div onClick={()=>window.print()}
-              style={{padding:"13px 14px",borderRadius:11,background:"#f1f5f9",color:"#475569",cursor:"pointer",fontWeight:800,fontSize:15}}>🖨</div>
+              style={{padding:"13px 14px",borderRadius:11,background:"#f1f5f9",color:"#475569",cursor:"pointer",fontWeight:800,fontSize:15}}>ðŸ–¨</div>
           </div>
         </div>
       </div>
@@ -3496,19 +3496,19 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   };
 
 // =======================================================
-// MASTRO ERP v2 — PARTE 3/5
+// MASTRO ERP v2 â€” PARTE 3/5
 // Righe 2639-3594: Vano Detail Wizard completo
 // =======================================================
-  /* == VANO DETAIL — WIZARD A STEP == */
+  /* == VANO DETAIL â€” WIZARD A STEP == */
   const STEPS = [
-    { id: "larghezze", title: "LARGHEZZE", desc: "Misura la larghezza in 3 punti: alto, centro, basso", color: "#507aff", icon: "📏", fields: ["lAlto", "lCentro", "lBasso"], labels: ["Larghezza ALTO", "Larghezza CENTRO (luce netta)", "Larghezza BASSO"] },
-    { id: "altezze", title: "ALTEZZE", desc: "Misura l'altezza in 3 punti: sinistra, centro, destra", color: "#34c759", icon: "📐", fields: ["hSx", "hCentro", "hDx"], labels: ["Altezza SINISTRA", "Altezza CENTRO", "Altezza DESTRA"] },
-    { id: "diagonali", title: "DIAGONALI", desc: "Misura le 2 diagonali per verificare la squadra", color: "#ff9500", icon: "✕", fields: ["d1", "d2"], labels: ["Diagonale 1 ↗", "Diagonale 2 ↘"] },
-    { id: "spallette", title: "SPALLETTE", desc: "Misura le spallette e l'imbotte", color: "#32ade6", icon: "🧱", fields: ["spSx", "spDx", "spSopra", "imbotte"], labels: ["Spalletta SINISTRA", "Spalletta DESTRA", "Spalletta SOPRA", "Profondità IMBOTTE"] },
-    { id: "davanzale", title: "DAVANZALE", desc: "Davanzale, soglia e cassonetto", color: "#ff2d55", icon: "⬇", fields: ["davProf", "davSporg", "soglia"], labels: ["Davanzale PROFONDITÀ", "Davanzale SPORGENZA", "Altezza SOGLIA"] },
+    { id: "larghezze", title: "LARGHEZZE", desc: "Misura la larghezza in 3 punti: alto, centro, basso", color: "#507aff", icon: "ðŸ“", fields: ["lAlto", "lCentro", "lBasso"], labels: ["Larghezza ALTO", "Larghezza CENTRO (luce netta)", "Larghezza BASSO"] },
+    { id: "altezze", title: "ALTEZZE", desc: "Misura l'altezza in 3 punti: sinistra, centro, destra", color: "#34c759", icon: "ðŸ“", fields: ["hSx", "hCentro", "hDx"], labels: ["Altezza SINISTRA", "Altezza CENTRO", "Altezza DESTRA"] },
+    { id: "diagonali", title: "DIAGONALI", desc: "Misura le 2 diagonali per verificare la squadra", color: "#ff9500", icon: "âœ•", fields: ["d1", "d2"], labels: ["Diagonale 1 â†—", "Diagonale 2 â†˜"] },
+    { id: "spallette", title: "SPALLETTE", desc: "Misura le spallette e l'imbotte", color: "#32ade6", icon: "ðŸ§±", fields: ["spSx", "spDx", "spSopra", "imbotte"], labels: ["Spalletta SINISTRA", "Spalletta DESTRA", "Spalletta SOPRA", "ProfonditÃ  IMBOTTE"] },
+    { id: "davanzale", title: "DAVANZALE", desc: "Davanzale, soglia e cassonetto", color: "#ff2d55", icon: "â¬‡", fields: ["davProf", "davSporg", "soglia"], labels: ["Davanzale PROFONDITÃ€", "Davanzale SPORGENZA", "Altezza SOGLIA"] },
     { id: "accessori", title: "ACCESSORI", desc: "Tapparella, persiana, zanzariera", color: "#af52de", icon: "+" },
-    { id: "disegno", title: "DISEGNO + FOTO", desc: "Disegna, fotografa e annota il vano", color: "#ff6b6b", icon: "📷" },
-    { id: "riepilogo", title: "RIEPILOGO", desc: "Anteprima completa del vano", color: "#34c759", icon: "📋" },
+    { id: "disegno", title: "DISEGNO + FOTO", desc: "Disegna, fotografa e annota il vano", color: "#ff6b6b", icon: "ðŸ“·" },
+    { id: "riepilogo", title: "RIEPILOGO", desc: "Anteprima completa del vano", color: "#34c759", icon: "ðŸ“‹" },
   ];
 
   const renderVanoDetail = () => {
@@ -3516,7 +3516,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     const m = v.misure || {};
     const step = STEPS[vanoStep];
     const filled = Object.values(m).filter(x => (x as number) > 0).length;
-    const TIPO_TIPS = { Scorrevole: { t: "Scorrevole (alzante/traslante)", dim: "2000 × 2200 mm", w: ["Binario inferiore: serve spazio incasso", "Verifica portata parete"] }, Portafinestra: { t: "Portafinestra standard", dim: "800-900 × 2200 mm", w: ["Soglia a taglio termico", "Verifica altezza architrave"] }, Finestra: { t: "Finestra", dim: "1200 × 1400 mm", w: ["Verifica spazio per anta"] } };
+    const TIPO_TIPS = { Scorrevole: { t: "Scorrevole (alzante/traslante)", dim: "2000 Ã— 2200 mm", w: ["Binario inferiore: serve spazio incasso", "Verifica portata parete"] }, Portafinestra: { t: "Portafinestra standard", dim: "800-900 Ã— 2200 mm", w: ["Soglia a taglio termico", "Verifica altezza architrave"] }, Finestra: { t: "Finestra", dim: "1200 Ã— 1400 mm", w: ["Verifica spazio per anta"] } };
     const tip = TIPO_TIPS[v.tipo] || null;
     const hasWarnings = !m.lAlto && !m.lCentro && !m.lBasso;
     const hasHWarnings = !m.hSx && !m.hCentro && !m.hDx;
@@ -3574,15 +3574,15 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           <div onClick={() => { setSelectedVano(null); setVanoStep(0); }} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 700 }}>{v.nome}</div>
-            <div style={{ fontSize: 10, color: T.sub }}>{TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.label || v.tipo} · {v.stanza} · {v.piano}</div>
+            <div style={{ fontSize: 10, color: T.sub }}>{TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.label || v.tipo} Â· {v.stanza} Â· {v.piano}</div>
           </div>
           <div onClick={() => { setShowAIPhoto(true); setAiPhotoStep(0); }} style={{ padding: "5px 10px", borderRadius: 8, background: "linear-gradient(135deg, #af52de20, #007aff20)", border: "1px solid #af52de40", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 14 }}>🤖</span>
+            <span style={{ fontSize: 14 }}>ðŸ¤–</span>
             <span style={{ fontSize: 10, fontWeight: 700, color: "#af52de" }}>AI</span>
           </div>
         </div>
 
-        {/* == INFO VANO — fisarmoniche (solo step 0) == */}
+        {/* == INFO VANO â€” fisarmoniche (solo step 0) == */}
         {vanoStep === 0 && (() => {
           const updateV = (field, val) => {
             setCantieri(cs => cs.map(c => c.id === selectedCM?.id
@@ -3594,11 +3594,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           const coloriRAL = ["RAL 9010","RAL 9016","RAL 9001","RAL 7016","RAL 7021","RAL 8014","RAL 8016","RAL 1013","Altro"];
 
           const sections = [
-            { id:"accesso", icon:"🏗", label:"Accesso / Difficoltà",
+            { id:"accesso", icon:"ðŸ—", label:"Accesso / DifficoltÃ ",
               badge: v.difficoltaSalita||null,
               body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <div style={{display:"flex",gap:4}}>
-                  {[{id:"facile",l:"Facile",c:T.grn,e:"✅"},{id:"media",l:"Media",c:T.orange,e:"⚠️"},{id:"difficile",l:"Difficile",c:T.red,e:"🔴"}].map(d=>(
+                  {[{id:"facile",l:"Facile",c:T.grn,e:"âœ…"},{id:"media",l:"Media",c:T.orange,e:"âš ï¸"},{id:"difficile",l:"Difficile",c:T.red,e:"ðŸ”´"}].map(d=>(
                     <div key={d.id} onClick={()=>updateV("difficoltaSalita",d.id)}
                       style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1.5px solid ${v.difficoltaSalita===d.id?d.c:T.bdr}`,background:v.difficoltaSalita===d.id?d.c+"15":T.card,textAlign:"center",cursor:"pointer"}}>
                       <div style={{fontSize:13}}>{d.e}</div>
@@ -3608,12 +3608,12 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 </div>
                 <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:2}}>MEZZO DI SALITA</div>
                 <select style={S.select} value={v.mezzoSalita||""} onChange={e=>updateV("mezzoSalita",e.target.value)}>
-                  <option value="">— Seleziona —</option>
+                  <option value="">â€” Seleziona â€”</option>
                   {mezziSalita.map(m=><option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
             },
-            { id:"tipologia", icon:"🪟", label:"Tipologia",
+            { id:"tipologia", icon:"ðŸªŸ", label:"Tipologia",
               badge: v.tipo||null,
               body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bdr}`,paddingBottom:0,marginBottom:4}}>
@@ -3634,8 +3634,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 </div>
               </div>
             },
-            { id:"posizione", icon:"🏠", label:"Stanza / Piano",
-              badge: v.stanza?`${v.stanza} · ${v.piano}`:null,
+            { id:"posizione", icon:"ðŸ ", label:"Stanza / Piano",
+              badge: v.stanza?`${v.stanza} Â· ${v.piano}`:null,
               body: <div style={{display:"flex",gap:8}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>STANZA</div>
@@ -3646,64 +3646,64 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 <div style={{flex:1}}>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>PIANO</div>
                   <select style={S.select} value={v.piano||""} onChange={e=>updateV("piano",e.target.value)}>
-                    {pianiList.map(p=><option key={p} value={p}>{p==="S2"?"S2 — 2° Seminterrato":p==="S1"?"S1 — Seminterrato":p==="PT"?"PT — Piano Terra":p==="M"?"M — Mansarda":`${p} — ${p.replace("P","")}° Piano`}</option>)}
+                    {pianiList.map(p=><option key={p} value={p}>{p==="S2"?"S2 â€” 2Â° Seminterrato":p==="S1"?"S1 â€” Seminterrato":p==="PT"?"PT â€” Piano Terra":p==="M"?"M â€” Mansarda":`${p} â€” ${p.replace("P","")}Â° Piano`}</option>)}
                   </select>
                 </div>
                 <div style={{width:80}}>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>PEZZI</div>
                   <div style={{display:"flex",alignItems:"center",gap:4}}>
-                    <div onClick={()=>updateV("pezzi",Math.max(1,(v.pezzi||1)-1))} style={{width:28,height:32,borderRadius:6,background:T.bg,border:`1px solid ${T.bdr}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:16,fontWeight:700,color:T.sub}}>−</div>
+                    <div onClick={()=>updateV("pezzi",Math.max(1,(v.pezzi||1)-1))} style={{width:28,height:32,borderRadius:6,background:T.bg,border:`1px solid ${T.bdr}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:16,fontWeight:700,color:T.sub}}>âˆ’</div>
                     <div style={{flex:1,textAlign:"center",fontSize:16,fontWeight:800,color:T.acc}}>{v.pezzi||1}</div>
                     <div onClick={()=>updateV("pezzi",(v.pezzi||1)+1)} style={{width:28,height:32,borderRadius:6,background:T.bg,border:`1px solid ${T.bdr}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:16,fontWeight:700,color:T.sub}}>+</div>
                   </div>
                 </div>
               </div>
             },
-            { id:"sistema", icon:"⚙️", label:"Sistema / Vetro",
-              badge: v.sistema?v.sistema.split(" ").slice(0,2).join(" "):null,
+            { id:"sistema", icon:"âš™ï¸", label:"Sistema / Vetro",
+              badge: v.sistema?v.sistema.split(" ").slice(0,2).join(" · "):null,
               body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <div>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>SISTEMA</div>
                   <select style={S.select} value={v.sistema||""} onChange={e=>updateV("sistema",e.target.value)}>
-                    <option value="">— Seleziona —</option>
+                    <option value="">â€” Seleziona â€”</option>
                     {sistemiDB.map(s=><option key={s.id} value={`${s.marca} ${s.sistema}`}>{s.marca} {s.sistema}</option>)}
                   </select>
                 </div>
                 <div>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>VETRO</div>
                   <select style={S.select} value={v.vetro||""} onChange={e=>updateV("vetro",e.target.value)}>
-                    <option value="">— Seleziona —</option>
+                    <option value="">â€” Seleziona â€”</option>
                     {vetriDB.map(g=><option key={g.id} value={g.code}>{g.code} Ug={g.ug}</option>)}
                   </select>
                 </div>
               </div>
             },
-            { id:"colori", icon:"🎨", label:"Colori profili",
+            { id:"colori", icon:"ðŸŽ¨", label:"Colori profili",
               badge: v.coloreInt||null,
               body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub}}>INT</div>
                   <div onClick={()=>updateV("bicolore",!v.bicolore)}
                     style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:v.bicolore?T.accLt:"transparent",border:`1px solid ${v.bicolore?T.acc:T.bdr}`,color:v.bicolore?T.acc:T.sub,cursor:"pointer",fontWeight:600}}>
-                    Bicolore {v.bicolore?"✓":""}
+                    Bicolore {v.bicolore?"âœ“":""}
                   </div>
                 </div>
                 {!v.bicolore
                   ? <select style={S.select} value={v.coloreInt||""} onChange={e=>updateV("coloreInt",e.target.value)}>
-                      <option value="">— Seleziona —</option>
-                      {coloriDB.map(c=><option key={c.id} value={c.code}>{c.code} — {c.nome}</option>)}
+                      <option value="">â€” Seleziona â€”</option>
+                      {coloriDB.map(c=><option key={c.id} value={c.code}>{c.code} â€” {c.nome}</option>)}
                     </select>
                   : <div style={{display:"flex",gap:6}}>
                       <div style={{flex:1}}>
                         <div style={{fontSize:9,color:T.sub,marginBottom:2}}>INT</div>
                         <select style={S.select} value={v.coloreInt||""} onChange={e=>updateV("coloreInt",e.target.value)}>
-                          <option value="">—</option>{coloriDB.map(c=><option key={c.id} value={c.code}>{c.code}</option>)}
+                          <option value="">â€”</option>{coloriDB.map(c=><option key={c.id} value={c.code}>{c.code}</option>)}
                         </select>
                       </div>
                       <div style={{flex:1}}>
                         <div style={{fontSize:9,color:T.sub,marginBottom:2}}>EST</div>
                         <select style={S.select} value={v.coloreEst||""} onChange={e=>updateV("coloreEst",e.target.value)}>
-                          <option value="">—</option>{coloriDB.map(c=><option key={c.id} value={c.code}>{c.code}</option>)}
+                          <option value="">â€”</option>{coloriDB.map(c=><option key={c.id} value={c.code}>{c.code}</option>)}
                         </select>
                       </div>
                     </div>
@@ -3711,13 +3711,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 <div>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>ACCESSORI</div>
                   <select style={S.select} value={v.coloreAcc||""} onChange={e=>updateV("coloreAcc",e.target.value)}>
-                    <option value="">— Come profili —</option>
-                    {coloriDB.map(c=><option key={c.id} value={c.code}>{c.code} — {c.nome}</option>)}
+                    <option value="">â€” Come profili â€”</option>
+                    {coloriDB.map(c=><option key={c.id} value={c.code}>{c.code} â€” {c.nome}</option>)}
                   </select>
                 </div>
               </div>
             },
-            { id:"telaio", icon:"📐", label:"Telaio / Rifilato",
+            { id:"telaio", icon:"ðŸ“", label:"Telaio / Rifilato",
               badge: v.telaio?(v.telaio==="Z"?"Telaio Z":"Telaio L"):(v.rifilato?"Rifilato":null),
               body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <div style={{display:"flex",gap:6}}>
@@ -3740,28 +3740,28 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   <span style={{fontSize:12,fontWeight:600,color:T.text}}>Rifilato</span>
                 </div>
                 {v.rifilato && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                  {[["rifilSx","↙ Sx"],["rifilDx","↘ Dx"],["rifilSopra","↑ Sopra"],["rifilSotto","↓ Sotto"]].map(([f,l])=>(
+                  {[["rifilSx","â†™ Sx"],["rifilDx","â†˜ Dx"],["rifilSopra","â†‘ Sopra"],["rifilSotto","â†“ Sotto"]].map(([f,l])=>(
                     <div key={f}><div style={{fontSize:9,color:T.sub,fontWeight:600,marginBottom:2}}>{l} (mm)</div>
                     <input style={S.input} type="number" inputMode="numeric" placeholder="0" value={v[f]||""} onChange={e=>updateV(f,e.target.value)}/></div>
                   ))}
                 </div>}
               </div>
             },
-            { id:"finiture", icon:"🔩", label:"Coprifilo / Lamiera",
-              badge: (v.coprifilo||v.lamiera)?"✓":null,
+            { id:"finiture", icon:"ðŸ”©", label:"Coprifilo / Lamiera",
+              badge: (v.coprifilo||v.lamiera)?"âœ“":null,
               body: <div style={{display:"flex",gap:8}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>COPRIFILO</div>
                   <select style={S.select} value={v.coprifilo||""} onChange={e=>updateV("coprifilo",e.target.value)}>
-                    <option value="">— No —</option>
-                    {coprifiliDB.map(c=><option key={c.id} value={c.cod}>{c.cod} — {c.nome}</option>)}
+                    <option value="">â€” No â€”</option>
+                    {coprifiliDB.map(c=><option key={c.id} value={c.cod}>{c.cod} â€” {c.nome}</option>)}
                   </select>
                 </div>
                 <div style={{flex:1}}>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>LAMIERA</div>
                   <select style={S.select} value={v.lamiera||""} onChange={e=>updateV("lamiera",e.target.value)}>
-                    <option value="">— No —</option>
-                    {lamiereDB.map(l=><option key={l.id} value={l.cod}>{l.cod} — {l.nome}</option>)}
+                    <option value="">â€” No â€”</option>
+                    {lamiereDB.map(l=><option key={l.id} value={l.cod}>{l.cod} â€” {l.nome}</option>)}
                   </select>
                 </div>
               </div>
@@ -3781,7 +3781,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                         <span style={{fontSize:12,fontWeight:600,color:T.text}}>{sec.label}</span>
                         {sec.badge && <span style={{...S.badge(T.accLt,T.acc),fontSize:9,padding:"1px 6px"}}>{sec.badge}</span>}
                       </div>
-                      <span style={{fontSize:9,color:T.sub,display:"inline-block",transform:isOpen?"rotate(180deg)":"none",transition:"transform 0.15s"}}>▼</span>
+                      <span style={{fontSize:9,color:T.sub,display:"inline-block",transform:isOpen?"rotate(180deg)":"none",transition:"transform 0.15s"}}>â–¼</span>
                     </div>
                     {isOpen && <div style={{padding:"12px",background:T.bg,borderTop:`1px solid ${T.bdr}`}}>{sec.body}</div>}
                   </div>
@@ -3813,8 +3813,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           {/* Warnings */}
           {vanoStep <= 2 && (hasWarnings || hasHWarnings) && (
             <div style={{ padding: "8px 14px", borderRadius: 10, background: "#fff3e0", border: "1px solid #ffe0b2", marginBottom: 12, fontSize: 11, color: "#e65100" }}>
-              {hasWarnings && <div>⚠ Nessuna larghezza inserita</div>}
-              {hasHWarnings && <div>⚠ Nessuna altezza inserita</div>}
+              {hasWarnings && <div>âš  Nessuna larghezza inserita</div>}
+              {hasHWarnings && <div>âš  Nessuna altezza inserita</div>}
             </div>
           )}
 
@@ -3826,9 +3826,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               {bInput("Larghezza BASSO", "lBasso")}
               {tip && (
                 <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fff8e1", border: "1px solid #ffecb3", marginTop: 4 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f57f17" }}>💡 {tip.t}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f57f17" }}>ðŸ’¡ {tip.t}</div>
                   <div style={{ fontSize: 11, color: "#795548" }}>Dimensioni tipiche: {tip.dim}</div>
-                  {tip.w.map((w, i) => <div key={i} style={{ fontSize: 10, color: "#e65100", marginTop: 2 }}>⚠ {w}</div>)}
+                  {tip.w.map((w, i) => <div key={i} style={{ fontSize: 10, color: "#e65100", marginTop: 2 }}>âš  {w}</div>)}
                 </div>
               )}
             </>
@@ -3842,9 +3842,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               {bInput("Altezza DESTRA", "hDx")}
               {tip && (
                 <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fff8e1", border: "1px solid #ffecb3", marginTop: 4 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f57f17" }}>💡 {tip.t}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f57f17" }}>ðŸ’¡ {tip.t}</div>
                   <div style={{ fontSize: 11, color: "#795548" }}>Dimensioni tipiche: {tip.dim}</div>
-                  {tip.w.map((w, i) => <div key={i} style={{ fontSize: 10, color: "#e65100", marginTop: 2 }}>⚠ {w}</div>)}
+                  {tip.w.map((w, i) => <div key={i} style={{ fontSize: 10, color: "#e65100", marginTop: 2 }}>âš  {w}</div>)}
                 </div>
               )}
             </>
@@ -3853,24 +3853,24 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           {/* === STEP 2: DIAGONALI === */}
           {vanoStep === 2 && (
             <>
-              {bInput("Diagonale 1 ↗", "d1")}
-              {bInput("Diagonale 2 ↘", "d2")}
+              {bInput("Diagonale 1 â†—", "d1")}
+              {bInput("Diagonale 2 â†˜", "d2")}
               {fSq !== null && fSq > 3 && (
                 <div style={{ padding: "10px 14px", borderRadius: 10, background: "#ffebee", border: "1px solid #ef9a9a", marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#c62828" }}>⚠ Fuori squadra: {fSq}mm</div>
-                  <div style={{ fontSize: 11, color: "#b71c1c" }}>Differenza superiore a 3mm — segnalare in ufficio</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#c62828" }}>âš  Fuori squadra: {fSq}mm</div>
+                  <div style={{ fontSize: 11, color: "#b71c1c" }}>Differenza superiore a 3mm â€” segnalare in ufficio</div>
                 </div>
               )}
               {fSq !== null && fSq <= 3 && (
                 <div style={{ padding: "10px 14px", borderRadius: 10, background: "#e8f5e9", border: "1px solid #a5d6a7" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#2e7d32" }}>✅ In squadra — differenza: {fSq}mm</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#2e7d32" }}>âœ… In squadra â€” differenza: {fSq}mm</div>
                 </div>
               )}
               {tip && (
                 <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fff8e1", border: "1px solid #ffecb3", marginTop: 4 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f57f17" }}>💡 {tip.t}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f57f17" }}>ðŸ’¡ {tip.t}</div>
                   <div style={{ fontSize: 11, color: "#795548" }}>Dimensioni tipiche: {tip.dim}</div>
-                  {tip.w.map((w, i) => <div key={i} style={{ fontSize: 10, color: "#e65100", marginTop: 2 }}>⚠ {w}</div>)}
+                  {tip.w.map((w, i) => <div key={i} style={{ fontSize: 10, color: "#e65100", marginTop: 2 }}>âš  {w}</div>)}
                 </div>
               )}
             </>
@@ -3882,14 +3882,14 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               {bInput("Spalletta SINISTRA", "spSx")}
               {bInput("Spalletta DESTRA", "spDx")}
               {bInput("Spalletta SOPRA", "spSopra")}
-              {bInput("Profondità IMBOTTE", "imbotte")}
+              {bInput("ProfonditÃ  IMBOTTE", "imbotte")}
               {/* DISEGNO LIBERO SPALLETTE */}
               <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, marginTop: 8, overflow: "hidden" }}>
                 <div style={{ padding: "8px 14px", borderBottom: `1px solid ${T.bdr}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#32ade6" }}>✏️ Disegno spallette</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#32ade6" }}>âœï¸ Disegno spallette</span>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => { const ctx = spCanvasRef.current?.getContext("2d"); ctx?.clearRect(0, 0, 380, 200); }} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>🗑 Pulisci</button>
-                    <button style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: T.grn, color: "#fff", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>💾 Salva</button>
+                    <button onClick={() => { const ctx = spCanvasRef.current?.getContext("2d"); ctx?.clearRect(0, 0, 380, 200); }} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>ðŸ—‘ Pulisci</button>
+                    <button style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: T.grn, color: "#fff", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>ðŸ’¾ Salva</button>
                   </div>
                 </div>
                 <canvas ref={spCanvasRef} width={380} height={200} style={{ width: "100%", height: 200, background: "#fff", touchAction: "none", cursor: "crosshair" }}
@@ -3917,7 +3917,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           {/* === STEP 4: DAVANZALE === */}
           {vanoStep === 4 && (
             <>
-              {bInput("Davanzale PROFONDITÀ", "davProf")}
+              {bInput("Davanzale PROFONDITÃ€", "davProf")}
               {bInput("Davanzale SPORGENZA", "davSporg")}
               {bInput("Altezza SOGLIA", "soglia")}
               {/* Cassonetto toggle */}
@@ -3927,13 +3927,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 if(selectedRilievo){const updR3={...selectedRilievo,vani:selectedRilievo.vani.map(x=>x.id===v.id?nv:x)};setCantieri(cs=>cs.map(c=>c.id===selectedCM?.id?{...c,rilievi:c.rilievi.map(r2=>r2.id===selectedRilievo.id?updR3:r2)}:c));setSelectedRilievo(updR3);}
               }}>
                 <span style={{ fontSize: 12, color: T.sub }}>+</span>
-                <span style={{ fontSize: 14 }}>🧊</span>
+                <span style={{ fontSize: 14 }}>ðŸ§Š</span>
                 <span style={{ fontSize: 13, color: T.sub }}>{v.cassonetto ? "Cassonetto attivo" : "Ha un cassonetto? Tocca per aggiungere"}</span>
               </div>
               {v.cassonetto && (
                 <div style={{ marginTop: 8 }}>
                   {bInput("Cassonetto ALTEZZA", "casH")}
-                  {bInput("Cassonetto PROFONDITÀ", "casP")}
+                  {bInput("Cassonetto PROFONDITÃ€", "casP")}
                 </div>
               )}
             </>
@@ -3950,13 +3950,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                       setSelectedVano(nv);
                       if(selectedRilievo){const updR3={...selectedRilievo,vani:selectedRilievo.vani.map(x=>x.id===v.id?nv:x)};setCantieri(cs=>cs.map(c=>c.id===selectedCM?.id?{...c,rilievi:c.rilievi.map(r2=>r2.id===selectedRilievo.id?updR3:r2)}:c));setSelectedRilievo(updR3);}
                     }} style={{ padding: "14px 16px", borderRadius: 12, border: `1px dashed ${v.cassonetto ? "#ff9500" : T.bdr}`, background: v.cassonetto ? "#fff8e1" : T.card, marginBottom: 8, cursor: "pointer", textAlign: "center" }}>
-                      <span style={{ fontSize: 12, color: v.cassonetto ? "#ff9500" : T.sub }}>+ 🧊 {v.cassonetto ? "Cassonetto attivo — tocca per rimuovere" : "Aggiungi Cassonetto"}</span>
+                      <span style={{ fontSize: 12, color: v.cassonetto ? "#ff9500" : T.sub }}>+ ðŸ§Š {v.cassonetto ? "Cassonetto attivo â€” tocca per rimuovere" : "Aggiungi Cassonetto"}</span>
                     </div>
                   );
                 }
                 const a = v.accessori?.[acc] || { attivo: false };
                 const accColors = { tapparella: "#ff9500", persiana: "#007aff", zanzariera: "#ff2d55" };
-                const accIcons = { tapparella: "🪟", persiana: "🏠", zanzariera: "🦟" };
+                const accIcons = { tapparella: "ðŸªŸ", persiana: "ðŸ ", zanzariera: "ðŸ¦Ÿ" };
                 return (
                   <div key={acc} style={{ marginBottom: 8, borderRadius: 12, border: `1px ${a.attivo ? "solid" : "dashed"} ${a.attivo ? accColors[acc] + "40" : T.bdr}`, overflow: "hidden", background: T.card }}>
                     {!a.attivo ? (
@@ -3967,7 +3967,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                       <>
                         <div style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${T.bdr}` }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: accColors[acc] }}>{accIcons[acc]} {acc.charAt(0).toUpperCase() + acc.slice(1)}</span>
-                          <div onClick={() => toggleAccessorio(v.id, acc)} style={{ fontSize: 11, color: T.sub, cursor: "pointer" }}>▲ Chiudi</div>
+                          <div onClick={() => toggleAccessorio(v.id, acc)} style={{ fontSize: 11, color: T.sub, cursor: "pointer" }}>â–² Chiudi</div>
                         </div>
                         <div style={{ padding: "12px 16px" }}>
                           <div style={{ marginBottom: 10 }}>
@@ -3994,7 +3994,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                               </div>
                               <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6, textTransform: "uppercase" }}>Motorizzata</div>
                               <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
-                                {["Sì", "No"].map(mot => (
+                                {["SÃ¬", "No"].map(mot => (
                                   <div key={mot} onClick={() => updateAccessorio(v.id, acc, "motorizzata", mot)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${v.accessori?.[acc]?.motorizzata === mot ? "#34c759" : T.bdr}`, background: v.accessori?.[acc]?.motorizzata === mot ? "#34c75918" : T.card, fontSize: 12, cursor: "pointer", fontWeight: v.accessori?.[acc]?.motorizzata === mot ? 700 : 400, color: v.accessori?.[acc]?.motorizzata === mot ? "#34c759" : T.text }}>{mot}</div>
                                 ))}
                               </div>
@@ -4003,10 +4003,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                           <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6, textTransform: "uppercase" }}>Colore</div>
                           <select style={{ width: "100%", padding: "10px", fontSize: 12, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card, fontFamily: FF }} value={v.accessori?.[acc]?.colore || ""} onChange={e => updateAccessorio(v.id, acc, "colore", e.target.value)}>
                             <option value="">Colore</option>
-                            {coloriDB.map(c => <option key={c.id} value={c.code}>{c.code} — {c.nome}</option>)}
+                            {coloriDB.map(c => <option key={c.id} value={c.code}>{c.code} â€” {c.nome}</option>)}
                           </select>
                           <div onClick={() => toggleAccessorio(v.id, acc)} style={{ marginTop: 10, padding: "8px", borderRadius: 8, border: `1px dashed #ef5350`, textAlign: "center", fontSize: 11, color: "#ef5350", cursor: "pointer" }}>
-                            🗑 Rimuovi {acc}
+                            ðŸ—‘ Rimuovi {acc}
                           </div>
                         </div>
                       </>
@@ -4023,10 +4023,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               {/* Disegno mano libera */}
               <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, marginBottom: 12, overflow: "hidden" }}>
                 <div style={{ padding: "10px 14px", borderBottom: `1px solid ${T.bdr}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#ff6b6b" }}>✏️ Disegno a mano libera</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#ff6b6b" }}>âœï¸ Disegno a mano libera</span>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => { const ctx = canvasRef.current?.getContext("2d"); ctx?.clearRect(0, 0, 380, 340); }} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>🗑 Pulisci</button>
-                    <button style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#ff3b30", color: "#fff", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>💾 Salva</button>
+                    <button onClick={() => { const ctx = canvasRef.current?.getContext("2d"); ctx?.clearRect(0, 0, 380, 340); }} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>ðŸ—‘ Pulisci</button>
+                    <button style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#ff3b30", color: "#fff", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>ðŸ’¾ Salva</button>
                   </div>
                 </div>
                 <canvas ref={canvasRef} width={380} height={340} style={{ width: "100%", height: 340, background: "#fff", touchAction: "none", cursor: "crosshair" }}
@@ -4041,7 +4041,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   ))}
                   <div style={{ width: 1, height: 20, background: T.bdr, margin: "0 4px" }} />
                   <div style={{ width: 28, height: 28, borderRadius: 6, background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                    <span style={{ fontSize: 12 }}>🩹</span>
+                    <span style={{ fontSize: 12 }}>ðŸ©¹</span>
                   </div>
                   <div style={{ marginLeft: "auto", display: "flex", gap: 3 }}>
                     {[1, 2, 4, 6].map(s => (
@@ -4056,12 +4056,12 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               {/* Foto */}
               <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 14, marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: T.blue }}>📷 FOTO ({(v.foto && Object.keys(v.foto).length) || 0})</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.blue }}>ðŸ“· FOTO ({(v.foto && Object.keys(v.foto).length) || 0})</div>
                   <div style={{ display: "flex", gap: 4 }}>
                     <button onClick={() => document.getElementById("fotoVanoInput").click()}
-                      style={{ padding: "4px 10px", borderRadius: 6, background: T.acc, color: "#fff", border: "none", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>📷 Foto</button>
+                      style={{ padding: "4px 10px", borderRadius: 6, background: T.acc, color: "#fff", border: "none", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>ðŸ“· Foto</button>
                     <button onClick={() => { setPendingFotoCat(null); videoVanoRef.current?.click(); }}
-                      style={{ padding: "4px 10px", borderRadius: 6, background: T.blue, color: "#fff", border: "none", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>🎬 Video</button>
+                      style={{ padding: "4px 10px", borderRadius: 6, background: T.blue, color: "#fff", border: "none", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>ðŸŽ¬ Video</button>
                   </div>
                 </div>
                 <input ref={fotoVanoRef} type="file" accept="image/*" capture="environment" multiple style={{ display: "none" }}
@@ -4099,21 +4099,21 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     return (
                     <div key={i} onClick={()=>{ setPendingFotoCat(cat.n); fotoVanoRef.current?.click(); }}
                       style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${fotoCount>0 ? "#34c759" : cat.r ? cat.c + "40" : T.bdr}`, background: fotoCount>0 ? "#34c75915" : cat.r ? cat.c + "08" : "transparent", fontSize: 10, fontWeight: 600, color: fotoCount>0 ? "#1a9e40" : cat.r ? cat.c : T.sub, cursor: "pointer", display: "flex", alignItems: "center", gap: 3, position:"relative" }}>
-                      {fotoCount>0 ? <span style={{fontSize:8,background:"#34c759",color:"#fff",borderRadius:"50%",width:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900}}>{fotoCount}</span> : cat.r ? <span style={{ fontSize: 8 }}>✕</span> : null}
-                      <span style={{ fontSize: 10 }}>📷</span> {cat.n}
+                      {fotoCount>0 ? <span style={{fontSize:8,background:"#34c759",color:"#fff",borderRadius:"50%",width:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900}}>{fotoCount}</span> : cat.r ? <span style={{ fontSize: 8 }}>âœ•</span> : null}
+                      <span style={{ fontSize: 10 }}>ðŸ“·</span> {cat.n}
                     </div>
                     );
                   })}
                 </div>
                 {Object.keys(v.foto||{}).length === 0
-                  ? <div style={{ textAlign: "center", padding: "16px 0", color: T.sub, fontSize: 11 }}>Nessun allegato — tocca 📷 Foto o 🎬 Video</div>
+                  ? <div style={{ textAlign: "center", padding: "16px 0", color: T.sub, fontSize: 11 }}>Nessun allegato â€” tocca ðŸ“· Foto o ðŸŽ¬ Video</div>
                   : <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
                       {Object.entries(v.foto||{}).map(([k, f]) => (
                         <div key={k} style={{ position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden", background: T.bg, border: `1px solid ${T.bdr}` }}>
                           {f.tipo === "foto" && f.dataUrl
                             ? <img src={f.dataUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt={f.nome}/>
                             : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 2 }}>
-                                <span style={{ fontSize: 24 }}>🎬</span>
+                                <span style={{ fontSize: 24 }}>ðŸŽ¬</span>
                                 <span style={{ fontSize: 8, color: T.sub, textAlign: "center", padding: "0 4px" }}>{f.nome?.slice(0,12)}</span>
                               </div>
                           }
@@ -4122,7 +4122,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                             const newFoto = { ...(v.foto||{}) }; delete newFoto[k];
                             setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: newFoto } : vn) } : r2) } : c));
                             setSelectedVano(prev => ({ ...prev, foto: newFoto }));
-                          }} style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%", background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>✕</div>
+                          }} style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%", background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>âœ•</div>
                         </div>
                       ))}
                     </div>
@@ -4131,7 +4131,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
               {/* Note */}
               <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#ff9500", marginBottom: 8 }}>📝 NOTE</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#ff9500", marginBottom: 8 }}>ðŸ“ NOTE</div>
                 <textarea style={{ width: "100%", padding: 10, fontSize: 13, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card, minHeight: 60, resize: "vertical", fontFamily: FF, boxSizing: "border-box" }} placeholder="Note sul vano..." defaultValue={v.note || ""} />
               </div>
             </>
@@ -4143,65 +4143,65 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 16, marginBottom: 12 }}>
                 <div style={{ textAlign: "center", marginBottom: 14 }}>
                   <div style={{ fontSize: 16, fontWeight: 700 }}>{v.nome}</div>
-                  <div style={{ fontSize: 12, color: T.sub }}>{v.tipo} • {v.stanza} • {v.piano}</div>
+                  <div style={{ fontSize: 12, color: T.sub }}>{v.tipo} â€¢ {v.stanza} â€¢ {v.piano}</div>
                 </div>
                 {/* Larghezze */}
                 <div style={{ borderRadius: 10, border: `1px solid #507aff25`, overflow: "hidden", marginBottom: 8 }}>
-                  <div style={{ padding: "6px 12px", background: "#507aff10", fontSize: 11, fontWeight: 700, color: "#507aff" }}>📏 LARGHEZZE</div>
+                  <div style={{ padding: "6px 12px", background: "#507aff10", fontSize: 11, fontWeight: 700, color: "#507aff" }}>ðŸ“ LARGHEZZE</div>
                   {[["Alto", m.lAlto], ["Centro", m.lCentro], ["Basso", m.lBasso]].map(([l, val]) => (
                     <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
                       <span style={{ color: T.text }}>{l}</span>
-                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
+                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "â€”"}</span>
                     </div>
                   ))}
                 </div>
                 {/* Altezze */}
                 <div style={{ borderRadius: 10, border: `1px solid #34c75925`, overflow: "hidden", marginBottom: 8 }}>
-                  <div style={{ padding: "6px 12px", background: "#34c75910", fontSize: 11, fontWeight: 700, color: "#34c759" }}>📐 ALTEZZE</div>
+                  <div style={{ padding: "6px 12px", background: "#34c75910", fontSize: 11, fontWeight: 700, color: "#34c759" }}>ðŸ“ ALTEZZE</div>
                   {[["Sinistra", m.hSx], ["Centro", m.hCentro], ["Destra", m.hDx]].map(([l, val]) => (
                     <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
                       <span>{l}</span>
-                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
+                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "â€”"}</span>
                     </div>
                   ))}
                 </div>
                 {/* Diagonali */}
                 <div style={{ borderRadius: 10, border: `1px solid #ff950025`, overflow: "hidden", marginBottom: 8 }}>
-                  <div style={{ padding: "6px 12px", background: "#ff950010", fontSize: 11, fontWeight: 700, color: "#ff9500" }}>✕ DIAGONALI</div>
+                  <div style={{ padding: "6px 12px", background: "#ff950010", fontSize: 11, fontWeight: 700, color: "#ff9500" }}>âœ• DIAGONALI</div>
                   {[["D1", m.d1], ["D2", m.d2], ["Fuori squadra", fSq !== null ? `${fSq}mm` : ""]].map(([l, val]) => (
                     <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
                       <span>{l}</span>
-                      <span style={{ fontFamily: FM, fontWeight: 600, color: l === "Fuori squadra" && fSq > 3 ? "#ff3b30" : val ? T.text : T.sub2 }}>{val || "—"}</span>
+                      <span style={{ fontFamily: FM, fontWeight: 600, color: l === "Fuori squadra" && fSq > 3 ? "#ff3b30" : val ? T.text : T.sub2 }}>{val || "â€”"}</span>
                     </div>
                   ))}
                 </div>
                 {/* Spallette */}
                 <div style={{ borderRadius: 10, border: `1px solid #32ade625`, overflow: "hidden", marginBottom: 8 }}>
-                  <div style={{ padding: "6px 12px", background: "#32ade610", fontSize: 11, fontWeight: 700, color: "#32ade6" }}>🧱 SPALLETTE</div>
+                  <div style={{ padding: "6px 12px", background: "#32ade610", fontSize: 11, fontWeight: 700, color: "#32ade6" }}>ðŸ§± SPALLETTE</div>
                   {[["Sinistra", m.spSx], ["Destra", m.spDx], ["Sopra", m.spSopra], ["Imbotte", m.imbotte]].map(([l, val]) => (
                     <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
                       <span>{l}</span>
-                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
+                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "â€”"}</span>
                     </div>
                   ))}
                 </div>
                 {/* Davanzale */}
                 <div style={{ borderRadius: 10, border: `1px solid #ff2d5525`, overflow: "hidden", marginBottom: 8 }}>
-                  <div style={{ padding: "6px 12px", background: "#ff2d5510", fontSize: 11, fontWeight: 700, color: "#ff2d55" }}>⬇ DAVANZALE</div>
-                  {[["Profondità", m.davProf], ["Sporgenza", m.davSporg], ["Soglia", m.soglia]].map(([l, val]) => (
+                  <div style={{ padding: "6px 12px", background: "#ff2d5510", fontSize: 11, fontWeight: 700, color: "#ff2d55" }}>â¬‡ DAVANZALE</div>
+                  {[["ProfonditÃ ", m.davProf], ["Sporgenza", m.davSporg], ["Soglia", m.soglia]].map(([l, val]) => (
                     <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
                       <span>{l}</span>
-                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
+                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "â€”"}</span>
                     </div>
                   ))}
                 </div>
                 {/* Accessori */}
                 {(v.accessori?.tapparella?.attivo || v.accessori?.persiana?.attivo || v.accessori?.zanzariera?.attivo) && (
                   <div style={{ borderRadius: 10, border: `1px solid #af52de25`, overflow: "hidden", marginBottom: 8 }}>
-                    <div style={{ padding: "6px 12px", background: "#af52de10", fontSize: 11, fontWeight: 700, color: "#af52de" }}>✚ ACCESSORI</div>
-                    {v.accessori?.tapparella?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>🪟 Tapparella</div>}
-                    {v.accessori?.persiana?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>🏠 Persiana</div>}
-                    {v.accessori?.zanzariera?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>🦟 Zanzariera</div>}
+                    <div style={{ padding: "6px 12px", background: "#af52de10", fontSize: 11, fontWeight: 700, color: "#af52de" }}>âœš ACCESSORI</div>
+                    {v.accessori?.tapparella?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>ðŸªŸ Tapparella</div>}
+                    {v.accessori?.persiana?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>ðŸ  Persiana</div>}
+                    {v.accessori?.zanzariera?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>ðŸ¦Ÿ Zanzariera</div>}
                   </div>
                 )}
               </div>
@@ -4211,13 +4211,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           {/* === NAV BUTTONS === */}
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             {vanoStep > 0 && (
-              <button onClick={() => setVanoStep(s => s - 1)} style={{ flex: 1, padding: "14px", borderRadius: 12, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: FF, color: T.text }}>← Indietro</button>
+              <button onClick={() => setVanoStep(s => s - 1)} style={{ flex: 1, padding: "14px", borderRadius: 12, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: FF, color: T.text }}>â† Indietro</button>
             )}
             {vanoStep < 7 && (
-              <button onClick={() => setVanoStep(s => s + 1)} style={{ flex: vanoStep === 0 ? "1 1 100%" : 1, padding: "14px", borderRadius: 12, border: "none", background: step.color, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>Avanti →</button>
+              <button onClick={() => setVanoStep(s => s + 1)} style={{ flex: vanoStep === 0 ? "1 1 100%" : 1, padding: "14px", borderRadius: 12, border: "none", background: step.color, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>Avanti â†’</button>
             )}
             {vanoStep === 7 && (
-              <button onClick={() => { setVanoStep(0); goBack(); }} style={{ flex: 1, padding: "14px", borderRadius: 12, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>💾 SALVA TUTTO</button>
+              <button onClick={() => { setVanoStep(0); goBack(); }} style={{ flex: 1, padding: "14px", borderRadius: 12, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>ðŸ’¾ SALVA TUTTO</button>
             )}
           </div>
 
@@ -4232,7 +4232,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 ["F.sq", fSq !== null ? `${fSq}` : null],
               ].map(([l, val]) => (
                 <div key={l} style={{ padding: "3px 8px", borderRadius: 4, background: T.bg, fontSize: 10, fontFamily: FM, color: val ? T.text : T.sub2 }}>
-                  {l}: {val || "—"}
+                  {l}: {val || "â€”"}
                 </div>
               ))}
             </div>
@@ -4243,7 +4243,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     );
   };
 
-  /* == AGENDA TAB — Giorno / Settimana / Mese == */
+  /* == AGENDA TAB â€” Giorno / Settimana / Mese == */
   const renderAgenda = () => {
     const dateStr = (d) => d.toISOString().split("T")[0];
     const dayEvents = events.filter(e => e.date === dateStr(selDate)).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
@@ -4304,11 +4304,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           {ev.time && <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, minWidth: 38, fontFamily: FM }}>{ev.time}</div>}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{ev.text}</div>
-            {ev.addr && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>📍 {ev.addr}</div>}
+            {ev.addr && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>ðŸ“ {ev.addr}</div>}
             <div style={{ display: "flex", gap: 4, marginTop: 3, flexWrap: "wrap" }}>
               {ev.cm && <span onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); } }} style={{ ...S.badge(T.accLt, T.acc), cursor: "pointer" }}>{ev.cm}</span>}
               {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>{ev.persona}</span>}
-              {ev.reminder && <span style={S.badge(ev.reminderSent ? T.grnLt : "#FF950015", ev.reminderSent ? T.grn : "#FF9500")}>{ev.reminderSent ? "✓ Reminder inviato" : `⏰ ${ev.reminder}`}</span>}
+              {ev.reminder && <span style={S.badge(ev.reminderSent ? T.grnLt : "#FF950015", ev.reminderSent ? T.grn : "#FF9500")}>{ev.reminderSent ? "âœ“ Reminder inviato" : `â° ${ev.reminder}`}</span>}
               <span style={S.badge(ev.tipo==="appuntamento"?T.blueLt:ev.tipo==="sopr_riparazione"?"#FF6B0018":ev.tipo==="riparazione"?"#FF3B3018":ev.tipo==="collaudo"?"#5856D618":"#8E8E9318", ev.tipo==="appuntamento"?T.blue:ev.tipo==="sopr_riparazione"?"#FF6B00":ev.tipo==="riparazione"?"#FF3B30":ev.tipo==="collaudo"?"#5856D6":ev.tipo==="garanzia"?"#8E8E93":T.orange)}>{ev.tipo}</span>
             </div>
           </div>
@@ -4330,22 +4330,22 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               </div>
               {ev.persona && <div>
                 <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Assegnato a</div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>👤 {ev.persona}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>ðŸ‘¤ {ev.persona}</div>
               </div>}
               {ev.addr && <div>
                 <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Luogo</div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>📍 {ev.addr}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>ðŸ“ {ev.addr}</div>
               </div>}
             </div>
             {ev.cm && (
               <div style={{ padding: "8px 10px", background: T.accLt, borderRadius: 8, marginBottom: 8 }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: T.acc, textTransform: "uppercase", letterSpacing: 0.5 }}>Commessa collegata</div>
-                <div onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); } }} style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginTop: 2, cursor: "pointer" }}>{ev.cm} → Apri commessa</div>
+                <div onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); } }} style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginTop: 2, cursor: "pointer" }}>{ev.cm} â†’ Apri commessa</div>
               </div>
             )}
             <div style={{ display: "flex", gap: 6 }}>
-              <div onClick={(e) => { e.stopPropagation(); if (ev.addr) window.open("https://maps.google.com/?q=" + encodeURIComponent(ev.addr)); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.blue }}>🗺 Mappa</div>
-              <div onClick={(e) => { e.stopPropagation(); if (ev.persona) window.open("tel:"); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.grn }}>📞 Chiama</div>
+              <div onClick={(e) => { e.stopPropagation(); if (ev.addr) window.open("https://maps.google.com/?q=" + encodeURIComponent(ev.addr)); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.blue }}>ðŸ—º Mappa</div>
+              <div onClick={(e) => { e.stopPropagation(); if (ev.persona) window.open("tel:"); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.grn }}>ðŸ“ž Chiama</div>
               <div onClick={(e) => {
                 e.stopPropagation();
                 const cmObj = cantieri.find(c => c.code === ev.cm) || null;
@@ -4355,20 +4355,20 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
 Le confermo l'appuntamento:
 
-📅 ${dataFmt}${ev.time ? " alle " + ev.time : ""}
-📍 ${ev.addr || "da concordare"}
+ðŸ“… ${dataFmt}${ev.time ? " alle " + ev.time : ""}
+ðŸ“ ${ev.addr || "da concordare"}
 
 ${ev.text}
 
-Per qualsiasi necessità non esiti a contattarmi.
+Per qualsiasi necessitÃ  non esiti a contattarmi.
 
 Cordiali saluti,
 Fabio Cozza
 Walter Cozza Serramenti`;
                 setMailBody(tpl);
                 setShowMailModal({ ev, cm: cmObj });
-              }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.accLt, border: `1px solid ${T.acc}30`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.acc }}>✉️ Mail</div>
-              <div onClick={(e) => { e.stopPropagation(); deleteEvent(ev.id); setSelectedEvent(null); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.redLt, border: `1px solid ${T.red}30`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.red }}>🗑</div>
+              }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.accLt, border: `1px solid ${T.acc}30`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.acc }}>âœ‰ï¸ Mail</div>
+              <div onClick={(e) => { e.stopPropagation(); deleteEvent(ev.id); setSelectedEvent(null); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.redLt, border: `1px solid ${T.red}30`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.red }}>ðŸ—‘</div>
             </div>
           </div>
         )}
@@ -4382,7 +4382,7 @@ Walter Cozza Serramenti`;
             <div style={S.headerTitle}>Agenda</div>
             <div style={S.headerSub}>
               {agendaView === "giorno" ? selDate.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" }) :
-               agendaView === "settimana" ? `${weekDays[0].getDate()}–${weekDays[6].getDate()} ${selDate.toLocaleDateString("it-IT", { month: "long", year: "numeric" })}` :
+               agendaView === "settimana" ? `${weekDays[0].getDate()}â€“${weekDays[6].getDate()} ${selDate.toLocaleDateString("it-IT", { month: "long", year: "numeric" })}` :
                selDate.toLocaleDateString("it-IT", { month: "long", year: "numeric" })}
             </div>
           </div>
@@ -4427,7 +4427,7 @@ Walter Cozza Serramenti`;
           return (
             <div style={{ margin: "0 16px 10px", padding: "10px 12px", borderRadius: 10, background: "#FF950010", border: "1px solid #FF950040", borderLeft: "3px solid #FF9500" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 18 }}>⏰</span>
+                <span style={{ fontSize: 18 }}>â°</span>
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: "#FF9500" }}>
                     {reminderPendenti.length} reminder da inviare
@@ -4443,12 +4443,12 @@ Walter Cozza Serramenti`;
 
 Le ricordiamo l'appuntamento:
 
-📅 ${dataFmt}${ev.time ? " alle " + ev.time : ""}
-📍 ${ev.addr || "da concordare"}
+ðŸ“… ${dataFmt}${ev.time ? " alle " + ev.time : ""}
+ðŸ“ ${ev.addr || "da concordare"}
 
 ${ev.text}
 
-Per qualsiasi necessità non esiti a contattarci.
+Per qualsiasi necessitÃ  non esiti a contattarci.
 
 Cordiali saluti,
 Fabio Cozza
@@ -4457,14 +4457,14 @@ Walter Cozza Serramenti`;
                   <div key={ev.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 8px", background:"#fff", borderRadius:8, marginBottom:4, border:"1px solid #FF950030" }}>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{ev.text}</div>
-                      <div style={{ fontSize:10, color:T.sub }}>{cliente} · {ev.time || "tutto il giorno"}</div>
+                      <div style={{ fontSize:10, color:T.sub }}>{cliente} Â· {ev.time || "tutto il giorno"}</div>
                     </div>
                     <div onClick={() => {
                       setMailBody(tpl);
                       setShowMailModal({ ev: { ...ev, addr: ev.addr || "" }, cm: cmObj || null });
                       setEvents(es => es.map(x => x.id === ev.id ? { ...x, reminderSent: true } : x));
                     }} style={{ padding:"5px 10px", borderRadius:7, background:"#FF9500", color:"#fff", fontSize:11, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap" }}>
-                      ✉️ Invia
+                      âœ‰ï¸ Invia
                     </div>
                   </div>
                 );
@@ -4488,12 +4488,12 @@ Walter Cozza Serramenti`;
                         : `${Math.floor(eventiOggi[0].minutiAlEvento/60)}h ${eventiOggi[0].minutiAlEvento%60>0?eventiOggi[0].minutiAlEvento%60+"min":""}`}
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 700 }}>{eventiOggi[0].text}</div>
-                    {eventiOggi[0].addr && <div style={{ fontSize: 11, color: T.sub }}>📍 {eventiOggi[0].addr}</div>}
+                    {eventiOggi[0].addr && <div style={{ fontSize: 11, color: T.sub }}>ðŸ“ {eventiOggi[0].addr}</div>}
                   </div>
                   {eventiOggi[0].addr && (
                     <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(eventiOggi[0].addr))}
                       style={{ padding: "6px 10px", borderRadius: 8, background: T.blueLt, color: T.blue, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                      🗺 Naviga
+                      ðŸ—º Naviga
                     </div>
                   )}
                 </div>
@@ -4577,7 +4577,7 @@ Walter Cozza Serramenti`;
                           <div style={{ fontSize: 13, fontWeight: 600 }}>{ev.text}</div>
                           <div style={{ display: "flex", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
                             {ev.cm && <span style={S.badge(T.accLt, T.acc)}>{ev.cm}</span>}
-                            {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {ev.persona}</span>}
+                            {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>ðŸ‘¤ {ev.persona}</span>}
                           </div>
                         </div>
                         <div style={{ textAlign: "right" }}>
@@ -4597,16 +4597,16 @@ Walter Cozza Serramenti`;
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{selectedEvent.text}</div>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {selectedEvent.time && <span style={S.badge(T.bg, T.sub)}>🕐 {selectedEvent.time}</span>}
+                        {selectedEvent.time && <span style={S.badge(T.bg, T.sub)}>ðŸ• {selectedEvent.time}</span>}
                         {selectedEvent.cm && <span style={S.badge(T.accLt, T.acc)}>{selectedEvent.cm}</span>}
-                        {selectedEvent.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {selectedEvent.persona}</span>}
-                        {selectedEvent.addr && <span style={S.badge(T.grnLt, T.grn)}>📍 {selectedEvent.addr}</span>}
+                        {selectedEvent.persona && <span style={S.badge(T.purpleLt, T.purple)}>ðŸ‘¤ {selectedEvent.persona}</span>}
+                        {selectedEvent.addr && <span style={S.badge(T.grnLt, T.grn)}>ðŸ“ {selectedEvent.addr}</span>}
                       </div>
                     </div>
-                    <div onClick={() => setSelectedEvent(null)} style={{ padding: 4, cursor: "pointer", color: T.sub, fontSize: 16 }}>×</div>
+                    <div onClick={() => setSelectedEvent(null)} style={{ padding: 4, cursor: "pointer", color: T.sub, fontSize: 16 }}>Ã—</div>
                   </div>
                   <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                    {selectedEvent.addr && <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(selectedEvent.addr))} style={{ flex:1, padding:"6px", borderRadius:6, background:T.blueLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.blue }}>🗺 Mappa</div>}
+                    {selectedEvent.addr && <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(selectedEvent.addr))} style={{ flex:1, padding:"6px", borderRadius:6, background:T.blueLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.blue }}>ðŸ—º Mappa</div>}
                     <div onClick={() => {
                       const ev = selectedEvent;
                       const cmObj = cantieri.find(c => c.code === ev.cm) || null;
@@ -4616,20 +4616,20 @@ Walter Cozza Serramenti`;
 
 Le confermo l'appuntamento:
 
-📅 ${dataFmt}${ev.time ? " alle " + ev.time : ""}
-📍 ${ev.addr || "da concordare"}
+ðŸ“… ${dataFmt}${ev.time ? " alle " + ev.time : ""}
+ðŸ“ ${ev.addr || "da concordare"}
 
 ${ev.text}
 
-Per qualsiasi necessità non esiti a contattarmi.
+Per qualsiasi necessitÃ  non esiti a contattarmi.
 
 Cordiali saluti,
 Fabio Cozza
 Walter Cozza Serramenti`;
                       setMailBody(tpl);
                       setShowMailModal({ ev, cm: cmObj });
-                    }} style={{ flex:1, padding:"6px", borderRadius:6, background:T.accLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.acc }}>✉️ Mail</div>
-                    <div onClick={() => deleteEvent(selectedEvent.id)} style={{ flex:1, padding:"6px", borderRadius:6, background:T.redLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.red }}>🗑 Elimina</div>
+                    }} style={{ flex:1, padding:"6px", borderRadius:6, background:T.accLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.acc }}>âœ‰ï¸ Mail</div>
+                    <div onClick={() => deleteEvent(selectedEvent.id)} style={{ flex:1, padding:"6px", borderRadius:6, background:T.redLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.red }}>ðŸ—‘ Elimina</div>
                   </div>
                 </div>
               )}
@@ -4673,7 +4673,7 @@ Walter Cozza Serramenti`;
           {/* === VISTA GIORNO === */}
           {agendaView === "giorno" && (
             <>
-              {/* Timeline ore — scrollabile con dito */}
+              {/* Timeline ore â€” scrollabile con dito */}
               <div style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, overflowY: "auto", overflowX: "hidden", marginBottom: 12, maxHeight: "60vh" } as any}>
                 {Array.from({ length: 15 }, (_, i) => i + 6).map(h => {
                   const hour = `${String(h).padStart(2, "0")}:00`;
@@ -4686,20 +4686,20 @@ Walter Cozza Serramenti`;
                           <div key={ev.id}>
                             <div onClick={() => setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)} style={{ padding: "4px 8px", borderRadius: 6, background: ev.color + "18", borderLeft: `3px solid ${ev.color}`, marginBottom: 2, fontSize: 11, fontWeight: 600, color: T.text, cursor: "pointer" }}>
                               {ev.text}
-                              {ev.persona && <span style={{ color: T.sub, fontWeight: 400 }}> · {ev.persona}</span>}
+                              {ev.persona && <span style={{ color: T.sub, fontWeight: 400 }}> Â· {ev.persona}</span>}
                             </div>
                             {selectedEvent?.id === ev.id && (
                               <div style={{ padding: "8px", margin: "2px 0 6px", background: T.card, borderRadius: 8, border: `1px solid ${T.bdr}`, boxShadow: T.cardSh }}>
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-                                  {ev.addr && <div style={{ fontSize: 11, color: T.text }}>📍 {ev.addr}</div>}
-                                  {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {ev.persona}</span>}
-                                  {ev.cm && <span onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); } }} style={{ ...S.badge(T.accLt, T.acc), cursor: "pointer" }}>📁 {ev.cm}</span>}
+                                  {ev.addr && <div style={{ fontSize: 11, color: T.text }}>ðŸ“ {ev.addr}</div>}
+                                  {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>ðŸ‘¤ {ev.persona}</span>}
+                                  {ev.cm && <span onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); } }} style={{ ...S.badge(T.accLt, T.acc), cursor: "pointer" }}>ðŸ“ {ev.cm}</span>}
                                   <span style={S.badge(ev.tipo==="appuntamento"?T.blueLt:ev.tipo==="sopr_riparazione"?"#FF6B0018":ev.tipo==="riparazione"?"#FF3B3018":ev.tipo==="collaudo"?"#5856D618":"#8E8E9318", ev.tipo==="appuntamento"?T.blue:ev.tipo==="sopr_riparazione"?"#FF6B00":ev.tipo==="riparazione"?"#FF3B30":ev.tipo==="collaudo"?"#5856D6":ev.tipo==="garanzia"?"#8E8E93":T.orange)}>{ev.tipo}</span>
                                 </div>
                                 <div style={{ display: "flex", gap: 4 }}>
-                                  {ev.addr && <div onClick={(e) => { e.stopPropagation(); window.open("https://maps.google.com/?q=" + encodeURIComponent(ev.addr)); }} style={{ flex: 1, padding: "6px", borderRadius: 6, background: T.blueLt, textAlign: "center", cursor: "pointer", fontSize: 10, fontWeight: 600, color: T.blue }}>🗺 Mappa</div>}
-                                  <div onClick={(e) => { e.stopPropagation(); }} style={{ flex: 1, padding: "6px", borderRadius: 6, background: T.grnLt, textAlign: "center", cursor: "pointer", fontSize: 10, fontWeight: 600, color: T.grn }}>📞 Chiama</div>
-                                  <div onClick={(e) => { e.stopPropagation(); deleteEvent(ev.id); setSelectedEvent(null); }} style={{ flex: 1, padding: "6px", borderRadius: 6, background: T.redLt, textAlign: "center", cursor: "pointer", fontSize: 10, fontWeight: 600, color: T.red }}>🗑 Elimina</div>
+                                  {ev.addr && <div onClick={(e) => { e.stopPropagation(); window.open("https://maps.google.com/?q=" + encodeURIComponent(ev.addr)); }} style={{ flex: 1, padding: "6px", borderRadius: 6, background: T.blueLt, textAlign: "center", cursor: "pointer", fontSize: 10, fontWeight: 600, color: T.blue }}>ðŸ—º Mappa</div>}
+                                  <div onClick={(e) => { e.stopPropagation(); }} style={{ flex: 1, padding: "6px", borderRadius: 6, background: T.grnLt, textAlign: "center", cursor: "pointer", fontSize: 10, fontWeight: 600, color: T.grn }}>ðŸ“ž Chiama</div>
+                                  <div onClick={(e) => { e.stopPropagation(); deleteEvent(ev.id); setSelectedEvent(null); }} style={{ flex: 1, padding: "6px", borderRadius: 6, background: T.redLt, textAlign: "center", cursor: "pointer", fontSize: 10, fontWeight: 600, color: T.red }}>ðŸ—‘ Elimina</div>
                                 </div>
                               </div>
                             )}
@@ -4725,12 +4725,12 @@ Walter Cozza Serramenti`;
   };
 
 // =======================================================
-// MASTRO ERP v2 — PARTE 4/5
+// MASTRO ERP v2 â€” PARTE 4/5
 // Righe 3595-4130: Agenda (Giorno/Settimana/Mese), Chat AI, Settings
 // =======================================================
   /* == CHAT / AI TAB == */
   const renderMessaggi = () => {
-    const chIco = { email: "📧", whatsapp: "💬", sms: "📱", telegram: "✈️" };
+    const chIco = { email: "ðŸ“§", whatsapp: "ðŸ’¬", sms: "ðŸ“±", telegram: "âœˆï¸" };
     const chCol = { email: T.blue, whatsapp: "#25d366", sms: T.orange, telegram: "#0088cc" };
     const chBg = { email: T.blueLt, whatsapp: "#25d36618", sms: T.orangeLt, telegram: "#0088cc18" };
     const filteredMsgs = msgs.filter(m => {
@@ -4751,7 +4751,7 @@ Walter Cozza Serramenti`;
         <div style={S.header}>
           <div style={{ flex: 1 }}>
             <div style={S.headerTitle}>Messaggi</div>
-            <div style={S.headerSub}>{unread > 0 ? `${unread} non letti` : "Tutti letti"} · {msgs.length} conversazioni</div>
+            <div style={S.headerSub}>{unread > 0 ? `${unread} non letti` : "Tutti letti"} Â· {msgs.length} conversazioni</div>
           </div>
           <div onClick={() => setShowCompose(true)} style={{ width: 36, height: 36, borderRadius: 10, background: T.acc, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
             <Ico d={ICO.pen} s={16} c="#fff" />
@@ -4761,9 +4761,9 @@ Walter Cozza Serramenti`;
         {/* Sub-tabs: Chat / Rubrica / AI */}
         <div style={{ display: "flex", margin: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, overflow: "hidden" }}>
           {[
-            { id: "chat", l: "💬 Chat", count: unread },
-            { id: "ai", l: "🤖 AI Inbox", count: aiInbox.filter(m => !m.read).length },
-            { id: "rubrica", l: "📒 Rubrica", count: 0 }
+            { id: "chat", l: "ðŸ’¬ Chat", count: unread },
+            { id: "ai", l: "ðŸ¤– AI Inbox", count: aiInbox.filter(m => !m.read).length },
+            { id: "rubrica", l: "ðŸ“’ Rubrica", count: 0 }
           ].map(st => (
             <div key={st.id} onClick={() => setMsgSubTab(st.id)} style={{ flex: 1, padding: "10px 4px", textAlign: "center", fontSize: 12, fontWeight: 700, cursor: "pointer", background: msgSubTab === st.id ? T.acc : T.card, color: msgSubTab === st.id ? "#fff" : T.sub, transition: "all 0.2s", position: "relative" }}>
               {st.l}
@@ -4778,16 +4778,16 @@ Walter Cozza Serramenti`;
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
               <Ico d={ICO.search} s={14} c={T.sub} />
               <input style={{ flex: 1, border: "none", background: "transparent", fontSize: 13, color: T.text, outline: "none", fontFamily: FF }} placeholder="Cerca contatto o messaggio..." value={msgSearch} onChange={e => setMsgSearch(e.target.value)} />
-              {msgSearch && <div onClick={() => setMsgSearch("")} style={{ cursor: "pointer", fontSize: 14, color: T.sub }}>✕</div>}
+              {msgSearch && <div onClick={() => setMsgSearch("")} style={{ cursor: "pointer", fontSize: 14, color: T.sub }}>âœ•</div>}
             </div>
           </div>
           <div style={{ display: "flex", gap: 4, padding: "0 16px 10px", overflowX: "auto" }}>
             {[
               { id: "tutti", l: "Tutti", c: T.acc },
-              { id: "whatsapp", l: "💬 WhatsApp", c: "#25d366" },
-              { id: "email", l: "📧 Email", c: T.blue },
-              { id: "sms", l: "📱 SMS", c: T.orange },
-              { id: "telegram", l: "✈️ Telegram", c: "#0088cc" },
+              { id: "whatsapp", l: "ðŸ’¬ WhatsApp", c: "#25d366" },
+              { id: "email", l: "ðŸ“§ Email", c: T.blue },
+              { id: "sms", l: "ðŸ“± SMS", c: T.orange },
+              { id: "telegram", l: "âœˆï¸ Telegram", c: "#0088cc" },
             ].map(f => {
               const unr = f.id === "tutti" ? unread : msgs.filter(m => m.canale === f.id && !m.read).length;
               return (
@@ -4829,10 +4829,10 @@ Walter Cozza Serramenti`;
         {msgSubTab === "ai" && (<>
           {/* Header spiegazione */}
           <div style={{ margin: "0 16px 10px", padding: "10px 12px", borderRadius: 10, background: "linear-gradient(135deg, #1A1A1C, #2A2008)", border: `1px solid ${T.acc}30`, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 22 }}>🤖</span>
+            <span style={{ fontSize: 22 }}>ðŸ¤–</span>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>AI classifica le tue email</div>
-              <div style={{ fontSize: 10, color: "#888", marginTop: 1 }}>Collegata al tuo indirizzo mail — suggerisce dove archiviare ogni messaggio</div>
+              <div style={{ fontSize: 10, color: "#888", marginTop: 1 }}>Collegata al tuo indirizzo mail â€” suggerisce dove archiviare ogni messaggio</div>
             </div>
           </div>
 
@@ -4861,13 +4861,13 @@ Walter Cozza Serramenti`;
                           {m.ai.emoji} {m.ai.label}
                         </span>
                         <span style={{ fontSize: 9, fontWeight: 700, color: T.sub }}>
-                          🤖 {m.ai.confidenza}% sicuro
+                          ðŸ¤– {m.ai.confidenza}% sicuro
                         </span>
                         {m.ai.cmSuggerita && <span style={{ ...S.badge(T.accLt, T.acc) }}>{m.ai.cmSuggerita}</span>}
-                        {m.archiviata && <span style={{ fontSize: 9, fontWeight: 700, color: T.grn }}>✓ Archiviata</span>}
+                        {m.archiviata && <span style={{ fontSize: 9, fontWeight: 700, color: T.grn }}>âœ“ Archiviata</span>}
                       </div>
                     </div>
-                    <span style={{ fontSize: 13, color: T.sub, transform: isSelected ? "rotate(90deg)" : "rotate(0)", transition: "transform 0.2s", flexShrink: 0, marginTop: 2 }}>›</span>
+                    <span style={{ fontSize: 13, color: T.sub, transform: isSelected ? "rotate(90deg)" : "rotate(0)", transition: "transform 0.2s", flexShrink: 0, marginTop: 2 }}>â€º</span>
                   </div>
 
                   {/* Dettaglio espanso */}
@@ -4880,7 +4880,7 @@ Walter Cozza Serramenti`;
 
                       {/* Analisi AI */}
                       <div style={{ background: m.ai.color + "10", border: `1px solid ${m.ai.color}30`, borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
-                        <div style={{ fontSize: 10, fontWeight: 800, color: m.ai.color, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>🤖 Analisi AI</div>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: m.ai.color, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>ðŸ¤– Analisi AI</div>
                         <div style={{ fontSize: 12, color: T.text, marginBottom: 4 }}><strong>Tipo:</strong> {m.ai.emoji} {m.ai.label} ({m.ai.confidenza}% confidenza)</div>
                         <div style={{ fontSize: 12, color: T.text, marginBottom: 4 }}><strong>Azione suggerita:</strong> {m.ai.azione}</div>
                         {m.ai.note && <div style={{ fontSize: 11, color: T.sub, fontStyle: "italic" }}>"{m.ai.note}"</div>}
@@ -4889,11 +4889,11 @@ Walter Cozza Serramenti`;
                       {/* Dati estratti (se nuova commessa) */}
                       {m.ai.estratto && (
                         <div style={{ background: T.grnLt, border: `1px solid ${T.grn}30`, borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
-                          <div style={{ fontSize: 10, fontWeight: 800, color: T.grn, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>📋 Dati estratti automaticamente</div>
-                          {m.ai.estratto.cliente && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>👤 <strong>Cliente:</strong> {m.ai.estratto.cliente}</div>}
-                          {m.ai.estratto.indirizzo && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>📍 <strong>Indirizzo:</strong> {m.ai.estratto.indirizzo}</div>}
-                          {m.ai.estratto.email && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>✉️ <strong>Email:</strong> {m.ai.estratto.email}</div>}
-                          {m.ai.estratto.note && <div style={{ fontSize: 12, color: T.text }}>📝 <strong>Note:</strong> {m.ai.estratto.note}</div>}
+                          <div style={{ fontSize: 10, fontWeight: 800, color: T.grn, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>ðŸ“‹ Dati estratti automaticamente</div>
+                          {m.ai.estratto.cliente && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>ðŸ‘¤ <strong>Cliente:</strong> {m.ai.estratto.cliente}</div>}
+                          {m.ai.estratto.indirizzo && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>ðŸ“ <strong>Indirizzo:</strong> {m.ai.estratto.indirizzo}</div>}
+                          {m.ai.estratto.email && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>âœ‰ï¸ <strong>Email:</strong> {m.ai.estratto.email}</div>}
+                          {m.ai.estratto.note && <div style={{ fontSize: 12, color: T.text }}>ðŸ“ <strong>Note:</strong> {m.ai.estratto.note}</div>}
                         </div>
                       )}
 
@@ -4908,7 +4908,7 @@ Walter Cozza Serramenti`;
                               if (cm) { setSelectedCM(cm); setTab("commesse"); }
                             }
                           }} style={{ flex: 2, padding: "10px", borderRadius: 9, background: m.ai.color, color: "#fff", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
-                            {m.ai.cmNuova ? "➕ Crea Commessa" : `🔗 ${m.ai.azione.split(" ").slice(0,3).join(" ")}`}
+                            {m.ai.cmNuova ? "âž• Crea Commessa" : `ðŸ”— ${m.ai.azione.split(" ").slice(0,3).join(" · ")}`}
                           </div>
                           <div onClick={() => {
                             setAiInbox(ai => ai.map(x => x.id === m.id ? { ...x, archiviata: true, read: true } : x));
@@ -4926,13 +4926,13 @@ Grazie per il suo messaggio.
                             setMailBody(tpl);
                             setShowMailModal({ ev: { text: m.subject, date: new Date().toISOString().slice(0,10), time: "", addr: "" }, cm: null, emailOverride: dest });
                           }} style={{ flex: 1, padding: "10px", borderRadius: 9, background: T.accLt, border: `1px solid ${T.acc}30`, color: T.acc, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
-                            ✉️
+                            âœ‰ï¸
                           </div>
                         </div>
                       )}
                       {m.archiviata && (
                         <div style={{ padding: "8px 12px", background: T.grnLt, borderRadius: 8, textAlign: "center", fontSize: 12, fontWeight: 700, color: T.grn }}>
-                          ✓ Archiviata con successo
+                          âœ“ Archiviata con successo
                         </div>
                       )}
                     </div>
@@ -4949,16 +4949,16 @@ Grazie per il suo messaggio.
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
               <Ico d={ICO.search} s={14} c={T.sub} />
               <input style={{ flex: 1, border: "none", background: "transparent", fontSize: 13, color: T.text, outline: "none", fontFamily: FF }} placeholder="Cerca nella rubrica..." value={rubricaSearch} onChange={e => setRubricaSearch(e.target.value)} />
-              {rubricaSearch && <div onClick={() => setRubricaSearch("")} style={{ cursor: "pointer", fontSize: 14, color: T.sub }}>✕</div>}
+              {rubricaSearch && <div onClick={() => setRubricaSearch("")} style={{ cursor: "pointer", fontSize: 14, color: T.sub }}>âœ•</div>}
             </div>
           </div>
           <div style={{ display: "flex", gap: 4, padding: "0 16px 10px", overflowX: "auto" }}>
             {[
               { id: "tutti", l: "Tutti", c: T.acc },
-              { id: "preferiti", l: "⭐ Preferiti", c: "#ff9500" },
-              { id: "team", l: "👥 Team", c: "#34c759" },
-              { id: "clienti", l: "🏠 Clienti", c: T.blue },
-              { id: "fornitori", l: "🏭 Fornitori", c: "#af52de" },
+              { id: "preferiti", l: "â­ Preferiti", c: "#ff9500" },
+              { id: "team", l: "ðŸ‘¥ Team", c: "#34c759" },
+              { id: "clienti", l: "ðŸ  Clienti", c: T.blue },
+              { id: "fornitori", l: "ðŸ­ Fornitori", c: "#af52de" },
             ].map(f => (
               <div key={f.id} onClick={() => setRubricaFilter(f.id)} style={{ padding: "6px 12px", borderRadius: 20, border: `1px solid ${rubricaFilter === f.id ? f.c : T.bdr}`, background: rubricaFilter === f.id ? f.c + "15" : T.card, fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", color: rubricaFilter === f.id ? f.c : T.sub }}>
                 {f.l}
@@ -4976,7 +4976,7 @@ Grazie per il suo messaggio.
                   <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${T.bg}` }}>
                     <div style={{ width: 42, height: 42, borderRadius: "50%", background: (c.colore || tipoColor) + "18", border: `2px solid ${c.colore || tipoColor}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: c.colore || tipoColor, flexShrink: 0, position: "relative" }}>
                       {c.nome.split(" ").map(w => w[0]).join("").substring(0, 2)}
-                      {c.preferito && <div style={{ position: "absolute", top: -4, right: -4, fontSize: 10 }}>⭐</div>}
+                      {c.preferito && <div style={{ position: "absolute", top: -4, right: -4, fontSize: 10 }}>â­</div>}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{c.nome}</div>
@@ -4988,13 +4988,13 @@ Grazie per il suo messaggio.
                     </div>
                     <div style={{ display: "flex", gap: 4 }}>
                       {(c.canali || []).includes("whatsapp") && (
-                        <div onClick={() => { setComposeMsg(m => ({ ...m, canale: "whatsapp", to: c.nome })); setShowCompose(true); }} style={{ width: 32, height: 32, borderRadius: "50%", background: "#25d36618", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>💬</div>
+                        <div onClick={() => { setComposeMsg(m => ({ ...m, canale: "whatsapp", to: c.nome })); setShowCompose(true); }} style={{ width: 32, height: 32, borderRadius: "50%", background: "#25d36618", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>ðŸ’¬</div>
                       )}
                       {(c.canali || []).includes("email") && (
-                        <div onClick={() => { setComposeMsg(m => ({ ...m, canale: "email", to: c.nome })); setShowCompose(true); }} style={{ width: 32, height: 32, borderRadius: "50%", background: T.blueLt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>📧</div>
+                        <div onClick={() => { setComposeMsg(m => ({ ...m, canale: "email", to: c.nome })); setShowCompose(true); }} style={{ width: 32, height: 32, borderRadius: "50%", background: T.blueLt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>ðŸ“§</div>
                       )}
                       <div onClick={() => { setContatti(cs => cs.map(x => x.id === c.id ? { ...x, preferito: !x.preferito } : x)); }} style={{ width: 32, height: 32, borderRadius: "50%", background: c.preferito ? "#ff950018" : T.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>
-                        {c.preferito ? "⭐" : "☆"}
+                        {c.preferito ? "â­" : "â˜†"}
                       </div>
                     </div>
                   </div>
@@ -5004,16 +5004,16 @@ Grazie per il suo messaggio.
           </div>
         </>)}
 
-        {/* FAB — Compose menu */}
+        {/* FAB â€” Compose menu */}
         <style>{`
           @keyframes fabPulse { 0%,100% { box-shadow: 0 4px 20px rgba(0,122,255,0.4); } 50% { box-shadow: 0 4px 30px rgba(0,122,255,0.6); } }
         `}</style>
         {fabOpen && <div onClick={() => setFabOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", backdropFilter: "blur(4px)", zIndex: 89 }} />}
         {[
-          { ch: "whatsapp", ico: "💬", l: "WhatsApp", c: "#25d366" },
-          { ch: "email", ico: "📧", l: "Email", c: "#007aff" },
-          { ch: "sms", ico: "📱", l: "SMS", c: "#ff9500" },
-          { ch: "telegram", ico: "✈️", l: "Telegram", c: "#0088cc" },
+          { ch: "whatsapp", ico: "ðŸ’¬", l: "WhatsApp", c: "#25d366" },
+          { ch: "email", ico: "ðŸ“§", l: "Email", c: "#007aff" },
+          { ch: "sms", ico: "ðŸ“±", l: "SMS", c: "#ff9500" },
+          { ch: "telegram", ico: "âœˆï¸", l: "Telegram", c: "#0088cc" },
         ].map((item, i) => (
           <div key={item.ch} onClick={() => { setFabOpen(false); setComposeMsg(c => ({ ...c, canale: item.ch })); setShowCompose(true); }} style={{
             position: "fixed", bottom: 90 + (i + 1) * 58, right: 20, zIndex: 90,
@@ -5039,7 +5039,7 @@ Grazie per il suo messaggio.
           cursor: "pointer", transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
           animation: fabOpen ? "none" : "fabPulse 2s infinite",
         }}>
-          <div style={{ fontSize: 24, color: "#fff", transition: "transform 0.3s ease", transform: fabOpen ? "rotate(45deg)" : "rotate(0deg)" }}>✏️</div>
+          <div style={{ fontSize: 24, color: "#fff", transition: "transform 0.3s ease", transform: fabOpen ? "rotate(45deg)" : "rotate(0deg)" }}>âœï¸</div>
         </div>
       </div>
     );
@@ -5052,17 +5052,17 @@ Grazie per il suo messaggio.
         <div style={{ flex: 1 }}>
           <div style={S.headerTitle}>Impostazioni</div>
         </div>
-        {/* FIX: rimosso supabase.auth.signOut() — usa localStorage clear */}
+        {/* FIX: rimosso supabase.auth.signOut() â€” usa localStorage clear */}
         <div onClick={async () => { try { localStorage.clear(); const { createClient } = await import("@/lib/supabase"); await createClient().auth.signOut(); } catch(e) {} window.location.href = "/login"; }}
           style={{padding:"6px 12px",borderRadius:8,border:"1px solid #e5e5ea",background:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",color:"#86868b"}}>
           Esci
         </div>
       </div>
 
-      {/* Settings sub-tabs — scrollable */}
+      {/* Settings sub-tabs â€” scrollable */}
       <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "8px 16px 12px", borderRadius: 8, border: `1px solid ${T.bdr}` }}>
         <div style={{ display: "flex", minWidth: "max-content" }}>
-          {[{ id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "team", l: "👥 Team" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }].map(t => (
+          {[{ id: "azienda", l: "ðŸ¢ Azienda" }, { id: "generali", l: "âš™ï¸ Generali" }, { id: "team", l: "ðŸ‘¥ Team" }, { id: "sistemi", l: "ðŸ— Sistemi" }, { id: "colori", l: "ðŸŽ¨ Colori" }, { id: "vetri", l: "ðŸªŸ Vetri" }, { id: "tipologie", l: "ðŸ“ Tipologie" }, { id: "coprifili", l: "ðŸ“ Coprifili" }, { id: "lamiere", l: "ðŸ”© Lamiere" }, { id: "salita", l: "ðŸªœ Salita" }, { id: "pipeline", l: "ðŸ“Š Pipeline" }].map(t => (
             <div key={t.id} onClick={() => setSettingsTab(t.id)} style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 600, background: settingsTab === t.id ? T.acc : T.card, color: settingsTab === t.id ? "#fff" : T.sub, cursor: "pointer", whiteSpace: "nowrap" }}>
               {t.l}
             </div>
@@ -5093,19 +5093,19 @@ Grazie per il suo messaggio.
                     <img src={aziendaInfo.logo} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}} alt="logo"/>
                   </div>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:4}}>Logo caricato ✓</div>
+                    <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:4}}>Logo caricato âœ“</div>
                     <div style={{display:"flex",gap:6}}>
                       <div onClick={()=>logoInputRef.current?.click()} style={{fontSize:11,color:T.acc,fontWeight:700,cursor:"pointer"}}>Cambia</div>
-                      <span style={{color:T.bdr}}>·</span>
+                      <span style={{color:T.bdr}}>Â·</span>
                       <div onClick={()=>setAziendaInfo(a=>({...a,logo:null}))} style={{fontSize:11,color:"#ff3b30",fontWeight:700,cursor:"pointer"}}>Rimuovi</div>
                     </div>
                   </div>
                 </div>
               ) : (
                 <div onClick={()=>logoInputRef.current?.click()} style={{border:`2px dashed ${T.bdr}`,borderRadius:10,padding:"16px",textAlign:"center",cursor:"pointer",background:"#fafafa"}}>
-                  <div style={{fontSize:24,marginBottom:4}}>🖼</div>
+                  <div style={{fontSize:24,marginBottom:4}}>ðŸ–¼</div>
                   <div style={{fontSize:12,fontWeight:700,color:T.text}}>Carica logo</div>
-                  <div style={{fontSize:10,color:T.sub,marginTop:2}}>PNG, JPG, SVG · max 2MB</div>
+                  <div style={{fontSize:10,color:T.sub,marginTop:2}}>PNG, JPG, SVG Â· max 2MB</div>
                 </div>
               )}
             </div>
@@ -5130,7 +5130,7 @@ Grazie per il suo messaggio.
               </div>
             ))}
             <div style={{padding:"12px 14px",background:"#f0fdf4",display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:14}}>✅</span>
+              <span style={{fontSize:14}}>âœ…</span>
               <span style={{fontSize:11,color:"#1a9e40",fontWeight:600}}>Salvato automaticamente in ogni preventivo PDF</span>
             </div>
           </div>
@@ -5142,7 +5142,7 @@ Grazie per il suo messaggio.
             <div style={{...S.card,marginBottom:8}}><div style={S.cardInner}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
                 <div>
-                  <div style={{fontSize:13,fontWeight:700}}>🔔 Soglia commesse ferme</div>
+                  <div style={{fontSize:13,fontWeight:700}}>ðŸ”” Soglia commesse ferme</div>
                   <div style={{fontSize:11,color:T.sub}}>Alert se una commessa non avanza da N giorni</div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -5167,7 +5167,7 @@ Grazie per il suo messaggio.
             <div style={{ ...S.card, marginTop: 8 }}><div style={S.cardInner}>
               <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>TEMA</div>
               <div style={{ display: "flex", gap: 6 }}>
-                {[["chiaro", "☀️"], ["scuro", "🌙"], ["oceano", "🌊"]].map(([id, ico]) => (
+                {[["chiaro", "â˜€ï¸"], ["scuro", "ðŸŒ™"], ["oceano", "ðŸŒŠ"]].map(([id, ico]) => (
                   <div key={id} onClick={() => setTheme(id)} style={{ flex: 1, padding: "10px 4px", borderRadius: 8, border: `1.5px solid ${theme === id ? T.acc : T.bdr}`, textAlign: "center", cursor: "pointer" }}>
                     <div style={{ fontSize: 18 }}>{ico}</div>
                     <div style={{ fontSize: 10, fontWeight: 600, textTransform: "capitalize", marginTop: 2 }}>{id}</div>
@@ -5194,7 +5194,7 @@ Grazie per il suo messaggio.
                 <div style={{ width: 36, height: 36, borderRadius: "50%", background: m.colore, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{m.nome.split(" ").map(n => n[0]).join("")}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700 }}>{m.nome}</div>
-                  <div style={{ fontSize: 11, color: T.sub }}>{m.ruolo} — {m.compiti}</div>
+                  <div style={{ fontSize: 11, color: T.sub }}>{m.ruolo} â€” {m.compiti}</div>
                 </div>
                 <Ico d={ICO.pen} s={14} c={T.sub} />
               </div></div>
@@ -5215,8 +5215,8 @@ Grazie per il suo messaggio.
                     <div style={{ fontSize: 12, fontWeight: 600 }}>{s.sistema}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: T.grn, fontFamily: FM }}>€{s.euroMq}/mq</div>
-                    <div style={{ fontSize: 9, color: T.sub }}>+{s.sovRAL}% RAL · +{s.sovLegno}% Legno</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.grn, fontFamily: FM }}>â‚¬{s.euroMq}/mq</div>
+                    <div style={{ fontSize: 9, color: T.sub }}>+{s.sovRAL}% RAL Â· +{s.sovLegno}% Legno</div>
                   </div>
                 </div>
                 {s.sottosistemi && (
@@ -5243,15 +5243,15 @@ Grazie per il suo messaggio.
         {/* === COLORI === */}
         {settingsTab === "colori" && (
           <>
-            <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Colori disponibili — collegati ai sistemi</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Colori disponibili â€” collegati ai sistemi</div>
             {coloriDB.map(c => (
               <div key={c.id} style={{ ...S.card, marginBottom: 6 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ width: 28, height: 28, borderRadius: 6, background: c.hex, border: `1px solid ${T.bdr}`, flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{c.nome}</div>
-                  <div style={{ fontSize: 10, color: T.sub }}>{c.code} · {c.tipo}</div>
+                  <div style={{ fontSize: 10, color: T.sub }}>{c.code} Â· {c.tipo}</div>
                 </div>
-                <div style={{ fontSize: 10, color: T.sub }}>{sistemiDB.filter(s => s.colori.includes(c.code)).map(s => s.marca).join(", ") || "—"}</div>
+                <div style={{ fontSize: 10, color: T.sub }}>{sistemiDB.filter(s => s.colori.includes(c.code)).map(s => s.marca).join(", ") || "â€”"}</div>
                 <div onClick={() => deleteSettingsItem("colore", c.id)} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
@@ -5282,13 +5282,13 @@ Grazie per il suo messaggio.
         {/* === TIPOLOGIE === */}
         {settingsTab === "tipologie" && (
           <>
-            <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Tipologie serramento — trascina ⭐ per i preferiti</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Tipologie serramento â€” trascina â­ per i preferiti</div>
             {TIPOLOGIE_RAPIDE.map(t => {
               const isFav = favTipologie.includes(t.code);
               return (
                 <div key={t.code} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", gap: 8, padding: "8px 14px" }}>
                   <div onClick={() => setFavTipologie(fav => isFav ? fav.filter(f => f !== t.code) : [...fav, t.code])} style={{ cursor: "pointer" }}>
-                    <span style={{ fontSize: 16, color: isFav ? "#ff9500" : T.bdr }}>{isFav ? "⭐" : "☆"}</span>
+                    <span style={{ fontSize: 16, color: isFav ? "#ff9500" : T.bdr }}>{isFav ? "â­" : "â˜†"}</span>
                   </div>
                   <span style={{ fontSize: 16 }}>{t.icon}</span>
                   <div style={{ flex: 1 }}>
@@ -5299,7 +5299,7 @@ Grazie per il suo messaggio.
                 </div></div>
               );
             })}
-            <div onClick={() => { setSettingsModal("tipologia"); setSettingsForm({ code: "", label: "", icon: "🪟" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipologia</div>
+            <div onClick={() => { setSettingsModal("tipologia"); setSettingsForm({ code: "", label: "", icon: "ðŸªŸ" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipologia</div>
           </>
         )}
 
@@ -5344,7 +5344,7 @@ Grazie per il suo messaggio.
             {mezziSalita.map((m, i) => (
               <div key={i} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 16 }}>🪜</span>
+                  <span style={{ fontSize: 16 }}>ðŸªœ</span>
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{m}</span>
                 </div>
                 <div onClick={() => { if ((()=>{try{return window.confirm(`Eliminare "${m}"?`);}catch(e){return false;}})()) setMezziSalita(ms => ms.filter((_, j) => j !== i)); }} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
@@ -5362,8 +5362,8 @@ Grazie per il suo messaggio.
               <div key={p.id} style={{...S.card, marginBottom:6, opacity: p.attiva===false ? 0.45 : 1}}>
                 <div style={{display:"flex", alignItems:"center", gap:8, padding:"10px 12px"}}>
                   <div style={{display:"flex",flexDirection:"column",gap:1}}>
-                    <div onClick={()=>{ if(i===0) return; const a=[...pipelineDB]; [a[i-1],a[i]]=[a[i],a[i-1]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===0?"default":"pointer",color:i===0?T.bdr:T.sub,lineHeight:1}}>▲</div>
-                    <div onClick={()=>{ if(i===pipelineDB.length-1) return; const a=[...pipelineDB]; [a[i],a[i+1]]=[a[i+1],a[i]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===pipelineDB.length-1?"default":"pointer",color:i===pipelineDB.length-1?T.bdr:T.sub,lineHeight:1}}>▼</div>
+                    <div onClick={()=>{ if(i===0) return; const a=[...pipelineDB]; [a[i-1],a[i]]=[a[i],a[i-1]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===0?"default":"pointer",color:i===0?T.bdr:T.sub,lineHeight:1}}>â–²</div>
+                    <div onClick={()=>{ if(i===pipelineDB.length-1) return; const a=[...pipelineDB]; [a[i],a[i+1]]=[a[i+1],a[i]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===pipelineDB.length-1?"default":"pointer",color:i===pipelineDB.length-1?T.bdr:T.sub,lineHeight:1}}>â–¼</div>
                   </div>
                   <span style={{fontSize:20,flexShrink:0}}>{p.ico}</span>
                   <input value={p.nome} onChange={e=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,nome:e.target.value}:x))}
@@ -5373,11 +5373,11 @@ Grazie per il suo messaggio.
                     style={{width:36,height:20,borderRadius:10,background:p.attiva===false?T.bdr:T.grn,cursor:p.id==="chiusura"?"default":"pointer",transition:"background 0.2s",position:"relative",flexShrink:0}}>
                     <div style={{position:"absolute",top:2,left:p.attiva===false?2:18,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
                   </div>
-                  {p.custom && <div onClick={()=>setPipelineDB(db=>db.filter((_,j)=>j!==i))} style={{fontSize:12,cursor:"pointer",color:T.red}}>✕</div>}
+                  {p.custom && <div onClick={()=>setPipelineDB(db=>db.filter((_,j)=>j!==i))} style={{fontSize:12,cursor:"pointer",color:T.red}}>âœ•</div>}
                 </div>
               </div>
             ))}
-            <div onClick={()=>{ let nome; try{nome=window.prompt("Nome nuova fase:");}catch(e){} if(nome?.trim()) setPipelineDB(db=>[...db.slice(0,-1),{id:"custom_"+Date.now(),nome:nome.trim(),ico:"⭐",color:"#8e8e93",attiva:true,custom:true},...db.slice(-1)]); }}
+            <div onClick={()=>{ let nome; try{nome=window.prompt("Nome nuova fase:");}catch(e){} if(nome?.trim()) setPipelineDB(db=>[...db.slice(0,-1),{id:"custom_"+Date.now(),nome:nome.trim(),ico:"â­",color:"#8e8e93",attiva:true,custom:true},...db.slice(-1)]); }}
               style={{...S.card,marginTop:4,textAlign:"center",padding:"10px",cursor:"pointer",color:T.acc,fontSize:13,fontWeight:700}}>+ Aggiungi fase personalizzata</div>
             <div onClick={()=>{if((()=>{try{return window.confirm("Ripristinare le fasi predefinite?");}catch(e){return false;}})())setPipelineDB(PIPELINE_DEFAULT);}}
               style={{textAlign:"center",padding:"10px 0 4px",fontSize:11,color:T.sub,cursor:"pointer"}}>Ripristina predefinita</div>
@@ -5388,7 +5388,7 @@ Grazie per il suo messaggio.
   );
 
 // =======================================================
-// MASTRO ERP v2 — PARTE 5/5
+// MASTRO ERP v2 â€” PARTE 5/5
 // Righe 4131-5248: Modals (Task, Commessa, Vano, Allegati, Firma, AI Photo),
 //                 Main Render finale
 // =======================================================
@@ -5406,15 +5406,15 @@ Grazie per il suo messaggio.
               <div style={{ background:T.bg, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, maxHeight:"85vh", overflow:"auto", paddingBottom:24 }}>
                 {/* Header */}
                 <div style={{ padding:"16px 16px 10px", display:"flex", alignItems:"center", gap:10, position:"sticky", top:0, background:T.bg, zIndex:1, borderBottom:`1px solid ${T.bdr}` }}>
-                  <span style={{ fontSize:22 }}>✉️</span>
+                  <span style={{ fontSize:22 }}>âœ‰ï¸</span>
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:15, fontWeight:800, color:T.text }}>Manda Mail</div>
                     <div style={{ fontSize:11, color:T.sub }}>
                       {showMailModal.cm ? `${showMailModal.cm.cliente} ${showMailModal.cm.cognome||""}`.trim() : showMailModal.ev.persona || "Cliente"}
-                      {showMailModal.cm?.email ? ` · ${showMailModal.cm.email}` : ""}
+                      {showMailModal.cm?.email ? ` Â· ${showMailModal.cm.email}` : ""}
                     </div>
                   </div>
-                  <div onClick={() => setShowMailModal(null)} style={{ width:30, height:30, borderRadius:"50%", background:T.bdr, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16, color:T.sub }}>×</div>
+                  <div onClick={() => setShowMailModal(null)} style={{ width:30, height:30, borderRadius:"50%", background:T.bdr, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16, color:T.sub }}>Ã—</div>
                 </div>
 
                 <div style={{ padding:"14px 16px" }}>
@@ -5423,8 +5423,8 @@ Grazie per il suo messaggio.
                     <div style={{ fontSize:12, fontWeight:700, color:T.acc, marginBottom:2 }}>{showMailModal.ev.text}</div>
                     <div style={{ fontSize:11, color:T.sub }}>
                       {new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"short", day:"numeric", month:"short" })}
-                      {showMailModal.ev.time ? " · " + showMailModal.ev.time : ""}
-                      {showMailModal.ev.addr ? " · 📍 " + showMailModal.ev.addr : ""}
+                      {showMailModal.ev.time ? " Â· " + showMailModal.ev.time : ""}
+                      {showMailModal.ev.addr ? " Â· ðŸ“ " + showMailModal.ev.addr : ""}
                     </div>
                   </div>
 
@@ -5459,33 +5459,33 @@ Grazie per il suo messaggio.
                     <div style={{ fontSize:10, fontWeight:700, color:T.sub, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:6 }}>Template rapidi</div>
                     <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                       {[
-                        { lbl:"📅 Conferma", tpl: `Gentile Cliente,
+                        { lbl:"ðŸ“… Conferma", tpl: `Gentile Cliente,
 
 Le confermo l'appuntamento del ${new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" })}${showMailModal.ev.time ? " alle " + showMailModal.ev.time : ""}.
 
-📍 ${showMailModal.ev.addr || "Luogo da concordare"}
+ðŸ“ ${showMailModal.ev.addr || "Luogo da concordare"}
 
 Cordiali saluti,
 Fabio Cozza - Walter Cozza Serramenti` },
-                        { lbl:"⏰ Reminder", tpl: `Gentile Cliente,
+                        { lbl:"â° Reminder", tpl: `Gentile Cliente,
 
-Le ricordiamo che domani, ${new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" })}${showMailModal.ev.time ? " alle " + showMailModal.ev.time : ""}, è previsto il nostro appuntamento.
+Le ricordiamo che domani, ${new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" })}${showMailModal.ev.time ? " alle " + showMailModal.ev.time : ""}, Ã¨ previsto il nostro appuntamento.
 
-📍 ${showMailModal.ev.addr || "Luogo da concordare"}
+ðŸ“ ${showMailModal.ev.addr || "Luogo da concordare"}
 
 In caso di impedimento la preghiamo di avvertirci il prima possibile.
 
 Cordiali saluti,
 Fabio Cozza - Walter Cozza Serramenti` },
-                        { lbl:"✅ Preventivo pronto", tpl: `Gentile Cliente,
+                        { lbl:"âœ… Preventivo pronto", tpl: `Gentile Cliente,
 
-Siamo lieti di comunicarle che il preventivo relativo alla fornitura e posa è pronto.
+Siamo lieti di comunicarle che il preventivo relativo alla fornitura e posa Ã¨ pronto.
 
-Può contattarci per concordare un incontro o richiedere il documento via mail.
+PuÃ² contattarci per concordare un incontro o richiedere il documento via mail.
 
 Cordiali saluti,
 Fabio Cozza - Walter Cozza Serramenti` },
-                        { lbl:"🔧 Posa confermata", tpl: `Gentile Cliente,
+                        { lbl:"ðŸ”§ Posa confermata", tpl: `Gentile Cliente,
 
 Confermiamo la data di posa in opera per il ${new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" })}${showMailModal.ev.time ? " a partire dalle " + showMailModal.ev.time : ""}.
 
@@ -5512,7 +5512,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                         window.open(`mailto:${dest}?subject=${sogg}&body=${corpo}`);
                       }}
                       style={{ flex:1, padding:"12px", borderRadius:10, background:T.acc, color:"#fff", textAlign:"center", cursor:"pointer", fontSize:13, fontWeight:700 }}>
-                      ✉️ Apri in Mail
+                      âœ‰ï¸ Apri in Mail
                     </div>
                     <div
                       onClick={() => {
@@ -5520,7 +5520,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                         alert("Testo copiato negli appunti!");
                       }}
                       style={{ padding:"12px 14px", borderRadius:10, background:T.bg, border:`1px solid ${T.bdr}`, color:T.sub, cursor:"pointer", fontSize:13, fontWeight:600 }}>
-                      📋 Copia
+                      ðŸ“‹ Copia
                     </div>
                   </div>
                 </div>
@@ -5546,7 +5546,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                 </div>
               </div>
               <div style={{ marginBottom: 14 }}>
-                <label style={S.fieldLabel}>Priorità</label>
+                <label style={S.fieldLabel}>PrioritÃ </label>
                 <div style={{ display: "flex", gap: 6 }}>
                   {[{ id: "alta", l: "Urgente", c: T.red }, { id: "media", l: "Normale", c: T.orange }, { id: "bassa", l: "Bassa", c: T.sub }].map(p => (
                     <div key={p.id} onClick={() => setNewTask(t => ({ ...t, priority: p.id }))} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${newTask.priority === p.id ? p.c : T.bdr}`, background: newTask.priority === p.id ? p.c + "18" : "transparent", color: p.c, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
@@ -5558,8 +5558,8 @@ Fabio Cozza - Walter Cozza Serramenti` },
               <div style={{ marginBottom: 14 }}>
                 <label style={S.fieldLabel}>Collega a commessa (opzionale)</label>
                 <select style={S.select} value={newTask.cm} onChange={e => setNewTask(t => ({ ...t, cm: e.target.value }))}>
-                  <option value="">— Nessuna —</option>
-                  {cantieri.map(c => <option key={c.id} value={c.code}>{c.code} · {c.cliente}</option>)}
+                  <option value="">â€” Nessuna â€”</option>
+                  {cantieri.map(c => <option key={c.id} value={c.code}>{c.code} Â· {c.cliente}</option>)}
                 </select>
               </div>
               <div style={{ marginBottom: 14 }}>
@@ -5571,10 +5571,10 @@ Fabio Cozza - Walter Cozza Serramenti` },
                 <label style={S.fieldLabel}>Allegati</label>
                 <div style={{ display: "flex", gap: 6 }}>
                   {[
-                    { ico: "📎", l: "File", act: () => setTaskAllegati(a => [...a, { id: Date.now(), tipo: "file", nome: "Allegato_" + (a.length + 1) }]) },
-                    { ico: "📝", l: "Nota", act: () => { let txt; try{txt=window.prompt("Nota:");}catch(e){} if (txt) setTaskAllegati(a => [...a, { id: Date.now(), tipo: "nota", nome: txt }]); }},
-                    { ico: "🎤", l: "Audio", act: () => setTaskAllegati(a => [...a, { id: Date.now(), tipo: "vocale", nome: "Audio " + (a.length + 1) }]) },
-                    { ico: "📷", l: "Foto", act: () => setTaskAllegati(a => [...a, { id: Date.now(), tipo: "foto", nome: "Foto " + (a.length + 1) }]) },
+                    { ico: "ðŸ“Ž", l: "File", act: () => setTaskAllegati(a => [...a, { id: Date.now(), tipo: "file", nome: "Allegato_" + (a.length + 1) }]) },
+                    { ico: "ðŸ“", l: "Nota", act: () => { let txt; try{txt=window.prompt("Nota:");}catch(e){} if (txt) setTaskAllegati(a => [...a, { id: Date.now(), tipo: "nota", nome: txt }]); }},
+                    { ico: "ðŸŽ¤", l: "Audio", act: () => setTaskAllegati(a => [...a, { id: Date.now(), tipo: "vocale", nome: "Audio " + (a.length + 1) }]) },
+                    { ico: "ðŸ“·", l: "Foto", act: () => setTaskAllegati(a => [...a, { id: Date.now(), tipo: "foto", nome: "Foto " + (a.length + 1) }]) },
                   ].map((b, i) => (
                     <div key={i} onClick={b.act} style={{ flex: 1, padding: "8px 4px", background: T.bg, borderRadius: 8, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer" }}>
                       <div style={{ fontSize: 16 }}>{b.ico}</div>
@@ -5586,9 +5586,9 @@ Fabio Cozza - Walter Cozza Serramenti` },
                   <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
                     {taskAllegati.map(a => (
                       <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: T.bg, border: `1px solid ${T.bdr}`, fontSize: 10 }}>
-                        <span>{a.tipo === "nota" ? "📝" : a.tipo === "vocale" ? "🎤" : a.tipo === "foto" ? "📷" : "📎"}</span>
+                        <span>{a.tipo === "nota" ? "ðŸ“" : a.tipo === "vocale" ? "ðŸŽ¤" : a.tipo === "foto" ? "ðŸ“·" : "ðŸ“Ž"}</span>
                         <span style={{ color: T.text, maxWidth: 80, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.nome}</span>
-                        <span onClick={() => setTaskAllegati(al => al.filter(x => x.id !== a.id))} style={{ cursor: "pointer", color: T.red }}>✕</span>
+                        <span onClick={() => setTaskAllegati(al => al.filter(x => x.id !== a.id))} style={{ cursor: "pointer", color: T.red }}>âœ•</span>
                       </div>
                     ))}
                   </div>
@@ -5604,7 +5604,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
             <>
               <div style={S.modalTitle}>Nuova commessa</div>
               <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
-                {[{ id: "nuova", l: "🆕 Nuova installazione", c: T.acc }, { id: "riparazione", l: "🔧 Riparazione", c: T.orange }].map(t => (
+                {[{ id: "nuova", l: "ðŸ†• Nuova installazione", c: T.acc }, { id: "riparazione", l: "ðŸ”§ Riparazione", c: T.orange }].map(t => (
                   <div key={t.id} onClick={() => { setNewCM(c => ({ ...c, tipo: t.id })); setRipSearch(""); setRipCMSel(null); setRipProblema(""); setRipFotos([]); setRipUrgenza("media"); }}
                     style={{ flex: 1, padding: "12px 6px", borderRadius: 12, border: `2px solid ${newCM.tipo === t.id ? (t.id==="nuova"?T.acc:T.orange) : T.bdr}`, background: newCM.tipo === t.id ? (t.id==="nuova"?T.acc:T.orange)+"12" : T.card, textAlign: "center", cursor: "pointer", transition:"all 0.15s" }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: newCM.tipo === t.id ? (t.id==="nuova"?T.acc:T.orange) : T.sub }}>{t.l}</div>
@@ -5644,7 +5644,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                     urgenza: ripUrgenza,
                     fotoProblema: ripFotos,
                     vani: ripCMSel?.vani || [], note: ripProblema,
-                    alert: ripUrgenza === "urgente" ? "⚠️ Riparazione urgente" : null,
+                    alert: ripUrgenza === "urgente" ? "âš ï¸ Riparazione urgente" : null,
                     creato: new Date().toLocaleDateString("it-IT", {day:"numeric",month:"short"}),
                     aggiornato: new Date().toLocaleDateString("it-IT", {day:"numeric",month:"short"}),
                     allegati: [],
@@ -5660,7 +5660,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
 
                     <div>
                       <label style={S.fieldLabel}>Cliente o commessa esistente</label>
-                      <input style={S.input} placeholder="Cerca nome, codice CM, indirizzo…"
+                      <input style={S.input} placeholder="Cerca nome, codice CM, indirizzoâ€¦"
                         value={ripSearch} onChange={e => { setRipSearch(e.target.value); if(ripCMSel) setRipCMSel(null); }}/>
                       {cmResults.length > 0 && !ripCMSel && (
                         <div style={{ marginTop:4, background:T.card, border:`1px solid ${T.bdr}`, borderRadius:10, overflow:"hidden" }}>
@@ -5669,10 +5669,10 @@ Fabio Cozza - Walter Cozza Serramenti` },
                               style={{ padding:"10px 14px", borderBottom:`1px solid ${T.bg}`, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                               <div>
                                 <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{c.cliente}</div>
-                                <div style={{ fontSize:11, color:T.sub, marginTop:1 }}>{c.code} · {c.indirizzo}</div>
+                                <div style={{ fontSize:11, color:T.sub, marginTop:1 }}>{c.code} Â· {c.indirizzo}</div>
                                 {getVaniAttivi(c).length>0 && <div style={{ fontSize:10, color:T.sub }}>{getVaniAttivi(c).length} vani</div>}
                               </div>
-                              <div style={{ fontSize:10, fontWeight:600, color:T.acc }}>Collega →</div>
+                              <div style={{ fontSize:10, fontWeight:600, color:T.acc }}>Collega â†’</div>
                             </div>
                           ))}
                         </div>
@@ -5680,10 +5680,10 @@ Fabio Cozza - Walter Cozza Serramenti` },
                       {ripCMSel && (
                         <div style={{ marginTop:6, padding:"8px 12px", background:T.accLt, border:`1px solid ${T.acc}30`, borderRadius:8, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                           <div>
-                            <div style={{ fontSize:12, fontWeight:700, color:T.acc }}>✓ Collegata a {ripCMSel.code}</div>
-                            <div style={{ fontSize:11, color:T.sub, marginTop:1 }}>{ripCMSel.cliente} · {ripCMSel.indirizzo}</div>
+                            <div style={{ fontSize:12, fontWeight:700, color:T.acc }}>âœ“ Collegata a {ripCMSel.code}</div>
+                            <div style={{ fontSize:11, color:T.sub, marginTop:1 }}>{ripCMSel.cliente} Â· {ripCMSel.indirizzo}</div>
                           </div>
-                          <div onClick={() => { setRipCMSel(null); setRipSearch(""); setNewCM(x=>({...x,indirizzo:"",telefono:""})); }} style={{ fontSize:14, color:T.sub, cursor:"pointer", padding:4 }}>✕</div>
+                          <div onClick={() => { setRipCMSel(null); setRipSearch(""); setNewCM(x=>({...x,indirizzo:"",telefono:""})); }} style={{ fontSize:14, color:T.sub, cursor:"pointer", padding:4 }}>âœ•</div>
                         </div>
                       )}
                       {!ripCMSel && (
@@ -5705,7 +5705,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                     <div>
                       <label style={S.fieldLabel}>Urgenza</label>
                       <div style={{ display:"flex", gap:6 }}>
-                        {[{id:"normale",l:"Normale",c:T.grn,e:"🟢"},{id:"media",l:"Media",c:T.orange,e:"🟡"},{id:"urgente",l:"Urgente",c:T.red,e:"🔴"}].map(u => (
+                        {[{id:"normale",l:"Normale",c:T.grn,e:"ðŸŸ¢"},{id:"media",l:"Media",c:T.orange,e:"ðŸŸ¡"},{id:"urgente",l:"Urgente",c:T.red,e:"ðŸ”´"}].map(u => (
                           <div key={u.id} onClick={() => setRipUrgenza(u.id)}
                             style={{ flex:1, padding:"8px 4px", borderRadius:8, border:`1.5px solid ${ripUrgenza===u.id?u.c:T.bdr}`, background:ripUrgenza===u.id?u.c+"15":T.card, textAlign:"center", cursor:"pointer", transition:"all 0.12s" }}>
                             <div style={{ fontSize:14 }}>{u.e}</div>
@@ -5756,7 +5756,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                     <div>
                       <label style={S.fieldLabel}>Descrizione problema *</label>
                       <textarea style={{ ...S.input, minHeight:70, resize:"vertical" }}
-                        placeholder="Descrivi il problema in dettaglio…"
+                        placeholder="Descrivi il problema in dettaglioâ€¦"
                         value={ripProblema} onChange={e => setRipProblema(e.target.value)}/>
                     </div>
 
@@ -5778,7 +5778,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                     </div>
 
                     <div>
-                      <label style={S.fieldLabel}>Preventivo stimato (€)</label>
+                      <label style={S.fieldLabel}>Preventivo stimato (â‚¬)</label>
                       <input style={S.input} type="number" inputMode="numeric" placeholder="es. 250" value={newCM.preventivoStimato} onChange={e=>setNewCM(c=>({...c,preventivoStimato:e.target.value}))}/>
                     </div>
 
@@ -5787,7 +5787,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                       {ripFotos.length === 0
                         ? <div onClick={() => ripFotoRef.current?.click()}
                             style={{ border:`1.5px dashed ${T.bdr}`, borderRadius:10, padding:"20px", textAlign:"center", cursor:"pointer" }}>
-                            <div style={{ fontSize:28, marginBottom:4 }}>📷</div>
+                            <div style={{ fontSize:28, marginBottom:4 }}>ðŸ“·</div>
                             <div style={{ fontSize:12, color:T.sub }}>Scatta o allega una foto</div>
                             <div style={{ fontSize:10, color:T.sub2||T.sub, marginTop:2 }}>Puoi aggiungerne quante vuoi</div>
                           </div>
@@ -5797,7 +5797,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                                 <div key={f.id} style={{ position:"relative", width:76, height:76, borderRadius:10, overflow:"hidden", background:T.bg }}>
                                   <img src={f.dataUrl} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt={`Foto ${i+1}`}/>
                                   <div onClick={() => setRipFotos(fs => fs.filter(x => x.id !== f.id))}
-                                    style={{ position:"absolute", top:3, right:3, width:20, height:20, borderRadius:"50%", background:"rgba(0,0,0,0.55)", color:"#fff", fontSize:11, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontWeight:700 }}>✕</div>
+                                    style={{ position:"absolute", top:3, right:3, width:20, height:20, borderRadius:"50%", background:"rgba(0,0,0,0.55)", color:"#fff", fontSize:11, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontWeight:700 }}>âœ•</div>
                                   <div style={{ position:"absolute", bottom:2, left:4, fontSize:9, color:"#fff", fontWeight:700, textShadow:"0 1px 2px rgba(0,0,0,0.7)" }}>#{i+1}</div>
                                 </div>
                               ))}
@@ -5815,11 +5815,11 @@ Fabio Cozza - Walter Cozza Serramenti` },
 
                     <div style={{ paddingTop:4 }}>
                       {!ripProblema.trim() && (
-                        <div style={{ fontSize:11, color:T.orange, fontWeight:600, marginBottom:8, textAlign:"center" }}>⚠️ Descrivi il problema per procedere</div>
+                        <div style={{ fontSize:11, color:T.orange, fontWeight:600, marginBottom:8, textAlign:"center" }}>âš ï¸ Descrivi il problema per procedere</div>
                       )}
                       <button style={{ ...S.btn, background:ripProblema.trim()?T.orange:"#ccc", cursor:ripProblema.trim()?"pointer":"not-allowed" }}
                         onClick={addRiparazione} disabled={!ripProblema.trim()}>
-                        🔧 Crea riparazione
+                        ðŸ”§ Crea riparazione
                       </button>
                       <button style={S.btnCancel} onClick={() => setShowModal(null)}>Annulla</button>
                     </div>
@@ -5841,7 +5841,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                           <span style={{ fontSize:13, fontWeight:600, color:T.text }}>{label}</span>
                           {badge && <span style={{ ...S.badge(T.accLt,T.acc), fontSize:10 }}>{badge}</span>}
                         </div>
-                        <span style={{ fontSize:12, color:T.sub, transition:"transform 0.2s", display:"inline-block", transform:open?"rotate(180deg)":"rotate(0deg)" }}>▼</span>
+                        <span style={{ fontSize:12, color:T.sub, transition:"transform 0.2s", display:"inline-block", transform:open?"rotate(180deg)":"rotate(0deg)" }}>â–¼</span>
                       </div>
                       {open && <div style={{ padding:"12px 14px", background:T.bg, borderTop:`1px solid ${T.bdr}` }}>{children}</div>}
                     </div>
@@ -5859,22 +5859,22 @@ Fabio Cozza - Walter Cozza Serramenti` },
                     </div>
 
                     <div style={{ marginBottom:14, padding:"14px", background:T.card, borderRadius:12, border:`1.5px solid ${T.bdr}` }}>
-                      <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>👤 Dati cliente *</div>
+                      <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>ðŸ‘¤ Dati cliente *</div>
                       <div style={{ display:"flex", gap:8, marginBottom:8 }}>
                         <input style={{...S.input,flex:1}} placeholder="Nome" value={newCM.cliente} onChange={e=>setNewCM(c=>({...c,cliente:e.target.value}))}/>
                         <input style={{...S.input,flex:1}} placeholder="Cognome" value={newCM.cognome||""} onChange={e=>setNewCM(c=>({...c,cognome:e.target.value}))}/>
                       </div>
-                      <input style={{...S.input,marginBottom:8}} placeholder="Indirizzo lavori (Via, CAP, Città)" value={newCM.indirizzo} onChange={e=>setNewCM(c=>({...c,indirizzo:e.target.value}))}/>
+                      <input style={{...S.input,marginBottom:8}} placeholder="Indirizzo lavori (Via, CAP, CittÃ )" value={newCM.indirizzo} onChange={e=>setNewCM(c=>({...c,indirizzo:e.target.value}))}/>
                       <div style={{ display:"flex", gap:8 }}>
                         <input style={{...S.input,flex:1}} placeholder="Telefono" inputMode="tel" value={newCM.telefono} onChange={e=>setNewCM(c=>({...c,telefono:e.target.value}))}/>
                         <input style={{...S.input,flex:1}} placeholder="Email" inputMode="email" value={newCM.email||""} onChange={e=>setNewCM(c=>({...c,email:e.target.value}))}/>
                       </div>
                     </div>
 
-                    <AccordionSection id="accesso" icon="🏗" label="Accesso / Difficoltà salita"
+                    <AccordionSection id="accesso" icon="ðŸ—" label="Accesso / DifficoltÃ  salita"
                       badge={newCM.difficoltaSalita||null}>
                       <div style={{ display:"flex", gap:4, marginBottom:8 }}>
-                        {[{id:"facile",l:"Facile",c:T.grn,e:"✅"},{id:"media",l:"Media",c:T.orange,e:"⚠️"},{id:"difficile",l:"Difficile",c:T.red,e:"🔴"}].map(d => (
+                        {[{id:"facile",l:"Facile",c:T.grn,e:"âœ…"},{id:"media",l:"Media",c:T.orange,e:"âš ï¸"},{id:"difficile",l:"Difficile",c:T.red,e:"ðŸ”´"}].map(d => (
                           <div key={d.id} onClick={()=>setNewCM(c=>({...c,difficoltaSalita:d.id}))}
                             style={{ flex:1, padding:"8px 4px", borderRadius:8, border:`1.5px solid ${newCM.difficoltaSalita===d.id?d.c:T.bdr}`, background:newCM.difficoltaSalita===d.id?d.c+"15":T.card, textAlign:"center", cursor:"pointer" }}>
                             <div style={{ fontSize:14 }}>{d.e}</div>
@@ -5886,26 +5886,26 @@ Fabio Cozza - Walter Cozza Serramenti` },
                         <div style={{ flex:1 }}>
                           <div style={{ fontSize:10, color:T.sub, fontWeight:600, marginBottom:2 }}>Piano edificio</div>
                           <select style={S.select} value={newCM.pianoEdificio} onChange={e=>setNewCM(c=>({...c,pianoEdificio:e.target.value}))}>
-                            <option value="">— Seleziona —</option>
-                            {["S2 — 2° Seminterrato","S1 — Seminterrato","PT — Piano Terra","P1 — 1° Piano","P2 — 2° Piano","P3 — 3° Piano","P4 — 4° Piano","P5 — 5° Piano","P6 — 6° Piano","P7 — 7° Piano","P8 — 8° Piano","P9 — 9° Piano","P10 — 10° Piano","P11 — 11° Piano","P12 — 12° Piano","P13 — 13° Piano","P14 — 14° Piano","P15 — 15° Piano","P16 — 16° Piano","P17 — 17° Piano","P18 — 18° Piano","P19 — 19° Piano","P20 — 20° Piano","M — Mansarda"].map(p=><option key={p} value={p}>{p}</option>)}
+                            <option value="">â€” Seleziona â€”</option>
+                            {["S2 â€” 2Â° Seminterrato","S1 â€” Seminterrato","PT â€” Piano Terra","P1 â€” 1Â° Piano","P2 â€” 2Â° Piano","P3 â€” 3Â° Piano","P4 â€” 4Â° Piano","P5 â€” 5Â° Piano","P6 â€” 6Â° Piano","P7 â€” 7Â° Piano","P8 â€” 8Â° Piano","P9 â€” 9Â° Piano","P10 â€” 10Â° Piano","P11 â€” 11Â° Piano","P12 â€” 12Â° Piano","P13 â€” 13Â° Piano","P14 â€” 14Â° Piano","P15 â€” 15Â° Piano","P16 â€” 16Â° Piano","P17 â€” 17Â° Piano","P18 â€” 18Â° Piano","P19 â€” 19Â° Piano","P20 â€” 20Â° Piano","M â€” Mansarda"].map(p=><option key={p} value={p}>{p}</option>)}
                           </select>
                         </div>
                         <div style={{ flex:1 }}>
                           <div style={{ fontSize:10, color:T.sub, fontWeight:600, marginBottom:2 }}>Foro scale (cm)</div>
-                          <input style={S.input} placeholder="es. 80×200" value={newCM.foroScale} onChange={e=>setNewCM(c=>({...c,foroScale:e.target.value}))}/>
+                          <input style={S.input} placeholder="es. 80Ã—200" value={newCM.foroScale} onChange={e=>setNewCM(c=>({...c,foroScale:e.target.value}))}/>
                         </div>
                       </div>
                       <div style={{ fontSize:10, color:T.sub, fontWeight:600, marginBottom:2 }}>Mezzo di salita</div>
                       <select style={S.select} value={newCM.mezzoSalita} onChange={e=>setNewCM(c=>({...c,mezzoSalita:e.target.value}))}>
-                        <option value="">— Seleziona —</option>
+                        <option value="">â€” Seleziona â€”</option>
                         {mezziSalita.map(m => <option key={m} value={m}>{m}</option>)}
                       </select>
                     </AccordionSection>
 
-                    <AccordionSection id="note" icon="📝" label="Note aggiuntive"
-                      badge={newCM.note ? "✓" : null}>
+                    <AccordionSection id="note" icon="ðŸ“" label="Note aggiuntive"
+                      badge={newCM.note ? "âœ“" : null}>
                       <textarea style={{...S.input,minHeight:70,resize:"vertical"}}
-                        placeholder="Note aggiuntive sulla commessa…"
+                        placeholder="Note aggiuntive sulla commessaâ€¦"
                         defaultValue={newCM.note} onBlur={e=>setNewCM(c=>({...c,note:e.target.value}))}/>
                     </AccordionSection>
 
@@ -5915,7 +5915,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                       )}
                       <button style={{ ...S.btn, background:newCM.cliente.trim()?T.acc:"#ccc", cursor:newCM.cliente.trim()?"pointer":"not-allowed" }}
                         onClick={addCommessa} disabled={!newCM.cliente.trim()}>
-                        ✓ Crea commessa {previewCode}
+                        âœ“ Crea commessa {previewCode}
                       </button>
                       <button style={S.btnCancel} onClick={() => setShowModal(null)}>Annulla</button>
                     </div>
@@ -5958,22 +5958,22 @@ Fabio Cozza - Walter Cozza Serramenti` },
     const righeVani = vaniPDF.map((v, i) => {
       const { tot: sub, mq } = calcolaVanoPDF(v);
       const m = v.misure||{};
-      return '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">'+(i+1)+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">'+(v.nome||"Vano "+(i+1))+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;color:#666;">'+(v.tipo||"")+" — "+(v.stanza||"")+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;color:#666;">'+(v.sistema||c.sistema||"")+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">'+(m.lCentro||0)+" × "+(m.hCentro||0)+' mm</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">'+mq.toFixed(2)+' mq</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:700;">€ '+sub.toFixed(2)+'</td></tr>';
+      return '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">'+(i+1)+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">'+(v.nome||"Vano "+(i+1))+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;color:#666;">'+(v.tipo||"")+" â€” "+(v.stanza||"")+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;color:#666;">'+(v.sistema||c.sistema||"")+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">'+(m.lCentro||0)+" Ã— "+(m.hCentro||0)+' mm</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">'+mq.toFixed(2)+' mq</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:700;">â‚¬ '+sub.toFixed(2)+'</td></tr>';
     }).join("");
-    const scontoHtml = sconto>0 ? '<div class="row" style="color:#ff9500;"><span>Sconto '+sconto+'%</span><span>− € '+scontoVal.toFixed(2)+'</span></div><div class="row"><span>Imponibile netto</span><span>€ '+imponibile.toFixed(2)+'</span></div>' : '';
+    const scontoHtml = sconto>0 ? '<div class="row" style="color:#ff9500;"><span>Sconto '+sconto+'%</span><span>âˆ’ â‚¬ '+scontoVal.toFixed(2)+'</span></div><div class="row"><span>Imponibile netto</span><span>â‚¬ '+imponibile.toFixed(2)+'</span></div>' : '';
     const noteHtml = c.notePreventivo ? '<div style="border:1px solid #eee;border-radius:10px;padding:14px 18px;margin-bottom:24px;font-size:12px;color:#444;line-height:1.6;"><strong>Note:</strong> '+c.notePreventivo+'</div>' : '';
     const firmaHtml = c.firmaCliente ? '<img src="'+c.firmaCliente+'" style="max-height:60px;max-width:100%;display:block;margin:0 auto 4px;"/>' : '<div class="linea"></div>';
-    const dataFirmaHtml = c.dataFirma ? ' — '+c.dataFirma : '';
+    const dataFirmaHtml = c.dataFirma ? ' â€” '+c.dataFirma : '';
     const html = '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"/><title>Preventivo '+c.code+'</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,Arial,sans-serif;color:#1a1a1c;font-size:13px;padding:40px;max-width:900px;margin:0 auto;}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #007aff;}.azienda{font-size:22px;font-weight:900;color:#007aff;}.doc-title{text-align:right;}.doc-title h1{font-size:28px;font-weight:900;}table{width:100%;border-collapse:collapse;margin-bottom:20px;}thead{background:#007aff;color:white;}thead th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;}thead th:last-child,thead th:nth-last-child(-n+3){text-align:right;}.totali{max-width:340px;margin-left:auto;background:#f5f5f7;border-radius:10px;padding:16px 20px;margin-bottom:24px;}.totali .row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;}.totali .row.main{font-size:16px;font-weight:900;padding-top:10px;border-top:2px solid #1a1a1c;margin-top:4px;color:#007aff;}.cliente-box{background:#f5f5f7;border-radius:10px;padding:16px 20px;margin-bottom:24px;display:flex;gap:40px;}.cliente-box .label{font-size:10px;font-weight:700;color:#999;text-transform:uppercase;margin-bottom:4px;}.cliente-box .val{font-size:14px;font-weight:700;}.validita{background:#fff8ec;border:1px solid #ffb800;border-radius:8px;padding:10px 16px;font-size:11px;color:#7a5000;margin-bottom:20px;}.firma{display:flex;gap:40px;margin-top:40px;padding-top:20px;border-top:1px solid #eee;}.firma .box{flex:1;text-align:center;}.firma .linea{border-bottom:1px solid #999;margin-bottom:6px;height:50px;}.firma .label{font-size:10px;color:#666;text-transform:uppercase;}.footer{font-size:10px;color:#999;text-align:center;padding-top:20px;border-top:1px solid #eee;}@media print{body{padding:20px;}button{display:none!important;}}</style></head><body>'
-      +(aziendaInfo.logo?'<div class="header" style="display:flex;justify-content:space-between;align-items:flex-start;"><div style="display:flex;align-items:center;gap:14px;"><img src="'+aziendaInfo.logo+'" style="height:56px;max-width:120px;object-fit:contain;" alt="logo"/><div>':'<div class="header"><div>')+'<div style="font-size:20px;font-weight:900;color:#007aff;">'+aziendaInfo.ragione+'</div>'+'<div style="font-size:11px;color:#666;">'+aziendaInfo.indirizzo+'</div>'+'<div style="font-size:11px;color:#666;">'+aziendaInfo.telefono+(aziendaInfo.email?' · '+aziendaInfo.email:'')+'</div>'+(aziendaInfo.piva?'<div style="font-size:10px;color:#999;">P.IVA '+aziendaInfo.piva+(aziendaInfo.cciaa?' · CCIAA '+aziendaInfo.cciaa:'')+'</div>':'')+(aziendaInfo.logo?'</div></div>':'</div>')+'<div style="text-align:right">'+'<h1 style="font-size:28px;font-weight:900;">PREVENTIVO</h1>'+'<div style="font-size:14px;color:#007aff;font-weight:700;">'+c.code+'</div>'+'<div style="font-size:11px;color:#666;">Data: '+oggi+'</div>'+'</div></div>'
-      +'<div class="cliente-box"><div><div class="label">Cliente</div><div class="val">'+c.cliente+' '+(c.cognome||'')+'</div><div style="font-size:12px;color:#444;">'+(c.indirizzo||'')+'</div></div><div><div class="label">Contatto</div><div class="val">'+(c.telefono||'—')+'</div></div><div><div class="label">Vani</div><div class="val">'+vaniPDF.length+'</div></div></div>'
-      +'<button onclick="window.print()" style="margin-bottom:16px;padding:10px 24px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">🖨 Stampa / Salva PDF</button>'
+      +(aziendaInfo.logo?'<div class="header" style="display:flex;justify-content:space-between;align-items:flex-start;"><div style="display:flex;align-items:center;gap:14px;"><img src="'+aziendaInfo.logo+'" style="height:56px;max-width:120px;object-fit:contain;" alt="logo"/><div>':'<div class="header"><div>')+'<div style="font-size:20px;font-weight:900;color:#007aff;">'+aziendaInfo.ragione+'</div>'+'<div style="font-size:11px;color:#666;">'+aziendaInfo.indirizzo+'</div>'+'<div style="font-size:11px;color:#666;">'+aziendaInfo.telefono+(aziendaInfo.email?' Â· '+aziendaInfo.email:'')+'</div>'+(aziendaInfo.piva?'<div style="font-size:10px;color:#999;">P.IVA '+aziendaInfo.piva+(aziendaInfo.cciaa?' Â· CCIAA '+aziendaInfo.cciaa:'')+'</div>':'')+(aziendaInfo.logo?'</div></div>':'</div>')+'<div style="text-align:right">'+'<h1 style="font-size:28px;font-weight:900;">PREVENTIVO</h1>'+'<div style="font-size:14px;color:#007aff;font-weight:700;">'+c.code+'</div>'+'<div style="font-size:11px;color:#666;">Data: '+oggi+'</div>'+'</div></div>'
+      +'<div class="cliente-box"><div><div class="label">Cliente</div><div class="val">'+c.cliente+' '+(c.cognome||'')+'</div><div style="font-size:12px;color:#444;">'+(c.indirizzo||'')+'</div></div><div><div class="label">Contatto</div><div class="val">'+(c.telefono||'â€”')+'</div></div><div><div class="label">Vani</div><div class="val">'+vaniPDF.length+'</div></div></div>'
+      +'<button onclick="window.print()" style="margin-bottom:16px;padding:10px 24px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">ðŸ–¨ Stampa / Salva PDF</button>'
       +'<table><thead><tr><th>#</th><th>Vano</th><th>Tipologia</th><th>Sistema</th><th>Misura</th><th>Mq</th><th>Importo</th></tr></thead><tbody>'+righeVani+'</tbody></table>'
-      +'<div class="totali"><div class="row"><span>Totale imponibile</span><span>€ '+totale.toFixed(2)+'</span></div>'+scontoHtml+'<div class="row"><span>IVA 10%</span><span>€ '+iva.toFixed(2)+'</span></div><div class="row main"><span>TOTALE</span><span>€ '+totIva.toFixed(2)+'</span></div></div>'
+      +'<div class="totali"><div class="row"><span>Totale imponibile</span><span>â‚¬ '+totale.toFixed(2)+'</span></div>'+scontoHtml+'<div class="row"><span>IVA 10%</span><span>â‚¬ '+iva.toFixed(2)+'</span></div><div class="row main"><span>TOTALE</span><span>â‚¬ '+totIva.toFixed(2)+'</span></div></div>'
       +noteHtml
-      +'<div class="validita">⏰ Preventivo valido 30 giorni. Prezzi IVA 10% inclusa per lavori di ristrutturazione.</div>'
+      +'<div class="validita">â° Preventivo valido 30 giorni. Prezzi IVA 10% inclusa per lavori di ristrutturazione.</div>'
       +'<div class="firma"><div class="box"><div class="linea"></div><div class="label">Timbro e firma azienda</div></div><div class="box">'+firmaHtml+'<div class="label">Firma cliente per accettazione'+dataFirmaHtml+'</div></div></div>'
-      +'<div class="footer">'+aziendaInfo.ragione+(aziendaInfo.piva?' · P.IVA '+aziendaInfo.piva:'')+(aziendaInfo.iban?'<br>IBAN: '+aziendaInfo.iban:'')+'</div></body></html>';
+      +'<div class="footer">'+aziendaInfo.ragione+(aziendaInfo.piva?' Â· P.IVA '+aziendaInfo.piva:'')+(aziendaInfo.iban?'<br>IBAN: '+aziendaInfo.iban:'')+'</div></body></html>';
     const blob = new Blob([html], {type:"text/html"});
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank");
@@ -5995,9 +5995,9 @@ Fabio Cozza - Walter Cozza Serramenti` },
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
         <div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:420,overflow:"hidden"}}>
           <div style={{padding:"14px 16px",borderBottom:"1px solid #eee",display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:20}}>✍️</span>
+            <span style={{fontSize:20}}>âœï¸</span>
             <div><div style={{fontSize:14,fontWeight:800}}>Firma del Cliente</div><div style={{fontSize:11,color:"#666"}}>{c?.code}</div></div>
-            <div onClick={()=>setShowFirmaModal(false)} style={{marginLeft:"auto",width:28,height:28,borderRadius:"50%",background:"#f5f5f7",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>✕</div>
+            <div onClick={()=>setShowFirmaModal(false)} style={{marginLeft:"auto",width:28,height:28,borderRadius:"50%",background:"#f5f5f7",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>âœ•</div>
           </div>
           <div style={{padding:"12px 16px 0"}}>
             <div style={{fontSize:11,color:"#666",marginBottom:8,textAlign:"center"}}>Firma nella casella qui sotto</div>
@@ -6008,13 +6008,13 @@ Fabio Cozza - Walter Cozza Serramenti` },
                 onPointerUp={()=>setFirmaDrawing(false)} onPointerLeave={()=>setFirmaDrawing(false)}/>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0 10px"}}>
-              <div style={{fontSize:10,color:"#999"}}>📅 {new Date().toLocaleDateString("it-IT")}</div>
-              <div onClick={clearFirma} style={{fontSize:11,color:"#ff3b30",cursor:"pointer",fontWeight:600}}>🗑 Cancella</div>
+              <div style={{fontSize:10,color:"#999"}}>ðŸ“… {new Date().toLocaleDateString("it-IT")}</div>
+              <div onClick={clearFirma} style={{fontSize:11,color:"#ff3b30",cursor:"pointer",fontWeight:600}}>ðŸ—‘ Cancella</div>
             </div>
           </div>
           <div style={{padding:"0 16px 16px",display:"flex",gap:8}}>
             <button onClick={()=>setShowFirmaModal(false)} style={{flex:1,padding:12,borderRadius:10,border:"1px solid #eee",background:"#f5f5f7",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:"#666"}}>Annulla</button>
-            <button onClick={salvaFirma} style={{flex:2,padding:12,borderRadius:10,border:"none",background:"linear-gradient(135deg,#34c759,#1a9e40)",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>✅ Conferma firma</button>
+            <button onClick={salvaFirma} style={{flex:2,padding:12,borderRadius:10,border:"none",background:"linear-gradient(135deg,#34c759,#1a9e40)",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>âœ… Conferma firma</button>
           </div>
         </div>
       </div>
@@ -6049,35 +6049,35 @@ Fabio Cozza - Walter Cozza Serramenti` },
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:400,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={e=>e.target===e.currentTarget&&setShowPreventivoModal(false)}>
         <div style={{background:"#f5f5f7",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:480,maxHeight:"90vh",overflow:"auto",paddingBottom:24}}>
           <div style={{padding:"16px 16px 10px",display:"flex",alignItems:"center",gap:10,position:"sticky",top:0,background:"#f5f5f7",zIndex:1}}>
-            <span style={{fontSize:20}}>📄</span>
-            <div><div style={{fontSize:15,fontWeight:800}}>Preventivo</div><div style={{fontSize:11,color:"#666"}}>{c.code} — {c.cliente} {c.cognome||""}</div></div>
-            <div onClick={()=>setShowPreventivoModal(false)} style={{marginLeft:"auto",width:28,height:28,borderRadius:"50%",background:"#e5e5ea",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>✕</div>
+            <span style={{fontSize:20}}>ðŸ“„</span>
+            <div><div style={{fontSize:15,fontWeight:800}}>Preventivo</div><div style={{fontSize:11,color:"#666"}}>{c.code} â€” {c.cliente} {c.cognome||""}</div></div>
+            <div onClick={()=>setShowPreventivoModal(false)} style={{marginLeft:"auto",width:28,height:28,borderRadius:"50%",background:"#e5e5ea",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>âœ•</div>
           </div>
           <div style={{padding:"0 16px"}}>
             <div style={{background:"#fff",borderRadius:12,padding:"14px",marginBottom:10}}>
               <div style={{fontSize:11,fontWeight:700,color:"#999",textTransform:"uppercase",marginBottom:10}}>Parametri</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
                 <div><div style={{fontSize:10,fontWeight:700,color:"#999",marginBottom:4}}>SCONTO %</div><input type="number" value={c.sconto||0} onChange={e=>updateCMp("sconto",e.target.value)} style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid #e5e5ea",fontSize:15,fontWeight:700,textAlign:"right",boxSizing:"border-box"}}/></div>
-                <div><div style={{fontSize:10,fontWeight:700,color:"#999",marginBottom:4}}>ACCONTO €</div><input type="number" value={c.accontoRicevuto||0} onChange={e=>updateCMp("accontoRicevuto",e.target.value)} style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid #e5e5ea",fontSize:15,fontWeight:700,textAlign:"right",boxSizing:"border-box"}}/></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:"#999",marginBottom:4}}>ACCONTO â‚¬</div><input type="number" value={c.accontoRicevuto||0} onChange={e=>updateCMp("accontoRicevuto",e.target.value)} style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid #e5e5ea",fontSize:15,fontWeight:700,textAlign:"right",boxSizing:"border-box"}}/></div>
               </div>
               <div><div style={{fontSize:10,fontWeight:700,color:"#999",marginBottom:4}}>NOTE</div><textarea value={c.notePreventivo||""} onChange={e=>updateCMp("notePreventivo",e.target.value)} placeholder="Condizioni, garanzie..." style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid #e5e5ea",fontSize:12,minHeight:50,resize:"none",boxSizing:"border-box",fontFamily:"inherit"}}/></div>
             </div>
             {hasWarnings && (
               <div style={{background:"#fff8ec",borderRadius:12,padding:"12px 14px",marginBottom:10,border:"1.5px solid #ff9500"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                  <span style={{fontSize:16}}>⚠️</span>
+                  <span style={{fontSize:16}}>âš ï¸</span>
                   <span style={{fontSize:12,fontWeight:800,color:"#7a4500"}}>Preventivo incompleto</span>
                 </div>
                 {vaniSenzaSistema.length>0 && (
                   <div style={{fontSize:11,color:"#7a4500",marginBottom:4}}>
-                    • {vaniSenzaSistema.length} vano/i senza sistema assegnato → prezzo €0
-                    <div onClick={()=>{setShowPreventivoModal(false);setSelectedVano(vaniSenzaSistema[0]);setVanoStep(2);}} style={{display:"inline",marginLeft:8,color:"#007aff",fontWeight:700,cursor:"pointer"}}>Vai →</div>
+                    â€¢ {vaniSenzaSistema.length} vano/i senza sistema assegnato â†’ prezzo â‚¬0
+                    <div onClick={()=>{setShowPreventivoModal(false);setSelectedVano(vaniSenzaSistema[0]);setVanoStep(2);}} style={{display:"inline",marginLeft:8,color:"#007aff",fontWeight:700,cursor:"pointer"}}>Vai â†’</div>
                   </div>
                 )}
                 {vaniSenzaMisure.length>0 && (
                   <div style={{fontSize:11,color:"#7a4500"}}>
-                    • {vaniSenzaMisure.length} vano/i senza misure → calcolo non accurato
-                    <div onClick={()=>{setShowPreventivoModal(false);setSelectedVano(vaniSenzaMisure[0]);setVanoStep(1);}} style={{display:"inline",marginLeft:8,color:"#007aff",fontWeight:700,cursor:"pointer"}}>Vai →</div>
+                    â€¢ {vaniSenzaMisure.length} vano/i senza misure â†’ calcolo non accurato
+                    <div onClick={()=>{setShowPreventivoModal(false);setSelectedVano(vaniSenzaMisure[0]);setVanoStep(1);}} style={{display:"inline",marginLeft:8,color:"#007aff",fontWeight:700,cursor:"pointer"}}>Vai â†’</div>
                   </div>
                 )}
               </div>
@@ -6086,7 +6086,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
               <div style={{fontSize:11,fontWeight:700,color:"#999",textTransform:"uppercase",marginBottom:8}}>Voci</div>
               {vaniCalc.length===0?<div style={{fontSize:12,color:"#999",textAlign:"center",padding:12}}>Nessun vano</div>:vaniCalc.map((v,i)=>(
                 <div key={v.id} style={{padding:"8px 0",borderBottom:"1px solid #f5f5f7",background:v.calc.tot===0?"#fff5f5":"transparent",borderRadius:v.calc.tot===0?8:0}}>
-                  <div style={{display:"flex",gap:8,alignItems:"flex-start"}}><div style={{flex:1}}><div style={{fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>{v.nome||"Vano "+(i+1)}{v.calc.tot===0&&<span style={{fontSize:9,background:"#ff3b30",color:"#fff",padding:"1px 5px",borderRadius:3,fontWeight:800}}>MANCA SISTEMA</span>}</div><div style={{fontSize:10,color:"#666"}}>{v.tipo} · {(v.misure?.lCentro||0)}×{(v.misure?.hCentro||0)}mm · {v.calc.mq.toFixed(2)} mq</div></div><div style={{fontSize:13,fontWeight:800,color:v.calc.tot===0?"#ff3b30":"#1a1a1c"}}>€ {v.calc.tot.toFixed(2)}</div></div>
+                  <div style={{display:"flex",gap:8,alignItems:"flex-start"}}><div style={{flex:1}}><div style={{fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>{v.nome||"Vano "+(i+1)}{v.calc.tot===0&&<span style={{fontSize:9,background:"#ff3b30",color:"#fff",padding:"1px 5px",borderRadius:3,fontWeight:800}}>MANCA SISTEMA</span>}</div><div style={{fontSize:10,color:"#666"}}>{v.tipo} Â· {(v.misure?.lCentro||0)}Ã—{(v.misure?.hCentro||0)}mm Â· {v.calc.mq.toFixed(2)} mq</div></div><div style={{fontSize:13,fontWeight:800,color:v.calc.tot===0?"#ff3b30":"#1a1a1c"}}>â‚¬ {v.calc.tot.toFixed(2)}</div></div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:3,marginTop:3}}>
                     {v.calc.sysRec&&<span style={{fontSize:9,background:"#007aff15",color:"#007aff",padding:"1px 5px",borderRadius:4}}>{v.calc.sysRec.sistema}</span>}
                     {v.calc.vetroRec&&<span style={{fontSize:9,background:"#34c75915",color:"#1a9e40",padding:"1px 5px",borderRadius:4}}>{v.calc.vetroRec.code}</span>}
@@ -6097,18 +6097,18 @@ Fabio Cozza - Walter Cozza Serramenti` },
               ))}
             </div>
             <div style={{background:"#fff",borderRadius:12,padding:"14px",marginBottom:10}}>
-              {parseFloat(c.sconto||0)>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#ff9500",marginBottom:6}}><span>Sconto {c.sconto}%</span><span>− € {scontoVal.toFixed(2)}</span></div>}
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#666",marginBottom:6}}><span>Imponibile</span><span>€ {imponibile.toFixed(2)}</span></div>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#666",marginBottom:10}}><span>IVA 10%</span><span>€ {iva.toFixed(2)}</span></div>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:18,fontWeight:900,paddingTop:10,borderTop:"2px solid #1a1a1c"}}><span>TOTALE</span><span style={{color:"#007aff"}}>€ {totIva.toFixed(2)}</span></div>
-              {parseFloat(c.accontoRicevuto||0)>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#34c759",marginTop:8,fontWeight:700}}><span>Saldo da incassare</span><span>€ {(totIva-parseFloat(c.accontoRicevuto)).toFixed(2)}</span></div>}
+              {parseFloat(c.sconto||0)>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#ff9500",marginBottom:6}}><span>Sconto {c.sconto}%</span><span>âˆ’ â‚¬ {scontoVal.toFixed(2)}</span></div>}
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#666",marginBottom:6}}><span>Imponibile</span><span>â‚¬ {imponibile.toFixed(2)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#666",marginBottom:10}}><span>IVA 10%</span><span>â‚¬ {iva.toFixed(2)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:18,fontWeight:900,paddingTop:10,borderTop:"2px solid #1a1a1c"}}><span>TOTALE</span><span style={{color:"#007aff"}}>â‚¬ {totIva.toFixed(2)}</span></div>
+              {parseFloat(c.accontoRicevuto||0)>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#34c759",marginTop:8,fontWeight:700}}><span>Saldo da incassare</span><span>â‚¬ {(totIva-parseFloat(c.accontoRicevuto)).toFixed(2)}</span></div>}
             </div>
-            {c.firmaCliente?(<div style={{background:"#f0fdf4",borderRadius:12,padding:14,border:"1.5px solid #34c759",marginBottom:10}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span>✅</span><span style={{fontSize:12,fontWeight:700,color:"#1a9e40"}}>Firmato {c.dataFirma}</span><div onClick={()=>{setCantieri(cs=>cs.map(x=>x.id===c.id?{...x,firmaCliente:null,dataFirma:null}:x));setSelectedCM(p=>({...p,firmaCliente:null,dataFirma:null}));}} style={{marginLeft:"auto",fontSize:11,color:"#ff3b30",cursor:"pointer"}}>✕ Rimuovi</div></div><img src={c.firmaCliente} style={{width:"100%",maxHeight:70,objectFit:"contain",background:"#fff",borderRadius:8}} alt=""/></div>):(<button onClick={()=>{setShowPreventivoModal(false);setShowFirmaModal(true);}} style={{width:"100%",padding:13,borderRadius:12,border:"1.5px solid #34c759",background:"#f0fdf4",color:"#1a9e40",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>✍️ Firma cliente sul telefono</button>)}
+            {c.firmaCliente?(<div style={{background:"#f0fdf4",borderRadius:12,padding:14,border:"1.5px solid #34c759",marginBottom:10}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span>âœ…</span><span style={{fontSize:12,fontWeight:700,color:"#1a9e40"}}>Firmato {c.dataFirma}</span><div onClick={()=>{setCantieri(cs=>cs.map(x=>x.id===c.id?{...x,firmaCliente:null,dataFirma:null}:x));setSelectedCM(p=>({...p,firmaCliente:null,dataFirma:null}));}} style={{marginLeft:"auto",fontSize:11,color:"#ff3b30",cursor:"pointer"}}>âœ• Rimuovi</div></div><img src={c.firmaCliente} style={{width:"100%",maxHeight:70,objectFit:"contain",background:"#fff",borderRadius:8}} alt=""/></div>):(<button onClick={()=>{setShowPreventivoModal(false);setShowFirmaModal(true);}} style={{width:"100%",padding:13,borderRadius:12,border:"1.5px solid #34c759",background:"#f0fdf4",color:"#1a9e40",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>âœï¸ Firma cliente sul telefono</button>)}
             {hasWarnings && (
-              <div style={{fontSize:11,color:"#999",textAlign:"center",marginBottom:6}}>⚠️ Correggi i problemi per un preventivo accurato</div>
+              <div style={{fontSize:11,color:"#999",textAlign:"center",marginBottom:6}}>âš ï¸ Correggi i problemi per un preventivo accurato</div>
             )}
             <button onClick={()=>generaPreventivoPDF(c)} style={{width:"100%",padding:14,borderRadius:12,border:"none",background:hasWarnings?"linear-gradient(135deg,#8e8e93,#636366)":"linear-gradient(135deg,#007aff,#0055cc)",color:"#fff",fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:hasWarnings?"none":"0 4px 12px rgba(0,122,255,0.3)"}}>
-              {hasWarnings?"⚠️ Genera PDF (incompleto)":"📄 Genera & Scarica PDF"}
+              {hasWarnings?"âš ï¸ Genera PDF (incompleto)":"ðŸ“„ Genera & Scarica PDF"}
             </button>
           </div>
         </div>
@@ -6150,7 +6150,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
 
         {/* MESSAGE DETAIL OVERLAY */}
         {selectedMsg && (() => {
-          const chIco = { email: "📧", whatsapp: "💬", sms: "📱", telegram: "✈️" };
+          const chIco = { email: "ðŸ“§", whatsapp: "ðŸ’¬", sms: "ðŸ“±", telegram: "âœˆï¸" };
           const chCol = { email: T.blue, whatsapp: "#25d366", sms: T.orange, telegram: "#0088cc" };
           const [replyChannel, setReplyChannelX] = [selectedMsg._replyChannel || selectedMsg.canale, (ch) => setSelectedMsg(p => ({...p, _replyChannel: ch}))];
           return (
@@ -6161,21 +6161,21 @@ Fabio Cozza - Walter Cozza Serramenti` },
                 <div style={{ fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
                   <span>{chIco[selectedMsg.canale]}</span> {selectedMsg.from}
                 </div>
-                <div style={{ fontSize: 11, color: T.sub }}>{selectedMsg.cm ? `${selectedMsg.cm} · ` : ""}{selectedMsg.thread?.length || 0} messaggi</div>
+                <div style={{ fontSize: 11, color: T.sub }}>{selectedMsg.cm ? `${selectedMsg.cm} Â· ` : ""}{selectedMsg.thread?.length || 0} messaggi</div>
               </div>
               {selectedMsg.cm && (
                 <div onClick={() => { const cm = cantieri.find(c => c.code === selectedMsg.cm); if (cm) { setSelectedMsg(null); setSelectedCM(cm); setTab("commesse"); } }} style={{ padding: "4px 10px", borderRadius: 6, background: T.accLt, fontSize: 10, fontWeight: 700, color: T.acc, cursor: "pointer" }}>
-                  📂 {selectedMsg.cm}
+                  ðŸ“‚ {selectedMsg.cm}
                 </div>
               )}
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
               {(selectedMsg.thread || []).map((msg, i) => {
                 const isMe = msg.who === "Tu";
-                const mChIco = chIco[msg.canale] || chIco[selectedMsg.canale] || "💬";
+                const mChIco = chIco[msg.canale] || chIco[selectedMsg.canale] || "ðŸ’¬";
                 return (
                   <div key={i} style={{ marginBottom: 12, display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
-                    <div style={{ fontSize: 9, color: T.sub, marginBottom: 3, fontWeight: 600 }}>{mChIco} {msg.who} · {msg.date} {msg.time}</div>
+                    <div style={{ fontSize: 9, color: T.sub, marginBottom: 3, fontWeight: 600 }}>{mChIco} {msg.who} Â· {msg.date} {msg.time}</div>
                     <div style={{ maxWidth: "80%", padding: "10px 14px", borderRadius: isMe ? "14px 14px 4px 14px" : "14px 14px 14px 4px", background: isMe ? (chCol[msg.canale || selectedMsg.canale] || T.acc) : T.card, color: isMe ? "#fff" : T.text, border: isMe ? "none" : `1px solid ${T.bdr}`, fontSize: 13, lineHeight: 1.4 }}>
                       {msg.text}
                     </div>
@@ -6193,9 +6193,9 @@ Fabio Cozza - Walter Cozza Serramenti` },
               </div>
               <div style={{ padding: "8px 16px 10px", display: "flex", gap: 8, alignItems: "center" }}>
                 <div style={{ display: "flex", gap: 4 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>📎</div>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>🎤</div>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>📷</div>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>ðŸ“Ž</div>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>ðŸŽ¤</div>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>ðŸ“·</div>
                 </div>
                 <input
                   style={{ flex: 1, padding: "10px 14px", fontSize: 13, border: `1px solid ${T.bdr}`, borderRadius: 20, background: T.bg, outline: "none", fontFamily: FF }}
@@ -6251,7 +6251,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                 <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Marca</label><input style={S.input} placeholder="es. Aluplast" value={settingsForm.marca || ""} onChange={e => setSettingsForm(f => ({ ...f, marca: e.target.value }))} /></div>
                 <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Sistema</label><input style={S.input} placeholder="es. Ideal 4000" value={settingsForm.sistema || ""} onChange={e => setSettingsForm(f => ({ ...f, sistema: e.target.value }))} /></div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                  <div style={{ flex: 1 }}><label style={S.fieldLabel}>€/mq</label><input style={S.input} type="number" placeholder="180" value={settingsForm.euroMq || ""} onChange={e => setSettingsForm(f => ({ ...f, euroMq: e.target.value }))} /></div>
+                  <div style={{ flex: 1 }}><label style={S.fieldLabel}>â‚¬/mq</label><input style={S.input} type="number" placeholder="180" value={settingsForm.euroMq || ""} onChange={e => setSettingsForm(f => ({ ...f, euroMq: e.target.value }))} /></div>
                   <div style={{ flex: 1 }}><label style={S.fieldLabel}>Sovr. RAL %</label><input style={S.input} type="number" placeholder="12" value={settingsForm.sovRAL || ""} onChange={e => setSettingsForm(f => ({ ...f, sovRAL: e.target.value }))} /></div>
                   <div style={{ flex: 1 }}><label style={S.fieldLabel}>Sovr. Legno %</label><input style={S.input} type="number" placeholder="22" value={settingsForm.sovLegno || ""} onChange={e => setSettingsForm(f => ({ ...f, sovLegno: e.target.value }))} /></div>
                 </div>
@@ -6273,19 +6273,19 @@ Fabio Cozza - Walter Cozza Serramenti` },
                   <div style={{ flex: 2 }}><label style={S.fieldLabel}>Codice composizione</label><input style={S.input} placeholder="es. 4/16/4 BE" value={settingsForm.code || ""} onChange={e => setSettingsForm(f => ({ ...f, code: e.target.value }))} /></div>
                   <div style={{ flex: 1 }}><label style={S.fieldLabel}>Ug</label><input style={S.input} type="number" step="0.1" placeholder="1.1" value={settingsForm.ug || ""} onChange={e => setSettingsForm(f => ({ ...f, ug: e.target.value }))} /></div>
                 </div>
-                <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Prezzo €/mq</label><input style={S.input} type="number" step="0.5" placeholder="es. 45" value={settingsForm.prezzoMq || ""} onChange={e => setSettingsForm(f => ({ ...f, prezzoMq: parseFloat(e.target.value)||0 }))} /></div>
+                <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Prezzo â‚¬/mq</label><input style={S.input} type="number" step="0.5" placeholder="es. 45" value={settingsForm.prezzoMq || ""} onChange={e => setSettingsForm(f => ({ ...f, prezzoMq: parseFloat(e.target.value)||0 }))} /></div>
               </>)}
 
               {(settingsModal === "coprifilo" || settingsModal === "lamiera") && (<>
                 <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Codice</label><input style={S.input} placeholder={settingsModal === "coprifilo" ? "es. CP50" : "es. LD250"} value={settingsForm.cod || ""} onChange={e => setSettingsForm(f => ({ ...f, cod: e.target.value }))} /></div>
                 <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Descrizione</label><input style={S.input} placeholder={settingsModal === "coprifilo" ? "es. Coprifilo piatto 50mm" : "es. Lamiera davanzale 250mm"} value={settingsForm.nome || ""} onChange={e => setSettingsForm(f => ({ ...f, nome: e.target.value }))} /></div>
-                <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Prezzo €/ml</label><input style={S.input} type="number" step="0.5" placeholder="es. 5.50" value={settingsForm.prezzoMl || ""} onChange={e => setSettingsForm(f => ({ ...f, prezzoMl: parseFloat(e.target.value)||0 }))} /></div>
+                <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Prezzo â‚¬/ml</label><input style={S.input} type="number" step="0.5" placeholder="es. 5.50" value={settingsForm.prezzoMl || ""} onChange={e => setSettingsForm(f => ({ ...f, prezzoMl: parseFloat(e.target.value)||0 }))} /></div>
               </>)}
 
               {settingsModal === "tipologia" && (<>
                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                   <div style={{ flex: 1 }}><label style={S.fieldLabel}>Codice</label><input style={S.input} placeholder="es. F4A" value={settingsForm.code || ""} onChange={e => setSettingsForm(f => ({ ...f, code: e.target.value }))} /></div>
-                  <div style={{ width: 60 }}><label style={S.fieldLabel}>Icona</label><input style={S.input} placeholder="🪟" value={settingsForm.icon || ""} onChange={e => setSettingsForm(f => ({ ...f, icon: e.target.value }))} /></div>
+                  <div style={{ width: 60 }}><label style={S.fieldLabel}>Icona</label><input style={S.input} placeholder="ðŸªŸ" value={settingsForm.icon || ""} onChange={e => setSettingsForm(f => ({ ...f, icon: e.target.value }))} /></div>
                 </div>
                 <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Descrizione</label><input style={S.input} placeholder="es. Finestra 4 ante" value={settingsForm.label || ""} onChange={e => setSettingsForm(f => ({ ...f, label: e.target.value }))} /></div>
               </>)}
@@ -6332,24 +6332,24 @@ Fabio Cozza - Walter Cozza Serramenti` },
             <div style={S.modalInner}>
               {sendConfirm === "sent" ? (
                 <div style={{ textAlign: "center", padding: "30px 0" }}>
-                  <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>âœ…</div>
                   <div style={{ fontSize: 17, fontWeight: 700, color: T.grn }}>Commessa inviata!</div>
                   <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>Email inviata con tutti i dati selezionati</div>
                 </div>
               ) : (
                 <>
-                  <div style={S.modalTitle}>📧 Invia Commessa — {selectedCM.code}</div>
+                  <div style={S.modalTitle}>ðŸ“§ Invia Commessa â€” {selectedCM.code}</div>
                   <div style={{ fontSize: 12, color: T.sub, marginBottom: 14 }}>Scegli cosa includere nell'invio:</div>
                   {[
-                    { key: "misure", label: "Misure tutti i vani", ico: "📐" },
-                    { key: "foto", label: "Foto scattate", ico: "📷" },
-                    { key: "disegno", label: "Disegni mano libera", ico: "✏️" },
-                    { key: "accessori", label: "Accessori (tapparelle, zanzariere...)", ico: "🪟" },
-                    { key: "note", label: "Note e annotazioni", ico: "📝" },
+                    { key: "misure", label: "Misure tutti i vani", ico: "ðŸ“" },
+                    { key: "foto", label: "Foto scattate", ico: "ðŸ“·" },
+                    { key: "disegno", label: "Disegni mano libera", ico: "âœï¸" },
+                    { key: "accessori", label: "Accessori (tapparelle, zanzariere...)", ico: "ðŸªŸ" },
+                    { key: "note", label: "Note e annotazioni", ico: "ðŸ“" },
                   ].map(opt => (
                     <div key={opt.key} onClick={() => setSendOpts(o => ({ ...o, [opt.key]: !o[opt.key] }))} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: sendOpts[opt.key] ? T.accLt : T.card, border: `1px solid ${sendOpts[opt.key] ? T.acc : T.bdr}`, borderRadius: 10, marginBottom: 6, cursor: "pointer" }}>
                       <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${sendOpts[opt.key] ? T.acc : T.bdr}`, background: sendOpts[opt.key] ? T.acc : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700 }}>
-                        {sendOpts[opt.key] && "✓"}
+                        {sendOpts[opt.key] && "âœ“"}
                       </div>
                       <span style={{ fontSize: 16 }}>{opt.ico}</span>
                       <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{opt.label}</span>
@@ -6360,7 +6360,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                     <input style={S.input} placeholder="email@destinatario.com" />
                   </div>
                   <button onClick={sendCommessa} style={{ ...S.btn, background: "linear-gradient(135deg, #007aff, #0055cc)", marginTop: 4 }}>
-                    📧 Invia commessa completa
+                    ðŸ“§ Invia commessa completa
                   </button>
                   <button style={S.btnCancel} onClick={() => setShowSendModal(false)}>Annulla</button>
                 </>
@@ -6391,7 +6391,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
               <div style={{ marginBottom: 14 }}>
                 <label style={S.fieldLabel}>Tipo</label>
                 <div style={{ display: "flex", gap: 6 }}>
-                  {[{ id: "appuntamento", l: "📅 Appuntamento", c: T.blue }, { id: "task", l: "✅ Task", c: T.orange }, { id: "sopr_riparazione", l: "🔩 Sopr. Riparazione", c: "#FF6B00" }, { id: "riparazione", l: "🛠 Riparazione", c: "#FF3B30" }, { id: "collaudo", l: "✔️ Collaudo", c: "#5856D6" }, { id: "garanzia", l: "🔒 Garanzia", c: "#8E8E93" }].map(t => (
+                  {[{ id: "appuntamento", l: "ðŸ“… Appuntamento", c: T.blue }, { id: "task", l: "âœ… Task", c: T.orange }, { id: "sopr_riparazione", l: "ðŸ”© Sopr. Riparazione", c: "#FF6B00" }, { id: "riparazione", l: "ðŸ›  Riparazione", c: "#FF3B30" }, { id: "collaudo", l: "âœ”ï¸ Collaudo", c: "#5856D6" }, { id: "garanzia", l: "ðŸ”’ Garanzia", c: "#8E8E93" }].map(t => (
                     <div key={t.id} onClick={() => setNewEvent(ev => ({ ...ev, tipo: t.id }))} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: `1px solid ${newEvent.tipo === t.id ? t.c : T.bdr}`, background: newEvent.tipo === t.id ? t.c + "18" : "transparent", textAlign: "center", fontSize: 12, fontWeight: 600, color: newEvent.tipo === t.id ? t.c : T.sub, cursor: "pointer" }}>
                       {t.l}
                     </div>
@@ -6401,15 +6401,15 @@ Fabio Cozza - Walter Cozza Serramenti` },
               <div style={{ marginBottom: 14 }}>
                 <label style={S.fieldLabel}>Collega a commessa</label>
                 <select style={S.select} value={newEvent.cm} onChange={e => setNewEvent(ev => ({ ...ev, cm: e.target.value }))}>
-                  <option value="">— Nessuna —</option>
-                  {cantieri.map(c => <option key={c.id} value={c.code}>{c.code} · {c.cliente}</option>)}
+                  <option value="">â€” Nessuna â€”</option>
+                  {cantieri.map(c => <option key={c.id} value={c.code}>{c.code} Â· {c.cliente}</option>)}
                 </select>
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={S.fieldLabel}>Assegna a persona</label>
                 <select style={S.select} value={newEvent.persona} onChange={e => setNewEvent(ev => ({ ...ev, persona: e.target.value }))}>
-                  <option value="">— Nessuno —</option>
-                  {team.map(m => <option key={m.id} value={m.nome}>{m.nome} — {m.ruolo}</option>)}
+                  <option value="">â€” Nessuno â€”</option>
+                  {team.map(m => <option key={m.id} value={m.nome}>{m.nome} â€” {m.ruolo}</option>)}
                 </select>
               </div>
               {/* Indirizzo */}
@@ -6419,7 +6419,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
               </div>
               {/* Reminder */}
               <div style={{ marginBottom: 16 }}>
-                <label style={S.fieldLabel}>⏰ Reminder al cliente</label>
+                <label style={S.fieldLabel}>â° Reminder al cliente</label>
                 <div style={{ display: "flex", gap: 6 }}>
                   {[
                     { id: "", l: "Nessuno" },
@@ -6438,7 +6438,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                 </div>
                 {newEvent.reminder && (
                   <div style={{ marginTop: 6, fontSize: 10, color: T.sub, padding: "5px 8px", background: T.accLt, borderRadius: 6 }}>
-                    📧 MASTRO ti avviserà di inviare il reminder — lo farai con 1 click dal banner in agenda
+                    ðŸ“§ MASTRO ti avviserÃ  di inviare il reminder â€” lo farai con 1 click dal banner in agenda
                   </div>
                 )}
               </div>
@@ -6452,13 +6452,13 @@ Fabio Cozza - Walter Cozza Serramenti` },
         {faseNotif && (
           <div style={{ position: "fixed", top: 60, left: "50%", transform: "translateX(-50%)", maxWidth: 380, width: "90%", padding: "12px 16px", borderRadius: 12, background: T.card, border: `1px solid ${faseNotif.color}40`, boxShadow: `0 4px 20px ${faseNotif.color}30`, zIndex: 300, display: "flex", alignItems: "center", gap: 10, animation: "fadeIn 0.3s ease" }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: faseNotif.color + "20", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 18 }}>📧</span>
+              <span style={{ fontSize: 18 }}>ðŸ“§</span>
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Avanzato a {faseNotif.fase}</div>
               <div style={{ fontSize: 11, color: T.sub }}>Email inviata a <strong>{faseNotif.addetto}</strong></div>
             </div>
-            <div style={{ fontSize: 18 }}>✅</div>
+            <div style={{ fontSize: 18 }}>âœ…</div>
           </div>
         )}
 
@@ -6466,15 +6466,15 @@ Fabio Cozza - Walter Cozza Serramenti` },
         {showCompose && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={e => e.target === e.currentTarget && setShowCompose(false)}>
             <div style={{ background: T.card, borderRadius: 16, width: "100%", maxWidth: 420, padding: 20, maxHeight: "80vh", overflowY: "auto" }}>
-              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>✏️ Nuovo messaggio</div>
+              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>âœï¸ Nuovo messaggio</div>
               <div style={{ marginBottom: 12 }}>
                 <label style={S.fieldLabel}>Invia via</label>
                 <div style={{ display: "flex", gap: 4 }}>
                   {[
-                    { id: "whatsapp", l: "💬 WhatsApp", c: "#25d366" },
-                    { id: "email", l: "📧 Email", c: T.blue },
-                    { id: "sms", l: "📱 SMS", c: T.orange },
-                    { id: "telegram", l: "✈️ Telegram", c: "#0088cc" },
+                    { id: "whatsapp", l: "ðŸ’¬ WhatsApp", c: "#25d366" },
+                    { id: "email", l: "ðŸ“§ Email", c: T.blue },
+                    { id: "sms", l: "ðŸ“± SMS", c: T.orange },
+                    { id: "telegram", l: "âœˆï¸ Telegram", c: "#0088cc" },
                   ].map(ch => (
                     <div key={ch.id} onClick={() => setComposeMsg(c => ({ ...c, canale: ch.id }))} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: `1.5px solid ${composeMsg.canale === ch.id ? ch.c : T.bdr}`, background: composeMsg.canale === ch.id ? ch.c + "15" : T.card, textAlign: "center", cursor: "pointer", fontSize: 10, fontWeight: 600, color: composeMsg.canale === ch.id ? ch.c : T.sub }}>
                       {ch.l}
@@ -6489,8 +6489,8 @@ Fabio Cozza - Walter Cozza Serramenti` },
               <div style={{ marginBottom: 12 }}>
                 <label style={S.fieldLabel}>Collega a commessa (opzionale)</label>
                 <select style={S.select} value={composeMsg.cm} onChange={e => setComposeMsg(c => ({ ...c, cm: e.target.value }))}>
-                  <option value="">— Nessuna —</option>
-                  {cantieri.map(c => <option key={c.id} value={c.code}>{c.code} · {c.cliente}</option>)}
+                  <option value="">â€” Nessuna â€”</option>
+                  {cantieri.map(c => <option key={c.id} value={c.code}>{c.code} Â· {c.cliente}</option>)}
                 </select>
               </div>
               <div style={{ marginBottom: 14 }}>
@@ -6498,7 +6498,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                 <textarea style={{ width: "100%", padding: 12, fontSize: 13, border: `1px solid ${T.bdr}`, borderRadius: 10, background: T.bg, minHeight: 80, resize: "vertical", fontFamily: FF, boxSizing: "border-box" }} placeholder="Scrivi il messaggio..." value={composeMsg.text} onChange={e => setComposeMsg(c => ({ ...c, text: e.target.value }))} />
               </div>
               <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-                {[{ ico: "📎", l: "File" }, { ico: "📷", l: "Foto" }, { ico: "🎤", l: "Audio" }, { ico: "📍", l: "Posizione" }].map((b, i) => (
+                {[{ ico: "ðŸ“Ž", l: "File" }, { ico: "ðŸ“·", l: "Foto" }, { ico: "ðŸŽ¤", l: "Audio" }, { ico: "ðŸ“", l: "Posizione" }].map((b, i) => (
                   <div key={i} style={{ flex: 1, padding: "8px 4px", background: T.bg, borderRadius: 8, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer" }}>
                     <div style={{ fontSize: 16 }}>{b.ico}</div>
                     <div style={{ fontSize: 9, fontWeight: 600, color: T.sub, marginTop: 1 }}>{b.l}</div>
@@ -6530,14 +6530,14 @@ Fabio Cozza - Walter Cozza Serramenti` },
             <div style={{ background: T.card, borderRadius: 16, width: "100%", maxWidth: 380, padding: 20 }}>
               {showAllegatiModal === "nota" && (
                 <>
-                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>📝 Nuova nota</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>ðŸ“ Nuova nota</div>
                   <textarea style={{ width: "100%", padding: 12, fontSize: 13, border: `1px solid ${T.bdr}`, borderRadius: 10, background: T.bg, minHeight: 100, resize: "vertical", fontFamily: FF, boxSizing: "border-box" }} placeholder="Scrivi la nota..." value={allegatiText} onChange={e => setAllegatiText(e.target.value)} autoFocus />
                   <button onClick={() => { if (allegatiText.trim()) { addAllegato("nota", allegatiText.trim()); setShowAllegatiModal(null); setAllegatiText(""); } }} style={{ ...S.btn, marginTop: 10, opacity: allegatiText.trim() ? 1 : 0.5 }}>Salva nota</button>
                 </>
               )}
               {showAllegatiModal === "vocale" && (
                 <>
-                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>🎤 Nota vocale</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>ðŸŽ¤ Nota vocale</div>
                   <div style={{ textAlign: "center", padding: "20px 0" }}>
                     {isRecording && (
                       <div style={{ fontSize: 24, fontWeight: 700, fontFamily: FM, color: T.red, marginBottom: 12 }}>
@@ -6555,7 +6555,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                         setShowAllegatiModal(null); setRecSeconds(0);
                       }
                     }} style={{ width: 70, height: 70, borderRadius: "50%", background: isRecording ? "linear-gradient(135deg, #ff3b30, #cc0000)" : "linear-gradient(135deg, #ff3b30, #ff6b6b)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", cursor: "pointer", boxShadow: isRecording ? "0 0 24px rgba(255,59,48,0.5)" : "0 4px 16px rgba(255,59,48,0.3)", animation: isRecording ? "pulse 1.5s infinite" : "none" }}>
-                      <span style={{ fontSize: 28, color: "#fff" }}>{isRecording ? "⏹" : "🎤"}</span>
+                      <span style={{ fontSize: 28, color: "#fff" }}>{isRecording ? "â¹" : "ðŸŽ¤"}</span>
                     </div>
                     <style>{`@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }`}</style>
                     <div style={{ fontSize: 12, color: isRecording ? T.red : T.sub, marginTop: 10, fontWeight: isRecording ? 700 : 400 }}>
@@ -6566,7 +6566,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
               )}
               {showAllegatiModal === "video" && (
                 <>
-                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>🎬 Video</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>ðŸŽ¬ Video</div>
                   <div style={{ textAlign: "center", padding: "20px 0" }}>
                     {isRecording && (
                       <div style={{ fontSize: 24, fontWeight: 700, fontFamily: FM, color: T.red, marginBottom: 12 }}>
@@ -6584,7 +6584,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                         setShowAllegatiModal(null); setRecSeconds(0);
                       }
                     }} style={{ width: 70, height: 70, borderRadius: "50%", background: isRecording ? "linear-gradient(135deg, #ff3b30, #cc0000)" : "linear-gradient(135deg, #007aff, #5856d6)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", cursor: "pointer", boxShadow: isRecording ? "0 0 24px rgba(255,59,48,0.5)" : "0 4px 16px rgba(0,122,255,0.3)", animation: isRecording ? "pulse 1.5s infinite" : "none" }}>
-                      <span style={{ fontSize: 28, color: "#fff" }}>{isRecording ? "⏹" : "🎬"}</span>
+                      <span style={{ fontSize: 28, color: "#fff" }}>{isRecording ? "â¹" : "ðŸŽ¬"}</span>
                     </div>
                     <div style={{ fontSize: 12, color: isRecording ? T.red : T.sub, marginTop: 10, fontWeight: isRecording ? 700 : 400 }}>
                       {isRecording ? "Registrazione... tocca per fermare" : "Tocca per registrare"}
@@ -6605,18 +6605,18 @@ Fabio Cozza - Walter Cozza Serramenti` },
               {aiPhotoStep === 0 && (
                 <>
                   <div style={{ textAlign: "center", marginBottom: 16 }}>
-                    <div style={{ width: 60, height: 60, borderRadius: 16, background: "linear-gradient(135deg, #af52de, #007aff)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 28 }}>🤖</div>
+                    <div style={{ width: 60, height: 60, borderRadius: 16, background: "linear-gradient(135deg, #af52de, #007aff)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 28 }}>ðŸ¤–</div>
                     <div style={{ fontSize: 17, fontWeight: 800, color: "#af52de" }}>AI Misure da Foto</div>
-                    <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>Inquadra il vano "{selectedVano?.nome}" e l'AI analizzerà l'immagine</div>
+                    <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>Inquadra il vano "{selectedVano?.nome}" e l'AI analizzerÃ  l'immagine</div>
                   </div>
                   <div style={{ position: "relative", height: 200, borderRadius: 12, overflow: "hidden", marginBottom: 12, background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <div style={{ position: "absolute", inset: 20, border: "2px solid #af52de80", borderRadius: 8 }} />
                     <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: "#af52de30" }} />
                     <div style={{ position: "absolute", top: "50%", left: 0, right: 0, height: 1, background: "#af52de30" }} />
-                    <div style={{ color: "#af52de", fontSize: 12, fontWeight: 600, textAlign: "center", zIndex: 1 }}>📷 Simulazione fotocamera<br /><span style={{ fontSize: 10, color: "#af52de80" }}>Inquadra il serramento</span></div>
+                    <div style={{ color: "#af52de", fontSize: 12, fontWeight: 600, textAlign: "center", zIndex: 1 }}>ðŸ“· Simulazione fotocamera<br /><span style={{ fontSize: 10, color: "#af52de80" }}>Inquadra il serramento</span></div>
                   </div>
                   <button onClick={() => { setAiPhotoStep(1); setTimeout(() => setAiPhotoStep(2), 2000 + Math.random() * 1500); }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: "linear-gradient(135deg, #af52de, #007aff)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF, marginBottom: 8 }}>
-                    📸 Scatta e analizza
+                    ðŸ“¸ Scatta e analizza
                   </button>
                   <button onClick={() => setShowAIPhoto(false)} style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FF, color: T.sub }}>Annulla</button>
                 </>
@@ -6626,14 +6626,14 @@ Fabio Cozza - Walter Cozza Serramenti` },
                   <div style={{ width: 60, height: 60, borderRadius: "50%", border: "4px solid #af52de20", borderTopColor: "#af52de", margin: "0 auto 16px", animation: "spin 1s linear infinite" }} />
                   <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
                   <div style={{ fontSize: 15, fontWeight: 700, color: "#af52de" }}>Analisi AI in corso...</div>
-                  <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>Rilevamento bordi · Edge detection · Stima dimensioni</div>
+                  <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>Rilevamento bordi Â· Edge detection Â· Stima dimensioni</div>
                   <div style={{ fontSize: 10, color: T.sub, marginTop: 8 }}>Analizzando "{selectedVano?.nome}"...</div>
                 </div>
               )}
               {aiPhotoStep === 2 && (
                 <>
                   <div style={{ textAlign: "center", marginBottom: 16 }}>
-                    <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
+                    <div style={{ fontSize: 36, marginBottom: 8 }}>âœ…</div>
                     <div style={{ fontSize: 15, fontWeight: 800, color: T.grn }}>Analisi completata!</div>
                     <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>Misure suggerite per "{selectedVano?.nome}" (verifica con metro)</div>
                   </div>
@@ -6646,7 +6646,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                     ))}
                   </div>
                   <div style={{ padding: "8px 12px", borderRadius: 8, background: "#fff3e0", border: "1px solid #ffe0b2", marginBottom: 12, fontSize: 10, color: "#e65100" }}>
-                    ⚠️ Le misure AI sono approssimative. Usa sempre il metro laser per le misure definitive.
+                    âš ï¸ Le misure AI sono approssimative. Usa sempre il metro laser per le misure definitive.
                   </div>
                   <button onClick={() => {
                     if (selectedVano) {
@@ -6659,7 +6659,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                     }
                     setShowAIPhoto(false);
                   }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: "linear-gradient(135deg, #af52de, #007aff)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF, marginBottom: 8 }}>
-                    ✅ Applica misure suggerite
+                    âœ… Applica misure suggerite
                   </button>
                   <button onClick={() => setShowAIPhoto(false)} style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FF, color: T.sub }}>Solo anteprima, non applicare</button>
                 </>
@@ -6671,3 +6671,5 @@ Fabio Cozza - Walter Cozza Serramenti` },
     </>
   );
 }
+
+
