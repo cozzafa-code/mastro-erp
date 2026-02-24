@@ -8,6 +8,7 @@
 // MASTRO ERP — adattato per Next.js + Supabase
 "use client";
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import { getAziendaId, loadAllData, saveCantiere, saveEvent, deleteEvent as deleteEventDB, saveContatto, saveTeamMember, saveTask, saveAzienda, saveVano, deleteVano, saveMateriali, savePipeline } from "@/lib/supabase-sync";
 
 /* =======================================================
    MASTRO MISURE — v15 COMPLETE REBUILD
@@ -463,6 +464,53 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   useEffect(()=>{try{localStorage.setItem("mastro:pipeline",JSON.stringify(pipelineDB));}catch(e){}},[pipelineDB]);
   useEffect(()=>{try{localStorage.setItem("mastro:azienda",JSON.stringify(aziendaInfo));}catch(e){}},[aziendaInfo]);
 
+  // === SUPABASE DATA LAYER ===
+  const [azId, setAzId] = useState<string | null>(null);
+  const [dbLoading, setDbLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const id = await getAziendaId();
+        if (!mounted || !id) { setDbLoading(false); return; }
+        setAzId(id);
+        const data = await loadAllData(id);
+        if (!mounted) return;
+        if (data.cantieri.length > 0) setCantieri(data.cantieri);
+        if (data.events.length > 0) setEvents(data.events);
+        if (data.contatti.length > 0) setContatti(data.contatti);
+        if (data.team.length > 0) setTeam(data.team);
+        if (data.tasks.length > 0) setTasks(data.tasks);
+        if (data.msgs.length > 0) setMsgs(data.msgs);
+        if (data.sistemi) setSistemiDB(data.sistemi);
+        if (data.colori) setColoriDB(data.colori);
+        if (data.vetri) setVetriDB(data.vetri);
+        if (data.coprifili) setCoprifiliDB(data.coprifili);
+        if (data.lamiere) setLamiereDB(data.lamiere);
+        if (data.pipeline) setPipelineDB(data.pipeline);
+        if (data.azienda) setAziendaInfo(prev => ({
+          ...prev,
+          ragione: data.azienda.ragione || prev.ragione,
+          piva: data.azienda.piva || prev.piva,
+          indirizzo: data.azienda.indirizzo || prev.indirizzo,
+          telefono: data.azienda.telefono || prev.telefono,
+          email: data.azienda.email || prev.email,
+        }));
+      } catch (e) { console.error('Supabase load error:', e); }
+      if (mounted) setDbLoading(false);
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => { if (!azId || dbLoading) return; cantieri.forEach(ct => saveCantiere(azId, ct)); }, [cantieri, azId, dbLoading]);
+  useEffect(() => { if (!azId || dbLoading) return; events.forEach(ev => saveEvent(azId, ev)); }, [events, azId, dbLoading]);
+  useEffect(() => { if (!azId || dbLoading) return; contatti.forEach(ct => saveContatto(azId, ct)); }, [contatti, azId, dbLoading]);
+  useEffect(() => { if (!azId || dbLoading) return; team.forEach(t => saveTeamMember(azId, t)); }, [team, azId, dbLoading]);
+  useEffect(() => { if (!azId || dbLoading) return; saveAzienda(azId, aziendaInfo); }, [aziendaInfo, azId, dbLoading]);
+  useEffect(() => { if (!azId || dbLoading) return; savePipeline(azId, pipelineDB); }, [pipelineDB, azId, dbLoading]);
+
+
   const PIPELINE = pipelineDB.filter(p => p.attiva !== false);
   const parseDataCM = (s) => {
     const oggi0 = new Date(); oggi0.setHours(0,0,0,0);
@@ -663,7 +711,14 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   };
 
   const addEvent = () => {
-    if (!newEvent.text.trim()) return;
+    const _evTitle = newEvent.text.trim() || (newEvent.persona ? "Appuntamento " + newEvent.persona : "");
+    if (!_evTitle) return;
+    newEvent.text = _evTitle;
+    if ((newEvent as any)._newCliente && (newEvent as any)._nomeCliente) {
+      const nc = { id: "CT-" + Date.now(), nome: (newEvent as any)._nomeCliente, cognome: (newEvent as any)._cognomeCliente || "", tipo: "cliente", telefono: (newEvent as any)._telCliente || "", indirizzo: (newEvent as any)._addrCliente || "" };
+      setContatti(prev => [...prev, nc]);
+      newEvent.persona = nc.nome + (nc.cognome ? " " + nc.cognome : "");
+    }
     setEvents(ev => [...ev, { id: Date.now(), ...newEvent, date: newEvent.date || selDate.toISOString().split("T")[0], addr: newEvent.addr || "", color: newEvent.tipo === "appuntamento" ? "#007aff" : newEvent.tipo === "sopr_riparazione" ? "#FF6B00" : newEvent.tipo === "riparazione" ? "#FF3B30" : newEvent.tipo === "collaudo" ? "#5856D6" : newEvent.tipo === "garanzia" ? "#8E8E93" : "#ff9500" }]);
     setNewEvent({ text: "", time: "", tipo: "appuntamento", cm: "", persona: "", date: "", reminder: "", addr: "" });
     setShowNewEvent(false);
@@ -4714,43 +4769,6 @@ Grazie per il suo messaggio.
           </div>
         </>)}
 
-        {/* FAB — Compose menu */}
-        <style>{`
-          @keyframes fabPulse { 0%,100% { box-shadow: 0 4px 20px rgba(0,122,255,0.4); } 50% { box-shadow: 0 4px 30px rgba(0,122,255,0.6); } }
-        `}</style>
-        {fabOpen && <div onClick={() => setFabOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", backdropFilter: "blur(4px)", zIndex: 89 }} />}
-        {[
-          { ch: "whatsapp", ico: "💬", l: "WhatsApp", c: "#25d366" },
-          { ch: "email", ico: "📧", l: "Email", c: "#007aff" },
-          { ch: "sms", ico: "📱", l: "SMS", c: "#ff9500" },
-          { ch: "telegram", ico: "✈️", l: "Telegram", c: "#0088cc" },
-        ].map((item, i) => (
-          <div key={item.ch} onClick={() => { setFabOpen(false); setComposeMsg(c => ({ ...c, canale: item.ch })); setShowCompose(true); }} style={{
-            position: "fixed", bottom: 90 + (i + 1) * 58, right: 20, zIndex: 90,
-            display: "flex", alignItems: "center", gap: 10, flexDirection: "row-reverse",
-            opacity: fabOpen ? 1 : 0, transform: fabOpen ? "translateY(0) scale(1)" : "translateY(30px) scale(0.5)",
-            transition: `all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) ${fabOpen ? i * 0.06 : 0}s`,
-            pointerEvents: fabOpen ? "auto" : "none",
-          }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", background: item.c, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, boxShadow: `0 4px 16px ${item.c}50`, cursor: "pointer" }}>
-              {item.ico}
-            </div>
-            <div style={{ padding: "6px 12px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, boxShadow: "0 2px 12px rgba(0,0,0,0.1)", fontSize: 12, fontWeight: 700, color: item.c, whiteSpace: "nowrap" }}>
-              {item.l}
-            </div>
-          </div>
-        ))}
-        <div onClick={() => setFabOpen(!fabOpen)} style={{
-          position: "fixed", bottom: 90, right: 20, zIndex: 91,
-          width: 56, height: 56, borderRadius: "50%",
-          background: fabOpen ? T.sub : "linear-gradient(135deg, #007aff, #5856d6)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: fabOpen ? "0 4px 16px rgba(0,0,0,0.2)" : "0 4px 20px rgba(0,122,255,0.4)",
-          cursor: "pointer", transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
-          animation: fabOpen ? "none" : "fabPulse 2s infinite",
-        }}>
-          <div style={{ fontSize: 24, color: "#fff", transition: "transform 0.3s ease", transform: fabOpen ? "rotate(45deg)" : "rotate(0deg)" }}>✏️</div>
-        </div>
       </div>
     );
   };
@@ -5481,6 +5499,31 @@ Fabio Cozza - Walter Cozza Serramenti` },
           )}
 
           {/* COMMESSA MODAL */}
+          {showModal === "contatto" && (
+            <div style={{ padding: "20px 0" }}>
+              <div style={S.modalTitle}>Nuovo cliente</div>
+              <div style={{ marginBottom: 12 }}><label style={S.fieldLabel}>Nome *</label>
+                <input style={S.input} placeholder="Nome" value={(newCM as any)._ctNome || ""} onChange={e => setNewCM(p => ({ ...p, _ctNome: e.target.value } as any))} /></div>
+              <div style={{ marginBottom: 12 }}><label style={S.fieldLabel}>Cognome</label>
+                <input style={S.input} placeholder="Cognome" value={(newCM as any)._ctCognome || ""} onChange={e => setNewCM(p => ({ ...p, _ctCognome: e.target.value } as any))} /></div>
+              <div style={{ marginBottom: 12 }}><label style={S.fieldLabel}>Telefono</label>
+                <input style={S.input} type="tel" placeholder="333 1234567" value={(newCM as any)._ctTel || ""} onChange={e => setNewCM(p => ({ ...p, _ctTel: e.target.value } as any))} /></div>
+              <div style={{ marginBottom: 12 }}><label style={S.fieldLabel}>Email</label>
+                <input style={S.input} type="email" placeholder="nome@email.it" value={(newCM as any)._ctEmail || ""} onChange={e => setNewCM(p => ({ ...p, _ctEmail: e.target.value } as any))} /></div>
+              <div style={{ marginBottom: 12 }}><label style={S.fieldLabel}>Indirizzo</label>
+                <input style={S.input} placeholder="Via Roma 12, Cosenza" value={(newCM as any)._ctAddr || ""} onChange={e => setNewCM(p => ({ ...p, _ctAddr: e.target.value } as any))} /></div>
+              <div onClick={() => {
+                const nome = ((newCM as any)._ctNome || "").trim();
+                if (!nome) return;
+                setContatti(prev => [...prev, { id: "CT-" + Date.now(), nome, cognome: (newCM as any)._ctCognome || "", tipo: "cliente", telefono: (newCM as any)._ctTel || "", email: (newCM as any)._ctEmail || "", indirizzo: (newCM as any)._ctAddr || "", preferito: false }]);
+                setNewCM({ cliente: "", indirizzo: "", telefono: "", sistema: "", tipo: "nuova" });
+                setShowModal(null);
+              }} style={{ padding: "14px", borderRadius: 12, background: `linear-gradient(135deg, ${T.acc}, #b86e06)`, color: "#fff", textAlign: "center", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+                Salva cliente ✓
+              </div>
+            </div>
+          )}
+
           {showModal === "commessa" && (
             <>
               <div style={S.modalTitle}>Nuova commessa</div>
@@ -6030,6 +6073,45 @@ Fabio Cozza - Walter Cozza Serramenti` },
         {tab === "agenda" && renderAgenda()}
         {tab === "settings" && renderSettings()}
 
+        {/* FAB — Quick Actions */}
+        {/* FAB — Compose menu */}
+        <style>{`
+          @keyframes fabPulse { 0%,100% { box-shadow: 0 4px 20px rgba(0,122,255,0.4); } 50% { box-shadow: 0 4px 30px rgba(0,122,255,0.6); } }
+        `}</style>
+        {fabOpen && <div onClick={() => setFabOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", backdropFilter: "blur(4px)", zIndex: 89 }} />}
+        {[
+          { id: "evento", ico: "📅", l: "Appuntamento", c: "#007aff", action: () => { setFabOpen(false); setShowNewEvent(true); } },
+          { id: "cliente", ico: "👤", l: "Nuovo cliente", c: "#34c759", action: () => { setFabOpen(false); setShowModal("contatto"); } },
+          { id: "commessa", ico: "📁", l: "Nuova commessa", c: "#ff9500", action: () => { setFabOpen(false); setShowModal("commessa"); } },
+          { id: "messaggio", ico: "💬", l: "Messaggio", c: "#5856d6", action: () => { setFabOpen(false); setShowCompose(true); } },
+        ].map((item, i) => (
+          <div key={item.id} onClick={item.action} style={{
+            position: "fixed", bottom: 90 + (i + 1) * 58, right: 20, zIndex: 90,
+            display: "flex", alignItems: "center", gap: 10, flexDirection: "row-reverse",
+            opacity: fabOpen ? 1 : 0, transform: fabOpen ? "translateY(0) scale(1)" : "translateY(30px) scale(0.5)",
+            transition: `all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) ${fabOpen ? i * 0.06 : 0}s`,
+            pointerEvents: fabOpen ? "auto" : "none",
+          }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: item.c, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, boxShadow: `0 4px 16px ${item.c}50`, cursor: "pointer" }}>
+              {item.ico}
+            </div>
+            <div style={{ padding: "6px 12px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, boxShadow: "0 2px 12px rgba(0,0,0,0.1)", fontSize: 12, fontWeight: 700, color: item.c, whiteSpace: "nowrap" }}>
+              {item.l}
+            </div>
+          </div>
+        ))}
+        <div onClick={() => setFabOpen(!fabOpen)} style={{
+          position: "fixed", bottom: 90, right: 20, zIndex: 91,
+          width: 56, height: 56, borderRadius: "50%",
+          background: fabOpen ? T.sub : "linear-gradient(135deg, #007aff, #5856d6)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: fabOpen ? "0 4px 16px rgba(0,0,0,0.2)" : "0 4px 20px rgba(0,122,255,0.4)",
+          cursor: "pointer", transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+          animation: fabOpen ? "none" : "fabPulse 2s infinite",
+        }}>
+          <div style={{ fontSize: 24, color: "#fff", transition: "transform 0.3s ease", transform: fabOpen ? "rotate(45deg)" : "rotate(0deg)" }}>✏️</div>
+        </div>
+
         {/* MESSAGE DETAIL OVERLAY */}
         {selectedMsg && (() => {
           const chIco = { email: "📧", whatsapp: "💬", sms: "📱", telegram: "✈️" };
@@ -6413,6 +6495,29 @@ Fabio Cozza - Walter Cozza Serramenti` },
                     </div>
                   ))}
                 </div>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Cliente</label>
+                <select style={S.select} value={newEvent.persona || ""} onChange={e => {
+                  const val = e.target.value;
+                  if (val === "__new__") { setNewEvent(ev => ({ ...ev, persona: "", _newCliente: true } as any)); }
+                  else { const ct = contatti.find(c => c.nome === val); setNewEvent(ev => ({ ...ev, persona: val, addr: ct?.indirizzo || ev.addr, text: ev.text || ("Appuntamento " + val), _newCliente: false } as any)); }
+                }}>
+                  <option value="">— Seleziona cliente —</option>
+                  {contatti.filter(ct => ct.tipo === "cliente").map(ct => <option key={ct.id || ct.nome} value={ct.nome}>{ct.nome}{ct.cognome ? " " + ct.cognome : ""}</option>)}
+                  <option value="__new__">➕ Nuovo cliente...</option>
+                </select>
+                {(newEvent as any)._newCliente && (
+                  <div style={{ background: T.bgSec, borderRadius: 10, padding: 12, marginTop: 8, border: `1px solid ${T.bdr}` }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 8 }}>👤 Nuovo cliente</div>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                      <input style={{ ...S.input, flex: 1 }} placeholder="Nome" value={(newEvent as any)._nomeCliente || ""} onChange={e => setNewEvent(ev => ({ ...ev, _nomeCliente: e.target.value } as any))} />
+                      <input style={{ ...S.input, flex: 1 }} placeholder="Cognome" value={(newEvent as any)._cognomeCliente || ""} onChange={e => setNewEvent(ev => ({ ...ev, _cognomeCliente: e.target.value } as any))} />
+                    </div>
+                    <input style={{ ...S.input, marginBottom: 8 }} placeholder="Telefono" value={(newEvent as any)._telCliente || ""} onChange={e => setNewEvent(ev => ({ ...ev, _telCliente: e.target.value } as any))} />
+                    <input style={S.input} placeholder="Indirizzo" value={(newEvent as any)._addrCliente || ""} onChange={e => setNewEvent(ev => ({ ...ev, _addrCliente: e.target.value, addr: e.target.value } as any))} />
+                  </div>
+                )}
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={S.fieldLabel}>Collega a commessa</label>
