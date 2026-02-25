@@ -388,7 +388,7 @@ export default function MastroERP({ user, azienda: aziendaInit }: { user?: any, 
   const [drawPaths, setDrawPaths] = useState([]);
 
   // New task form
-  const [newTask, setNewTask] = useState({ text: "", meta: "", time: "", priority: "media", cm: "" });
+  const [newTask, setNewTask] = useState({ text: "", meta: "", time: "", date: "", priority: "media", cm: "", persona: "" });
   const [taskAllegati, setTaskAllegati] = useState([]); // allegati for new task
   const [msgFilter, setMsgFilter] = useState("tutti"); // tutti/email/whatsapp/sms/telegram
   const [msgSearch, setMsgSearch] = useState("");
@@ -524,7 +524,7 @@ export default function MastroERP({ user, azienda: aziendaInit }: { user?: any, 
     if (!newTask.text.trim()) return;
     setTasks(ts => [...ts, { id: Date.now(), ...newTask, done: false, allegati: [...taskAllegati] }]);
     setTaskAllegati([]);
-    setNewTask({ text: "", meta: "", time: "", priority: "media", cm: "" });
+    setNewTask({ text: "", meta: "", time: "", date: "", priority: "media", cm: "", persona: "" });
     setShowModal(null);
   };
 
@@ -3961,14 +3961,17 @@ export default function MastroERP({ user, azienda: aziendaInit }: { user?: any, 
   /* == AGENDA TAB — Giorno / Settimana / Mese == */
   const renderAgenda = () => {
     const dateStr = (d) => d.toISOString().split("T")[0];
-    const dayEvents = events.filter(e => e.date === dateStr(selDate)).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
+    // Merge events + tasks con data
+    const tasksWithDate = tasks.filter(t => t.date).map(t => ({ ...t, _isTask: true, color: t.priority === "alta" ? T.red : t.priority === "media" ? T.orange : T.sub }));
+    const allItems = [...events, ...tasksWithDate];
+    const dayEvents = allItems.filter(e => e.date === dateStr(selDate)).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
     const weekStart = new Date(selDate); weekStart.setDate(selDate.getDate() - selDate.getDay() + 1);
     const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
     const monthStart = new Date(selDate.getFullYear(), selDate.getMonth(), 1);
     const monthDays = Array.from({ length: 35 }, (_, i) => { const d = new Date(monthStart); d.setDate(d.getDate() + i - monthStart.getDay() + 1); return d; });
     const isSameDay = (a, b) => dateStr(a) === dateStr(b);
     const isToday2 = (d) => isSameDay(d, new Date());
-    const eventsOn = (d) => events.filter(e => e.date === dateStr(d));
+    const eventsOn = (d) => allItems.filter(e => e.date === dateStr(d));
   // Helper: colore per tipo evento
   const tipoEvColor = (tipo) => {
     if (tipo === "appuntamento") return "#007aff";
@@ -3998,38 +4001,48 @@ export default function MastroERP({ user, azienda: aziendaInit }: { user?: any, 
 
     // Prossimi eventi (dal giorno di oggi in avanti, max 3)
     const todayStr = dateStr(new Date());
-    const prossimiEventi = events
-      .filter(e => e.date >= todayStr)
+    const prossimiEventi = allItems
+      .filter(e => e.date >= todayStr && !(e._isTask && e.done))
       .sort((a, b) => a.date.localeCompare(b.date) || (a.time||"99").localeCompare(b.time||"99"))
       .slice(0, 3);
 
     // Ore rimanenti agli eventi di oggi
     const now = new Date();
     const oraOra = now.getHours() * 60 + now.getMinutes();
-    const eventiOggi = events.filter(e => e.date === todayStr && e.time).map(e => {
+    const eventiOggi = allItems.filter(e => e.date === todayStr && e.time && !e._isTask).map(e => {
       const [hh, mm] = e.time.split(":").map(Number);
       const minuti = hh * 60 + mm - oraOra;
       return { ...e, minutiAlEvento: minuti };
     }).filter(e => e.minutiAlEvento > 0).sort((a,b) => a.minutiAlEvento - b.minutiAlEvento);
 
     const renderEventCard = (ev) => (
-      <div key={ev.id} style={{ ...S.card, margin: "0 0 8px" }} onClick={() => setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)}>
+      <div key={ev.id} style={{ ...S.card, margin: "0 0 8px", opacity: ev._isTask && ev.done ? 0.5 : 1 }} onClick={() => ev._isTask ? null : setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)}>
         <div style={{ ...S.cardInner, display: "flex", gap: 10 }}>
-          <div style={{ width: 3, borderRadius: 2, background: ev.color, flexShrink: 0 }} />
+          {ev._isTask ? (
+            <div onClick={(e) => { e.stopPropagation(); toggleTask(ev.id); }} style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${ev.done ? T.grn : T.bdr}`, background: ev.done ? T.grn : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginTop: 2 }}>
+              {ev.done && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span>}
+            </div>
+          ) : (
+            <div style={{ width: 3, borderRadius: 2, background: ev.color, flexShrink: 0 }} />
+          )}
           {ev.time && <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, minWidth: 38, fontFamily: FM }}>{ev.time}</div>}
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>{ev.text}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, textDecoration: ev._isTask && ev.done ? "line-through" : "none" }}>{ev.text}</div>
             {ev.addr && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>📍 {ev.addr}</div>}
+            {ev._isTask && ev.meta && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{ev.meta}</div>}
             <div style={{ display: "flex", gap: 4, marginTop: 3, flexWrap: "wrap" }}>
               {ev.cm && <span onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); } }} style={{ ...S.badge(T.accLt, T.acc), cursor: "pointer" }}>{ev.cm}</span>}
               {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>{ev.persona}</span>}
-              {ev.reminder && <span style={S.badge(ev.reminderSent ? T.grnLt : "#FF950015", ev.reminderSent ? T.grn : "#FF9500")}>{ev.reminderSent ? "✓ Reminder inviato" : `⏰ ${ev.reminder}`}</span>}
-              <span style={S.badge(ev.tipo==="appuntamento"?T.blueLt:ev.tipo==="sopr_riparazione"?"#FF6B0018":ev.tipo==="riparazione"?"#FF3B3018":ev.tipo==="collaudo"?"#5856D618":"#8E8E9318", ev.tipo==="appuntamento"?T.blue:ev.tipo==="sopr_riparazione"?"#FF6B00":ev.tipo==="riparazione"?"#FF3B30":ev.tipo==="collaudo"?"#5856D6":ev.tipo==="garanzia"?"#8E8E93":T.orange)}>{ev.tipo}</span>
+              {!ev._isTask && ev.reminder && <span style={S.badge(ev.reminderSent ? T.grnLt : "#FF950015", ev.reminderSent ? T.grn : "#FF9500")}>{ev.reminderSent ? "✓ Reminder inviato" : `⏰ ${ev.reminder}`}</span>}
+              {ev._isTask
+                ? <span style={S.badge(ev.priority==="alta"?T.redLt:ev.priority==="media"?T.orangeLt:T.card2, ev.priority==="alta"?T.red:ev.priority==="media"?T.orange:T.sub)}>task</span>
+                : <span style={S.badge(ev.tipo==="appuntamento"?T.blueLt:ev.tipo==="sopr_riparazione"?"#FF6B0018":ev.tipo==="riparazione"?"#FF3B3018":ev.tipo==="collaudo"?"#5856D618":"#8E8E9318", ev.tipo==="appuntamento"?T.blue:ev.tipo==="sopr_riparazione"?"#FF6B00":ev.tipo==="riparazione"?"#FF3B30":ev.tipo==="collaudo"?"#5856D6":ev.tipo==="garanzia"?"#8E8E93":T.orange)}>{ev.tipo}</span>
+              }
             </div>
           </div>
-          <div style={{ alignSelf: "center", transition: "transform 0.2s", transform: selectedEvent?.id === ev.id ? "rotate(90deg)" : "rotate(0deg)" }}>
+          {!ev._isTask && <div style={{ alignSelf: "center", transition: "transform 0.2s", transform: selectedEvent?.id === ev.id ? "rotate(90deg)" : "rotate(0deg)" }}>
             <Ico d={ICO.back} s={14} c={T.sub} />
-          </div>
+          </div>}
         </div>
         {/* Expanded detail */}
         {selectedEvent?.id === ev.id && (
@@ -5366,7 +5379,7 @@ ${userFullName} - ${aziendaInfo.ragione}` },
               <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
                 <div style={{ flex: 1 }}>
                   <label style={S.fieldLabel}>Data</label>
-                  <input style={S.input} type="date" />
+                  <input style={S.input} type="date" value={newTask.date} onChange={e => setNewTask(t => ({ ...t, date: e.target.value }))} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={S.fieldLabel}>Ora (opz.)</label>
@@ -5388,6 +5401,14 @@ ${userFullName} - ${aziendaInfo.ragione}` },
                 <select style={S.select} value={newTask.cm} onChange={e => setNewTask(t => ({ ...t, cm: e.target.value }))}>
                   <option value="">— Nessuna —</option>
                   {cantieri.map(c => <option key={c.id} value={c.code}>{c.code} · {c.cliente}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Persona (opzionale)</label>
+                <select style={S.select} value={newTask.persona} onChange={e => setNewTask(t => ({ ...t, persona: e.target.value }))}>
+                  <option value="">— Nessuna —</option>
+                  {contatti.map(c => <option key={c.id} value={c.nome || c.cognome || ""}>{c.nome} {c.cognome || ""}</option>)}
+                  {team.map(t => <option key={t.id} value={t.nome}>{t.nome} ({t.ruolo})</option>)}
                 </select>
               </div>
               <div style={{ marginBottom: 14 }}>
