@@ -398,7 +398,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [drawPaths, setDrawPaths] = useState([]);
 
   // New task form
-  const [newTask, setNewTask] = useState({ text: "", meta: "", time: "", priority: "media", cm: "" });
+  const [newTask, setNewTask] = useState({ text: "", meta: "", time: "", priority: "media", cm: "", date: "", persona: "" });
   const [taskAllegati, setTaskAllegati] = useState([]); // allegati for new task
   const [msgFilter, setMsgFilter] = useState("tutti"); // tutti/email/whatsapp/sms/telegram
   const [msgSearch, setMsgSearch] = useState("");
@@ -562,7 +562,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     if (!newTask.text.trim()) return;
     setTasks(ts => [...ts, { id: Date.now(), ...newTask, done: false, allegati: [...taskAllegati] }]);
     setTaskAllegati([]);
-    setNewTask({ text: "", meta: "", time: "", priority: "media", cm: "" });
+    setNewTask({ text: "", meta: "", time: "", priority: "media", cm: "", date: "", persona: "" });
     setShowModal(null);
   };
 
@@ -714,6 +714,14 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     const _evTitle = newEvent.text.trim() || (newEvent.persona ? "Appuntamento " + newEvent.persona : "");
     if (!_evTitle) return;
     newEvent.text = _evTitle;
+    // If tipo is "task", create a task instead of an event
+    if (newEvent.tipo === "task") {
+      const taskDate = newEvent.date || selDate.toISOString().split("T")[0];
+      setTasks(ts => [...ts, { id: Date.now(), text: newEvent.text, meta: (newEvent as any)._taskMeta || "", time: newEvent.time, priority: (newEvent as any)._taskPriority || "media", cm: newEvent.cm, date: taskDate, persona: newEvent.persona, done: false, allegati: [] }]);
+      setNewEvent({ text: "", time: "", tipo: "appuntamento", cm: "", persona: "", date: "", reminder: "", addr: "" });
+      setShowNewEvent(false);
+      return;
+    }
     if ((newEvent as any)._newCliente && (newEvent as any)._nomeCliente) {
       const nc = { id: "CT-" + Date.now(), nome: (newEvent as any)._nomeCliente, cognome: (newEvent as any)._cognomeCliente || "", tipo: "cliente", telefono: (newEvent as any)._telCliente || "", indirizzo: (newEvent as any)._addrCliente || "" };
       setContatti(prev => [...prev, nc]);
@@ -1056,7 +1064,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             const cells = Array.from({length: calOff + dIM}, (_,i) => i < calOff ? null : i - calOff + 1);
             const hdrL = agendaView === "giorno" ? selDate.toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" }) : agendaView === "settimana" ? weekDays[0].getDate() + "–" +  weekDays[6].getDate() + " " + selDate.toLocaleDateString("it-IT", { month:"long", year:"numeric" }) : selDate.toLocaleDateString("it-IT", { month:"long", year:"numeric" });
             const hours = [7,8,9,10,11,12,13,14,15,16,17,18,19];
-            const dayEvs = events.filter(e => e.date === dateStr2(selDate)).sort((a,b) => (a.time||"99").localeCompare(b.time||"99"));
+            const _homeTasks = tasks.filter(t => t.date).map(t => ({ ...t, _isTask: true, color: t.priority === "alta" ? "#FF3B30" : t.priority === "media" ? "#FF9500" : "#8E8E93" }));
+            const _homeAll = [...events, ..._homeTasks];
+            const dayEvs = _homeAll.filter(e => e.date === dateStr2(selDate)).sort((a,b) => (a.time||"99").localeCompare(b.time||"99"));
             return (<div style={{ marginBottom:12 }}>
                 <div style={S.section}><div style={S.sectionTitle}>Calendario</div><div onClick={() => { setTab("agenda"); }} style={{ padding:"4px 10px", borderRadius:6, fontSize:10, fontWeight:700, cursor:"pointer", color:T.acc }}> Apri  </div></div>
                 <div style={{ padding:"0 16px" }}>
@@ -1078,16 +1088,26 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                               return (<div key={h} style={{ display:"flex", minHeight: hEvs.length > 0 ? 48 : 28, borderBottom:`1px solid ${T.bdr}20` }}>
                                   <div style={{ width:42, fontSize:10, fontWeight:600, color:T.sub, textAlign:"right", padding:"4px 8px 0 0" }}>{hStr}:00</div>
                                   <div style={{ flex:1, padding:"2px 8px 2px 0" }}>
-                                    {hEvs.map(ev => (<div key={ev.id} onClick={() => setSelectedEvent(ev)} style={{ padding:"6px 10px", borderRadius:8, marginBottom:2, background:(ev.color||T.acc)+"15", borderLeft:`3px solid ${ev.color||T.acc}`, cursor:"pointer" }}>
-                                        <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{ev.text}</div>
-                                        <div style={{ fontSize:10, color:T.sub }}>{[ev.time, ev.persona, ev.cm, ev.addr].filter(Boolean).join("  ")}</div>
+                                    {hEvs.map(ev => (<div key={ev.id} onClick={() => ev._isTask ? toggleTask(ev.id) : setSelectedEvent(ev)} style={{ padding:"6px 10px", borderRadius:8, marginBottom:2, background:(ev.color||T.acc)+"15", borderLeft: ev._isTask ? "none" : `3px solid ${ev.color||T.acc}`, cursor:"pointer", display:"flex", alignItems:"center", gap:8, opacity: ev._isTask && ev.done ? 0.5 : 1 }}>
+                                        {ev._isTask && <div style={{ width:18, height:18, borderRadius:5, border:`2px solid ${ev.done ? T.grn : T.bdr}`, background: ev.done ? T.grn : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{ev.done && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}</div>}
+                                        <div>
+                                          <div style={{ fontSize:12, fontWeight:700, color:T.text, textDecoration: ev._isTask && ev.done ? "line-through" : "none" }}>{ev.text}</div>
+                                          <div style={{ fontSize:10, color:T.sub }}>{[ev.time, ev.persona, ev.cm, ev._isTask ? `task · ${ev.priority}` : null, !ev._isTask ? ev.addr : null].filter(Boolean).join("  ")}</div>
+                                        </div>
                                       </div>))}
                                   </div></div>); })}
+                            {dayEvs.filter(e => !e.time).length > 0 && (<div style={{ padding:"8px 12px", borderTop:`1px solid ${T.bdr}` }}>
+                              <div style={{ fontSize:10, fontWeight:700, color:T.sub, marginBottom:4 }}>Senza orario</div>
+                              {dayEvs.filter(e => !e.time).map(ev => (<div key={ev.id} onClick={() => ev._isTask ? toggleTask(ev.id) : setSelectedEvent(ev)} style={{ padding:"6px 10px", borderRadius:8, marginBottom:2, background:(ev.color||T.acc)+"15", borderLeft: ev._isTask ? "none" : `3px solid ${ev.color||T.acc}`, cursor:"pointer", display:"flex", alignItems:"center", gap:8, opacity: ev._isTask && ev.done ? 0.5 : 1 }}>
+                                {ev._isTask && <div style={{ width:18, height:18, borderRadius:5, border:`2px solid ${ev.done ? T.grn : T.bdr}`, background: ev.done ? T.grn : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{ev.done && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}</div>}
+                                <div style={{ fontSize:12, fontWeight:700, color:T.text, textDecoration: ev._isTask && ev.done ? "line-through" : "none" }}>{ev.text}</div>
+                              </div>))}
+                            </div>)}
                           </div>)}
                       </div>)}
                     {agendaView === "settimana" && (<div>
                         <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", borderBottom:`1px solid ${T.bdr}` }}>
-                          {weekDays.map((wd,i) => { const wdISO = dateStr2(wd); const isT = wdISO === todayISO; const wEvs = events.filter(e => e.date === wdISO);
+                          {weekDays.map((wd,i) => { const wdISO = dateStr2(wd); const isT = wdISO === todayISO; const wEvs = _homeAll.filter(e => e.date === wdISO);
                             return (<div key={i} onClick={() => { setSelDate(new Date(wd)); setAgendaView("giorno"); }}
                                 style={{ textAlign:"center", padding:"6px 2px", cursor:"pointer", borderRight: i<6 ? `1px solid ${T.bdr}` : "none", background: isT ? T.accLt : "transparent" }}>
                                 <div style={{ fontSize:9, fontWeight:600, color: i>=5 ? T.orange : T.sub, textTransform:"uppercase" }}>{wd.toLocaleDateString("it-IT",{weekday:"short"}).slice(0,3)}</div>
@@ -1096,7 +1116,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                               </div>); })}
                         </div>
                         <div style={{ maxHeight:200, overflowY:"auto", padding:"6px 0" }}>
-                          {weekDays.map(wd => { const wdISO = dateStr2(wd); const wEvs = events.filter(e => e.date === wdISO).sort((a,b) => (a.time||"99").localeCompare(b.time||"99"));
+                          {weekDays.map(wd => { const wdISO = dateStr2(wd); const wEvs = _homeAll.filter(e => e.date === wdISO).sort((a,b) => (a.time||"99").localeCompare(b.time||"99"));
                             if (wEvs.length === 0) return null;
                             return wEvs.map(ev => (<div key={ev.id} onClick={() => { setSelDate(new Date(wd)); setAgendaView("giorno"); }}
                                 style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 12px", cursor:"pointer", borderBottom:`1px solid ${T.bdr}20` }}>
@@ -1113,7 +1133,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                           {cells.map((day,i) => {
                             if (!day) return <div key={i} style={{ borderRight:`1px solid ${T.bdr}`, borderBottom:`1px solid ${T.bdr}`, minHeight:44 }}/>;
                             const iso = dashY + "-" + String(dashMo+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
-                            const isT = iso === todayISO; const evs = events.filter(e => e.date === iso); const col = i % 7; const isW = col >= 5;
+                            const isT = iso === todayISO; const evs = _homeAll.filter(e => e.date === iso); const col = i % 7; const isW = col >= 5;
                             return (<div key={i} onClick={() => { setSelDate(new Date(iso+"T12:00:00")); setAgendaView("giorno"); }}
                                 style={{ minHeight:44, padding:"3px 2px", borderRight: col<6 ? `1px solid ${T.bdr}` : "none", borderBottom:`1px solid ${T.bdr}`, background: isW ? T.bg+"80" : T.card, cursor:"pointer" }}>
                                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -4012,14 +4032,17 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   /* == AGENDA TAB — Giorno / Settimana / Mese == */
   const renderAgenda = () => {
     const dateStr = (d) => d.toISOString().split("T")[0];
-    const dayEvents = events.filter(e => e.date === dateStr(selDate)).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
+    // Merge events + tasks with dates
+    const tasksWithDate = tasks.filter(t => t.date).map(t => ({ ...t, _isTask: true, color: t.priority === "alta" ? "#FF3B30" : t.priority === "media" ? "#FF9500" : "#8E8E93" }));
+    const allItems = [...events, ...tasksWithDate];
+    const dayEvents = allItems.filter(e => e.date === dateStr(selDate)).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
     const weekStart = new Date(selDate); weekStart.setDate(selDate.getDate() - selDate.getDay() + 1);
     const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
     const monthStart = new Date(selDate.getFullYear(), selDate.getMonth(), 1);
     const monthDays = Array.from({ length: 35 }, (_, i) => { const d = new Date(monthStart); d.setDate(d.getDate() + i - monthStart.getDay() + 1); return d; });
     const isSameDay = (a, b) => dateStr(a) === dateStr(b);
     const isToday2 = (d) => isSameDay(d, new Date());
-    const eventsOn = (d) => events.filter(e => e.date === dateStr(d));
+    const eventsOn = (d) => allItems.filter(e => e.date === dateStr(d));
   // Helper: colore per tipo evento
   const tipoEvColor = (tipo) => {
     if (tipo === "appuntamento") return "#007aff";
@@ -4049,7 +4072,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
     // Prossimi eventi (dal giorno di oggi in avanti, max 3)
     const todayStr = dateStr(new Date());
-    const prossimiEventi = events
+    const prossimiEventi = allItems
       .filter(e => e.date >= todayStr)
       .sort((a, b) => a.date.localeCompare(b.date) || (a.time||"99").localeCompare(b.time||"99"))
       .slice(0, 3);
@@ -4064,18 +4087,26 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     }).filter(e => e.minutiAlEvento > 0).sort((a,b) => a.minutiAlEvento - b.minutiAlEvento);
 
     const renderEventCard = (ev) => (
-      <div key={ev.id} style={{ ...S.card, margin: "0 0 8px" }} onClick={() => setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)}>
+      <div key={ev.id} style={{ ...S.card, margin: "0 0 8px", opacity: ev._isTask && ev.done ? 0.5 : 1 }} onClick={() => !ev._isTask && setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)}>
         <div style={{ ...S.cardInner, display: "flex", gap: 10 }}>
-          <div style={{ width: 3, borderRadius: 2, background: ev.color, flexShrink: 0 }} />
+          {ev._isTask ? (
+            <div onClick={(e) => { e.stopPropagation(); toggleTask(ev.id); }} style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${ev.done ? T.grn : T.bdr}`, background: ev.done ? T.grn : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginTop: 2 }}>
+              {ev.done && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
+            </div>
+          ) : (
+            <div style={{ width: 3, borderRadius: 2, background: ev.color, flexShrink: 0 }} />
+          )}
           {ev.time && <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, minWidth: 38, fontFamily: FM }}>{ev.time}</div>}
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>{ev.text}</div>
-            {ev.addr && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>📍 {ev.addr}</div>}
+            <div style={{ fontSize: 13, fontWeight: 600, textDecoration: ev._isTask && ev.done ? "line-through" : "none" }}>{ev.text}</div>
+            {ev._isTask && ev.meta && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>📝 {ev.meta}</div>}
+            {!ev._isTask && ev.addr && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>📍 {ev.addr}</div>}
             <div style={{ display: "flex", gap: 4, marginTop: 3, flexWrap: "wrap" }}>
               {ev.cm && <span onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); } }} style={{ ...S.badge(T.accLt, T.acc), cursor: "pointer" }}>{ev.cm}</span>}
               {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>{ev.persona}</span>}
-              {ev.reminder && <span style={S.badge(ev.reminderSent ? T.grnLt : "#FF950015", ev.reminderSent ? T.grn : "#FF9500")}>{ev.reminderSent ? "✓ Reminder inviato" : `⏰ ${ev.reminder}`}</span>}
-              <span style={S.badge(ev.tipo==="appuntamento"?T.blueLt:ev.tipo==="sopr_riparazione"?"#FF6B0018":ev.tipo==="riparazione"?"#FF3B3018":ev.tipo==="collaudo"?"#5856D618":"#8E8E9318", ev.tipo==="appuntamento"?T.blue:ev.tipo==="sopr_riparazione"?"#FF6B00":ev.tipo==="riparazione"?"#FF3B30":ev.tipo==="collaudo"?"#5856D6":ev.tipo==="garanzia"?"#8E8E93":T.orange)}>{ev.tipo}</span>
+              {ev._isTask && <span style={S.badge(ev.priority === "alta" ? "#FF3B3018" : ev.priority === "media" ? "#FF950018" : "#8E8E9318", ev.priority === "alta" ? "#FF3B30" : ev.priority === "media" ? "#FF9500" : "#8E8E93")}>task · {ev.priority}</span>}
+              {!ev._isTask && ev.reminder && <span style={S.badge(ev.reminderSent ? T.grnLt : "#FF950015", ev.reminderSent ? T.grn : "#FF9500")}>{ev.reminderSent ? "✓ Reminder inviato" : `⏰ ${ev.reminder}`}</span>}
+              {!ev._isTask && <span style={S.badge(ev.tipo==="appuntamento"?T.blueLt:ev.tipo==="sopr_riparazione"?"#FF6B0018":ev.tipo==="riparazione"?"#FF3B3018":ev.tipo==="collaudo"?"#5856D618":"#8E8E9318", ev.tipo==="appuntamento"?T.blue:ev.tipo==="sopr_riparazione"?"#FF6B00":ev.tipo==="riparazione"?"#FF3B30":ev.tipo==="collaudo"?"#5856D6":ev.tipo==="garanzia"?"#8E8E93":T.orange)}>{ev.tipo}</span>}
             </div>
           </div>
           <div style={{ alignSelf: "center", transition: "transform 0.2s", transform: selectedEvent?.id === ev.id ? "rotate(90deg)" : "rotate(0deg)" }}>
@@ -5426,7 +5457,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
               <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
                 <div style={{ flex: 1 }}>
                   <label style={S.fieldLabel}>Data</label>
-                  <input style={S.input} type="date" />
+                  <input style={S.input} type="date" value={newTask.date} onChange={e => setNewTask(t => ({ ...t, date: e.target.value }))} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={S.fieldLabel}>Ora (opz.)</label>
@@ -5448,6 +5479,13 @@ Fabio Cozza - Walter Cozza Serramenti` },
                 <select style={S.select} value={newTask.cm} onChange={e => setNewTask(t => ({ ...t, cm: e.target.value }))}>
                   <option value="">— Nessuna —</option>
                   {cantieri.map(c => <option key={c.id} value={c.code}>{c.code} · {c.cliente}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Assegna a persona (opzionale)</label>
+                <select style={S.select} value={newTask.persona} onChange={e => setNewTask(t => ({ ...t, persona: e.target.value }))}>
+                  <option value="">— Nessuno —</option>
+                  {[...contatti.filter(ct => ct.tipo === "cliente"), ...team].map(m => <option key={m.id} value={m.nome}>{m.nome}{(m as any).ruolo ? " — " + (m as any).ruolo : ""}</option>)}
                 </select>
               </div>
               <div style={{ marginBottom: 14 }}>
@@ -6507,7 +6545,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
         {showNewEvent && (
           <div style={S.modal} onClick={e => e.target === e.currentTarget && setShowNewEvent(false)}>
             <div style={S.modalInner}>
-              <div style={S.modalTitle}>Nuovo evento</div>
+              <div style={S.modalTitle}>{newEvent.tipo === "task" ? "Nuovo task" : "Nuovo evento"}</div>
               <div style={{ marginBottom: 14 }}>
                 <label style={S.fieldLabel}>Titolo</label>
                 <input style={S.input} placeholder="es. Sopralluogo, consegna materiale..." value={newEvent.text} onChange={e => setNewEvent(ev => ({ ...ev, text: e.target.value }))} />
@@ -6532,6 +6570,39 @@ Fabio Cozza - Walter Cozza Serramenti` },
                   ))}
                 </div>
               </div>
+              {/* --- TASK-SPECIFIC FIELDS --- */}
+              {newEvent.tipo === "task" && (<>
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Priorità</label>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[{ id: "alta", l: "🔴 Alta", c: "#FF3B30" }, { id: "media", l: "🟠 Media", c: "#FF9500" }, { id: "bassa", l: "⚪ Bassa", c: "#8E8E93" }].map(p => (
+                    <div key={p.id} onClick={() => setNewEvent(ev => ({ ...ev, _taskPriority: p.id } as any))} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: `1px solid ${((newEvent as any)._taskPriority || "media") === p.id ? p.c : T.bdr}`, background: ((newEvent as any)._taskPriority || "media") === p.id ? p.c + "18" : "transparent", textAlign: "center", fontSize: 12, fontWeight: 600, color: ((newEvent as any)._taskPriority || "media") === p.id ? p.c : T.sub, cursor: "pointer" }}>
+                      {p.l}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Collega a commessa</label>
+                <select style={S.select} value={newEvent.cm} onChange={e => setNewEvent(ev => ({ ...ev, cm: e.target.value }))}>
+                  <option value="">— Nessuna —</option>
+                  {cantieri.map(c => <option key={c.id} value={c.code}>{c.code} · {c.cliente}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Assegna a persona</label>
+                <select style={S.select} value={newEvent.persona} onChange={e => setNewEvent(ev => ({ ...ev, persona: e.target.value }))}>
+                  <option value="">— Nessuno —</option>
+                  {[...contatti.filter(ct => ct.tipo === "cliente"), ...team].map(m => <option key={m.id} value={m.nome}>{m.nome}{(m as any).ruolo ? " — " + (m as any).ruolo : ""}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Note (opz.)</label>
+                <input style={S.input} placeholder="Dettagli, materiale da portare..." value={(newEvent as any)._taskMeta || ""} onChange={e => setNewEvent(ev => ({ ...ev, _taskMeta: e.target.value } as any))} />
+              </div>
+              </>)}
+              {/* --- EVENT-SPECIFIC FIELDS --- */}
+              {newEvent.tipo !== "task" && (<>
               <div style={{ marginBottom: 14 }}>
                 <label style={S.fieldLabel}>Cliente</label>
                 <select style={S.select} value={newEvent.persona || ""} onChange={e => {
@@ -6599,7 +6670,8 @@ Fabio Cozza - Walter Cozza Serramenti` },
                   </div>
                 )}
               </div>
-              <button style={S.btn} onClick={addEvent}>Crea evento</button>
+              </>)}
+              <button style={S.btn} onClick={addEvent}>{newEvent.tipo === "task" ? "Crea task" : "Crea evento"}</button>
               <button style={S.btnCancel} onClick={() => setShowNewEvent(false)}>Annulla</button>
             </div>
           </div>

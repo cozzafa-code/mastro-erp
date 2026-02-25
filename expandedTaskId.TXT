@@ -353,7 +353,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [selDate, setSelDate] = useState(new Date());
   const [showNewEvent, setShowNewEvent] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [selectedTask, setSelectedTask] = useState(null);
+  const [expandedTaskId, setExpandedTaskId] = useState(null);
   const [showMailModal, setShowMailModal] = useState<{ev: any, cm: any} | null>(null);
   const [mailBody, setMailBody] = useState("");
   const [newEvent, setNewEvent] = useState({ text: "", time: "", tipo: "appuntamento", cm: "", persona: "", date: "", reminder: "", addr: "" });
@@ -380,6 +380,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [playingId, setPlayingId] = useState(null);
   const [playProgress, setPlayProgress] = useState(0);
   const playInterval = useRef(null);
+  const [selectedTask, setSelectedTask] = useState(null);
   
   // Drawing state
   const canvasRef = useRef(null);
@@ -1025,7 +1026,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             else if (nextEvent) { banner = { color:nextEvent.color||T.acc, bg:`${nextEvent.color||T.acc}10`, border:`${nextEvent.color||T.acc}25`, tag:`📅 OGGI ${nextEvent.time?"ALLE "+nextEvent.time:""}`, title:nextEvent.text, sub:[nextEvent.persona,nextEvent.cm,nextEvent.addr].filter(Boolean).join(" · "), act:()=>{setTab("agenda");setAgendaView("giorno");setSelDate(new Date(nextEvent.date));} }; }
             else if (misureInAttesa.length > 0) { const c=misureInAttesa[0]; const mn=getVaniAttivi(c).filter(v=>Object.keys(v.misure||{}).length<4).length; banner = { color:T.orange, bg:"rgba(255,149,0,0.07)", border:"rgba(255,149,0,0.18)", tag:"📐 MISURE IN ATTESA", title:`${c.code} · ${c.cliente}`, sub:`${mn} ${mn===1?"vano":"vani"} da misurare`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
             else if (preventiviDaFare.length > 0) { banner = { color:"#7c3aed", bg:"rgba(124,58,237,0.07)", border:"rgba(124,58,237,0.18)", tag:"📋 PREVENTIVI", title:`${preventiviDaFare.length} ${preventiviDaFare.length===1?"preventivo da inviare":"preventivi da inviare"}`, sub:preventiviDaFare.map(c=>c.code).join(" · "), act:()=>setTab("commesse") }; }
-            else if (taskUrgenti.length > 0) { const t=taskUrgenti[0]; banner = { color:T.red, bg:"rgba(255,59,48,0.07)", border:"rgba(255,59,48,0.18)", tag:"⚡ TASK URGENTE", title:t.text, sub:t.cm?`Commessa ${t.cm}`:(t.meta||""), act:()=>{ setSelectedTask(t); } }; }
+            else if (taskUrgenti.length > 0) { const t=taskUrgenti[0]; banner = { color:T.red, bg:"rgba(255,59,48,0.07)", border:"rgba(255,59,48,0.18)", tag:"⚡ TASK URGENTE", title:t.text, sub:t.cm?`Commessa ${t.cm}`:(t.meta||""), act:()=>{ if (t.date) { setSelDate(new Date(t.date+"T12:00:00")); setAgendaView("giorno"); setExpandedTaskId(t.id); } else { setTab("agenda"); setShowModal("task"); } } }; }
             else if (ferme.length > 0) { const c=ferme[0]; const gg=giorniFermaCM(c); banner = { color:"#ff6b00", bg:"rgba(255,107,0,0.07)", border:"rgba(255,107,0,0.18)", tag:`🔔 FERMA DA ${gg} GIORNI`, title:`${c.code} · ${c.cliente}`, sub:`In fase "${PIPELINE.find(p=>p.id===c.fase)?.nome||c.fase}" dal ${c.aggiornato}${ferme.length>1?" · e altre "+(ferme.length-1):""}`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
             else { banner = { color:T.grn, bg:"rgba(52,199,89,0.07)", border:"rgba(52,199,89,0.18)", tag:"✅ TUTTO IN ORDINE", title:"Nessuna azione urgente", sub:`${cantieri.length} commesse attive`, act:null }; }
             return (
@@ -1089,11 +1090,29 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                                   <div style={{ width:42, fontSize:10, fontWeight:600, color:T.sub, textAlign:"right", padding:"4px 8px 0 0" }}>{hStr}:00</div>
                                   <div style={{ flex:1, padding:"2px 8px 2px 0" }}>
                                     {hEvs.map(ev => ev._isTask ? (
-                                      <div key={ev.id} onClick={() => setSelectedTask(tasks.find(t => t.id === ev.id) || ev)} style={{ padding:"6px 10px", borderRadius:8, marginBottom:2, background:(ev.color||T.acc)+"15", cursor:"pointer", display:"flex", alignItems:"center", gap:8, opacity: ev.done ? 0.55 : 1 }}>
-                                        <div onClick={(e) => { e.stopPropagation(); toggleTask(ev.id); }} style={{ width:18, height:18, borderRadius:5, border:`2px solid ${ev.done ? T.grn : T.bdr}`, background: ev.done ? T.grn : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{ev.done && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}</div>
-                                        <div style={{ flex:1 }}><div style={{ fontSize:12, fontWeight:700, color:T.text, textDecoration: ev.done ? "line-through" : "none" }}>{ev.text}</div>
-                                          <div style={{ fontSize:10, color:T.sub }}>{[ev.time, ev.persona, ev.cm].filter(Boolean).join(" · ")}</div></div>
-                                        <div style={{ fontSize:14, color:T.sub }}>›</div>
+                                      <div key={ev.id} style={{ borderRadius:8, marginBottom:2, background:(ev.color||T.acc)+"15", overflow:"hidden", opacity: ev.done ? 0.55 : 1 }}>
+                                        <div onClick={() => setExpandedTaskId(expandedTaskId === ev.id ? null : ev.id)} style={{ padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:8 }}>
+                                          <div onClick={(e) => { e.stopPropagation(); toggleTask(ev.id); }} style={{ width:18, height:18, borderRadius:5, border:`2px solid ${ev.done ? T.grn : T.bdr}`, background: ev.done ? T.grn : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{ev.done && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}</div>
+                                          <div style={{ flex:1 }}>
+                                            <div style={{ fontSize:12, fontWeight:700, color:T.text, textDecoration: ev.done ? "line-through" : "none" }}>{ev.text}</div>
+                                            <div style={{ fontSize:10, color:T.sub }}>{[ev.time, ev.persona, ev.cm].filter(Boolean).join(" · ")}</div>
+                                          </div>
+                                          <div style={{ fontSize:10, color:ev.priority==="alta"?"#FF3B30":ev.priority==="media"?"#FF9500":"#8E8E93", transform: expandedTaskId === ev.id ? "rotate(180deg)" : "rotate(0)", transition:"transform 0.2s" }}>▼</div>
+                                        </div>
+                                        {expandedTaskId === ev.id && (
+                                          <div style={{ padding:"6px 10px 10px", borderTop:`1px solid ${T.bdr}30` }}>
+                                            {ev.meta && <div style={{ fontSize:11, color:T.sub, marginBottom:6 }}>📝 {ev.meta}</div>}
+                                            <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:8 }}>
+                                              <span style={S.badge(ev.priority==="alta"?"#FF3B3018":ev.priority==="media"?"#FF950018":"#8E8E9318", ev.priority==="alta"?"#FF3B30":ev.priority==="media"?"#FF9500":"#8E8E93")}>{ev.priority==="alta"?"🔴 Urgente":ev.priority==="media"?"🟠 Normale":"⚪ Bassa"}</span>
+                                              {ev.cm && <span onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); }}} style={{ ...S.badge(T.accLt, T.acc), cursor:"pointer" }}>{ev.cm}</span>}
+                                              {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>{ev.persona}</span>}
+                                            </div>
+                                            <div style={{ display:"flex", gap:6 }}>
+                                              <div onClick={(e) => { e.stopPropagation(); toggleTask(ev.id); }} style={{ flex:1, padding:"7px", borderRadius:8, background: ev.done ? T.bg : T.grn, color: ev.done ? T.sub : "#fff", textAlign:"center", fontSize:11, fontWeight:700, cursor:"pointer", border:`1px solid ${ev.done ? T.bdr : T.grn}` }}>{ev.done ? "↩ Riapri" : "✓ Completa"}</div>
+                                              <div onClick={(e) => { e.stopPropagation(); setTasks(ts => ts.filter(t => t.id !== ev.id)); setExpandedTaskId(null); }} style={{ padding:"7px 12px", borderRadius:8, background:"#FF3B3010", color:"#FF3B30", fontSize:11, fontWeight:700, cursor:"pointer", border:"1px solid #FF3B3020" }}>🗑</div>
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
                                     ) : (
                                       <div key={ev.id} onClick={() => setSelectedEvent(ev)} style={{ padding:"6px 10px", borderRadius:8, marginBottom:2, background:(ev.color||T.acc)+"15", borderLeft:`3px solid ${ev.color||T.acc}`, cursor:"pointer" }}>
@@ -1105,11 +1124,29 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                             {dayEvs.filter(e => !e.time).length > 0 && (<div style={{ padding:"8px 12px", borderTop:`1px solid ${T.bdr}` }}>
                               <div style={{ fontSize:10, fontWeight:700, color:T.sub, marginBottom:4 }}>Senza orario</div>
                               {dayEvs.filter(e => !e.time).map(ev => ev._isTask ? (
-                                <div key={ev.id} onClick={() => setSelectedTask(tasks.find(t => t.id === ev.id) || ev)} style={{ padding:"8px 10px", borderRadius:8, marginBottom:4, background:(ev.color||T.acc)+"15", cursor:"pointer", display:"flex", alignItems:"center", gap:8, opacity: ev.done ? 0.55 : 1 }}>
-                                  <div onClick={(e) => { e.stopPropagation(); toggleTask(ev.id); }} style={{ width:18, height:18, borderRadius:5, border:`2px solid ${ev.done ? T.grn : T.bdr}`, background: ev.done ? T.grn : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{ev.done && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}</div>
-                                  <div style={{ flex:1 }}><div style={{ fontSize:12, fontWeight:700, color:T.text, textDecoration: ev.done ? "line-through" : "none" }}>{ev.text}</div>
-                                    <div style={{ fontSize:10, color:T.sub }}>{[ev.persona, ev.cm].filter(Boolean).join(" · ")}</div></div>
-                                  <div style={{ fontSize:14, color:T.sub }}>›</div>
+                                <div key={ev.id} style={{ borderRadius:8, marginBottom:4, background:(ev.color||T.acc)+"15", overflow:"hidden", opacity: ev.done ? 0.55 : 1 }}>
+                                  <div onClick={() => setExpandedTaskId(expandedTaskId === ev.id ? null : ev.id)} style={{ padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:8 }}>
+                                    <div onClick={(e) => { e.stopPropagation(); toggleTask(ev.id); }} style={{ width:18, height:18, borderRadius:5, border:`2px solid ${ev.done ? T.grn : T.bdr}`, background: ev.done ? T.grn : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{ev.done && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}</div>
+                                    <div style={{ flex:1 }}>
+                                      <div style={{ fontSize:12, fontWeight:700, color:T.text, textDecoration: ev.done ? "line-through" : "none" }}>{ev.text}</div>
+                                      <div style={{ fontSize:10, color:T.sub }}>{[ev.persona, ev.cm].filter(Boolean).join(" · ")}</div>
+                                    </div>
+                                    <div style={{ fontSize:10, color:ev.priority==="alta"?"#FF3B30":ev.priority==="media"?"#FF9500":"#8E8E93", transform: expandedTaskId === ev.id ? "rotate(180deg)" : "rotate(0)", transition:"transform 0.2s" }}>▼</div>
+                                  </div>
+                                  {expandedTaskId === ev.id && (
+                                    <div style={{ padding:"6px 10px 10px", borderTop:`1px solid ${T.bdr}30` }}>
+                                      {ev.meta && <div style={{ fontSize:11, color:T.sub, marginBottom:6 }}>📝 {ev.meta}</div>}
+                                      <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:8 }}>
+                                        <span style={S.badge(ev.priority==="alta"?"#FF3B3018":ev.priority==="media"?"#FF950018":"#8E8E9318", ev.priority==="alta"?"#FF3B30":ev.priority==="media"?"#FF9500":"#8E8E93")}>{ev.priority==="alta"?"🔴 Urgente":ev.priority==="media"?"🟠 Normale":"⚪ Bassa"}</span>
+                                        {ev.cm && <span onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); }}} style={{ ...S.badge(T.accLt, T.acc), cursor:"pointer" }}>{ev.cm}</span>}
+                                        {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>{ev.persona}</span>}
+                                      </div>
+                                      <div style={{ display:"flex", gap:6 }}>
+                                        <div onClick={(e) => { e.stopPropagation(); toggleTask(ev.id); }} style={{ flex:1, padding:"7px", borderRadius:8, background: ev.done ? T.bg : T.grn, color: ev.done ? T.sub : "#fff", textAlign:"center", fontSize:11, fontWeight:700, cursor:"pointer", border:`1px solid ${ev.done ? T.bdr : T.grn}` }}>{ev.done ? "↩ Riapri" : "✓ Completa"}</div>
+                                        <div onClick={(e) => { e.stopPropagation(); setTasks(ts => ts.filter(t => t.id !== ev.id)); setExpandedTaskId(null); }} style={{ padding:"7px 12px", borderRadius:8, background:"#FF3B3010", color:"#FF3B30", fontSize:11, fontWeight:700, cursor:"pointer", border:"1px solid #FF3B3020" }}>🗑</div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ) : (
                                 <div key={ev.id} onClick={() => setSelectedEvent(ev)} style={{ padding:"6px 10px", borderRadius:8, marginBottom:2, background:(ev.color||T.acc)+"15", borderLeft:`3px solid ${ev.color||T.acc}`, cursor:"pointer" }}>
@@ -6162,38 +6199,6 @@ Fabio Cozza - Walter Cozza Serramenti` },
                   <div onClick={() => { if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #007aff15, #007aff08)", border: "1px solid #007aff25", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#007aff" }}>{"📁"} Commessa</div>
                   <div onClick={() => { if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "misure", vani: [], note: "Misure: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #ff950015, #ff950008)", border: "1px solid #ff950025", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#ff9500" }}>{"📏"} Misure</div>
                   <div onClick={() => { const code = "INT-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: "Intervento: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #34c75915, #34c75908)", border: "1px solid #34c75925", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#34c759" }}>{"🔧"} Intervento</div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-        {/* TASK DETAIL MODAL */}
-        {selectedTask && (() => {
-          const t = tasks.find(x => x.id === selectedTask.id) || selectedTask;
-          const prioColor = t.priority === "alta" ? "#FF3B30" : t.priority === "media" ? "#FF9500" : "#8E8E93";
-          const prioLabel = t.priority === "alta" ? "🔴 Urgente" : t.priority === "media" ? "🟠 Normale" : "⚪ Bassa";
-          return (
-            <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setSelectedTask(null)}>
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.3)" }} />
-              <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", zIndex: 9999, background: T.bg, borderRadius: 16, padding: 20, width: "90%", maxWidth: 420, boxShadow: "0 8px 40px rgba(0,0,0,0.2)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 9, fontWeight: 800, color: prioColor, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, fontFamily: FM }}>✅ TASK · {prioLabel}</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: T.text, textDecoration: t.done ? "line-through" : "none", opacity: t.done ? 0.6 : 1 }}>{t.text}</div>
-                    {t.date && <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>📅 {new Date(t.date + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}{t.time ? " alle " + t.time : ""}</div>}
-                  </div>
-                  <div onClick={() => setSelectedTask(null)} style={{ cursor: "pointer", fontSize: 22, color: T.sub, padding: "0 4px" }}>✕</div>
-                </div>
-                {t.meta && <div style={{ fontSize: 13, color: T.sub, marginBottom: 12, padding: "8px 12px", background: T.bgSec, borderRadius: 8, border: `1px solid ${T.bdr}` }}>📝 {t.meta}</div>}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
-                  <span style={S.badge(prioColor + "18", prioColor)}>{prioLabel}</span>
-                  {t.cm && <span onClick={() => { const cm = cantieri.find(c => c.code === t.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); setSelectedTask(null); } }} style={{ ...S.badge(T.accLt, T.acc), cursor: "pointer" }}>📁 {t.cm}</span>}
-                  {t.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {t.persona}</span>}
-                  {t.done && <span style={S.badge(T.grnLt, T.grn)}>✅ Completato</span>}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  <div onClick={() => { toggleTask(t.id); setSelectedTask({ ...t, done: !t.done }); }} style={{ padding: "14px", borderRadius: 12, background: t.done ? T.bg : T.grn, color: t.done ? T.sub : "#fff", textAlign: "center", cursor: "pointer", fontSize: 14, fontWeight: 800, border: `1px solid ${t.done ? T.bdr : T.grn}` }}>{t.done ? "↩ Riapri" : "✓ Completa"}</div>
-                  <div onClick={() => { setTasks(ts => ts.filter(x => x.id !== t.id)); setSelectedTask(null); }} style={{ padding: "14px", borderRadius: 12, background: "#FF3B3010", color: "#FF3B30", textAlign: "center", cursor: "pointer", fontSize: 14, fontWeight: 800, border: "1px solid #FF3B3020" }}>🗑 Elimina</div>
                 </div>
               </div>
             </div>
