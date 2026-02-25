@@ -4,10 +4,14 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
+  const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [nome, setNome] = useState('')
+  const [azienda, setAzienda] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
@@ -25,6 +29,54 @@ export default function LoginPage() {
       router.push('/dashboard')
       router.refresh()
     }
+  }
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    if (password.length < 6) {
+      setError('La password deve avere almeno 6 caratteri')
+      setLoading(false)
+      return
+    }
+
+    // 1. Crea utente
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: nome } }
+    })
+
+    if (authError) {
+      setError(authError.message === 'User already registered'
+        ? 'Questa email è già registrata. Prova ad accedere.'
+        : authError.message)
+      setLoading(false)
+      return
+    }
+
+    // 2. Crea azienda collegata all'utente
+    if (authData.user) {
+      const { error: azError } = await supabase.from('aziende').insert({
+        owner_id: authData.user.id,
+        ragione: azienda || 'La mia azienda',
+      })
+      if (azError) console.error('Errore creazione azienda:', azError.message)
+    }
+
+    // 3. Se Supabase richiede conferma email
+    if (authData.user && !authData.session) {
+      setSuccess('Controlla la tua email per confermare la registrazione!')
+      setLoading(false)
+      return
+    }
+
+    // 4. Login automatico se non serve conferma
+    router.push('/dashboard')
+    router.refresh()
   }
 
   return (
@@ -57,7 +109,47 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <form onSubmit={handleLogin}>
+        <form onSubmit={mode === 'login' ? handleLogin : handleRegister}>
+          {mode === 'register' && (
+            <>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#86868b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
+                  Il tuo nome
+                </label>
+                <input
+                  type="text"
+                  value={nome}
+                  onChange={e => setNome(e.target.value)}
+                  placeholder="Mario Rossi"
+                  required
+                  style={{
+                    width: '100%', padding: '12px 14px', borderRadius: 10,
+                    border: '1.5px solid #e5e5ea', fontSize: 15, boxSizing: 'border-box',
+                    background: '#fff', outline: 'none', fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#86868b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
+                  Nome azienda
+                </label>
+                <input
+                  type="text"
+                  value={azienda}
+                  onChange={e => setAzienda(e.target.value)}
+                  placeholder="Serramenti Rossi SRL"
+                  required
+                  style={{
+                    width: '100%', padding: '12px 14px', borderRadius: 10,
+                    border: '1.5px solid #e5e5ea', fontSize: 15, boxSizing: 'border-box',
+                    background: '#fff', outline: 'none', fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+            </>
+          )}
+
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, fontWeight: 700, color: '#86868b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
               Email
@@ -86,6 +178,7 @@ export default function LoginPage() {
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
               required
+              minLength={6}
               style={{
                 width: '100%', padding: '12px 14px', borderRadius: 10,
                 border: '1.5px solid #e5e5ea', fontSize: 15, boxSizing: 'border-box',
@@ -100,6 +193,12 @@ export default function LoginPage() {
             </div>
           )}
 
+          {success && (
+            <div style={{ background: '#f0fff4', border: '1px solid #34c759', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#34c759', fontWeight: 600 }}>
+              {success}
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
@@ -110,12 +209,35 @@ export default function LoginPage() {
               fontFamily: 'inherit', transition: 'all 0.2s',
             }}
           >
-            {loading ? 'Accesso in corso...' : 'Accedi →'}
+            {loading
+              ? (mode === 'login' ? 'Accesso in corso...' : 'Registrazione...')
+              : (mode === 'login' ? 'Accedi \u2192' : 'Crea account \u2192')
+            }
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 11, color: '#86868b' }}>
-          Accesso riservato — contatta l&apos;amministratore
+        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: '#86868b' }}>
+          {mode === 'login' ? (
+            <>
+              Non hai un account?{' '}
+              <span
+                onClick={() => { setMode('register'); setError(''); setSuccess(''); }}
+                style={{ color: '#D08008', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Registrati gratis
+              </span>
+            </>
+          ) : (
+            <>
+              Hai gi&agrave; un account?{' '}
+              <span
+                onClick={() => { setMode('login'); setError(''); setSuccess(''); }}
+                style={{ color: '#D08008', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Accedi
+              </span>
+            </>
+          )}
         </div>
       </div>
     </div>
