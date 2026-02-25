@@ -1,0 +1,2000 @@
+                  {l}: {val || "—"}
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    );
+  };
+
+  /* == AGENDA TAB — Giorno / Settimana / Mese == */
+  const renderAgenda = () => {
+    const dateStr = (d) => d.toISOString().split("T")[0];
+    const dayEvents = events.filter(e => e.date === dateStr(selDate)).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
+    const weekStart = new Date(selDate); weekStart.setDate(selDate.getDate() - selDate.getDay() + 1);
+    const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
+    const monthStart = new Date(selDate.getFullYear(), selDate.getMonth(), 1);
+    const monthDays = Array.from({ length: 35 }, (_, i) => { const d = new Date(monthStart); d.setDate(d.getDate() + i - monthStart.getDay() + 1); return d; });
+    const isSameDay = (a, b) => dateStr(a) === dateStr(b);
+    const isToday2 = (d) => isSameDay(d, new Date());
+    const eventsOn = (d) => events.filter(e => e.date === dateStr(d));
+  // Helper: colore per tipo evento
+  const tipoEvColor = (tipo) => {
+    if (tipo === "appuntamento") return "#007aff";
+    if (tipo === "sopr_riparazione") return "#FF6B00";
+    if (tipo === "riparazione") return "#FF3B30";
+    if (tipo === "collaudo") return "#5856D6";
+    if (tipo === "garanzia") return "#8E8E93";
+    return "#ff9500"; // sopralluogo default
+  };
+
+
+    const navDate = (dir) => {
+      const d = new Date(selDate);
+      if (agendaView === "giorno") d.setDate(d.getDate() + dir);
+      else if (agendaView === "settimana") d.setDate(d.getDate() + dir * 7);
+      else d.setMonth(d.getMonth() + dir);
+      setSelDate(d);
+    };
+
+    // Swipe handlers
+    let touchStartX = 0;
+    const onTouchStart = (e) => { touchStartX = e.touches[0].clientX; };
+    const onTouchEnd = (e) => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 50) navDate(dx < 0 ? 1 : -1);
+    };
+
+    // Prossimi eventi (dal giorno di oggi in avanti, max 3)
+    const todayStr = dateStr(new Date());
+    const prossimiEventi = events
+      .filter(e => e.date >= todayStr)
+      .sort((a, b) => a.date.localeCompare(b.date) || (a.time||"99").localeCompare(b.time||"99"))
+      .slice(0, 3);
+
+    // Ore rimanenti agli eventi di oggi
+    const now = new Date();
+    const oraOra = now.getHours() * 60 + now.getMinutes();
+    const eventiOggi = events.filter(e => e.date === todayStr && e.time).map(e => {
+      const [hh, mm] = e.time.split(":").map(Number);
+      const minuti = hh * 60 + mm - oraOra;
+      return { ...e, minutiAlEvento: minuti };
+    }).filter(e => e.minutiAlEvento > 0).sort((a,b) => a.minutiAlEvento - b.minutiAlEvento);
+
+    const renderEventCard = (ev) => (
+      <div key={ev.id} style={{ ...S.card, margin: "0 0 8px" }} onClick={() => setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)}>
+        <div style={{ ...S.cardInner, display: "flex", gap: 10 }}>
+          <div style={{ width: 3, borderRadius: 2, background: ev.color, flexShrink: 0 }} />
+          {ev.time && <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, minWidth: 38, fontFamily: FM }}>{ev.time}</div>}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{ev.text}</div>
+            {ev.addr && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>📍 {ev.addr}</div>}
+            <div style={{ display: "flex", gap: 4, marginTop: 3, flexWrap: "wrap" }}>
+              {ev.cm && <span onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); } }} style={{ ...S.badge(T.accLt, T.acc), cursor: "pointer" }}>{ev.cm}</span>}
+              {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>{ev.persona}</span>}
+              {ev.reminder && <span style={S.badge(ev.reminderSent ? T.grnLt : "#FF950015", ev.reminderSent ? T.grn : "#FF9500")}>{ev.reminderSent ? "✓ Reminder inviato" : `⏰ ${ev.reminder}`}</span>}
+              <span style={S.badge(ev.tipo==="appuntamento"?T.blueLt:ev.tipo==="sopr_riparazione"?"#FF6B0018":ev.tipo==="riparazione"?"#FF3B3018":ev.tipo==="collaudo"?"#5856D618":"#8E8E9318", ev.tipo==="appuntamento"?T.blue:ev.tipo==="sopr_riparazione"?"#FF6B00":ev.tipo==="riparazione"?"#FF3B30":ev.tipo==="collaudo"?"#5856D6":ev.tipo==="garanzia"?"#8E8E93":T.orange)}>{ev.tipo}</span>
+            </div>
+          </div>
+          <div style={{ alignSelf: "center", transition: "transform 0.2s", transform: selectedEvent?.id === ev.id ? "rotate(90deg)" : "rotate(0deg)" }}>
+            <Ico d={ICO.back} s={14} c={T.sub} />
+          </div>
+        </div>
+        {/* Expanded detail */}
+        {selectedEvent?.id === ev.id && (
+          <div style={{ padding: "0 14px 12px", borderTop: `1px solid ${T.bdr}`, marginTop: 4 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "10px 0" }}>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Data</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>{new Date(ev.date).toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" })}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Orario</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>{ev.time || "Tutto il giorno"}</div>
+              </div>
+              {ev.persona && <div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Assegnato a</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>👤 {ev.persona}</div>
+              </div>}
+              {ev.addr && <div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Luogo</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>📍 {ev.addr}</div>
+              </div>}
+            </div>
+            {ev.cm && (
+              <div style={{ padding: "8px 10px", background: T.accLt, borderRadius: 8, marginBottom: 8 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.acc, textTransform: "uppercase", letterSpacing: 0.5 }}>Commessa collegata</div>
+                <div onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); } }} style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginTop: 2, cursor: "pointer" }}>{ev.cm} → Apri commessa</div>
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 6 }}>
+              <div onClick={(e) => { e.stopPropagation(); if (ev.addr) window.open("https://maps.google.com/?q=" + encodeURIComponent(ev.addr)); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.blue }}>🗝º Mappa</div>
+              <div onClick={(e) => { e.stopPropagation(); if (ev.persona) window.open("tel:"); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.grn }}>📞 Chiama</div>
+              <div onClick={(e) => {
+                e.stopPropagation();
+                const cmObj = cantieri.find(c => c.code === ev.cm) || null;
+                const cliente = cmObj ? `${cmObj.cliente} ${cmObj.cognome||""}`.trim() : (ev.persona || "Cliente");
+                const dataFmt = new Date(ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" });
+                const tpl = `Gentile ${cliente},
+
+Le confermo l'appuntamento:
+
+📅 ${dataFmt}${ev.time ? " alle " + ev.time : ""}
+📍 ${ev.addr || "da concordare"}
+
+${ev.text}
+
+Per qualsiasi necessità non esiti a contattarmi.
+
+Cordiali saluti,
+Fabio Cozza
+Walter Cozza Serramenti`;
+                setMailBody(tpl);
+                setShowMailModal({ ev, cm: cmObj });
+              }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.accLt, border: `1px solid ${T.acc}30`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.acc }}>✉️ Mail</div>
+              <div onClick={(e) => { e.stopPropagation(); deleteEvent(ev.id); setSelectedEvent(null); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.redLt, border: `1px solid ${T.red}30`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.red }}>🗝‘</div>
+            </div>
+            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+              <div onClick={(e) => { e.stopPropagation(); const cmObj = ev.cm ? cantieri.find(c => c.code === ev.cm) : null; if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ flex: 1, padding: "10px 4px", borderRadius: 10, background: "linear-gradient(135deg, #007aff15, #007aff08)", border: "1px solid #007aff25", textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 800, color: "#007aff" }}>{"📁"} Commessa</div>
+              <div onClick={(e) => { e.stopPropagation(); const cmObj = ev.cm ? cantieri.find(c => c.code === ev.cm) : null; if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "misure", vani: [], note: "Misure: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ flex: 1, padding: "10px 4px", borderRadius: 10, background: "linear-gradient(135deg, #ff950015, #ff950008)", border: "1px solid #ff950025", textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 800, color: "#ff9500" }}>{"📏"} Misure</div>
+              <div onClick={(e) => { e.stopPropagation(); const code = "INT-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: "Intervento: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); setSelectedEvent(null); setTab("commesse"); }} style={{ flex: 1, padding: "10px 4px", borderRadius: 10, background: "linear-gradient(135deg, #34c75915, #34c75908)", border: "1px solid #34c75925", textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 800, color: "#34c759" }}>{"🔧"} Intervento</div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <div style={{ paddingBottom: 80 }}>
+        <div style={S.header}>
+          <div style={{ flex: 1 }}>
+            <div style={S.headerTitle}>Agenda</div>
+            <div style={S.headerSub}>
+              {agendaView === "giorno" ? selDate.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" }) :
+               agendaView === "settimana" ? `${weekDays[0].getDate()}–${weekDays[6].getDate()} ${selDate.toLocaleDateString("it-IT", { month: "long", year: "numeric" })}` :
+               selDate.toLocaleDateString("it-IT", { month: "long", year: "numeric" })}
+            </div>
+          </div>
+          <div onClick={() => setShowNewEvent(true)} style={{ width: 36, height: 36, borderRadius: 10, background: T.acc, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 20, fontWeight: 300 }}>+</div>
+        </div>
+
+        {/* View switcher */}
+        <div style={{ display: "flex", gap: 0, margin: "8px 16px", borderRadius: 8, overflow: "hidden", border: `1px solid ${T.bdr}` }}>
+          {["giorno", "settimana", "mese"].map(v => (
+            <div key={v} onClick={() => setAgendaView(v)} style={{ flex: 1, padding: "8px 4px", textAlign: "center", fontSize: 12, fontWeight: 600, background: agendaView === v ? T.acc : T.card, color: agendaView === v ? "#fff" : T.sub, cursor: "pointer", textTransform: "capitalize" }}>
+              {v}
+            </div>
+          ))}
+        </div>
+
+        {/* Nav arrows */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 16px" }}>
+          <div onClick={() => navDate(-1)} style={{ cursor: "pointer", padding: "4px 8px" }}><Ico d={ICO.back} s={18} c={T.sub} /></div>
+          <div onClick={() => setSelDate(new Date())} style={{ fontSize: 12, fontWeight: 600, color: T.acc, cursor: "pointer" }}>Oggi</div>
+          <div onClick={() => navDate(1)} style={{ cursor: "pointer", padding: "4px 8px", transform: "rotate(180deg)" }}><Ico d={ICO.back} s={18} c={T.sub} /></div>
+        </div>
+
+        {/* === BANNER REMINDER PENDENTI === */}
+        {(() => {
+          const today = dateStr(new Date());
+          const tomorrow = dateStr(new Date(Date.now() + 86400000));
+          const reminderPendenti = events.filter(ev => {
+            if (!ev.reminder || ev.reminderSent) return false;
+            if (ev.reminder === "giorno" && ev.date === today) return true;
+            if (ev.reminder === "24h" && ev.date === tomorrow) return true;
+            if (ev.reminder === "1h") {
+              if (ev.date !== today) return false;
+              if (!ev.time) return true;
+              const [hh, mm] = ev.time.split(":").map(Number);
+              const evMin = hh * 60 + mm;
+              const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+              return evMin - nowMin <= 60 && evMin - nowMin > 0;
+            }
+            return false;
+          });
+          if (reminderPendenti.length === 0) return null;
+          return (
+            <div style={{ margin: "0 16px 10px", padding: "10px 12px", borderRadius: 10, background: "#FF950010", border: "1px solid #FF950040", borderLeft: "3px solid #FF9500" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 18 }}>⏰</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#FF9500" }}>
+                    {reminderPendenti.length} reminder da inviare
+                  </div>
+                  <div style={{ fontSize: 10, color: T.sub }}>Avvisa i clienti con 1 click</div>
+                </div>
+              </div>
+              {reminderPendenti.map(ev => {
+                const cmObj = cantieri.find(c => c.code === ev.cm);
+                const cliente = cmObj ? `${cmObj.cliente} ${cmObj.cognome||""}`.trim() : ev.persona || "Cliente";
+                const dataFmt = new Date(ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" });
+                const tpl = `Gentile ${cliente},
+
+Le ricordiamo l'appuntamento:
+
+📅 ${dataFmt}${ev.time ? " alle " + ev.time : ""}
+📍 ${ev.addr || "da concordare"}
+
+${ev.text}
+
+Per qualsiasi necessità non esiti a contattarci.
+
+Cordiali saluti,
+Fabio Cozza
+Walter Cozza Serramenti`;
+                return (
+                  <div key={ev.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 8px", background:"#fff", borderRadius:8, marginBottom:4, border:"1px solid #FF950030" }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{ev.text}</div>
+                      <div style={{ fontSize:10, color:T.sub }}>{cliente} · {ev.time || "tutto il giorno"}</div>
+                    </div>
+                    <div onClick={() => {
+                      setMailBody(tpl);
+                      setShowMailModal({ ev: { ...ev, addr: ev.addr || "" }, cm: cmObj || null });
+                      setEvents(es => es.map(x => x.id === ev.id ? { ...x, reminderSent: true } : x));
+                    }} style={{ padding:"5px 10px", borderRadius:7, background:"#FF9500", color:"#fff", fontSize:11, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap" }}>
+                      ✉️ Invia
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
+        <div style={{ padding: "0 16px" }}>
+
+          {/* === VISTA MESE === */}
+          {agendaView === "mese" && (
+            <>
+              {/* Banner prossimo evento di oggi */}
+              {eventiOggi.length > 0 && (
+                <div style={{ ...S.card, marginBottom: 10, padding: "10px 14px", borderLeft: `3px solid ${eventiOggi[0].color || tipoEvColor(eventiOggi[0].tipo)}`, display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, color: T.sub, fontWeight: 600 }}>
+                      Prossimo evento tra {eventiOggi[0].minutiAlEvento < 60
+                        ? `${eventiOggi[0].minutiAlEvento} min`
+                        : `${Math.floor(eventiOggi[0].minutiAlEvento/60)}h ${eventiOggi[0].minutiAlEvento%60>0?eventiOggi[0].minutiAlEvento%60+"min":""}`}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>{eventiOggi[0].text}</div>
+                    {eventiOggi[0].addr && <div style={{ fontSize: 11, color: T.sub }}>📍 {eventiOggi[0].addr}</div>}
+                  </div>
+                  {eventiOggi[0].addr && (
+                    <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(eventiOggi[0].addr))}
+                      style={{ padding: "6px 10px", borderRadius: 8, background: T.blueLt, color: T.blue, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      🗝º Naviga
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* GRIGLIA MENSILE A RIQUADRI */}
+              <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
+                style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, overflow: "hidden", marginBottom: 12 }}>
+                {/* Intestazione giorni */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: `1px solid ${T.bdr}` }}>
+                  {["Lun","Mar","Mer","Gio","Ven","Sab","Dom"].map((d, i) => (
+                    <div key={i} style={{ fontSize: 10, fontWeight: 700, color: T.sub, padding: "7px 4px", textAlign: "center", borderRight: i < 6 ? `1px solid ${T.bdr}` : "none" }}>{d}</div>
+                  ))}
+                </div>
+                {/* Celle mese */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+                  {monthDays.map((d, i) => {
+                    const inMonth = d.getMonth() === selDate.getMonth();
+                    const sel = isSameDay(d, selDate);
+                    const tod = isToday2(d);
+                    const evs = eventsOn(d);
+                    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                    const isExp = expandedDay === dateStr(d);
+                    const col = Math.floor(i % 7);
+                    return (
+                      <div key={i}
+                        onClick={() => { setSelDate(new Date(d)); setExpandedDay(isExp ? null : dateStr(d)); }}
+                        onDoubleClick={() => { setSelDate(new Date(d)); setNewEvent(prev => ({...prev, date: dateStr(d)})); setShowNewEvent(true); }}
+                        style={{
+                        minHeight: 72, padding: "5px 6px",
+                        borderRight: col < 6 ? `1px solid ${T.bdr}` : "none",
+                        borderBottom: `1px solid ${T.bdr}`,
+                        background: sel ? T.acc + "18" : isExp ? T.accLt : isWeekend && inMonth ? T.bg : T.card,
+                        cursor: "pointer", position: "relative",
+                        outline: sel ? `2px solid ${T.acc}` : isExp ? `1.5px solid ${T.acc}50` : "none",
+                        outlineOffset: -1,
+                      }}>
+                        {/* Numero giorno */}
+                        <div style={{
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          width: 22, height: 22, borderRadius: "50%", fontSize: 12, fontWeight: sel || tod ? 800 : 400,
+                          background: tod ? T.acc : "transparent",
+                          color: tod ? "#fff" : !inMonth ? T.sub2 : sel ? T.acc : T.text,
+                          marginBottom: 3,
+                        }}>{d.getDate()}</div>
+                        {/* Eventi (max 3 visibili) */}
+                        {evs.slice(0, 3).map((ev, ei) => (
+                          <div key={ev.id} onClick={(e) => { e.stopPropagation(); setSelectedEvent(ev); setSelDate(new Date(d)); }} style={{
+                            display: "flex", alignItems: "center", gap: 3, marginBottom: 1,
+                            padding: "1px 4px", borderRadius: 3, fontSize: 10, fontWeight: 600,
+                            background: (ev.color || tipoEvColor(ev.tipo)) + "20",
+                            borderLeft: `2px solid ${ev.color || tipoEvColor(ev.tipo)}`,
+                            overflow: "hidden", whiteSpace: "nowrap",
+                          }}>
+                            <span style={{ color: ev.color || tipoEvColor(ev.tipo), overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
+                              {ev.time ? ev.time.slice(0,5) + " " : ""}{ev.text}
+                            </span>
+                          </div>
+                        ))}
+                        {evs.length > 3 && (
+                          <div style={{ fontSize: 9, color: T.sub, fontWeight: 600 }}>+{evs.length - 3} altri</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Sezione prossimi eventi */}
+              {prossimiEventi.length > 0 && (
+                <div style={{ ...S.card, marginBottom: 10, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Prossimi eventi</div>
+                  {prossimiEventi.map((ev, i) => {
+                    const evDate = new Date(ev.date + "T12:00:00");
+                    const isEvToday = ev.date === todayStr;
+                    const isEvTomorrow = ev.date === dateStr(new Date(Date.now() + 86400000));
+                    const labelData = isEvToday ? "Oggi" : isEvTomorrow ? "Domani" : evDate.toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" });
+                    return (
+                      <div key={ev.id} onClick={() => { setSelDate(evDate); setSelectedEvent(ev); }}
+                        style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: i < prossimiEventi.length-1 ? `1px solid ${T.bdr}` : "none", cursor: "pointer", alignItems: "center" }}>
+                        <div style={{ width: 3, alignSelf: "stretch", borderRadius: 2, background: ev.color || tipoEvColor(ev.tipo), flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600 }}>{ev.text}</div>
+                          <div style={{ display: "flex", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
+                            {ev.cm && <span style={S.badge(T.accLt, T.acc)}>{ev.cm}</span>}
+                            {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {ev.persona}</span>}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: isEvToday ? T.acc : T.sub }}>{labelData}</div>
+                          {ev.time && <div style={{ fontSize: 11, color: T.sub }}>{ev.time}</div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Pannello evento selezionato (click su evento nella griglia) */}
+              {selectedEvent && isSameDay(new Date(selectedEvent.date), selDate) && (
+                <div style={{ ...S.card, padding: "12px 14px", marginBottom: 8, borderLeft: `3px solid ${selectedEvent.color || T.acc}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{selectedEvent.text}</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {selectedEvent.time && <span style={S.badge(T.bg, T.sub)}>🕐 {selectedEvent.time}</span>}
+                        {selectedEvent.cm && <span style={S.badge(T.accLt, T.acc)}>{selectedEvent.cm}</span>}
+                        {selectedEvent.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {selectedEvent.persona}</span>}
+                        {selectedEvent.addr && <span style={S.badge(T.grnLt, T.grn)}>📍 {selectedEvent.addr}</span>}
+                      </div>
+                    </div>
+                    <div onClick={() => setSelectedEvent(null)} style={{ padding: 4, cursor: "pointer", color: T.sub, fontSize: 16 }}>×</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                    {selectedEvent.addr && <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(selectedEvent.addr))} style={{ flex:1, padding:"6px", borderRadius:6, background:T.blueLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.blue }}>🗝º Mappa</div>}
+                    <div onClick={() => {
+                      const ev = selectedEvent;
+                      const cmObj = cantieri.find(c => c.code === ev.cm) || null;
+                      const cliente = cmObj ? `${cmObj.cliente} ${cmObj.cognome||""}`.trim() : (ev.persona || "Cliente");
+                      const dataFmt = new Date(ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" });
+                      const tpl = `Gentile ${cliente},
+
+Le confermo l'appuntamento:
+
+📅 ${dataFmt}${ev.time ? " alle " + ev.time : ""}
+📍 ${ev.addr || "da concordare"}
+
+${ev.text}
+
+Per qualsiasi necessità non esiti a contattarmi.
+
+Cordiali saluti,
+Fabio Cozza
+Walter Cozza Serramenti`;
+                      setMailBody(tpl);
+                      setShowMailModal({ ev, cm: cmObj });
+                    }} style={{ flex:1, padding:"6px", borderRadius:6, background:T.accLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.acc }}>✉️ Mail</div>
+                    <div onClick={() => deleteEvent(selectedEvent.id)} style={{ flex:1, padding:"6px", borderRadius:6, background:T.redLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.red }}>🗝‘ Elimina</div>
+                  </div>
+                </div>
+              )}
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+                {selDate.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}
+              </div>
+              {dayEvents.length === 0 ? (
+                <div style={{ padding: "16px", textAlign: "center", color: T.sub, fontSize: 12, background: T.card, borderRadius: T.r, border: `1px dashed ${T.bdr}` }}>Nessun evento. Tocca + per aggiungere.</div>
+              ) : dayEvents.map(renderEventCard)}
+            </>
+          )}
+
+          {/* === VISTA SETTIMANA === */}
+          {agendaView === "settimana" && (
+            <>
+              <div style={{ display: "flex", gap: 2, marginBottom: 12 }}>
+                {weekDays.map((d, i) => {
+                  const sel = isSameDay(d, selDate);
+                  const tod = isToday2(d);
+                  const n = eventsOn(d).length;
+                  return (
+                    <div key={i} onClick={() => setSelDate(new Date(d))} style={{ flex: 1, textAlign: "center", padding: "8px 2px", borderRadius: 10, background: sel ? T.acc : tod ? T.accLt : T.card, border: `1px solid ${sel ? T.acc : T.bdr}`, cursor: "pointer" }}>
+                      <div style={{ fontSize: 9, fontWeight: 600, color: sel ? "#fff" : T.sub, textTransform: "uppercase" }}>
+                        {["Lu", "Ma", "Me", "Gi", "Ve", "Sa", "Do"][i]}
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: sel ? "#fff" : T.text, marginTop: 2 }}>{d.getDate()}</div>
+                      {n > 0 && <div style={{ width: 5, height: 5, borderRadius: "50%", background: sel ? "#fff" : T.red, margin: "2px auto 0" }} />}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+                {selDate.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}
+              </div>
+              {dayEvents.length === 0 ? (
+                <div style={{ padding: "16px", textAlign: "center", color: T.sub, fontSize: 12, background: T.card, borderRadius: T.r, border: `1px dashed ${T.bdr}` }}>Nessun evento</div>
+              ) : dayEvents.map(renderEventCard)}
+            </>
+          )}
+
+          {/* === VISTA GIORNO === */}
+          {agendaView === "giorno" && (
+            <>
+              {/* Timeline ore — scrollabile con dito */}
+              <div style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, overflowY: "auto", overflowX: "hidden", marginBottom: 12, maxHeight: "60vh" } as any}>
+                {Array.from({ length: 15 }, (_, i) => i + 6).map(h => {
+                  const hour = `${String(h).padStart(2, "0")}:00`;
+                  const hourEvents = dayEvents.filter(e => e.time && e.time.startsWith(String(h).padStart(2, "0")));
+                  return (
+                    <div key={h} style={{ display: "flex", borderBottom: `1px solid ${T.bdr}`, minHeight: 48 }}>
+                      <div style={{ width: 48, padding: "4px 6px", fontSize: 10, color: T.sub, fontFamily: FM, fontWeight: 600, borderRight: `1px solid ${T.bdr}`, flexShrink: 0 }}>{hour}</div>
+                      <div style={{ flex: 1, padding: "4px 8px" }}>
+                        {hourEvents.map(ev => (
+                          <div key={ev.id} onClick={() => setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)} style={{ padding: "6px 10px", marginBottom: 2, borderRadius: 6, background: selectedEvent?.id === ev.id ? (ev.color || T.acc) + "30" : (ev.color || T.acc) + "18", borderLeft: `3px solid ${ev.color || T.acc}`, cursor: "pointer", transition: "all 0.15s" }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{ev.text} {ev.persona && <span style={{ fontWeight: 400, color: T.sub }}>· {ev.persona}</span>}</div>
+                            {ev.addr && <div style={{ fontSize: 10, color: T.sub, marginTop: 1 }}>{ev.addr}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Unscheduled */}
+              {dayEvents.filter(e => !e.time).length > 0 && (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, color: T.sub }}>Senza orario</div>
+                  {dayEvents.filter(e => !e.time).map(ev => (<div key={ev.id} onClick={() => setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)} style={{ padding: "8px 12px", marginBottom: 4, borderRadius: 8, background: selectedEvent?.id === ev.id ? (ev.color || T.acc) + "30" : (ev.color || T.acc) + "18", borderLeft: `3px solid ${ev.color || T.acc}`, cursor: "pointer" }}><div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{ev.text}</div>{ev.persona && <div style={{ fontSize: 11, color: T.sub }}>{ev.persona} {ev.addr ? "· " + ev.addr : ""}</div>}</div>))}
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+// =======================================================
+// MASTRO ERP v2 — PARTE 4/5
+// Righe 3595-4130: Agenda (Giorno/Settimana/Mese), Chat AI, Settings
+// =======================================================
+  /* == CHAT / AI TAB == */
+  const renderMessaggi = () => {
+    const chIco = { email: "📧", whatsapp: "💬", sms: "📱", telegram: "✈️" };
+    const chCol = { email: T.blue, whatsapp: "#25d366", sms: T.orange, telegram: "#0088cc" };
+    const chBg = { email: T.blueLt, whatsapp: "#25d36618", sms: T.orangeLt, telegram: "#0088cc18" };
+    const filteredMsgs = msgs.filter(m => {
+      const matchFilter = msgFilter === "tutti" || m.canale === msgFilter;
+      const matchSearch = !msgSearch.trim() || m.from.toLowerCase().includes(msgSearch.toLowerCase()) || m.preview.toLowerCase().includes(msgSearch.toLowerCase());
+      return matchFilter && matchSearch;
+    });
+    const unread = msgs.filter(m => !m.read).length;
+
+    const filteredContatti = [...contatti, ...team.map(t => ({ id: "t" + t.id, nome: t.nome, tipo: "team", ruolo: t.ruolo, tel: "", email: "", preferito: true, canali: ["whatsapp", "email"], cm: "", colore: t.colore }))].filter(c => {
+      const matchF = rubricaFilter === "tutti" || (rubricaFilter === "preferiti" && c.preferito) || (rubricaFilter === "team" && c.tipo === "team") || (rubricaFilter === "clienti" && c.tipo === "cliente") || (rubricaFilter === "fornitori" && (c.tipo === "fornitore" || c.tipo === "professionista"));
+      const matchS = !rubricaSearch.trim() || c.nome.toLowerCase().includes(rubricaSearch.toLowerCase());
+      return matchF && matchS;
+    }).sort((a, b) => (b.preferito ? 1 : 0) - (a.preferito ? 1 : 0) || a.nome.localeCompare(b.nome));
+
+    return (
+      <div style={{ paddingBottom: 80 }}>
+        <div style={S.header}>
+          <div style={{ flex: 1 }}>
+            <div style={S.headerTitle}>Messaggi</div>
+            <div style={S.headerSub}>{unread > 0 ? `${unread} non letti` : "Tutti letti"} · {msgs.length} conversazioni</div>
+          </div>
+          <div onClick={() => setShowCompose(true)} style={{ width: 36, height: 36, borderRadius: 10, background: T.acc, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <Ico d={ICO.pen} s={16} c="#fff" />
+          </div>
+        </div>
+
+        {/* Sub-tabs: Chat / Rubrica / AI */}
+        <div style={{ display: "flex", margin: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, overflow: "hidden" }}>
+          {[
+            { id: "chat", l: "💬 Chat", count: unread },
+            { id: "ai", l: "🤖 AI Inbox", count: aiInbox.filter(m => !m.read).length },
+            { id: "rubrica", l: "📒 Rubrica", count: 0 }
+          ].map(st => (
+            <div key={st.id} onClick={() => setMsgSubTab(st.id)} style={{ flex: 1, padding: "10px 4px", textAlign: "center", fontSize: 12, fontWeight: 700, cursor: "pointer", background: msgSubTab === st.id ? T.acc : T.card, color: msgSubTab === st.id ? "#fff" : T.sub, transition: "all 0.2s", position: "relative" }}>
+              {st.l}
+              {st.count > 0 && <span style={{ marginLeft: 4, fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 8, background: msgSubTab === st.id ? "rgba(255,255,255,0.3)" : T.red, color: "#fff" }}>{st.count}</span>}
+            </div>
+          ))}
+        </div>
+
+        {/* == CHAT TAB == */}
+        {msgSubTab === "chat" && (<>
+          <div style={{ padding: "4px 16px 8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
+              <Ico d={ICO.search} s={14} c={T.sub} />
+              <input style={{ flex: 1, border: "none", background: "transparent", fontSize: 13, color: T.text, outline: "none", fontFamily: FF }} placeholder="Cerca contatto o messaggio..." value={msgSearch} onChange={e => setMsgSearch(e.target.value)} />
+              {msgSearch && <div onClick={() => setMsgSearch("")} style={{ cursor: "pointer", fontSize: 14, color: T.sub }}>✕</div>}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 4, padding: "0 16px 10px", overflowX: "auto" }}>
+            {[
+              { id: "tutti", l: "Tutti", c: T.acc },
+              { id: "whatsapp", l: "💬 WhatsApp", c: "#25d366" },
+              { id: "email", l: "📧 Email", c: T.blue },
+              { id: "sms", l: "📱 SMS", c: T.orange },
+              { id: "telegram", l: "✈️ Telegram", c: "#0088cc" },
+            ].map(f => {
+              const unr = f.id === "tutti" ? unread : msgs.filter(m => m.canale === f.id && !m.read).length;
+              return (
+                <div key={f.id} onClick={() => setMsgFilter(f.id)} style={{ padding: "6px 12px", borderRadius: 20, border: `1px solid ${msgFilter === f.id ? f.c : T.bdr}`, background: msgFilter === f.id ? f.c + "15" : T.card, fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", color: msgFilter === f.id ? f.c : T.sub, display: "flex", alignItems: "center", gap: 4 }}>
+                  {f.l}
+                  {unr > 0 && <span style={{ width: 16, height: 16, borderRadius: "50%", background: f.c, color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{unr}</span>}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ padding: "0 16px" }}>
+            {filteredMsgs.length === 0 ? (
+              <div style={{ padding: 30, textAlign: "center", color: T.sub, fontSize: 13 }}>Nessun messaggio</div>
+            ) : (
+              <div style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, overflow: "hidden" }}>
+                {filteredMsgs.map(m => (
+                  <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${T.bg}`, cursor: "pointer", background: m.read ? "transparent" : T.acc + "06" }} onClick={() => { setMsgs(ms => ms.map(x => x.id === m.id ? { ...x, read: true } : x)); setSelectedMsg(m); }}>
+                    <div style={{ width: 42, height: 42, borderRadius: "50%", background: chBg[m.canale] || T.bg, border: `2px solid ${chCol[m.canale] || T.bdr}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, position: "relative" }}>
+                      {m.from.charAt(0).toUpperCase()}
+                      <div style={{ position: "absolute", bottom: -2, right: -2, fontSize: 10, background: T.card, borderRadius: "50%", padding: 1 }}>{chIco[m.canale]}</div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 13, fontWeight: m.read ? 500 : 700, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.from}</div>
+                        <div style={{ fontSize: 10, color: m.read ? T.sub : T.acc, fontWeight: m.read ? 400 : 700, flexShrink: 0, marginLeft: 8 }}>{m.time}</div>
+                      </div>
+                      <div style={{ fontSize: 12, color: m.read ? T.sub : T.text, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: m.read ? 400 : 500 }}>{m.preview}</div>
+                      {m.cm && <div style={{ marginTop: 3 }}><span style={S.badge(T.accLt, T.acc)}>{m.cm}</span></div>}
+                    </div>
+                    {!m.read && <div style={{ width: 10, height: 10, borderRadius: "50%", background: T.acc, flexShrink: 0 }} />}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>)}
+
+        {/* == AI INBOX TAB == */}
+        {msgSubTab === "ai" && (<>
+          {/* Header spiegazione */}
+          <div style={{ margin: "0 16px 10px", padding: "10px 12px", borderRadius: 10, background: "linear-gradient(135deg, #1A1A1C, #2A2008)", border: `1px solid ${T.acc}30`, display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 22 }}>🤖</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>AI classifica le tue email</div>
+              <div style={{ fontSize: 10, color: "#888", marginTop: 1 }}>Collegata al tuo indirizzo mail — suggerisce dove archiviare ogni messaggio</div>
+            </div>
+          </div>
+
+          {/* Lista email classificate */}
+          <div style={{ padding: "0 16px" }}>
+            {aiInbox.map(m => {
+              const isSelected = selectedAiMsg?.id === m.id;
+              return (
+                <div key={m.id} style={{ ...S.card, marginBottom: 8, padding: 0, overflow: "hidden", opacity: m.archiviata ? 0.5 : 1 }}>
+                  {/* Header messaggio */}
+                  <div onClick={() => setSelectedAiMsg(isSelected ? null : m)}
+                    style={{ padding: "11px 13px", display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer", background: m.read ? T.card : T.acc + "06" }}>
+                    {/* Avatar */}
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: m.ai.color + "20", border: `2px solid ${m.ai.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: m.ai.color, flexShrink: 0 }}>
+                      {m.from.charAt(0)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 4 }}>
+                        <div style={{ fontSize: 12, fontWeight: m.read ? 500 : 700, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{m.from}</div>
+                        <div style={{ fontSize: 10, color: T.sub, flexShrink: 0 }}>{m.time}</div>
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: m.read ? 400 : 600, color: T.text, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.subject}</div>
+                      {/* Badge AI */}
+                      <div style={{ display: "flex", gap: 4, marginTop: 4, alignItems: "center", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 8, background: m.ai.color + "18", color: m.ai.color, border: `1px solid ${m.ai.color}30` }}>
+                          {m.ai.emoji} {m.ai.label}
+                        </span>
+                        <span style={{ fontSize: 9, fontWeight: 700, color: T.sub }}>
+                          🤖 {m.ai.confidenza}% sicuro
+                        </span>
+                        {m.ai.cmSuggerita && <span style={{ ...S.badge(T.accLt, T.acc) }}>{m.ai.cmSuggerita}</span>}
+                        {m.archiviata && <span style={{ fontSize: 9, fontWeight: 700, color: T.grn }}>✓ Archiviata</span>}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 13, color: T.sub, transform: isSelected ? "rotate(90deg)" : "rotate(0)", transition: "transform 0.2s", flexShrink: 0, marginTop: 2 }}>›</span>
+                  </div>
+
+                  {/* Dettaglio espanso */}
+                  {isSelected && (
+                    <div style={{ borderTop: `1px solid ${T.bdr}`, padding: "12px 13px" }}>
+                      {/* Testo email */}
+                      <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.6, marginBottom: 10, padding: "8px 10px", background: T.bg, borderRadius: 8 }}>
+                        {m.body}
+                      </div>
+
+                      {/* Analisi AI */}
+                      <div style={{ background: m.ai.color + "10", border: `1px solid ${m.ai.color}30`, borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: m.ai.color, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>🤖 Analisi AI</div>
+                        <div style={{ fontSize: 12, color: T.text, marginBottom: 4 }}><strong>Tipo:</strong> {m.ai.emoji} {m.ai.label} ({m.ai.confidenza}% confidenza)</div>
+                        <div style={{ fontSize: 12, color: T.text, marginBottom: 4 }}><strong>Azione suggerita:</strong> {m.ai.azione}</div>
+                        {m.ai.note && <div style={{ fontSize: 11, color: T.sub, fontStyle: "italic" }}>"{m.ai.note}"</div>}
+                      </div>
+
+                      {/* Dati estratti (se nuova commessa) */}
+                      {m.ai.estratto && (
+                        <div style={{ background: T.grnLt, border: `1px solid ${T.grn}30`, borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: T.grn, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>📋 Dati estratti automaticamente</div>
+                          {m.ai.estratto.cliente && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>👤 <strong>Cliente:</strong> {m.ai.estratto.cliente}</div>}
+                          {m.ai.estratto.indirizzo && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>📍 <strong>Indirizzo:</strong> {m.ai.estratto.indirizzo}</div>}
+                          {m.ai.estratto.email && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>✉️ <strong>Email:</strong> {m.ai.estratto.email}</div>}
+                          {m.ai.estratto.note && <div style={{ fontSize: 12, color: T.text }}>📝 <strong>Note:</strong> {m.ai.estratto.note}</div>}
+                        </div>
+                      )}
+
+                      {/* Azioni */}
+                      {!m.archiviata && (
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <div onClick={() => {
+                            setAiInbox(ai => ai.map(x => x.id === m.id ? { ...x, archiviata: true, read: true } : x));
+                            setSelectedAiMsg(null);
+                            if (m.ai.cmSuggerita) {
+                              const cm = cantieri.find(c => c.code === m.ai.cmSuggerita);
+                              if (cm) { setSelectedCM(cm); setTab("commesse"); }
+                            }
+                          }} style={{ flex: 2, padding: "10px", borderRadius: 9, background: m.ai.color, color: "#fff", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                            {m.ai.cmNuova ? "➕ Crea Commessa" : `🔗 ${m.ai.azione.split(" ").slice(0,3).join(" · ")}`}
+                          </div>
+                          <div onClick={() => {
+                            setAiInbox(ai => ai.map(x => x.id === m.id ? { ...x, archiviata: true, read: true } : x));
+                            setSelectedAiMsg(null);
+                          }} style={{ flex: 1, padding: "10px", borderRadius: 9, background: T.bg, border: `1px solid ${T.bdr}`, color: T.sub, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                            Ignora
+                          </div>
+                          <div onClick={() => {
+                            const dest = m.email || "";
+                            const tpl = `Gentile ${m.from.split(" ")[0]},
+
+Grazie per il suo messaggio.
+
+`;
+                            setMailBody(tpl);
+                            setShowMailModal({ ev: { text: m.subject, date: new Date().toISOString().slice(0,10), time: "", addr: "" }, cm: null, emailOverride: dest });
+                          }} style={{ flex: 1, padding: "10px", borderRadius: 9, background: T.accLt, border: `1px solid ${T.acc}30`, color: T.acc, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                            ✉️
+                          </div>
+                        </div>
+                      )}
+                      {m.archiviata && (
+                        <div style={{ padding: "8px 12px", background: T.grnLt, borderRadius: 8, textAlign: "center", fontSize: 12, fontWeight: 700, color: T.grn }}>
+                          ✓ Archiviata con successo
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>)}
+
+        {/* == RUBRICA TAB == */}
+        {msgSubTab === "rubrica" && (<>
+          <div style={{ padding: "4px 16px 8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
+              <Ico d={ICO.search} s={14} c={T.sub} />
+              <input style={{ flex: 1, border: "none", background: "transparent", fontSize: 13, color: T.text, outline: "none", fontFamily: FF }} placeholder="Cerca nella rubrica..." value={rubricaSearch} onChange={e => setRubricaSearch(e.target.value)} />
+              {rubricaSearch && <div onClick={() => setRubricaSearch("")} style={{ cursor: "pointer", fontSize: 14, color: T.sub }}>✕</div>}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 4, padding: "0 16px 10px", overflowX: "auto" }}>
+            {[
+              { id: "tutti", l: "Tutti", c: T.acc },
+              { id: "preferiti", l: "⭐ Preferiti", c: "#ff9500" },
+              { id: "team", l: "👥 Team", c: "#34c759" },
+              { id: "clienti", l: "🏠 Clienti", c: T.blue },
+              { id: "fornitori", l: "🏭 Fornitori", c: "#af52de" },
+            ].map(f => (
+              <div key={f.id} onClick={() => setRubricaFilter(f.id)} style={{ padding: "6px 12px", borderRadius: 20, border: `1px solid ${rubricaFilter === f.id ? f.c : T.bdr}`, background: rubricaFilter === f.id ? f.c + "15" : T.card, fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", color: rubricaFilter === f.id ? f.c : T.sub }}>
+                {f.l}
+              </div>
+            ))}
+          </div>
+          <div style={{ padding: "0 16px" }}>
+            <div style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, overflow: "hidden" }}>
+              {filteredContatti.length === 0 ? (
+                <div style={{ padding: 30, textAlign: "center", color: T.sub, fontSize: 13 }}>Nessun contatto trovato</div>
+              ) : filteredContatti.map(c => {
+                const tipoColor = c.tipo === "team" ? "#34c759" : c.tipo === "cliente" ? T.blue : c.tipo === "fornitore" ? "#af52de" : "#ff9500";
+                const tipoLabel = c.tipo === "team" ? "Team" : c.tipo === "cliente" ? "Cliente" : c.tipo === "fornitore" ? "Fornitore" : "Professionista";
+                return (
+                  <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${T.bg}` }}>
+                    <div style={{ width: 42, height: 42, borderRadius: "50%", background: (c.colore || tipoColor) + "18", border: `2px solid ${c.colore || tipoColor}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: c.colore || tipoColor, flexShrink: 0, position: "relative" }}>
+                      {c.nome.split(" ").map(w => w[0]).join("").substring(0, 2)}
+                      {c.preferito && <div style={{ position: "absolute", top: -4, right: -4, fontSize: 10 }}>⭐</div>}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{c.nome}</div>
+                      <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center", flexWrap: "wrap" }}>
+                        <span style={S.badge(tipoColor + "18", tipoColor)}>{tipoLabel}</span>
+                        {c.ruolo && <span style={{ fontSize: 10, color: T.sub }}>{c.ruolo}</span>}
+                        {c.cm && <span style={S.badge(T.accLt, T.acc)}>{c.cm}</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {(c.canali || []).includes("whatsapp") && (
+                        <div onClick={() => { setComposeMsg(m => ({ ...m, canale: "whatsapp", to: c.nome })); setShowCompose(true); }} style={{ width: 32, height: 32, borderRadius: "50%", background: "#25d36618", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>💬</div>
+                      )}
+                      {(c.canali || []).includes("email") && (
+                        <div onClick={() => { setComposeMsg(m => ({ ...m, canale: "email", to: c.nome })); setShowCompose(true); }} style={{ width: 32, height: 32, borderRadius: "50%", background: T.blueLt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>📧</div>
+                      )}
+                      <div onClick={() => { setContatti(cs => cs.map(x => x.id === c.id ? { ...x, preferito: !x.preferito } : x)); }} style={{ width: 32, height: 32, borderRadius: "50%", background: c.preferito ? "#ff950018" : T.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>
+                        {c.preferito ? "⭐" : "☆"}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>)}
+
+      </div>
+    );
+  };
+
+  /* == SETTINGS TAB == */
+  const renderSettings = () => (
+    <div style={{ paddingBottom: 80 }}>
+      <div style={S.header}>
+        <div style={{ flex: 1 }}>
+          <div style={S.headerTitle}>Impostazioni</div>
+        </div>
+        {/* FIX: rimosso supabase.auth.signOut() — usa localStorage clear */}
+        <div onClick={async () => { try { localStorage.clear(); const { createClient } = await import("@/lib/supabase"); await createClient().auth.signOut(); } catch(e) {} window.location.href = "/login"; }}
+          style={{padding:"6px 12px",borderRadius:8,border:"1px solid #e5e5ea",background:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",color:"#86868b"}}>
+          Esci
+        </div>
+      </div>
+
+      {/* Settings sub-tabs — scrollable */}
+      <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "8px 16px 12px", borderRadius: 8, border: `1px solid ${T.bdr}` }}>
+        <div style={{ display: "flex", minWidth: "max-content" }}>
+          {[{ id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "team", l: "👥 Team" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "guida", l: "📖 Guida" }].map(t => (
+            <div key={t.id} onClick={() => setSettingsTab(t.id)} style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 600, background: settingsTab === t.id ? T.acc : T.card, color: settingsTab === t.id ? "#fff" : T.sub, cursor: "pointer", whiteSpace: "nowrap" }}>
+              {t.l}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: "0 16px" }}>
+
+        {/* === AZIENDA === */}
+        {settingsTab === "azienda" && (
+          <div style={{background:"#fff",borderRadius:12,overflow:"hidden",border:`1px solid ${T.bdr}`}}>
+            <div style={{padding:"12px 14px",background:T.acc,color:"#fff"}}>
+              <div style={{fontSize:13,fontWeight:800}}>Dati Azienda</div>
+              <div style={{fontSize:10,opacity:0.8,marginTop:2}}>Questi dati appaiono sul PDF del preventivo</div>
+            </div>
+            {/* LOGO */}
+            <div style={{padding:"14px",borderBottom:`1px solid ${T.bdr}`}}>
+              <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:8,textTransform:"uppercase",letterSpacing:"0.04em"}}>Logo Azienda</div>
+              <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style={{display:"none"}} onChange={e=>{
+                const f=e.target.files?.[0]; if(!f) return;
+                const r=new FileReader(); r.onload=ev=>setAziendaInfo(a=>({...a,logo:ev.target.result}));
+                r.readAsDataURL(f); e.target.value="";
+              }}/>
+              {aziendaInfo.logo ? (
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:80,height:60,border:`1px solid ${T.bdr}`,borderRadius:8,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",background:"#f9f9f9"}}>
+                    <img src={aziendaInfo.logo} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}} alt="logo"/>
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:4}}>Logo caricato ✓</div>
+                    <div style={{display:"flex",gap:6}}>
+                      <div onClick={()=>logoInputRef.current?.click()} style={{fontSize:11,color:T.acc,fontWeight:700,cursor:"pointer"}}>Cambia</div>
+                      <span style={{color:T.bdr}}>·</span>
+                      <div onClick={()=>setAziendaInfo(a=>({...a,logo:null}))} style={{fontSize:11,color:"#ff3b30",fontWeight:700,cursor:"pointer"}}>Rimuovi</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div onClick={()=>logoInputRef.current?.click()} style={{border:`2px dashed ${T.bdr}`,borderRadius:10,padding:"16px",textAlign:"center",cursor:"pointer",background:"#fafafa"}}>
+                  <div style={{fontSize:24,marginBottom:4}}>🖼</div>
+                  <div style={{fontSize:12,fontWeight:700,color:T.text}}>Carica logo</div>
+                  <div style={{fontSize:10,color:T.sub,marginTop:2}}>PNG, JPG, SVG · max 2MB</div>
+                </div>
+              )}
+            </div>
+            {[
+              {label:"Ragione Sociale",field:"ragione",placeholder:"Es. Walter Cozza Serramenti SRL"},
+              {label:"Partita IVA",field:"piva",placeholder:"Es. 01234567890"},
+              {label:"Indirizzo",field:"indirizzo",placeholder:"Es. Via Roma 1, 87100 Cosenza (CS)"},
+              {label:"Telefono",field:"telefono",placeholder:"Es. +39 0984 000000"},
+              {label:"Email",field:"email",placeholder:"Es. info@azienda.it"},
+              {label:"Sito web",field:"website",placeholder:"Es. www.azienda.it"},
+              {label:"IBAN",field:"iban",placeholder:"Es. IT60 X054 2811 1010 0000 0123 456"},
+              {label:"CCIAA / REA",field:"cciaa",placeholder:"Es. CS-123456"},
+            ].map(({label,field,placeholder})=>(
+              <div key={field} style={{padding:"10px 14px",borderBottom:`1px solid ${T.bdr}`}}>
+                <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.04em"}}>{label}</div>
+                <input
+                  value={aziendaInfo[field]||""}
+                  onChange={e=>setAziendaInfo(a=>({...a,[field]:e.target.value}))}
+                  placeholder={placeholder}
+                  style={{width:"100%",border:"none",fontSize:13,fontWeight:600,color:T.text,background:"transparent",fontFamily:FF,outline:"none",padding:0,boxSizing:"border-box"}}
+                />
+              </div>
+            ))}
+            <div style={{padding:"12px 14px",background:"#f0fdf4",display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:14}}>✅</span>
+              <span style={{fontSize:11,color:"#1a9e40",fontWeight:600}}>Salvato automaticamente in ogni preventivo PDF</span>
+            </div>
+          </div>
+        )}
+
+        {/* === GENERALI === */}
+        {settingsTab === "generali" && (
+          <>
+            <div style={{...S.card,marginBottom:8}}><div style={S.cardInner}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700}}>🔔 Soglia commesse ferme</div>
+                  <div style={{fontSize:11,color:T.sub}}>Alert se una commessa non avanza da N giorni</div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <input type="number" min="1" max="30" value={sogliaDays} onChange={e=>setSogliaDays(parseInt(e.target.value)||5)}
+                    style={{width:50,padding:"5px 8px",borderRadius:8,border:`1px solid ${T.bdr}`,fontSize:14,fontWeight:700,textAlign:"center",fontFamily:FF}}/>
+                  <span style={{fontSize:11,color:T.sub}}>giorni</span>
+                </div>
+              </div>
+            </div></div>
+            <div style={S.card}><div style={S.cardInner}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {aziendaInfo.logo
+                  ? <img src={aziendaInfo.logo} style={{width:48,height:48,borderRadius:"50%",objectFit:"cover",border:`1px solid ${T.bdr}`}} alt="logo"/>
+                  : <div style={{ width: 48, height: 48, borderRadius: "50%", background: T.acc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 18, fontWeight: 700 }}>FC</div>
+                }
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>Fabio Cozza</div>
+                  <div style={{ fontSize: 12, color: T.sub }}>{aziendaInfo.ragione}</div>
+                </div>
+              </div>
+            </div></div>
+            <div style={{ ...S.card, marginTop: 8 }}><div style={S.cardInner}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>TEMA</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[["chiaro", "☀️"], ["scuro", "🌙"], ["oceano", "🌊"]].map(([id, ico]) => (
+                  <div key={id} onClick={() => setTheme(id)} style={{ flex: 1, padding: "10px 4px", borderRadius: 8, border: `1.5px solid ${theme === id ? T.acc : T.bdr}`, textAlign: "center", cursor: "pointer" }}>
+                    <div style={{ fontSize: 18 }}>{ico}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, textTransform: "capitalize", marginTop: 2 }}>{id}</div>
+                  </div>
+                ))}
+              </div>
+            </div></div>
+            <div style={{ ...S.card, marginTop: 8 }}><div style={S.cardInner}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>STATISTICHE</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 12 }}>
+                <div><div style={{ fontSize: 20, fontWeight: 700, color: T.acc }}>{cantieri.length}</div>Commesse</div>
+                <div><div style={{ fontSize: 20, fontWeight: 700, color: T.blue }}>{countVani()}</div>Vani</div>
+                <div><div style={{ fontSize: 20, fontWeight: 700, color: T.grn }}>{tasks.filter(t => t.done).length}/{tasks.length}</div>Task</div>
+              </div>
+            </div></div>
+          </>
+        )}
+
+        {/* === TEAM === */}
+        {settingsTab === "team" && (
+          <>
+            {team.map(m => (
+              <div key={m.id} style={{ ...S.card, marginBottom: 8 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: m.colore, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{m.nome.split(" ").map(n => n[0]).join("")}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{m.nome}</div>
+                  <div style={{ fontSize: 11, color: T.sub }}>{m.ruolo} — {m.compiti}</div>
+                </div>
+                <Ico d={ICO.pen} s={14} c={T.sub} />
+              </div></div>
+            ))}
+            <div onClick={() => { setSettingsModal("membro"); setSettingsForm({ nome: "", ruolo: "Posatore", compiti: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.bdr}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600 }}>+ Aggiungi membro</div>
+          </>
+        )}
+
+        {/* === SISTEMI E SOTTOSISTEMI === */}
+        {settingsTab === "sistemi" && (
+          <>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Configura marche, sistemi e sottosistemi con colori collegati</div>
+            {sistemiDB.map(s => (
+              <div key={s.id} style={{ ...S.card, marginBottom: 8 }}><div style={S.cardInner}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.acc }}>{s.marca}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600 }}>{s.sistema}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.grn, fontFamily: FM }}>€{s.euroMq}/mq</div>
+                    <div style={{ fontSize: 9, color: T.sub }}>+{s.sovRAL}% RAL · +{s.sovLegno}% Legno</div>
+                  </div>
+                </div>
+                {s.sottosistemi && (
+                  <div style={{ marginBottom: 6 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 3 }}>Sottosistemi</div>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      {s.sottosistemi.map(ss => <span key={ss} style={S.badge(T.blueLt, T.blue)}>{ss}</span>)}
+                    </div>
+                  </div>
+                )}
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 3 }}>Colori disponibili</div>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {s.colori.map(c => {
+                    const col = coloriDB.find(x => x.code === c);
+                    return <span key={c} style={{ padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: col?.hex + "20", color: T.text, border: `1px solid ${col?.hex || T.bdr}40` }}>{col?.hex && <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: col.hex, marginRight: 4, verticalAlign: "middle" }} />}{c}</span>;
+                  })}
+                </div>
+              </div></div>
+            ))}
+            <div onClick={() => { setSettingsModal("sistema"); setSettingsForm({ marca: "", sistema: "", euroMq: "", sovRAL: "", sovLegno: "", sottosistemi: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600 }}>+ Aggiungi sistema</div>
+          </>
+        )}
+
+        {/* === COLORI === */}
+        {settingsTab === "colori" && (
+          <>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Colori disponibili — collegati ai sistemi</div>
+            {coloriDB.map(c => (
+              <div key={c.id} style={{ ...S.card, marginBottom: 6 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 6, background: c.hex, border: `1px solid ${T.bdr}`, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{c.nome}</div>
+                  <div style={{ fontSize: 10, color: T.sub }}>{c.code} · {c.tipo}</div>
+                </div>
+                <div style={{ fontSize: 10, color: T.sub }}>{sistemiDB.filter(s => s.colori.includes(c.code)).map(s => s.marca).join(", ") || "—"}</div>
+                <div onClick={() => deleteSettingsItem("colore", c.id)} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
+              </div></div>
+            ))}
+            <div onClick={() => { setSettingsModal("colore"); setSettingsForm({ nome: "", code: "", hex: "#888888", tipo: "RAL" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600 }}>+ Aggiungi colore</div>
+          </>
+        )}
+
+        {/* === VETRI === */}
+        {settingsTab === "vetri" && (
+          <>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Tipologie vetro disponibili per i vani</div>
+            {vetriDB.map(g => (
+              <div key={g.id} style={{ ...S.card, marginBottom: 6 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{g.nome}</div>
+                  <div style={{ fontSize: 11, color: T.sub, fontFamily: FM }}>{g.code}</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ padding: "3px 8px", borderRadius: 6, background: g.ug <= 0.7 ? T.grnLt : g.ug <= 1.0 ? T.orangeLt : T.redLt, fontSize: 12, fontWeight: 700, fontFamily: FM, color: g.ug <= 0.7 ? T.grn : g.ug <= 1.0 ? T.orange : T.red }}>Ug={g.ug}</span>
+                  <div onClick={() => deleteSettingsItem("vetro", g.id)} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
+                </div>
+              </div></div>
+            ))}
+            <div onClick={() => { setSettingsModal("vetro"); setSettingsForm({ nome: "", code: "", ug: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600 }}>+ Aggiungi vetro</div>
+          </>
+        )}
+
+        {/* === TIPOLOGIE === */}
+        {settingsTab === "tipologie" && (
+          <>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Tipologie serramento — trascina ⭐ per i preferiti</div>
+            {TIPOLOGIE_RAPIDE.map(t => {
+              const isFav = favTipologie.includes(t.code);
+              return (
+                <div key={t.code} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", gap: 8, padding: "8px 14px" }}>
+                  <div onClick={() => setFavTipologie(fav => isFav ? fav.filter(f => f !== t.code) : [...fav, t.code])} style={{ cursor: "pointer" }}>
+                    <span style={{ fontSize: 16, color: isFav ? "#ff9500" : T.bdr }}>{isFav ? "⭐" : "☆"}</span>
+                  </div>
+                  <span style={{ fontSize: 16 }}>{t.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, fontFamily: FM }}>{t.code}</span>
+                    <span style={{ fontSize: 11, color: T.sub, marginLeft: 6 }}>{t.label}</span>
+                  </div>
+                  <Ico d={ICO.pen} s={14} c={T.sub} />
+                </div></div>
+              );
+            })}
+            <div onClick={() => { setSettingsModal("tipologia"); setSettingsForm({ code: "", label: "", icon: "🪟" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipologia</div>
+          </>
+        )}
+
+        {/* === COPRIFILI === */}
+        {settingsTab === "coprifili" && (
+          <>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Lista coprifili disponibili nella creazione vano</div>
+            {coprifiliDB.map(c => (
+              <div key={c.id} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
+                <div>
+                  <span style={{ fontSize: 12, fontWeight: 700, fontFamily: FM, color: T.acc }}>{c.cod}</span>
+                  <span style={{ fontSize: 12, marginLeft: 8 }}>{c.nome}</span>
+                </div>
+                <div onClick={() => deleteSettingsItem("coprifilo", c.id)} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
+              </div></div>
+            ))}
+            <div onClick={() => { setSettingsModal("coprifilo"); setSettingsForm({ nome: "", cod: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi coprifilo</div>
+          </>
+        )}
+
+        {/* === LAMIERE === */}
+        {settingsTab === "lamiere" && (
+          <>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Lista lamiere e scossaline</div>
+            {lamiereDB.map(l => (
+              <div key={l.id} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
+                <div>
+                  <span style={{ fontSize: 12, fontWeight: 700, fontFamily: FM, color: T.orange }}>{l.cod}</span>
+                  <span style={{ fontSize: 12, marginLeft: 8 }}>{l.nome}</span>
+                </div>
+                <div onClick={() => deleteSettingsItem("lamiera", l.id)} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
+              </div></div>
+            ))}
+            <div onClick={() => { setSettingsModal("lamiera"); setSettingsForm({ nome: "", cod: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi lamiera</div>
+          </>
+        )}
+
+        {/* === SALITA === */}
+        {settingsTab === "salita" && (
+          <>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Configura i mezzi di salita disponibili</div>
+            {mezziSalita.map((m, i) => (
+              <div key={i} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>🪜</span>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{m}</span>
+                </div>
+                <div onClick={() => { if ((()=>{try{return window.confirm(`Eliminare "${m}"?`);}catch(e){return false;}})()) setMezziSalita(ms => ms.filter((_, j) => j !== i)); }} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
+              </div></div>
+            ))}
+            <div onClick={() => { let n; try{n=window.prompt("Nome mezzo di salita:");}catch(e){} if (n?.trim()) setMezziSalita(ms => [...ms, n.trim()]); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi mezzo salita</div>
+          </>
+        )}
+
+        {/* === PIPELINE === */}
+        {settingsTab === "pipeline" && (
+          <>
+            <div style={{fontSize:12,color:T.sub,padding:"0 4px 10px",lineHeight:1.5}}>Personalizza il flusso di lavoro. Disattiva le fasi che non usi, rinominale o riordinale.</div>
+            {pipelineDB.map((p, i) => (
+              <div key={p.id} style={{...S.card, marginBottom:6, opacity: p.attiva===false ? 0.45 : 1}}>
+                <div style={{display:"flex", alignItems:"center", gap:8, padding:"10px 12px"}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:1}}>
+                    <div onClick={()=>{ if(i===0) return; const a=[...pipelineDB]; [a[i-1],a[i]]=[a[i],a[i-1]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===0?"default":"pointer",color:i===0?T.bdr:T.sub,lineHeight:1}}>▲</div>
+                    <div onClick={()=>{ if(i===pipelineDB.length-1) return; const a=[...pipelineDB]; [a[i],a[i+1]]=[a[i+1],a[i]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===pipelineDB.length-1?"default":"pointer",color:i===pipelineDB.length-1?T.bdr:T.sub,lineHeight:1}}>▼</div>
+                  </div>
+                  <span style={{fontSize:20,flexShrink:0}}>{p.ico}</span>
+                  <input value={p.nome} onChange={e=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,nome:e.target.value}:x))}
+                    style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:700,color:T.text,fontFamily:FF,outline:"none",padding:0}}/>
+                  <div style={{width:12,height:12,borderRadius:"50%",background:p.color,flexShrink:0}}/>
+                  <div onClick={()=>{ if(p.id==="chiusura") return; setPipelineDB(db=>db.map((x,j)=>j===i?{...x,attiva:x.attiva===false?true:false}:x)); }}
+                    style={{width:36,height:20,borderRadius:10,background:p.attiva===false?T.bdr:T.grn,cursor:p.id==="chiusura"?"default":"pointer",transition:"background 0.2s",position:"relative",flexShrink:0}}>
+                    <div style={{position:"absolute",top:2,left:p.attiva===false?2:18,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
+                  </div>
+                  {p.custom && <div onClick={()=>setPipelineDB(db=>db.filter((_,j)=>j!==i))} style={{fontSize:12,cursor:"pointer",color:T.red}}>✕</div>}
+                </div>
+              </div>
+            ))}
+            <div onClick={()=>{ let nome; try{nome=window.prompt("Nome nuova fase:");}catch(e){} if(nome?.trim()) setPipelineDB(db=>[...db.slice(0,-1),{id:"custom_"+Date.now(),nome:nome.trim(),ico:"⭐",color:"#8e8e93",attiva:true,custom:true},...db.slice(-1)]); }}
+              style={{...S.card,marginTop:4,textAlign:"center",padding:"10px",cursor:"pointer",color:T.acc,fontSize:13,fontWeight:700}}>+ Aggiungi fase personalizzata</div>
+            <div onClick={()=>{if((()=>{try{return window.confirm("Ripristinare le fasi predefinite?");}catch(e){return false;}})())setPipelineDB(PIPELINE_DEFAULT);}}
+              style={{textAlign:"center",padding:"10px 0 4px",fontSize:11,color:T.sub,cursor:"pointer"}}>Ripristina predefinita</div>
+          </>
+        )}
+
+        {/* === GUIDA === */}
+        {settingsTab === "guida" && (
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {/* Header */}
+            <div style={{background:T.acc,borderRadius:12,padding:"16px 18px",color:"#fff"}}>
+              <div style={{fontSize:15,fontWeight:800}}>📖 Guida rapida MASTRO</div>
+              <div style={{fontSize:11,opacity:0.8,marginTop:4}}>Tutto quello che ti serve sapere, in pillole da 30 secondi.</div>
+            </div>
+
+            {/* CARD 1: CREARE COMMESSA */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#007aff15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📁</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come creare una commessa</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Commesse</b> dal menu in basso</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca il pulsante <b>+ Nuova Commessa</b> in alto</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Compila <b>nome cliente, indirizzo</b> e tipo di lavoro</div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:"#34c759",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
+                  <div style={{fontSize:12,color:"#34c759",fontWeight:700,lineHeight:1.5}}>La commessa parte in fase "Sopralluogo"</div>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 2: AGGIUNGERE VANI */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#ff950015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🪟</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come aggiungere i vani</div><div style={{fontSize:10,color:T.sub}}>⏱ 30 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri una commessa e vai nella sezione <b>Rilievi</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>+ Aggiungi vano</b> — scegli tipo (F1A, PF2A, SC2A...)</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Dai un nome al vano (es. "Cucina", "Salone") e scegli la stanza</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:4,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Tipologie rapide:</b> F1A = 1 anta, F2A = 2 ante, PF = portafinestra, SC = scorrevole, VAS = vasistas</div>
+              </div>
+            </div>
+
+            {/* CARD 3: INSERIRE MISURE */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#5856d615",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📏</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come inserire le misure</div><div style={{fontSize:10,color:T.sub}}>⏱ 30 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca un vano per aprirlo — vai nel tab <b>Misure</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Inserisci <b>3 larghezze</b> (alto, centro, basso) e <b>3 altezze</b> (sx, centro, dx)</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Completa <b>spallette</b>, <b>davanzale</b>, telaio e accessori</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:4,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Regola d'oro:</b> misura sempre dal CENTRO del vano — è il punto più affidabile per il taglio</div>
+              </div>
+            </div>
+
+            {/* CARD 4: GENERARE PREVENTIVO */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#34c75915",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📄</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come generare un preventivo PDF</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri una commessa con almeno un vano misurato</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca il pulsante <b>€ Preventivo</b> nella barra azioni</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Controlla il riepilogo — fai <b>firmare il cliente</b> sul telefono</div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>4</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>Genera & Scarica PDF</b> — pronto per inviare via WhatsApp!</div>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 5: FASI COMMESSA */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#af52de15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🔄</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Le 8 fasi di una commessa</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                {[
+                  {f:"Sopralluogo",i:"📐",d:"Vai dal cliente, valuta il lavoro",c:"#007aff"},
+                  {f:"Preventivo",i:"📝",d:"Prepara e invia l'offerta",c:"#ff9500"},
+                  {f:"Conferma",i:"✍️",d:"Il cliente accetta e firma",c:"#af52de"},
+                  {f:"Misure",i:"📏",d:"Rilievo preciso di ogni vano",c:"#5856d6"},
+                  {f:"Ordini",i:"🛒",d:"Ordina profili, vetri e accessori",c:"#ff2d55"},
+                  {f:"Produzione",i:"🏭",d:"Attendi che il materiale sia pronto",c:"#ff9500"},
+                  {f:"Posa",i:"🔧",d:"Installa tutto dal cliente",c:"#34c759"},
+                  {f:"Chiusura",i:"✅",d:"Saldo finale e garanzia",c:"#30b0c7"},
+                ].map((p,i) => (
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:i<7?6:0}}>
+                    <div style={{fontSize:14,width:22,textAlign:"center"}}>{p.i}</div>
+                    <div style={{fontSize:12,fontWeight:700,color:p.c,width:85}}>{p.f}</div>
+                    <div style={{fontSize:11,color:T.sub}}>{p.d}</div>
+                    {i<7 && <div style={{marginLeft:"auto",fontSize:10,color:T.sub}}>→</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* CARD 6: SCORCIATOIE */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#ff2d5515",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>⚡</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Trucchi da Pro</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                {[
+                  {t:"Barra di ricerca",d:"Cerca qualsiasi cosa: clienti, commesse, indirizzi — tutto da Home"},
+                  {t:"Allerte rosse",d:"Le commesse ferme da troppo tempo appaiono in Home — toccale per aprirle"},
+                  {t:"Drag & drop fasi",d:"In Commesse, tieni premuto su una card per spostarla tra le fasi"},
+                  {t:"Foto e firma",d:"Puoi fotografare il vano e far firmare il cliente direttamente sul telefono"},
+                  {t:"SVG in tempo reale",d:"Mentre inserisci le misure, il disegno del vano si aggiorna live"},
+                ].map((tip,i) => (
+                  <div key={i} style={{display:"flex",gap:8,marginBottom:i<4?8:0,alignItems:"flex-start"}}>
+                    <div style={{fontSize:10,color:T.acc,fontWeight:900,marginTop:2}}>▸</div>
+                    <div><span style={{fontSize:12,fontWeight:700,color:T.text}}>{tip.t}: </span><span style={{fontSize:11,color:T.sub}}>{tip.d}</span></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* RIVEDI TUTORIAL */}
+            <div onClick={() => { try{localStorage.removeItem("mastro:onboarded")}catch(e){} setTutoStep(1); }} style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),padding:"14px 16px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+              <div style={{fontSize:18}}>🔄</div>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:T.text}}>Rivedi il tutorial iniziale</div>
+                <div style={{fontSize:11,color:T.sub}}>Riavvia la guida di benvenuto</div>
+              </div>
+              <div style={{marginLeft:"auto",fontSize:14,color:T.sub}}>→</div>
+            </div>
+
+            <div style={{height:20}}/>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+
+// =======================================================
+// MASTRO ERP v2 — PARTE 5/5
+// Righe 4131-5248: Modals (Task, Commessa, Vano, Allegati, Firma, AI Photo),
+//                 Main Render finale
+// =======================================================
+  /* ======= MODALS ======= */
+  const renderModal = () => {
+    if (!showModal) return null;
+    return (
+      <div style={S.modal} onClick={e => e.target === e.currentTarget && setShowModal(null)}>
+        <div style={S.modalInner}>
+          {/* TASK MODAL */}
+          {/* === MODAL MANDA MAIL === */}
+          {showMailModal && (
+            <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end", justifyContent:"center" }}
+              onClick={e => e.target === e.currentTarget && setShowMailModal(null)}>
+              <div style={{ background:T.bg, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, maxHeight:"85vh", overflow:"auto", paddingBottom:24 }}>
+                {/* Header */}
+                <div style={{ padding:"16px 16px 10px", display:"flex", alignItems:"center", gap:10, position:"sticky", top:0, background:T.bg, zIndex:1, borderBottom:`1px solid ${T.bdr}` }}>
+                  <span style={{ fontSize:22 }}>✉️</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:15, fontWeight:800, color:T.text }}>Manda Mail</div>
+                    <div style={{ fontSize:11, color:T.sub }}>
+                      {showMailModal.cm ? `${showMailModal.cm.cliente} ${showMailModal.cm.cognome||""}`.trim() : showMailModal.ev.persona || "Cliente"}
+                      {showMailModal.cm?.email ? ` · ${showMailModal.cm.email}` : ""}
+                    </div>
+                  </div>
+                  <div onClick={() => setShowMailModal(null)} style={{ width:30, height:30, borderRadius:"50%", background:T.bdr, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16, color:T.sub }}>×</div>
+                </div>
+
+                <div style={{ padding:"14px 16px" }}>
+                  {/* Info evento */}
+                  <div style={{ background:T.accLt, borderRadius:10, padding:"10px 12px", marginBottom:12, borderLeft:`3px solid ${T.acc}` }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:T.acc, marginBottom:2 }}>{showMailModal.ev.text}</div>
+                    <div style={{ fontSize:11, color:T.sub }}>
+                      {new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"short", day:"numeric", month:"short" })}
+                      {showMailModal.ev.time ? " · " + showMailModal.ev.time : ""}
+                      {showMailModal.ev.addr ? " · 📍 " + showMailModal.ev.addr : ""}
+                    </div>
+                  </div>
+
+                  {/* Campo email destinatario */}
+                  {!showMailModal.cm?.email && (
+                    <div style={{ marginBottom:10 }}>
+                      <div style={{ fontSize:10, fontWeight:700, color:T.sub, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:4 }}>Email destinatario</div>
+                      <input
+                        type="email" placeholder="cliente@email.com"
+                        style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:`1px solid ${T.bdr}`, background:T.card, fontSize:13, color:T.text, fontFamily:"inherit", boxSizing:"border-box" as any }}
+                        onChange={e => {
+                          const v = e.target.value;
+                          setShowMailModal(prev => prev ? { ...prev, emailOverride: v } : prev);
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Testo mail modificabile */}
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:T.sub, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:4 }}>Testo della mail</div>
+                    <textarea
+                      value={mailBody}
+                      onChange={e => setMailBody(e.target.value)}
+                      rows={10}
+                      style={{ width:"100%", padding:"10px 12px", borderRadius:8, border:`1px solid ${T.bdr}`, background:T.card, fontSize:12, color:T.text, fontFamily:"inherit", resize:"vertical" as any, boxSizing:"border-box" as any, lineHeight:1.6 }}
+                    />
+                  </div>
+
+                  {/* Template rapidi */}
+                  <div style={{ marginBottom:14 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:T.sub, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:6 }}>Template rapidi</div>
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                      {[
+                        { lbl:"📅 Conferma", tpl: `Gentile Cliente,
+
+Le confermo l'appuntamento del ${new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" })}${showMailModal.ev.time ? " alle " + showMailModal.ev.time : ""}.
+
+📍 ${showMailModal.ev.addr || "Luogo da concordare"}
+
+Cordiali saluti,
+Fabio Cozza - Walter Cozza Serramenti` },
+                        { lbl:"⏰ Reminder", tpl: `Gentile Cliente,
+
+Le ricordiamo che domani, ${new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" })}${showMailModal.ev.time ? " alle " + showMailModal.ev.time : ""}, è previsto il nostro appuntamento.
+
+📍 ${showMailModal.ev.addr || "Luogo da concordare"}
+
+In caso di impedimento la preghiamo di avvertirci il prima possibile.
+
+Cordiali saluti,
+Fabio Cozza - Walter Cozza Serramenti` },
+                        { lbl:"✅ Preventivo pronto", tpl: `Gentile Cliente,
+
+Siamo lieti di comunicarle che il preventivo relativo alla fornitura e posa è pronto.
+
+Può contattarci per concordare un incontro o richiedere il documento via mail.
+
+Cordiali saluti,
+Fabio Cozza - Walter Cozza Serramenti` },
+                        { lbl:"🔧 Posa confermata", tpl: `Gentile Cliente,
+
+Confermiamo la data di posa in opera per il ${new Date(showMailModal.ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" })}${showMailModal.ev.time ? " a partire dalle " + showMailModal.ev.time : ""}.
+
+La preghiamo di assicurarsi che i locali siano accessibili.
+
+Cordiali saluti,
+Fabio Cozza - Walter Cozza Serramenti` },
+                      ].map(({ lbl, tpl }) => (
+                        <div key={lbl} onClick={() => setMailBody(tpl)}
+                          style={{ padding:"5px 10px", borderRadius:20, border:`1px solid ${T.bdr}`, background:T.card, fontSize:11, fontWeight:600, color:T.text, cursor:"pointer" }}>
+                          {lbl}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Bottoni azione */}
+                  <div style={{ display:"flex", gap:8 }}>
+                    <div
+                      onClick={() => {
+                        const dest = (showMailModal as any).emailOverride || showMailModal.cm?.email || "";
+                        const sogg = encodeURIComponent(`Appuntamento - ${showMailModal.ev.text}`);
+                        const corpo = encodeURIComponent(mailBody);
+                        window.open(`mailto:${dest}?subject=${sogg}&body=${corpo}`);
+                      }}
+                      style={{ flex:1, padding:"12px", borderRadius:10, background:T.acc, color:"#fff", textAlign:"center", cursor:"pointer", fontSize:13, fontWeight:700 }}>
+                      ✉️ Apri in Mail
+                    </div>
+                    <div
+                      onClick={() => {
+                        navigator.clipboard?.writeText(mailBody);
+                        alert("Testo copiato negli appunti!");
+                      }}
+                      style={{ padding:"12px 14px", borderRadius:10, background:T.bg, border:`1px solid ${T.bdr}`, color:T.sub, cursor:"pointer", fontSize:13, fontWeight:600 }}>
+                      📋 Copia
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showModal === "task" && (
+            <>
+              <div style={S.modalTitle}>Nuovo task</div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Cosa devi fare?</label>
+                <input style={S.input} placeholder="es. Sopralluogo, chiamare fornitore..." value={newTask.text} onChange={e => setNewTask(t => ({ ...t, text: e.target.value }))} />
+              </div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={S.fieldLabel}>Data</label>
+                  <input style={S.input} type="date" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={S.fieldLabel}>Ora (opz.)</label>
+                  <input style={S.input} type="time" value={newTask.time} onChange={e => setNewTask(t => ({ ...t, time: e.target.value }))} />
+                </div>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Priorità</label>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[{ id: "alta", l: "Urgente", c: T.red }, { id: "media", l: "Normale", c: T.orange }, { id: "bassa", l: "Bassa", c: T.sub }].map(p => (
+                    <div key={p.id} onClick={() => setNewTask(t => ({ ...t, priority: p.id }))} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${newTask.priority === p.id ? p.c : T.bdr}`, background: newTask.priority === p.id ? p.c + "18" : "transparent", color: p.c, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                      {p.l}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Collega a commessa (opzionale)</label>
+                <select style={S.select} value={newTask.cm} onChange={e => setNewTask(t => ({ ...t, cm: e.target.value }))}>
+                  <option value="">— Nessuna —</option>
+                  {cantieri.map(c => <option key={c.id} value={c.code}>{c.code} · {c.cliente}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Note (opzionale)</label>
+                <input style={S.input} placeholder="Dettagli, materiale da portare..." value={newTask.meta} onChange={e => setNewTask(t => ({ ...t, meta: e.target.value }))} />
+              </div>
+              {/* Task Allegati */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.fieldLabel}>Allegati</label>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[
+                    { ico: "📎", l: "File", act: () => setTaskAllegati(a => [...a, { id: Date.now(), tipo: "file", nome: "Allegato_" + (a.length + 1) }]) },
+                    { ico: "📝", l: "Nota", act: () => { let txt; try{txt=window.prompt("Nota:");}catch(e){} if (txt) setTaskAllegati(a => [...a, { id: Date.now(), tipo: "nota", nome: txt }]); }},
+                    { ico: "🎤", l: "Audio", act: () => setTaskAllegati(a => [...a, { id: Date.now(), tipo: "vocale", nome: "Audio " + (a.length + 1) }]) },
+                    { ico: "📷", l: "Foto", act: () => setTaskAllegati(a => [...a, { id: Date.now(), tipo: "foto", nome: "Foto " + (a.length + 1) }]) },
+                  ].map((b, i) => (
+                    <div key={i} onClick={b.act} style={{ flex: 1, padding: "8px 4px", background: T.bg, borderRadius: 8, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer" }}>
+                      <div style={{ fontSize: 16 }}>{b.ico}</div>
+                      <div style={{ fontSize: 9, fontWeight: 600, color: T.sub, marginTop: 1 }}>{b.l}</div>
+                    </div>
+                  ))}
+                </div>
+                {taskAllegati.length > 0 && (
+                  <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {taskAllegati.map(a => (
+                      <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: T.bg, border: `1px solid ${T.bdr}`, fontSize: 10 }}>
+                        <span>{a.tipo === "nota" ? "📝" : a.tipo === "vocale" ? "🎤" : a.tipo === "foto" ? "📷" : "📎"}</span>
+                        <span style={{ color: T.text, maxWidth: 80, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.nome}</span>
+                        <span onClick={() => setTaskAllegati(al => al.filter(x => x.id !== a.id))} style={{ cursor: "pointer", color: T.red }}>✕</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button style={S.btn} onClick={addTask}>Crea task</button>
+              <button style={S.btnCancel} onClick={() => setShowModal(null)}>Annulla</button>
+            </>
+          )}
+
+          {/* COMMESSA MODAL */}
+          {showModal === "contatto" && (
+            <div style={{ padding: "20px 0" }}>
+              <div style={S.modalTitle}>Nuovo cliente</div>
+              <div style={{ marginBottom: 12 }}><label style={S.fieldLabel}>Nome *</label>
+                <input style={S.input} placeholder="Nome" value={(newCM as any)._ctNome || ""} onChange={e => setNewCM(p => ({ ...p, _ctNome: e.target.value } as any))} /></div>
+              <div style={{ marginBottom: 12 }}><label style={S.fieldLabel}>Cognome</label>
+                <input style={S.input} placeholder="Cognome" value={(newCM as any)._ctCognome || ""} onChange={e => setNewCM(p => ({ ...p, _ctCognome: e.target.value } as any))} /></div>
+              <div style={{ marginBottom: 12 }}><label style={S.fieldLabel}>Telefono</label>
+                <input style={S.input} type="tel" placeholder="333 1234567" value={(newCM as any)._ctTel || ""} onChange={e => setNewCM(p => ({ ...p, _ctTel: e.target.value } as any))} /></div>
+              <div style={{ marginBottom: 12 }}><label style={S.fieldLabel}>Email</label>
+                <input style={S.input} type="email" placeholder="nome@email.it" value={(newCM as any)._ctEmail || ""} onChange={e => setNewCM(p => ({ ...p, _ctEmail: e.target.value } as any))} /></div>
+              <div style={{ marginBottom: 12 }}><label style={S.fieldLabel}>Indirizzo</label>
+                <input style={S.input} placeholder="Via Roma 12, Cosenza" value={(newCM as any)._ctAddr || ""} onChange={e => setNewCM(p => ({ ...p, _ctAddr: e.target.value } as any))} /></div>
+              <div onClick={() => {
+                const nome = ((newCM as any)._ctNome || "").trim();
+                if (!nome) return;
+                setContatti(prev => [...prev, { id: "CT-" + Date.now(), nome, cognome: (newCM as any)._ctCognome || "", tipo: "cliente", telefono: (newCM as any)._ctTel || "", email: (newCM as any)._ctEmail || "", indirizzo: (newCM as any)._ctAddr || "", preferito: false }]);
+                setNewCM({ cliente: "", indirizzo: "", telefono: "", sistema: "", tipo: "nuova" });
+                setShowModal(null);
+              }} style={{ padding: "14px", borderRadius: 12, background: `linear-gradient(135deg, ${T.acc}, #b86e06)`, color: "#fff", textAlign: "center", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+                Salva cliente ✓
+              </div>
+            </div>
+          )}
+
+          {showModal === "commessa" && (
+            <>
+              <div style={S.modalTitle}>Nuova commessa</div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
+                {[{ id: "nuova", l: "🆕 Nuova installazione", c: T.acc }, { id: "riparazione", l: "🔧 Riparazione", c: T.orange }].map(t => (
+                  <div key={t.id} onClick={() => { setNewCM(c => ({ ...c, tipo: t.id })); setRipSearch(""); setRipCMSel(null); setRipProblema(""); setRipFotos([]); setRipUrgenza("media"); }}
+                    style={{ flex: 1, padding: "12px 6px", borderRadius: 12, border: `2px solid ${newCM.tipo === t.id ? (t.id==="nuova"?T.acc:T.orange) : T.bdr}`, background: newCM.tipo === t.id ? (t.id==="nuova"?T.acc:T.orange)+"12" : T.card, textAlign: "center", cursor: "pointer", transition:"all 0.15s" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: newCM.tipo === t.id ? (t.id==="nuova"?T.acc:T.orange) : T.sub }}>{t.l}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* == FLUSSO RIPARAZIONE == */}
+              {newCM.tipo === "riparazione" && (() => {
+                const addRipFoto = (e) => {
+                  const file = e.target.files?.[0]; if(!file) return;
+                  const r = new FileReader();
+                  r.onload = ev => setRipFotos(fs => [...fs, { id: Date.now(), dataUrl: ev.target.result, nome: file.name }]);
+                  r.readAsDataURL(file); e.target.value = "";
+                };
+                const cmResults = ripSearch.length > 1
+                  ? cantieri.filter(c => c.cliente.toLowerCase().includes(ripSearch.toLowerCase()) || c.code.toLowerCase().includes(ripSearch.toLowerCase()) || c.indirizzo.toLowerCase().includes(ripSearch.toLowerCase()))
+                  : [];
+                const addRiparazione = () => {
+                  if (!ripProblema.trim()) return;
+                  const code = "CM-" + String(cantieri.length + 1).padStart(4, "0");
+                  const nuova = {
+                    id: Date.now(), code,
+                    cliente: ripCMSel ? ripCMSel.cliente : (newCM.cliente || ripSearch),
+                    indirizzo: newCM.indirizzo || ripCMSel?.indirizzo || "",
+                    telefono: newCM.telefono || ripCMSel?.telefono || "",
+                    sistema: ripCMSel?.sistema || "",
+                    tipo: "riparazione", fase: "sopralluogo",
+                    cmCollegata: ripCMSel?.code || null,
+                    problema: ripProblema,
+                    tipoProblema: newCM.tipoProblema || "",
+                    tipoInfisso: newCM.tipoInfisso || "",
+                    vanoProblema: newCM.vanoProblema || "",
+                    dataRichiesta: newCM.dataRichiesta || "",
+                    chiSegnala: newCM.chiSegnala || "",
+                    preventivoStimato: newCM.preventivoStimato || "",
+                    urgenza: ripUrgenza,
+                    fotoProblema: ripFotos,
+                    vani: ripCMSel?.vani || [], note: ripProblema,
+                    alert: ripUrgenza === "urgente" ? "⚠️ Riparazione urgente" : null,
+                    creato: new Date().toLocaleDateString("it-IT", {day:"numeric",month:"short"}),
+                    aggiornato: new Date().toLocaleDateString("it-IT", {day:"numeric",month:"short"}),
+                    allegati: [],
+                  };
+                  setCantieri(cs => [nuova, ...cs]);
+                  setRipSearch(""); setRipCMSel(null); setRipProblema(""); setRipFotos([]); setRipUrgenza("media");
+                  setNewCM(c => ({...c, tipo:"nuova", cliente:"", indirizzo:"", telefono:"", tipoProblema:"", tipoInfisso:"", vanoProblema:"", dataRichiesta:"", chiSegnala:"", preventivoStimato:""}));
+                  setShowModal(null);
+                  setSelectedCM(nuova); setTab("commesse");
+                };
+                return (
+                  <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+
+                    <div>
+                      <label style={S.fieldLabel}>Cliente o commessa esistente</label>
+                      <input style={S.input} placeholder="Cerca nome, codice CM, indirizzo…"
+                        value={ripSearch} onChange={e => { setRipSearch(e.target.value); if(ripCMSel) setRipCMSel(null); }}/>
+                      {cmResults.length > 0 && !ripCMSel && (
+                        <div style={{ marginTop:4, background:T.card, border:`1px solid ${T.bdr}`, borderRadius:10, overflow:"hidden" }}>
+                          {cmResults.slice(0,4).map(c => (
+                            <div key={c.id} onClick={() => { setRipCMSel(c); setRipSearch(c.cliente); setNewCM(x=>({...x,indirizzo:c.indirizzo,telefono:c.telefono})); }}
+                              style={{ padding:"10px 14px", borderBottom:`1px solid ${T.bg}`, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                              <div>
+                                <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{c.cliente}</div>
+                                <div style={{ fontSize:11, color:T.sub, marginTop:1 }}>{c.code} · {c.indirizzo}</div>
+                                {getVaniAttivi(c).length>0 && <div style={{ fontSize:10, color:T.sub }}>{getVaniAttivi(c).length} vani</div>}
+                              </div>
+                              <div style={{ fontSize:10, fontWeight:600, color:T.acc }}>Collega →</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {ripCMSel && (
+                        <div style={{ marginTop:6, padding:"8px 12px", background:T.accLt, border:`1px solid ${T.acc}30`, borderRadius:8, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                          <div>
+                            <div style={{ fontSize:12, fontWeight:700, color:T.acc }}>✓ Collegata a {ripCMSel.code}</div>
+                            <div style={{ fontSize:11, color:T.sub, marginTop:1 }}>{ripCMSel.cliente} · {ripCMSel.indirizzo}</div>
+                          </div>
+                          <div onClick={() => { setRipCMSel(null); setRipSearch(""); setNewCM(x=>({...x,indirizzo:"",telefono:""})); }} style={{ fontSize:14, color:T.sub, cursor:"pointer", padding:4 }}>✕</div>
+                        </div>
+                      )}
+                      {!ripCMSel && (
+                        <div style={{ fontSize:10, color:T.sub, marginTop:3 }}>Lascia vuoto per cliente nuovo</div>
+                      )}
+                    </div>
+
+                    {!ripCMSel && (
+                      <div style={{ padding:"12px", background:T.bg, borderRadius:10, border:`1px solid ${T.bdr}`, display:"flex", flexDirection:"column", gap:8 }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:T.sub, textTransform:"uppercase", letterSpacing:"0.06em" }}>Dati cliente nuovo</div>
+                        <input style={S.input} placeholder="Nome e cognome" value={newCM.cliente} onChange={e=>setNewCM(c=>({...c,cliente:e.target.value}))}/>
+                        <div style={{ display:"flex", gap:8 }}>
+                          <input style={{...S.input,flex:2}} placeholder="Indirizzo" value={newCM.indirizzo} onChange={e=>setNewCM(c=>({...c,indirizzo:e.target.value}))}/>
+                          <input style={{...S.input,flex:1}} placeholder="Telefono" value={newCM.telefono} onChange={e=>setNewCM(c=>({...c,telefono:e.target.value}))}/>
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label style={S.fieldLabel}>Urgenza</label>
+                      <div style={{ display:"flex", gap:6 }}>
+                        {[{id:"normale",l:"Normale",c:T.grn,e:"🟢"},{id:"media",l:"Media",c:T.orange,e:"🟡"},{id:"urgente",l:"Urgente",c:T.red,e:"🔴"}].map(u => (
+                          <div key={u.id} onClick={() => setRipUrgenza(u.id)}
+                            style={{ flex:1, padding:"8px 4px", borderRadius:8, border:`1.5px solid ${ripUrgenza===u.id?u.c:T.bdr}`, background:ripUrgenza===u.id?u.c+"15":T.card, textAlign:"center", cursor:"pointer", transition:"all 0.12s" }}>
+                            <div style={{ fontSize:14 }}>{u.e}</div>
+                            <div style={{ fontSize:10, fontWeight:700, color:ripUrgenza===u.id?u.c:T.sub, marginTop:2 }}>{u.l}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={S.fieldLabel}>Tipo problema</label>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                        {["Vetro rotto","Cardine","Guarnizione","Serratura","Maniglia","Tapparella","Infiltrazioni","Deformazione","Altro"].map(t => (
+                          <div key={t} onClick={() => setNewCM(c=>({...c,tipoProblema:c.tipoProblema===t?"":t}))}
+                            style={{ padding:"5px 10px", borderRadius:20, border:`1.5px solid ${newCM.tipoProblema===t?T.orange:T.bdr}`, background:newCM.tipoProblema===t?T.orangeLt:T.card, fontSize:11, fontWeight:600, color:newCM.tipoProblema===t?T.orange:T.sub, cursor:"pointer", transition:"all 0.12s" }}>
+                            {t}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={S.fieldLabel}>Tipo infisso</label>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                        {["Finestra","Porta","Portafinestra","Scorrevole","Tapparella","Persiana","Zanzariera","Altro"].map(t => (
+                          <div key={t} onClick={() => setNewCM(c=>({...c,tipoInfisso:c.tipoInfisso===t?"":t}))}
+                            style={{ padding:"5px 10px", borderRadius:20, border:`1.5px solid ${newCM.tipoInfisso===t?T.acc:T.bdr}`, background:newCM.tipoInfisso===t?T.accLt:T.card, fontSize:11, fontWeight:600, color:newCM.tipoInfisso===t?T.acc:T.sub, cursor:"pointer", transition:"all 0.12s" }}>
+                            {t}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {ripCMSel && ripCMSel.vani.length > 0 && (
+                      <div>
+                        <label style={S.fieldLabel}>Vano con il problema</label>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                          {ripCMSel.vani.map(v => (
+                            <div key={v.id} onClick={() => setNewCM(c=>({...c,vanoProblema:c.vanoProblema===v.nome?"":v.nome}))}
+                              style={{ padding:"5px 10px", borderRadius:20, border:`1.5px solid ${newCM.vanoProblema===v.nome?T.acc:T.bdr}`, background:newCM.vanoProblema===v.nome?T.accLt:T.card, fontSize:11, fontWeight:600, color:newCM.vanoProblema===v.nome?T.acc:T.sub, cursor:"pointer" }}>
+                              {v.nome}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label style={S.fieldLabel}>Descrizione problema *</label>
+                      <textarea style={{ ...S.input, minHeight:70, resize:"vertical" }}
+                        placeholder="Descrivi il problema in dettaglio…"
+                        value={ripProblema} onChange={e => setRipProblema(e.target.value)}/>
+                    </div>
+
+                    <div>
+                      <label style={S.fieldLabel}>Chi segnala</label>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                        {["Cliente","Posatore","Tecnico","Subappaltatore","Altro"].map(t => (
+                          <div key={t} onClick={() => setNewCM(c=>({...c,chiSegnala:c.chiSegnala===t?"":t}))}
+                            style={{ padding:"5px 10px", borderRadius:20, border:`1.5px solid ${newCM.chiSegnala===t?T.acc:T.bdr}`, background:newCM.chiSegnala===t?T.accLt:T.card, fontSize:11, fontWeight:600, color:newCM.chiSegnala===t?T.acc:T.sub, cursor:"pointer" }}>
+                            {t}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={S.fieldLabel}>Data richiesta intervento</label>
+                      <input type="date" style={S.input} value={newCM.dataRichiesta} onChange={e=>setNewCM(c=>({...c,dataRichiesta:e.target.value}))}/>
+                    </div>
+
+                    <div>
+                      <label style={S.fieldLabel}>Preventivo stimato (€)</label>
+                      <input style={S.input} type="number" inputMode="numeric" placeholder="es. 250" value={newCM.preventivoStimato} onChange={e=>setNewCM(c=>({...c,preventivoStimato:e.target.value}))}/>
+                    </div>
+
+                    <div>
+                      <label style={S.fieldLabel}>Foto del problema ({ripFotos.length})</label>
+                      {ripFotos.length === 0
+                        ? <div onClick={() => ripFotoRef.current?.click()}
+                            style={{ border:`1.5px dashed ${T.bdr}`, borderRadius:10, padding:"20px", textAlign:"center", cursor:"pointer" }}>
+                            <div style={{ fontSize:28, marginBottom:4 }}>📷</div>
+                            <div style={{ fontSize:12, color:T.sub }}>Scatta o allega una foto</div>
+                            <div style={{ fontSize:10, color:T.sub2||T.sub, marginTop:2 }}>Puoi aggiungerne quante vuoi</div>
+                          </div>
+                        : <div>
+                            <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:8 }}>
+                              {ripFotos.map((f,i) => (
+                                <div key={f.id} style={{ position:"relative", width:76, height:76, borderRadius:10, overflow:"hidden", background:T.bg }}>
+                                  <img src={f.dataUrl} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt={`Foto ${i+1}`}/>
+                                  <div onClick={() => setRipFotos(fs => fs.filter(x => x.id !== f.id))}
+                                    style={{ position:"absolute", top:3, right:3, width:20, height:20, borderRadius:"50%", background:"rgba(0,0,0,0.55)", color:"#fff", fontSize:11, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontWeight:700 }}>✕</div>
+                                  <div style={{ position:"absolute", bottom:2, left:4, fontSize:9, color:"#fff", fontWeight:700, textShadow:"0 1px 2px rgba(0,0,0,0.7)" }}>#{i+1}</div>
+                                </div>
+                              ))}
+                              {/* FIX: usa ref invece di getElementById */}
+                              <div onClick={() => ripFotoRef.current?.click()}
+                                style={{ width:76, height:76, borderRadius:10, border:`1.5px dashed ${T.bdr}`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer", color:T.sub }}>
+                                <div style={{ fontSize:22 }}>+</div>
+                                <div style={{ fontSize:9, fontWeight:600 }}>Aggiungi</div>
+                              </div>
+                            </div>
+                          </div>
+                      }
+                      <input ref={ripFotoRef} type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={addRipFoto}/>
+                    </div>
+
+                    <div style={{ paddingTop:4 }}>
+                      {!ripProblema.trim() && (
+                        <div style={{ fontSize:11, color:T.orange, fontWeight:600, marginBottom:8, textAlign:"center" }}>⚠️ Descrivi il problema per procedere</div>
+                      )}
+                      <button style={{ ...S.btn, background:ripProblema.trim()?T.orange:"#ccc", cursor:ripProblema.trim()?"pointer":"not-allowed" }}
+                        onClick={addRiparazione} disabled={!ripProblema.trim()}>
+                        🔧 Crea riparazione
+                      </button>
+                      <button style={S.btnCancel} onClick={() => setShowModal(null)}>Annulla</button>
+                    </div>
+
+                  </div>
+                );
+              })()}
+
+              {/* == FLUSSO NUOVA INSTALLAZIONE == */}
+              {newCM.tipo === "nuova" && (() => {
+                const AccordionSection = ({ id, icon, label, badge, children }) => {
+                  const open = newCM._open === id;
+                  return (
+                    <div style={{ marginBottom:8, borderRadius:10, border:`1px solid ${T.bdr}`, overflow:"hidden" }}>
+                      <div onClick={() => setNewCM(c=>({...c,_open:open?null:id}))}
+                        style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"11px 14px", background:T.card, cursor:"pointer" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <span style={{ fontSize:16 }}>{icon}</span>
+                          <span style={{ fontSize:13, fontWeight:600, color:T.text }}>{label}</span>
+                          {badge && <span style={{ ...S.badge(T.accLt,T.acc), fontSize:10 }}>{badge}</span>}
+                        </div>
+                        <span style={{ fontSize:12, color:T.sub, transition:"transform 0.2s", display:"inline-block", transform:open?"rotate(180deg)":"rotate(0deg)" }}>▼</span>
+                      </div>
+                      {open && <div style={{ padding:"12px 14px", background:T.bg, borderTop:`1px solid ${T.bdr}` }}>{children}</div>}
+                    </div>
+                  );
+                };
+
+                const previewCode = "S-" + String(cantieri.length + 1).padStart(4,"0");
+
+                return (
+                  <>
+                    <div style={{ marginBottom:14, padding:"8px 12px", background:T.bg, borderRadius:8, display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontSize:11, color:T.sub }}>Numero commessa:</span>
+                      <span style={{ fontSize:13, fontWeight:800, color:T.acc, fontFamily:FM }}>{previewCode}</span>
+                      <span style={{ fontSize:10, color:T.sub }}>(assegnato automaticamente)</span>
+                    </div>
+
+                    <div style={{ marginBottom:14, padding:"14px", background:T.card, borderRadius:12, border:`1.5px solid ${T.bdr}` }}>
+                      <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>👤 Dati cliente *</div>
+                      <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+                        <input style={{...S.input,flex:1}} placeholder="Nome" value={newCM.cliente} onChange={e=>setNewCM(c=>({...c,cliente:e.target.value}))}/>
+                        <input style={{...S.input,flex:1}} placeholder="Cognome" value={newCM.cognome||""} onChange={e=>setNewCM(c=>({...c,cognome:e.target.value}))}/>
+                      </div>
+                      <input style={{...S.input,marginBottom:8}} placeholder="Indirizzo lavori (Via, CAP, Città)" value={newCM.indirizzo} onChange={e=>setNewCM(c=>({...c,indirizzo:e.target.value}))}/>
+                      <div style={{ display:"flex", gap:8 }}>
+                        <input style={{...S.input,flex:1}} placeholder="Telefono" inputMode="tel" value={newCM.telefono} onChange={e=>setNewCM(c=>({...c,telefono:e.target.value}))}/>
+                        <input style={{...S.input,flex:1}} placeholder="Email" inputMode="email" value={newCM.email||""} onChange={e=>setNewCM(c=>({...c,email:e.target.value}))}/>
+                      </div>
+                    </div>
+
+                    <AccordionSection id="accesso" icon="🏗" label="Accesso / Difficoltà salita"
+                      badge={newCM.difficoltaSalita||null}>
+                      <div style={{ display:"flex", gap:4, marginBottom:8 }}>
+                        {[{id:"facile",l:"Facile",c:T.grn,e:"✅"},{id:"media",l:"Media",c:T.orange,e:"⚠️"},{id:"difficile",l:"Difficile",c:T.red,e:"🔴"}].map(d => (
+                          <div key={d.id} onClick={()=>setNewCM(c=>({...c,difficoltaSalita:d.id}))}
+                            style={{ flex:1, padding:"8px 4px", borderRadius:8, border:`1.5px solid ${newCM.difficoltaSalita===d.id?d.c:T.bdr}`, background:newCM.difficoltaSalita===d.id?d.c+"15":T.card, textAlign:"center", cursor:"pointer" }}>
+                            <div style={{ fontSize:14 }}>{d.e}</div>
+                            <div style={{ fontSize:10, fontWeight:600, color:newCM.difficoltaSalita===d.id?d.c:T.sub }}>{d.l}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:10, color:T.sub, fontWeight:600, marginBottom:2 }}>Piano edificio</div>
+                          <select style={S.select} value={newCM.pianoEdificio} onChange={e=>setNewCM(c=>({...c,pianoEdificio:e.target.value}))}>
+                            <option value="">— Seleziona —</option>
+                            {["S2 — 2° Seminterrato","S1 — Seminterrato","PT — Piano Terra","P1 — 1° Piano","P2 — 2° Piano","P3 — 3° Piano","P4 — 4° Piano","P5 — 5° Piano","P6 — 6° Piano","P7 — 7° Piano","P8 — 8° Piano","P9 — 9° Piano","P10 — 10° Piano","P11 — 11° Piano","P12 — 12° Piano","P13 — 13° Piano","P14 — 14° Piano","P15 — 15° Piano","P16 — 16° Piano","P17 — 17° Piano","P18 — 18° Piano","P19 — 19° Piano","P20 — 20° Piano","M — Mansarda"].map(p=><option key={p} value={p}>{p}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:10, color:T.sub, fontWeight:600, marginBottom:2 }}>Foro scale (cm)</div>
+                          <input style={S.input} placeholder="es. 80×200" value={newCM.foroScale} onChange={e=>setNewCM(c=>({...c,foroScale:e.target.value}))}/>
+                        </div>
+                      </div>
+                      <div style={{ fontSize:10, color:T.sub, fontWeight:600, marginBottom:2 }}>Mezzo di salita</div>
+                      <select style={S.select} value={newCM.mezzoSalita} onChange={e=>setNewCM(c=>({...c,mezzoSalita:e.target.value}))}>
+                        <option value="">— Seleziona —</option>
+                        {mezziSalita.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </AccordionSection>
+
+                    <AccordionSection id="note" icon="📝" label="Note aggiuntive"
+                      badge={newCM.note ? "✓" : null}>
+                      <textarea style={{...S.input,minHeight:70,resize:"vertical"}}
+                        placeholder="Note aggiuntive sulla commessa…"
+                        defaultValue={newCM.note} onBlur={e=>setNewCM(c=>({...c,note:e.target.value}))}/>
+                    </AccordionSection>
+
+                    <div style={{ marginTop:6 }}>
+                      {!newCM.cliente.trim() && (
+                        <div style={{ fontSize:11, color:T.sub, textAlign:"center", marginBottom:8 }}>Inserisci almeno il nome per procedere</div>
+                      )}
+                      <button style={{ ...S.btn, background:newCM.cliente.trim()?T.acc:"#ccc", cursor:newCM.cliente.trim()?"pointer":"not-allowed" }}
+                        onClick={addCommessa} disabled={!newCM.cliente.trim()}>
+                        ✓ Crea commessa {previewCode}
+                      </button>
+                      <button style={S.btnCancel} onClick={() => setShowModal(null)}>Annulla</button>
+                    </div>
+                  </>
+                );
+              })()}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+
+  const generaPreventivoPDF = (c) => {
+    const calcolaVanoPDF = (v) => {
+      const m = v.misure||{};
+      const lc=(m.lCentro||0)/1000, hc=(m.hCentro||0)/1000;
+      const mq=lc*hc, perim=2*(lc+hc);
+      const sysRec = sistemiDB.find(s=>(s.marca+" "+s.sistema)===v.sistema||s.sistema===v.sistema);
+      let tot = mq * parseFloat(sysRec?.prezzoMq||sysRec?.euroMq||c.prezzoMq||350);
+      const vetroRec = vetriDB.find(g=>g.code===v.vetro||g.nome===v.vetro);
+      if(vetroRec?.prezzoMq) tot += mq * parseFloat(vetroRec.prezzoMq);
+      const copRec = coprifiliDB.find(cp=>cp.cod===v.coprifilo);
+      if(copRec?.prezzoMl) tot += perim * parseFloat(copRec.prezzoMl);
+      const lamRec = lamiereDB.find(l=>l.cod===v.lamiera);
+      if(lamRec?.prezzoMl) tot += lc * parseFloat(lamRec.prezzoMl);
+      const tapp=v.accessori?.tapparella; if(tapp?.attivo&&c.prezzoTapparella){const tmq=((tapp.l||m.lCentro||0)/1000)*((tapp.h||m.hCentro||0)/1000);tot+=tmq*parseFloat(c.prezzoTapparella);}
+      const pers=v.accessori?.persiana; if(pers?.attivo&&c.prezzoPersiana){const pmq=((pers.l||m.lCentro||0)/1000)*((pers.h||m.hCentro||0)/1000);tot+=pmq*parseFloat(c.prezzoPersiana);}
+      const zanz=v.accessori?.zanzariera; if(zanz?.attivo&&c.prezzoZanzariera){const zmq=((zanz.l||m.lCentro||0)/1000)*((zanz.h||m.hCentro||0)/1000);tot+=zmq*parseFloat(c.prezzoZanzariera);}
+      return { tot, mq };
+    };
+    const vaniPDF = getVaniAttivi(c); const totale = vaniPDF.reduce((s,v)=>s+calcolaVanoPDF(v).tot, 0);
+    const sconto = parseFloat(c.sconto||0);
+    const scontoVal = totale * sconto / 100;
+    const imponibile = totale - scontoVal;
+    const iva = imponibile * 0.10;
+    const totIva = imponibile + iva;
+    const oggi = new Date().toLocaleDateString("it-IT");
+    const righeVani = vaniPDF.map((v, i) => {
+      const { tot: sub, mq } = calcolaVanoPDF(v);
+      const m = v.misure||{};
+      return '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">'+(i+1)+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">'+(v.nome||"Vano "+(i+1))+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;color:#666;">'+(v.tipo||"")+" — "+(v.stanza||"")+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;color:#666;">'+(v.sistema||c.sistema||"")+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">'+(m.lCentro||0)+" × "+(m.hCentro||0)+' mm</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">'+mq.toFixed(2)+' mq</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:700;">€ '+sub.toFixed(2)+'</td></tr>';
+    }).join("");
+    const scontoHtml = sconto>0 ? '<div class="row" style="color:#ff9500;"><span>Sconto '+sconto+'%</span><span>− € '+scontoVal.toFixed(2)+'</span></div><div class="row"><span>Imponibile netto</span><span>€ '+imponibile.toFixed(2)+'</span></div>' : '';
+    const noteHtml = c.notePreventivo ? '<div style="border:1px solid #eee;border-radius:10px;padding:14px 18px;margin-bottom:24px;font-size:12px;color:#444;line-height:1.6;"><strong>Note:</strong> '+c.notePreventivo+'</div>' : '';
+    const firmaHtml = c.firmaCliente ? '<img src="'+c.firmaCliente+'" style="max-height:60px;max-width:100%;display:block;margin:0 auto 4px;"/>' : '<div class="linea"></div>';
+    const dataFirmaHtml = c.dataFirma ? ' — '+c.dataFirma : '';
+    const html = '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"/><title>Preventivo '+c.code+'</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,Arial,sans-serif;color:#1a1a1c;font-size:13px;padding:40px;max-width:900px;margin:0 auto;}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #007aff;}.azienda{font-size:22px;font-weight:900;color:#007aff;}.doc-title{text-align:right;}.doc-title h1{font-size:28px;font-weight:900;}table{width:100%;border-collapse:collapse;margin-bottom:20px;}thead{background:#007aff;color:white;}thead th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;}thead th:last-child,thead th:nth-last-child(-n+3){text-align:right;}.totali{max-width:340px;margin-left:auto;background:#f5f5f7;border-radius:10px;padding:16px 20px;margin-bottom:24px;}.totali .row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;}.totali .row.main{font-size:16px;font-weight:900;padding-top:10px;border-top:2px solid #1a1a1c;margin-top:4px;color:#007aff;}.cliente-box{background:#f5f5f7;border-radius:10px;padding:16px 20px;margin-bottom:24px;display:flex;gap:40px;}.cliente-box .label{font-size:10px;font-weight:700;color:#999;text-transform:uppercase;margin-bottom:4px;}.cliente-box .val{font-size:14px;font-weight:700;}.validita{background:#fff8ec;border:1px solid #ffb800;border-radius:8px;padding:10px 16px;font-size:11px;color:#7a5000;margin-bottom:20px;}.firma{display:flex;gap:40px;margin-top:40px;padding-top:20px;border-top:1px solid #eee;}.firma .box{flex:1;text-align:center;}.firma .linea{border-bottom:1px solid #999;margin-bottom:6px;height:50px;}.firma .label{font-size:10px;color:#666;text-transform:uppercase;}.footer{font-size:10px;color:#999;text-align:center;padding-top:20px;border-top:1px solid #eee;}@media print{body{padding:20px;}button{display:none!important;}}</style></head><body>'
+      +(aziendaInfo.logo?'<div class="header" style="display:flex;justify-content:space-between;align-items:flex-start;"><div style="display:flex;align-items:center;gap:14px;"><img src="'+aziendaInfo.logo+'" style="height:56px;max-width:120px;object-fit:contain;" alt="logo"/><div>':'<div class="header"><div>')+'<div style="font-size:20px;font-weight:900;color:#007aff;">'+aziendaInfo.ragione+'</div>'+'<div style="font-size:11px;color:#666;">'+aziendaInfo.indirizzo+'</div>'+'<div style="font-size:11px;color:#666;">'+aziendaInfo.telefono+(aziendaInfo.email?' · '+aziendaInfo.email:'')+'</div>'+(aziendaInfo.piva?'<div style="font-size:10px;color:#999;">P.IVA '+aziendaInfo.piva+(aziendaInfo.cciaa?' · CCIAA '+aziendaInfo.cciaa:'')+'</div>':'')+(aziendaInfo.logo?'</div></div>':'</div>')+'<div style="text-align:right">'+'<h1 style="font-size:28px;font-weight:900;">PREVENTIVO</h1>'+'<div style="font-size:14px;color:#007aff;font-weight:700;">'+c.code+'</div>'+'<div style="font-size:11px;color:#666;">Data: '+oggi+'</div>'+'</div></div>'
+      +'<div class="cliente-box"><div><div class="label">Cliente</div><div class="val">'+c.cliente+' '+(c.cognome||'')+'</div><div style="font-size:12px;color:#444;">'+(c.indirizzo||'')+'</div></div><div><div class="label">Contatto</div><div class="val">'+(c.telefono||'—')+'</div></div><div><div class="label">Vani</div><div class="val">'+vaniPDF.length+'</div></div></div>'
+      +'<button onclick="window.print()" style="margin-bottom:16px;padding:10px 24px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">🖨 Stampa / Salva PDF</button>'
+      +'<table><thead><tr><th>#</th><th>Vano</th><th>Tipologia</th><th>Sistema</th><th>Misura</th><th>Mq</th><th>Importo</th></tr></thead><tbody>'+righeVani+'</tbody></table>'
+      +'<div class="totali"><div class="row"><span>Totale imponibile</span><span>€ '+totale.toFixed(2)+'</span></div>'+scontoHtml+'<div class="row"><span>IVA 10%</span><span>€ '+iva.toFixed(2)+'</span></div><div class="row main"><span>TOTALE</span><span>€ '+totIva.toFixed(2)+'</span></div></div>'
+      +noteHtml
+      +'<div class="validita">⏰ Preventivo valido 30 giorni. Prezzi IVA 10% inclusa per lavori di ristrutturazione.</div>'
+      +'<div class="firma"><div class="box"><div class="linea"></div><div class="label">Timbro e firma azienda</div></div><div class="box">'+firmaHtml+'<div class="label">Firma cliente per accettazione'+dataFirmaHtml+'</div></div></div>'
+      +'<div class="footer">'+aziendaInfo.ragione+(aziendaInfo.piva?' · P.IVA '+aziendaInfo.piva:'')+(aziendaInfo.iban?'<br>IBAN: '+aziendaInfo.iban:'')+'</div></body></html>';
+    const blob = new Blob([html], {type:"text/html"});
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  };
+
+
+  const renderFirmaModal = () => {
+    if (!showFirmaModal) return null;
+    const c = selectedCM;
+    const clearFirma = () => { const cv=firmaRef.current; if(cv){const ctx=cv.getContext("2d");ctx.clearRect(0,0,cv.width,cv.height);} };
+    const salvaFirma = () => {
+      const cv=firmaRef.current; if(!cv)return;
+      const dataUrl=cv.toDataURL("image/png");
+      setCantieri(cs=>cs.map(x=>x.id===c.id?{...x,firmaCliente:dataUrl,dataFirma:new Date().toLocaleDateString("it-IT")}:x));
+      setSelectedCM(p=>({...p,firmaCliente:dataUrl,dataFirma:new Date().toLocaleDateString("it-IT")}));
+      setShowFirmaModal(false);
+    };
+    return (
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:420,overflow:"hidden"}}>
+          <div style={{padding:"14px 16px",borderBottom:"1px solid #eee",display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:20}}>✍️</span>
+            <div><div style={{fontSize:14,fontWeight:800}}>Firma del Cliente</div><div style={{fontSize:11,color:"#666"}}>{c?.code}</div></div>
+            <div onClick={()=>setShowFirmaModal(false)} style={{marginLeft:"auto",width:28,height:28,borderRadius:"50%",background:"#f5f5f7",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>✕</div>
+          </div>
+          <div style={{padding:"12px 16px 0"}}>
+            <div style={{fontSize:11,color:"#666",marginBottom:8,textAlign:"center"}}>Firma nella casella qui sotto</div>
+            <div style={{border:"2px solid #007aff",borderRadius:10,overflow:"hidden",background:"#fafafa",touchAction:"none"}}>
+              <canvas ref={firmaRef} width={388} height={160} style={{width:"100%",height:160,display:"block",cursor:"crosshair"}}
+                onPointerDown={e=>{firmaRef.current?.setPointerCapture(e.pointerId);setFirmaDrawing(true);const cv=firmaRef.current;const r=cv.getBoundingClientRect();const sx=cv.width/r.width,sy=cv.height/r.height;const ctx=cv.getContext("2d");ctx.beginPath();ctx.moveTo((e.clientX-r.left)*sx,(e.clientY-r.top)*sy);ctx.strokeStyle="#1a1a1c";ctx.lineWidth=2.5;ctx.lineCap="round";ctx.lineJoin="round";}}
+                onPointerMove={e=>{if(!firmaDrawing)return;const cv=firmaRef.current;const r=cv.getBoundingClientRect();const sx=cv.width/r.width,sy=cv.height/r.height;const ctx=cv.getContext("2d");ctx.lineTo((e.clientX-r.left)*sx,(e.clientY-r.top)*sy);ctx.stroke();}}
+                onPointerUp={()=>setFirmaDrawing(false)} onPointerLeave={()=>setFirmaDrawing(false)}/>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0 10px"}}>
+              <div style={{fontSize:10,color:"#999"}}>📅 {new Date().toLocaleDateString("it-IT")}</div>
+              <div onClick={clearFirma} style={{fontSize:11,color:"#ff3b30",cursor:"pointer",fontWeight:600}}>🗝‘ Cancella</div>
+            </div>
+          </div>
+          <div style={{padding:"0 16px 16px",display:"flex",gap:8}}>
+            <button onClick={()=>setShowFirmaModal(false)} style={{flex:1,padding:12,borderRadius:10,border:"1px solid #eee",background:"#f5f5f7",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:"#666"}}>Annulla</button>
+            <button onClick={salvaFirma} style={{flex:2,padding:12,borderRadius:10,border:"none",background:"linear-gradient(135deg,#34c759,#1a9e40)",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>✅ Conferma firma</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
+  const renderPreventivoModal = () => {
+    if (!showPreventivoModal || !selectedCM) return null;
+    const c = selectedCM;
+    const updateCMp = (field, val) => { setCantieri(cs=>cs.map(x=>x.id===c.id?{...x,[field]:val}:x)); setSelectedCM(p=>({...p,[field]:val})); };
+    const calcolaVano = (v) => {
+      const m=v.misure||{}; const lc=(m.lCentro||0)/1000,hc=(m.hCentro||0)/1000; const mq=lc*hc,perim=2*(lc+hc);
+      const sysRec=sistemiDB.find(s=>(s.marca+" "+s.sistema)===v.sistema||s.sistema===v.sistema);
+      let tot=mq*parseFloat(sysRec?.prezzoMq||sysRec?.euroMq||c.prezzoMq||350);
+      const vetroRec=vetriDB.find(g=>g.code===v.vetro||g.nome===v.vetro); if(vetroRec?.prezzoMq) tot+=mq*parseFloat(vetroRec.prezzoMq);
+      const copRec=coprifiliDB.find(cp=>cp.cod===v.coprifilo); if(copRec?.prezzoMl) tot+=perim*parseFloat(copRec.prezzoMl);
+      const lamRec=lamiereDB.find(l=>l.cod===v.lamiera); if(lamRec?.prezzoMl) tot+=lc*parseFloat(lamRec.prezzoMl);
+      const tapp=v.accessori?.tapparella; if(tapp?.attivo&&c.prezzoTapparella){const tmq=((tapp.l||m.lCentro||0)/1000)*((tapp.h||m.hCentro||0)/1000);tot+=tmq*parseFloat(c.prezzoTapparella);}
+      const pers=v.accessori?.persiana; if(pers?.attivo&&c.prezzoPersiana){const pmq=((pers.l||m.lCentro||0)/1000)*((pers.h||m.hCentro||0)/1000);tot+=pmq*parseFloat(c.prezzoPersiana);}
+      const zanz=v.accessori?.zanzariera; if(zanz?.attivo&&c.prezzoZanzariera){const zmq=((zanz.l||m.lCentro||0)/1000)*((zanz.h||m.hCentro||0)/1000);tot+=zmq*parseFloat(c.prezzoZanzariera);}
+      return {tot,mq,sysRec,vetroRec,copRec,lamRec};
+    };
+    const vaniCalc=(c.vani||[]).map(v=>({...v,calc:calcolaVano(v)}));
+    const totale=vaniCalc.reduce((s,v)=>s+v.calc.tot,0);
+    const vaniSenzaSistema = vaniCalc.filter(v=>!v.calc.sysRec && !v.sistema);
+    const vaniSenzaMisure = vaniCalc.filter(v=>!(v.misure?.lCentro) || !(v.misure?.hCentro));
+    const hasWarnings = vaniSenzaSistema.length>0 || vaniSenzaMisure.length>0;
+    const scontoVal=totale*parseFloat(c.sconto||0)/100;
+    const imponibile=totale-scontoVal; const iva=imponibile*0.10; const totIva=imponibile+iva;
+    return (
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:400,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={e=>e.target===e.currentTarget&&setShowPreventivoModal(false)}>
+        <div style={{background:"#f5f5f7",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:480,maxHeight:"90vh",overflow:"auto",paddingBottom:24}}>
+          <div style={{padding:"16px 16px 10px",display:"flex",alignItems:"center",gap:10,position:"sticky",top:0,background:"#f5f5f7",zIndex:1}}>
+            <span style={{fontSize:20}}>📄</span>
+            <div><div style={{fontSize:15,fontWeight:800}}>Preventivo</div><div style={{fontSize:11,color:"#666"}}>{c.code} — {c.cliente} {c.cognome||""}</div></div>
+            <div onClick={()=>setShowPreventivoModal(false)} style={{marginLeft:"auto",width:28,height:28,borderRadius:"50%",background:"#e5e5ea",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>✕</div>
+          </div>
+          <div style={{padding:"0 16px"}}>
+            <div style={{background:"#fff",borderRadius:12,padding:"14px",marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#999",textTransform:"uppercase",marginBottom:10}}>Parametri</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                <div><div style={{fontSize:10,fontWeight:700,color:"#999",marginBottom:4}}>SCONTO %</div><input type="number" value={c.sconto||0} onChange={e=>updateCMp("sconto",e.target.value)} style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid #e5e5ea",fontSize:15,fontWeight:700,textAlign:"right",boxSizing:"border-box"}}/></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:"#999",marginBottom:4}}>ACCONTO €</div><input type="number" value={c.accontoRicevuto||0} onChange={e=>updateCMp("accontoRicevuto",e.target.value)} style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid #e5e5ea",fontSize:15,fontWeight:700,textAlign:"right",boxSizing:"border-box"}}/></div>
+              </div>
+              <div><div style={{fontSize:10,fontWeight:700,color:"#999",marginBottom:4}}>NOTE</div><textarea value={c.notePreventivo||""} onChange={e=>updateCMp("notePreventivo",e.target.value)} placeholder="Condizioni, garanzie..." style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid #e5e5ea",fontSize:12,minHeight:50,resize:"none",boxSizing:"border-box",fontFamily:"inherit"}}/></div>
+            </div>
+            {hasWarnings && (
+              <div style={{background:"#fff8ec",borderRadius:12,padding:"12px 14px",marginBottom:10,border:"1.5px solid #ff9500"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                  <span style={{fontSize:16}}>⚠️</span>
+                  <span style={{fontSize:12,fontWeight:800,color:"#7a4500"}}>Preventivo incompleto</span>
+                </div>
+                {vaniSenzaSistema.length>0 && (
+                  <div style={{fontSize:11,color:"#7a4500",marginBottom:4}}>
+                    • {vaniSenzaSistema.length} vano/i senza sistema assegnato → prezzo €0
+                    <div onClick={()=>{setShowPreventivoModal(false);setSelectedVano(vaniSenzaSistema[0]);setVanoStep(2);}} style={{display:"inline",marginLeft:8,color:"#007aff",fontWeight:700,cursor:"pointer"}}>Vai →</div>
+                  </div>
+                )}
+                {vaniSenzaMisure.length>0 && (
+                  <div style={{fontSize:11,color:"#7a4500"}}>
+                    • {vaniSenzaMisure.length} vano/i senza misure → calcolo non accurato
+                    <div onClick={()=>{setShowPreventivoModal(false);setSelectedVano(vaniSenzaMisure[0]);setVanoStep(1);}} style={{display:"inline",marginLeft:8,color:"#007aff",fontWeight:700,cursor:"pointer"}}>Vai →</div>
+                  </div>
+                )}
+              </div>
+            )}
+            <div style={{background:"#fff",borderRadius:12,padding:"14px",marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#999",textTransform:"uppercase",marginBottom:8}}>Voci</div>
+              {vaniCalc.length===0?<div style={{fontSize:12,color:"#999",textAlign:"center",padding:12}}>Nessun vano</div>:vaniCalc.map((v,i)=>(

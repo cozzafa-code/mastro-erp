@@ -1,0 +1,2000 @@
+          </>}
+          {/* STEP 2 — Dati */}
+          {nvStep === 2 && <>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>📋 Dati della visita</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>DATA</div>
+                <input style={S.input} type="date" value={nvData.data} onChange={e => setNvData(d => ({...d, data: e.target.value}))} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>ORA</div>
+                <input style={S.input} type="time" value={nvData.ora} onChange={e => setNvData(d => ({...d, ora: e.target.value}))} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>RILEVATORE</div>
+                <input style={S.input} placeholder="Chi ha eseguito il rilievo..." value={nvData.rilevatore} onChange={e => setNvData(d => ({...d, rilevatore: e.target.value}))} />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+              <button onClick={() => setNvStep(1)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>← Indietro</button>
+              <button onClick={() => setNvStep(3)} style={{ ...S.btn, flex: 2 }}>Avanti →</button>
+            </div>
+          </>}
+          {/* STEP 2 — Vani misurati */}
+          {nvStep === 3 && <>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>✅ Vani misurati</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 14 }}>Seleziona i vani che hai misurato</div>
+            {vaniA.length === 0
+              ? <div style={{ textAlign: "center", padding: "20px", color: T.sub }}>Tutti già misurati!</div>
+              : vaniA.map(v => (
+                <div key={v.id} onClick={() => togV(v.id)} style={{
+                  ...S.card, padding: "12px 14px", marginBottom: 8, cursor: "pointer",
+                  border: `1.5px solid ${nvVani.includes(v.id) ? T.grn : T.bdr}`,
+                  background: nvVani.includes(v.id) ? T.grnLt : T.card,
+                  display: "flex", alignItems: "center", justifyContent: "space-between"
+                }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{v.nome}</div>
+                    <div style={{ fontSize: 11, color: T.sub }}>~{v.mq}m²</div>
+                  </div>
+                  <div style={{ width: 24, height: 24, borderRadius: 6,
+                    border: `2px solid ${nvVani.includes(v.id) ? T.grn : T.bdr}`,
+                    background: nvVani.includes(v.id) ? T.grn : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#fff", fontSize: 14 }}>
+                    {nvVani.includes(v.id) ? "✓" : ""}
+                  </div>
+                </div>
+              ))
+            }
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button onClick={() => setNvStep(2)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>← Indietro</button>
+              <button onClick={() => setNvStep(4)} style={{ ...S.btn, flex: 2 }}>Avanti →</button>
+            </div>
+          </>}
+          {/* STEP 4 — Vani bloccati */}
+          {nvStep === 4 && <>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>🔴 Vani non misurati</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 14 }}>Indica il motivo per ogni vano saltato</div>
+            {vaniA.filter(v => !nvVani.includes(v.id)).map(v => {
+              const hB = !!nvBlocchi[v.id];
+              return (
+                <div key={v.id} style={{ ...S.card, marginBottom: 10, overflow: "hidden", border: `1.5px solid ${hB ? T.red : T.bdr}` }}>
+                  <div onClick={() => togB(v.id)} style={{ padding: "11px 14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", background: hB ? T.redLt : T.card }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{v.nome}</div>
+                      <div style={{ fontSize: 11, color: T.sub }}>{hB ? "Indica motivo" : "Tocca per segnare bloccato"}</div>
+                    </div>
+                    <div style={{ width: 24, height: 24, borderRadius: 6, border: `2px solid ${hB ? T.red : T.bdr}`, background: hB ? T.red : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14 }}>
+                      {hB ? "✓" : ""}
+                    </div>
+                  </div>
+                  {hB && (
+                    <div style={{ padding: "0 14px 12px", background: T.redLt }}>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8, paddingTop: 8 }}>
+                        {MOTIVI_BLOCCO.map(m => (
+                          <div key={m} onClick={() => sbF(v.id, "motivo", m)} style={{
+                            padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: "pointer",
+                            background: nvBlocchi[v.id]?.motivo === m ? T.red : T.card,
+                            border: `1.5px solid ${nvBlocchi[v.id]?.motivo === m ? T.red : T.bdr}`,
+                            color: nvBlocchi[v.id]?.motivo === m ? "#fff" : T.sub
+                          }}>{m}</div>
+                        ))}
+                      </div>
+                      <input style={S.input} placeholder="Note aggiuntive..." value={nvBlocchi[v.id]?.note || ""} onChange={e => sbF(v.id, "note", e.target.value)} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>NOTE GENERALI</div>
+              <textarea style={{ ...S.input, minHeight: 70, resize: "vertical" }} placeholder="Osservazioni sull'intera visita..." value={nvNote} onChange={e => setNvNote(e.target.value)} />
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button onClick={() => setNvStep(3)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>← Indietro</button>
+              <button onClick={() => setNvStep(5)} style={{ ...S.btn, flex: 2 }}>Avanti →</button>
+            </div>
+          </>}
+          {/* STEP 5 — Riepilogo */}
+          {nvStep === 5 && <>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>📋 Riepilogo</div>
+            <div style={{ ...S.card, padding: "12px 14px", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, color: T.sub }}>📅 {nvData.data ? new Date(nvData.data + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" }) : "—"} · 🕐 {nvData.ora || "--:--"}</div>
+              <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>👤 {nvData.rilevatore || "Non specificato"}</div>
+            </div>
+            {nvVani.length > 0 && (
+              <div style={{ ...S.card, padding: "12px 14px", marginBottom: 10, border: `1px solid ${T.grn}40` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.grn, marginBottom: 7 }}>✅ Misurati</div>
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  {nvVani.map(id => { const v = vaniA.find(x => x.id === id); return <span key={id} style={S.badge(T.grnLt, T.grn)}>{v?.nome}</span>; })}
+                </div>
+              </div>
+            )}
+            {Object.keys(nvBlocchi).length > 0 && (
+              <div style={{ ...S.card, padding: "12px 14px", marginBottom: 10, border: `1px solid ${T.red}40` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.red, marginBottom: 7 }}>🔴 Bloccati</div>
+                {Object.entries(nvBlocchi).map(([id, b]) => {
+                  const v = vaniA.find(x => x.id === parseInt(id));
+                  return <div key={id} style={{ fontSize: 11, marginBottom: 4 }}><strong>{v?.nome}</strong>: {b.motivo || "—"}{b.note && ` — ${b.note}`}</div>;
+                })}
+              </div>
+            )}
+            {nvNote && <div style={{ ...S.card, padding: "12px 14px", marginBottom: 10, fontStyle: "italic", fontSize: 11, color: T.sub }}>"{nvNote}"</div>}
+            <div style={{ ...S.card, padding: "10px 14px", marginBottom: 10, background: T.accLt, border: `1px solid ${T.acc}30` }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: T.acc, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>Tipo visita</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.acc }}>
+                {nvTipo === "rilievo" ? "📐 Rilievo misure" : nvTipo === "definitiva" ? "✅ Misure definitive" : "🔧 Modifica cantiere"}
+              </div>
+              {nvTipo === "modifica" && nvMotivoModifica && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{nvMotivoModifica}</div>}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setNvStep(4)} style={{ ...S.btnCancel, flex: 1, border: `1px solid ${T.bdr}` }}>← Modifica</button>
+              <button onClick={salvaVisita} style={{ ...S.btn, flex: 2, background: T.grn }}>✓ Salva visita</button>
+            </div>
+          </>}
+        </div>
+      </div>
+    );
+
+    // == VISTA RILIEVO CON VANI ==
+    return (
+      <div style={{ paddingBottom: 80 }}>
+        {/* Header rilievo */}
+        <div style={{ ...S.header }}>
+          <div onClick={() => { setSelectedRilievo(null); setCmSubTab("rilievi"); }} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 14 }}>{tipoIcoRil}</span>
+              <div style={S.headerTitle}>{tipoLblRil} — R{r?.n}</div>
+            </div>
+            <div style={S.headerSub}>{c.code} · {c.cliente} {c.cognome || ""} · {r?.data ? new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { day:"numeric", month:"short", year:"numeric" }) : ""}</div>
+          </div>
+          {vaniList.length > 0 && (
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: tipoColRil }}>{progVani}%</div>
+              <div style={{ fontSize: 10, color: T.sub }}>{vaniMisurati.length}/{vaniList.length} vani</div>
+            </div>
+          )}
+          <div onClick={() => setShowRiepilogo(true)} style={{ padding: "6px 10px", borderRadius: 6, background: T.accLt, cursor: "pointer", marginLeft: 6 }}>
+            <span style={{ fontSize: 14 }}>📋</span>
+          </div>
+          <div onClick={exportPDF} style={{ padding: "6px 10px", borderRadius: 6, background: T.redLt, cursor: "pointer" }}>
+            <Ico d={ICO.file} s={16} c={T.red} />
+          </div>
+        </div>
+
+        {/* Banner rilievo info */}
+        {r?.motivoModifica && (
+          <div style={{ margin: "4px 16px 0", padding: "8px 12px", background: T.orangeLt, borderRadius: 8, border: `1px solid ${T.orange}30`, fontSize: 12, color: T.orange }}>
+            🔧 <strong>Modifica:</strong> {r.motivoModifica}
+          </div>
+        )}
+
+        {/* Barra progresso vani */}
+        {vaniList.length > 0 && (
+          <div style={{ padding: "8px 16px" }}>
+            <div style={{ height: 5, background: T.bdr, borderRadius: 3, overflow: "hidden", marginBottom: 4 }}>
+              <div style={{ height: "100%", width: `${progVani}%`, background: progVani === 100 ? T.grn : tipoColRil, borderRadius: 3 }} />
+            </div>
+            {vaniDaFare.filter(v => !v.note?.startsWith("🔴")).length > 0 && <div style={{ fontSize: 11, color: T.red, fontWeight: 600 }}>Mancano misure: {vaniDaFare.filter(v => !v.note?.startsWith("🔴")).map(v => v.nome).join(", ")}</div>}
+            {tutteMis && <div style={{ fontSize: 11, color: T.grn, fontWeight: 600 }}>✅ Tutte le misure raccolte</div>}
+          </div>
+        )}
+
+        {/* Info badges */}
+        <div style={{ padding: "8px 16px", display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>🔧 Riparazione</span>}
+          {c.tipo === "nuova" && <span style={S.badge(T.grnLt, T.grn)}>🆕 Nuova</span>}
+          {c.sistema && <span style={S.badge(T.blueLt, T.blue)}>{c.sistema}</span>}
+          {c.difficoltaSalita && <span style={S.badge(c.difficoltaSalita === "facile" ? T.grnLt : c.difficoltaSalita === "media" ? T.orangeLt : T.redLt, c.difficoltaSalita === "facile" ? T.grn : c.difficoltaSalita === "media" ? T.orange : T.red)}>Salita: {c.difficoltaSalita}</span>}
+          {c.mezzoSalita && <span style={S.badge(T.purpleLt, T.purple)}>🪜 {c.mezzoSalita}</span>}
+          {c.pianoEdificio && <span style={S.badge(T.blueLt, T.blue)}>Piano: {c.pianoEdificio}</span>}
+          {c.foroScale && <span style={S.badge(T.redLt, T.red)}>Foro: {c.foroScale}</span>}
+          {c.telefono && <span onClick={() => window.open(`tel:${c.telefono}`)} style={{ ...S.badge(T.grnLt, T.grn), cursor: "pointer" }}>📞 {c.telefono}</span>}
+        </div>
+        {c.note && <div style={{ padding: "0 16px", marginBottom: 6 }}><div style={{ padding: "8px 12px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, fontSize: 12, color: T.sub, lineHeight: 1.4 }}>📝 {c.note}</div></div>}
+
+        {/* Pipeline */}
+        <div style={{ padding: "4px 16px 0" }}>
+          <PipelineBar fase={c.fase} />
+        </div>
+        <div style={{ marginTop: 8 }}>{renderFasePanel(c)}</div>
+        {faseIndex(c.fase) < PIPELINE.length - 1 && (
+          <div style={{ padding: "0 16px", marginTop: 4, marginBottom: 4 }}>
+            <button onClick={() => advanceFase(c.id)} style={{ ...S.btn, background: fase?.color, fontSize: 13, padding: 10, width: "100%" }}>
+              ✓ Avanza a {PIPELINE[faseIndex(c.fase) + 1]?.nome} →
+            </button>
+          </div>
+        )}
+
+        {/* Contact actions */}
+        <div style={{ display: "flex", gap: 8, padding: "12px 16px" }}>
+          {[
+            { ico: ICO.phone, label: "Chiama",   col: T.grn,  act: () => window.open(`tel:${c.telefono || ""}`) },
+            { ico: ICO.map,   label: "Naviga",   col: T.blue, act: () => window.open(`https://maps.google.com/?q=${encodeURIComponent(c.indirizzo || "")}`) },
+            { ico: ICO.send,  label: "WhatsApp", col: "#25d366", act: () => window.open(`https://wa.me/?text=${encodeURIComponent(`Commessa ${c.code} - ${c.cliente}`)}`) },
+          ].map((a, i) => (
+            <div key={i} onClick={a.act} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "10px 0", background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, cursor: "pointer" }}>
+              <Ico d={a.ico} s={18} c={a.col} />
+              <span style={{ fontSize: 10, fontWeight: 600, color: T.sub }}>{a.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* == TAB: vani / info == */}
+        <div style={{ display: "flex", borderBottom: `1px solid ${T.bdr}`, margin: "0 0 0 0" }}>
+          {[{k:"sopralluoghi",l:`🪟 Vani (${vaniList.length})`},{k:"info",l:"ℹ Info rilievo"}].map(t => (
+            <div key={t.k} onClick={() => setCmSubTab(t.k)} style={{
+              flex: 1, padding: "8px 4px", textAlign: "center", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              borderBottom: `2px solid ${cmSubTab === t.k ? T.acc : "transparent"}`,
+              color: cmSubTab === t.k ? T.acc : T.sub
+            }}>{t.l}</div>
+          ))}
+        </div>
+
+        {/* == TAB VANI (lista vani del rilievo) == */}
+        {cmSubTab === "sopralluoghi" && (
+          <div style={{ padding: "0 16px 14px" }}>
+            {vaniList.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "28px 16px" }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>🪟</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>Nessun vano in questo rilievo</div>
+                <div style={{ fontSize: 12, color: T.sub, marginBottom: 18 }}>Aggiungi i vani da misurare</div>
+                <button onClick={() => setShowModal("vano")} style={{ ...S.btn, margin: "0 auto" }}>+ Aggiungi vano</button>
+              </div>
+            ) : vaniList.map(v => {
+              const nMisure = Object.values(v.misure||{}).filter(x=>(x as number)>0).length;
+              const completo = nMisure >= 6;
+              const bloccato = v.note?.startsWith("🔴 BLOCCATO");
+              const colore = bloccato ? T.red : completo ? T.grn : T.orange;
+              return (
+                <div key={v.id} onClick={() => { setSelectedVano(v); setVanoStep(0); }}
+                  style={{ ...S.card, marginBottom: 8, padding: "12px 14px", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 12,
+                    borderLeft: `3px solid ${colore}` }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{v.nome}</span>
+                      {/* Badge rilievo di appartenenza */}
+                      {(() => {
+                        const rIdx = c.rilievi?.findIndex(r => r.vani?.some(vv => vv.id === v.id));
+                        if (rIdx < 0) return null;
+                        const ril = c.rilievi[rIdx];
+                        const questoBloccato = v.note?.startsWith("🔴 BLOCCATO");
+                        const questoIncompleto = !questoBloccato && Object.values(v.misure||{}).filter(x=>(x as number)>0).length > 0 && Object.values(v.misure||{}).filter(x=>(x as number)>0).length < 6;
+                        const haProblema = questoBloccato || questoIncompleto;
+                        return (
+                          <span style={{
+                            fontSize: 9, fontWeight: 800, borderRadius: 6, padding: "1px 6px",
+                            background: haProblema ? T.redLt : T.bg,
+                            color: haProblema ? T.red : T.sub,
+                            border: `1px solid ${haProblema ? T.red+"40" : T.bdr}`
+                          }}>
+                            R{rIdx + 1} · {ril.data || ril.dataRilievo || "—"}
+                            {haProblema && " ⚠"}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <div style={{ fontSize: 11, color: T.sub }}>{v.tipo} · {v.stanza} · {v.piano}</div>
+                    {bloccato && <div style={{ fontSize: 11, color: T.red, marginTop: 2 }}>{v.note?.replace("🔴 BLOCCATO: ","")}</div>}
+                  </div>
+                  <div style={{ textAlign: "right", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+                    {/* Badge pezzi */}
+                    <span style={{ fontSize:12, fontWeight:800, color:"#fff",
+                      background: bloccato ? T.red : completo ? T.grn : T.orange,
+                      borderRadius:8, padding:"2px 8px", minWidth:28, textAlign:"center" }}>
+                      {v.pezzi||1} pz
+                    </span>
+                    {bloccato
+                      ? <span style={S.badge(T.redLt, T.red)}>🔴 Bloccato</span>
+                      : completo
+                      ? <span style={S.badge(T.grnLt, T.grn)}>✅ {nMisure} mis.</span>
+                      : <span style={S.badge(T.orangeLt, T.orange)}>⚠ {nMisure} mis.</span>}
+                  </div>
+                  <span style={{ color: T.sub, fontSize: 14 }}>›</span>
+                </div>
+              );
+            })}
+            {vaniList.length > 0 && (
+              <div onClick={() => setShowModal("vano")}
+                style={{ ...S.card, padding: "11px 14px", marginTop: 6, cursor: "pointer",
+                  border: `1px dashed ${T.bdr}`, background: "transparent",
+                  display: "flex", alignItems: "center", gap: 10, justifyContent: "center" }}>
+                <span style={{ fontSize: 18, color: T.acc }}>+</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: T.acc }}>Aggiungi vano</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* == TAB MISURE (stato per vano) == */}
+        {vaniList.length > 0 && cmSubTab === "misure_tab" && (
+          <div style={{ padding: "14px 16px" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Stato per vano</div>
+            {vaniList.map(v => {
+              const mis = vaniM.includes(v.id);
+              const blk = !mis && ulB(v.id);
+              let daV = null;
+              for (let i = viste.length - 1; i >= 0; i--) {
+                if (viste[i].vaniMisurati?.includes(v.id)) { daV = viste[i]; break; }
+              }
+              return (
+                <div key={v.id} style={{ ...S.card, marginBottom: 8 }}>
+                  <div style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: mis ? T.grnLt : blk ? T.redLt : T.bdr, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+                      {mis ? "✅" : blk ? "🔴" : "⏳"}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700 }}>{v.nome}</div>
+                        <span style={{ fontSize: 10, color: T.sub }}>~{v.mq}m²</span>
+                      </div>
+                      {mis && daV && <div style={{ fontSize: 11, color: T.sub }}>{daV.n}ª visita · {new Date(daV.data + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" })}</div>}
+                      {!mis && blk && <div style={{ fontSize: 11, color: T.red }}>{blk.motivo}{blk.note && <span style={{ color: T.sub }}> — {blk.note}</span>}</div>}
+                      {!mis && !blk && <div style={{ fontSize: 11, color: T.sub }}>Non ancora visitato</div>}
+                    </div>
+                    {!mis && <span style={{ ...S.badge(T.redLt, T.red), flexShrink: 0, fontSize: 9 }}>DA FARE</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* == TAB INFO RILIEVO == */}
+        {cmSubTab === "info" && (
+          <div style={{ padding: "14px 16px" }}>
+            {/* Info rilievo */}
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>Dettagli Rilievo</div>
+            {[
+              ["Tipo",       tipoLblRil],
+              ["Data",       r?.data ? new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) : "—"],
+              ["Ora",        r?.ora || "—"],
+              ["Rilevatore", r?.rilevatore || "—"],
+              ["N. vani",    `${vaniList.length} vani`],
+              ["Avanzamento",`${progVani}% (${vaniMisurati.length}/${vaniList.length})`],
+              ...(r?.motivoModifica ? [["Motivo", r.motivoModifica]] : []),
+              ...(r?.note ? [["Note", r.note]] : []),
+            ].map(([k, v]) => (
+              <div key={k} style={{ ...S.card, padding: "11px 14px", marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div style={{ fontSize: 12, color: T.sub, fontWeight: 600, flexShrink: 0 }}>{k}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, textAlign: "right" }}>{v}</div>
+              </div>
+            ))}
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8, marginTop: 16 }}>Commessa</div>
+            {[
+              ["Cliente",   `${c.cliente} ${c.cognome || ""}`],
+              ["Codice",    c.code],
+              ["Indirizzo", c.indirizzo],
+              ["Telefono",  c.telefono || "—"],
+              ["Sistema",   c.sistema || "—"],
+              ...(c.euro ? [["Importo", `€${c.euro.toLocaleString("it-IT")}`]] : []),
+              ["Rilievi",   `${(c.rilievi||[]).length} totali`],
+            ].map(([k, v]) => (
+              <div key={k} style={{ ...S.card, padding: "11px 14px", marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div style={{ fontSize: 12, color: T.sub, fontWeight: 600, flexShrink: 0 }}>{k}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, textAlign: "right" }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* PREVENTIVO + INVIA */}
+        <div style={{ padding: "0 16px", marginBottom: 8, display:"flex", gap:8 }}>
+          <input ref={fileInputRef} type="file" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const a={id:Date.now(),tipo:"file",nome:f.name,data:new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}),dataUrl:ev.target.result};setCantieri(cs=>cs.map(x=>x.id===selectedCM.id?{...x,allegati:[...(x.allegati||[]),a]}:x));setSelectedCM(p=>({...p,allegati:[...(p.allegati||[]),a]}));};r.readAsDataURL(f);e.target.value="";}}/>
+          <input ref={fotoInputRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const a={id:Date.now(),tipo:"foto",nome:f.name,data:new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}),dataUrl:ev.target.result};setCantieri(cs=>cs.map(x=>x.id===selectedCM.id?{...x,allegati:[...(x.allegati||[]),a]}:x));setSelectedCM(p=>({...p,allegati:[...(p.allegati||[]),a]}));};r.readAsDataURL(f);e.target.value="";}}/>
+          <button onClick={() => setShowPreventivoModal(true)} style={{ flex:1, padding: "12px", borderRadius: 10, border: "1.5px solid #ff9500", background: c.firmaCliente ? "#fff8ec" : "#fff", color: "#ff9500", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FF, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, position:"relative" }}>
+            📄 {c.firmaCliente ? "Preventivo ✅" : "Crea Preventivo"}
+            {(vaniList||[]).some(v=>!v.sistema) && !c.firmaCliente && <span style={{position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",background:"#ff3b30",color:"#fff",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>!</span>}
+          </button>
+          <button onClick={() => setShowSendModal(true)} style={{ flex:1, padding: "12px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #007aff, #0055cc)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FF, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: "0 2px 8px rgba(0,122,255,0.3)" }}>
+            <Ico d={ICO.send} s={14} c="#fff" sw={2} /> Invia
+          </button>
+        </div>
+
+        {/* Allegati / Note / Vocali / Video */}
+        <div style={{ padding: "0 16px", marginBottom: 8 }}>
+          <div style={{ display: "flex", gap: 6 }}>
+            {[
+              { ico: "📎", label: "File", act: () => fileInputRef.current?.click() },
+              { ico: "📷", label: "Foto", act: () => fotoInputRef.current?.click() },
+              { ico: "📝", label: "Nota", act: () => { setShowAllegatiModal("nota"); setAllegatiText(""); }},
+              { ico: "🎤", label: "Vocale", act: () => { setShowAllegatiModal("vocale"); }},
+              { ico: "🎬", label: "Video", act: () => { setShowAllegatiModal("video"); }},
+            ].map((b, i) => (
+              <div key={i} onClick={b.act} style={{ flex: 1, padding: "10px 4px", background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer" }}>
+                <div style={{ fontSize: 18 }}>{b.ico}</div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: T.sub, marginTop: 2 }}>{b.label}</div>
+              </div>
+            ))}
+          </div>
+          {/* Lista allegati */}
+          {(c.allegati || []).length > 0 && (
+            <div style={{ marginTop: 6, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, overflow: "hidden" }}>
+              {(c.allegati || []).map(a => (
+                <div key={a.id} style={{ borderBottom: `1px solid ${T.bg}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px" }}>
+                    <span style={{ fontSize: 16 }}>{a.tipo === "nota" ? "📝" : a.tipo === "vocale" ? "🎤" : a.tipo === "video" ? "🎬" : a.tipo === "foto" ? "📷" : "📎"}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{a.nome}</div>
+                      <div style={{ fontSize: 10, color: T.sub }}>{a.data}{a.durata ? ` · ${a.durata}` : ""}</div>
+                      {a.dataUrl && (a.tipo==="foto" ? <a href={a.dataUrl} target="_blank" rel="noreferrer" style={{fontSize:10,color:T.acc,fontWeight:600,marginTop:2,display:"block",textDecoration:"none"}}>🔍 Apri</a> : <a href={a.dataUrl} download={a.nome} style={{fontSize:10,color:T.acc,fontWeight:600,marginTop:2,display:"block",textDecoration:"none"}}>⬇ Scarica</a>)}
+                    </div>
+                    {a.tipo==="foto"&&a.dataUrl&&<img src={a.dataUrl} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0}} alt=""/>}
+                    {(a.tipo === "vocale" || a.tipo === "video") && (
+                      <div onClick={() => playAllegato(a.id)} style={{ padding: "3px 8px", borderRadius: 6, background: playingId === a.id ? T.redLt : T.accLt, fontSize: 10, fontWeight: 600, color: playingId === a.id ? T.red : T.acc, cursor: "pointer" }}>
+                        {playingId === a.id ? "⏸ Stop" : "▶ Play"}
+                      </div>
+                    )}
+                    {a.tipo === "foto" && <div onClick={() => alert("📷 Anteprima foto: " + a.nome)} style={{ padding: "3px 8px", borderRadius: 6, background: T.accLt, fontSize: 10, fontWeight: 600, color: T.acc, cursor: "pointer" }}>👁 Vedi</div>}
+                    {a.tipo === "file" && <div onClick={() => alert("📎 Apertura file: " + a.nome)} style={{ padding: "3px 8px", borderRadius: 6, background: T.accLt, fontSize: 10, fontWeight: 600, color: T.acc, cursor: "pointer" }}>📂 Apri</div>}
+                    <div onClick={() => { setCantieri(cs => cs.map(x => x.id === c.id ? { ...x, allegati: (x.allegati || []).filter(al => al.id !== a.id) } : x)); setSelectedCM(p => ({ ...p, allegati: (p.allegati || []).filter(al => al.id !== a.id) })); }} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={12} c={T.sub} /></div>
+                  </div>
+                  {/* Progress bar for playing */}
+                  {playingId === a.id && (
+                    <div style={{ height: 3, background: T.bdr, margin: "0 12px 6px" }}>
+                      <div style={{ height: "100%", background: a.tipo === "video" ? T.blue : T.acc, borderRadius: 2, width: `${playProgress}%`, transition: "width 0.1s linear" }} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Vani */}
+        <div style={S.section}>
+          <div style={S.sectionTitle}>Vani R{r?.n} ({vaniList.length})</div>
+          <button style={S.sectionBtn} onClick={() => {
+              if (!selectedCM) return;
+              const tipObj = TIPOLOGIE_RAPIDE[0];
+              if (!selectedRilievo) return;
+              const v = { id: Date.now(), nome: `Vano ${(selectedRilievo.vani?.length||0)+1}`, tipo: "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", difficoltaSalita: "", mezzoSalita: "", misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } };
+              const updR1 = { ...selectedRilievo, vani: [...(selectedRilievo.vani||[]), v] };
+              setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo.id ? updR1 : r2), aggiornato: "Oggi" } : c));
+              setSelectedRilievo(updR1);
+              setSelectedCM(prev => ({ ...prev, rilievi: prev.rilievi.map(r2 => r2.id === selectedRilievo.id ? updR1 : r2) }));
+              setSelectedVano(v);
+              setVanoStep(0);
+            }}>+ Nuovo vano</button>
+        </div>
+        <div style={{ padding: "0 16px", ...((isTablet || isDesktop) && vaniList.length > 0 ? { display: "grid", gridTemplateColumns: isDesktop ? "1fr 1fr 1fr" : "1fr 1fr", gap: 8 } : {}) }}>
+          {vaniList.length === 0 ? (
+            <div onClick={() => {
+              if (!selectedCM) return;
+              const v = { id: Date.now(), nome: `Vano 1`, tipo: "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", difficoltaSalita: "", mezzoSalita: "", misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } };
+              if (selectedRilievo) { const updR2 = { ...selectedRilievo, vani: [...(selectedRilievo.vani||[]), v] }; setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo.id ? updR2 : r2) } : c)); setSelectedRilievo(updR2); setSelectedCM(prev => ({ ...prev, rilievi: prev.rilievi.map(r2 => r2.id === selectedRilievo.id ? updR2 : r2) })); }
+              setSelectedVano(v);
+              setVanoStep(0);
+            }} style={{ padding: "20px", textAlign: "center", background: T.card, borderRadius: T.r, border: `1px dashed ${T.bdr}`, cursor: "pointer", color: T.sub, fontSize: 13 }}>
+              Nessun vano. Tocca per aggiungerne uno.
+            </div>
+          ) : vaniList.map(v => {
+            const filled = Object.values(v.misure || {}).filter(x => (x as number) > 0).length;
+            const total = 8;
+            const fotoCount = Object.values(v.foto || {}).filter(Boolean).length;
+            return (
+              <div key={v.id} style={{ ...S.card, margin: "0 0 8px" }} onClick={() => setSelectedVano(v)}>
+                <div style={S.cardInner}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: T.accLt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                        {TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.icon || "🪟"}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600 }}>{v.nome}</div>
+                        <div style={{ fontSize: 11, color: T.sub }}>{TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.label || v.tipo} · {v.stanza} · {v.piano}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: filled >= 6 ? T.grn : T.orange }}>{filled}/{total}<div style={{ fontSize: 10, color: T.sub, fontWeight: 400 }}>misure</div></div>
+                      <div onClick={e => { e.stopPropagation(); deleteVano(v.id); }} style={{ width: 28, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: T.redLt, cursor: "pointer" }}><Ico d={ICO.trash} s={13} c={T.red} /></div>
+                    </div>
+                  </div>
+                  {/* Tags */}
+                  <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
+                    {fotoCount > 0 && <span style={S.badge(T.blueLt, T.blue)}>{fotoCount} foto</span>}
+                    {v.cassonetto && <span style={S.badge(T.orangeLt, T.orange)}>Cassonetto</span>}
+                    {v.accessori?.tapparella?.attivo && <span style={S.badge(T.grnLt, T.grn)}>Tapparella</span>}
+                    {v.accessori?.zanzariera?.attivo && <span style={S.badge(T.purpleLt, T.purple)}>Zanzariera</span>}
+                    {v.note && <span style={S.badge(T.cyanLt, T.cyan)}>Note</span>}
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{ height: 3, background: T.bdr, borderRadius: 2, marginTop: 8 }}>
+                    <div style={{ height: "100%", borderRadius: 2, background: filled >= 6 ? T.grn : T.acc, width: `${(filled / total) * 100}%` }} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Timeline/Log */}
+        {c.log && c.log.length > 0 && (
+          <>
+            <div style={{ ...S.section, marginTop: 8 }}>
+              <div style={S.sectionTitle}>Cronologia</div>
+            </div>
+            <div style={{ padding: "0 16px" }}>
+              {c.log.map((l, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, padding: "8px 0" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: l.color, flexShrink: 0 }} />
+                    {i < c.log.length - 1 && <div style={{ width: 1, flex: 1, background: T.bdr, marginTop: 4 }} />}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: T.text, lineHeight: 1.3 }}><strong>{l.chi}</strong> {l.cosa}</div>
+                    <div style={{ fontSize: 10, color: T.sub2, marginTop: 1 }}>{l.quando}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Elimina — bottom, small */}
+        <div style={{ padding: "16px", textAlign: "center" }}>
+          <span onClick={() => deleteCommessa(c.id)} style={{ fontSize: 11, color: T.sub2, cursor: "pointer", textDecoration: "underline" }}>🗝‘ Elimina commessa</span>
+        </div>
+      </div>
+    );
+  };
+
+  /* == RIEPILOGO COMMESSA — SCHERMATA INVIO == */
+
+  /* ===============================================
+     PANNELLI DI FASE — renderFasePanel(c)
+     Appare nella commessa detail, sotto la pipeline
+     Un pannello specifico per ogni fase
+  =============================================== */
+  const renderFasePanel = (c) => {
+    const fi = faseIndex(c.fase);
+    const nextFase = PIPELINE[fi + 1];
+    const fase = PIPELINE[fi];
+
+    // Helper: aggiorna campo dentro la commessa selezionata
+    const updateCM = (field, val) => {
+      setCantieri(cs => cs.map(x => x.id === c.id ? { ...x, [field]: val } : x));
+      setSelectedCM(prev => ({ ...prev, [field]: val }));
+    };
+    const updateCMNested = (obj) => {
+      setCantieri(cs => cs.map(x => x.id === c.id ? { ...x, ...obj } : x));
+      setSelectedCM(prev => ({ ...prev, ...obj }));
+    };
+
+    // Chip checklist riusabile
+    const Chip = ({ label, done, onClick }) => (
+      <div onClick={onClick} style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 12px",
+        borderRadius:8, border:`1.5px solid ${done ? T.grn : T.bdr}`, background: done ? T.grn+"12" : T.card,
+        cursor:"pointer", marginBottom:6 }}>
+        <div style={{ width:18, height:18, borderRadius:"50%", border:`2px solid ${done ? T.grn : T.bdr}`,
+          background: done ? T.grn : "transparent", display:"flex", alignItems:"center", justifyContent:"center",
+          flexShrink:0 }}>
+          {done && <span style={{fontSize:10,color:"white",fontWeight:800}}>✓</span>}
+        </div>
+        <span style={{fontSize:12, fontWeight:600, color: done ? T.grn : T.text}}>{label}</span>
+      </div>
+    );
+
+    // Campo input riusabile
+    const Field = ({ label, field, placeholder, type="text" }) => (
+      <div style={{marginBottom:8}}>
+        <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3,textTransform:"uppercase",letterSpacing:"0.05em"}}>{label}</div>
+        <input type={type} placeholder={placeholder||""} value={c[field]||""}
+          onChange={e => updateCM(field, e.target.value)}
+          style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${T.bdr}`,
+            background:T.card,fontSize:13,color:T.text,fontFamily:FF,boxSizing:"border-box"}}/>
+      </div>
+    );
+
+    const panelStyle = {
+      margin:"0 16px 12px", borderRadius:12, border:`1.5px solid ${fase?.color}30`,
+      background:T.card, overflow:"hidden"
+    };
+    const headerStyle = {
+      padding:"10px 14px", background:fase?.color+"15", borderBottom:`1px solid ${fase?.color}25`,
+      display:"flex", alignItems:"center", gap:8
+    };
+
+    // Toggle accordion per id fase
+    const isOpen = (id) => fasePanelOpen[id] !== false; // default aperto
+    const togglePanel = (id) => setFasePanelOpen(s => ({...s, [id]: !isOpen(id)}));
+
+    // Wrapper accordion semplice — stessa UI di prima, solo con toggle
+    const FasePanel = ({ id, children, taskNonFatti = 0 }) => (
+      <div style={panelStyle}>
+        <div onClick={() => togglePanel(id)} style={{ ...headerStyle, cursor:"pointer",
+          borderBottom: isOpen(id) ? `1px solid ${fase?.color}25` : "none", userSelect:"none" }}>
+          {/* Contenuto header originale passato come primo child */}
+          <div style={{display:"flex",alignItems:"center",gap:8,flex:1,pointerEvents:"none"}}>
+            {(children as any[])[0]}
+          </div>
+          {/* Badge alert se task non completati */}
+          {taskNonFatti > 0 && (
+            <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6,flexShrink:0}}/>
+          )}
+          <span style={{fontSize:13,color:T.sub,transform:isOpen(id)?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s",flexShrink:0}}>▾</span>
+        </div>
+        {isOpen(id) && (
+          <div style={{padding:"12px 14px"}}>
+            {(children as any[]).slice(1)}
+          </div>
+        )}
+      </div>
+    );
+
+    // === SOPRALLUOGO ===
+    if (c.fase === "sopralluogo") {
+      const vaniAttivi2 = getVaniAttivi(c); const vaniCompletati = vaniAttivi2.filter(v => Object.values(v.misure||{}).filter(x=>(x as number)>0).length >= 6).length;
+      const tuttiCompletati = vaniCompletati === vaniAttivi2.length && vaniAttivi2.length > 0;
+      const ndone = [!c.ck_foto, !c.ck_accesso, !c.ck_riepilogo_inviato, !tuttiCompletati].filter(Boolean).length;
+      const open_sopr = fasePanelOpen["sopralluogo"] !== false;
+      return (
+        <div style={panelStyle}>
+          <div onClick={()=>togglePanel("sopralluogo")} style={{...headerStyle,cursor:"pointer",borderBottom:open_sopr?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
+            <span style={{fontSize:16}}>🔍</span>
+            <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Sopralluogo</span>
+            <span style={{fontSize:11,fontWeight:700,color:tuttiCompletati?T.grn:T.orange,marginRight:4}}>{vaniCompletati}/{vaniAttivi2.length} vani ✓</span>
+            {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
+            <span style={{fontSize:13,color:T.sub,transform:open_sopr?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+          </div>
+          {open_sopr && <div style={{padding:"12px 14px"}}>
+            <Chip label="Fotografie scattate" done={c.ck_foto} onClick={()=>updateCM("ck_foto",!c.ck_foto)}/>
+            <Chip label="Difficoltà accesso rilevata" done={c.ck_accesso} onClick={()=>updateCM("ck_accesso",!c.ck_accesso)}/>
+            <Chip label="Riepilogo inviato al cliente" done={c.ck_riepilogo_inviato} onClick={()=>updateCM("ck_riepilogo_inviato",!c.ck_riepilogo_inviato)}/>
+            <Chip label={`Tutte le misure inserite (${vaniCompletati}/${vaniAttivi2.length})`} done={tuttiCompletati} onClick={()=>{}}/>
+            <Field label="Data sopralluogo" field="dataSopralluogo" type="date"/>
+            <Field label="Note sopralluogo" field="noteSopralluogo" placeholder="Annotazioni rapide..."/>
+            {tuttiCompletati && (
+              <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,background:T.grn+"15",border:`1px solid ${T.grn}30`,fontSize:12,color:T.grn,fontWeight:600,textAlign:"center"}}>
+                ✅ Pronto per il preventivo
+              </div>
+            )}
+          </div>}
+        </div>
+      );
+    }
+
+    // === PREVENTIVO ===
+    if (c.fase === "preventivo") {
+      const vaniCalc = vaniList.length > 0 ? vaniList : getVaniAttivi(c); const totale = vaniCalc.reduce((sum, v) => {
+        const m = v.misure||{};
+        const lc = (m.lCentro||0)/1000;
+        const hc = (m.hCentro||0)/1000;
+        const mq = lc * hc;
+        const pxmq = parseFloat(c.prezzoMq||350);
+        return sum + mq * pxmq;
+      }, 0);
+      const iva = totale * 0.1;
+      return (
+        <div style={panelStyle}>
+          <div style={headerStyle}>
+            <span style={{fontSize:16}}>📋</span>
+            <span style={{fontSize:13,fontWeight:700,color:T.text}}>Preventivo</span>
+          </div>
+          <div style={{padding:"12px 14px"}}>
+            <Field label="Prezzo base €/mq" field="prezzoMq" placeholder="350" type="number"/>
+            <Field label="Sconto %" field="sconto" placeholder="0" type="number"/>
+            <Field label="Note preventivo" field="notePreventivo" placeholder="Condizioni, garanzie..."/>
+            <div style={{padding:"10px 12px",borderRadius:8,background:T.bg,border:`1px solid ${T.bdr}`,marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:T.sub,marginBottom:4}}>
+                <span>Totale imponibile</span><span style={{fontWeight:700,color:T.text}}>€ {totale.toFixed(2)}</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:T.sub,marginBottom:4}}>
+                <span>IVA 10%</span><span>€ {iva.toFixed(2)}</span>
+              </div>
+              {c.sconto > 0 && (
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:T.orange,marginBottom:4}}>
+                  <span>Sconto {c.sconto}%</span><span>- € {(totale * c.sconto/100).toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{borderTop:`1px solid ${T.bdr}`,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between",fontSize:14,fontWeight:800}}>
+                <span>TOTALE IVA inclusa</span>
+                <span style={{color:T.acc}}>€ {(totale + iva - (totale*(c.sconto||0)/100)).toFixed(2)}</span>
+              </div>
+            </div>
+            <Chip label="Preventivo inviato al cliente" done={c.ck_prev_inviato} onClick={()=>updateCM("ck_prev_inviato",!c.ck_prev_inviato)}/>
+            <Chip label="Cliente ha accettato verbalmente" done={c.ck_prev_accettato} onClick={()=>updateCM("ck_prev_accettato",!c.ck_prev_accettato)}/>
+          </div>
+        </div>
+      );
+    }
+
+    // === CONFERMA ===
+    if (c.fase === "conferma") {
+      return (
+        <div style={panelStyle}>
+          <div style={headerStyle}>
+            <span style={{fontSize:16}}>✍️</span>
+            <span style={{fontSize:13,fontWeight:700,color:T.text}}>Conferma Ordine</span>
+          </div>
+          <div style={{padding:"12px 14px"}}>
+            <Field label="Data conferma" field="dataConferma" type="date"/>
+            <Field label="Acconto ricevuto €" field="accontoRicevuto" placeholder="0" type="number"/>
+            <Field label="Metodo pagamento" field="metodoPagamento" placeholder="Bonifico / Contanti / Carta..."/>
+            <Field label="Data prevista posa" field="dataPosaPrevista" type="date"/>
+            <Chip label="Contratto firmato" done={c.ck_contratto} onClick={()=>updateCM("ck_contratto",!c.ck_contratto)}/>
+            <Chip label="Acconto incassato" done={c.ck_acconto_inc} onClick={()=>updateCM("ck_acconto_inc",!c.ck_acconto_inc)}/>
+            <Chip label="Data posa concordata" done={c.ck_data_posa} onClick={()=>updateCM("ck_data_posa",!c.ck_data_posa)}/>
+          </div>
+        </div>
+      );
+    }
+
+    // === MISURE ===
+    if (c.fase === "misure") {
+      const vaniCalc = getVaniAttivi(c);
+      const vaniOk = vaniCalc.filter(v => Object.values(v.misure||{}).filter(x=>(x as number)>0).length >= 9).length;
+      return (
+        (() => {
+          const ndone = [!c.ck_misure_ok,!c.ck_diag_ok,!c.ck_pdf_prod,!c.ck_sistema_ok].filter(Boolean).length;
+          const open = fasePanelOpen["misure"] !== false;
+          return (
+            <div style={panelStyle}>
+              <div onClick={()=>togglePanel("misure")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
+                <span style={{fontSize:16}}>📐</span>
+                <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Rilievo Misure Definitivo</span>
+                <span style={{fontSize:11,fontWeight:700,color:vaniOk===vaniCalc.length?T.grn:T.orange,marginRight:4}}>{vaniOk}/{vaniCalc.length}</span>
+                {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
+                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+              </div>
+              {open && <div style={{padding:"12px 14px"}}>
+                <Chip label="Tutte le misure verificate" done={c.ck_misure_ok} onClick={()=>updateCM("ck_misure_ok",!c.ck_misure_ok)}/>
+                <Chip label="Diagonali controllate" done={c.ck_diag_ok} onClick={()=>updateCM("ck_diag_ok",!c.ck_diag_ok)}/>
+                <Chip label="Riepilogo PDF inviato a produzione" done={c.ck_pdf_prod} onClick={()=>updateCM("ck_pdf_prod",!c.ck_pdf_prod)}/>
+                <Chip label="Conferma sistema/colori approvata" done={c.ck_sistema_ok} onClick={()=>updateCM("ck_sistema_ok",!c.ck_sistema_ok)}/>
+                <Field label="Tecnico misuratore" field="tecnicoMisure" placeholder="Nome tecnico..."/>
+                <Field label="Data rilievo definitivo" field="dataRilievo" type="date"/>
+              </div>}
+            </div>
+          );
+        })()
+      );
+    }
+
+    // === ORDINI ===
+    if (c.fase === "ordini") {
+      return (
+        (() => {
+          const ndone = [!c.ck_ordine_inviato,!c.ck_ordine_confermato,!c.ck_cliente_avvisato].filter(Boolean).length;
+          const open = fasePanelOpen["ordini"] !== false;
+          return (
+            <div style={panelStyle}>
+              <div onClick={()=>togglePanel("ordini")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
+                <span style={{fontSize:16}}>📦</span>
+                <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Ordini Fornitore</span>
+                {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
+                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+              </div>
+              {open && <div style={{padding:"12px 14px"}}>
+                <Field label="Fornitore" field="fornitore" placeholder="Es. Schüco, Rehau..."/>
+                <Field label="N° Ordine fornitore" field="numOrdine" placeholder="ORD-2026-XXXX"/>
+                <Field label="Data ordine" field="dataOrdine" type="date"/>
+                <Field label="Data consegna prevista" field="dataConsegna" type="date"/>
+                <Chip label="Ordine inviato" done={c.ck_ordine_inviato} onClick={()=>updateCM("ck_ordine_inviato",!c.ck_ordine_inviato)}/>
+                <Chip label="Conferma ricezione da fornitore" done={c.ck_ordine_confermato} onClick={()=>updateCM("ck_ordine_confermato",!c.ck_ordine_confermato)}/>
+                <Chip label="Materiale in arrivo comunicato al cliente" done={c.ck_cliente_avvisato} onClick={()=>updateCM("ck_cliente_avvisato",!c.ck_cliente_avvisato)}/>
+              </div>}
+            </div>
+          );
+        })()
+      );
+    }
+
+    // === PRODUZIONE ===
+    if (c.fase === "produzione") {
+      return (
+        (() => {
+          const ndone = [!c.ck_mat_ricevuto,!c.ck_colori_ok,!c.ck_accessori_ok,!c.ck_posa_confermata].filter(Boolean).length;
+          const open = fasePanelOpen["produzione"] !== false;
+          return (
+            <div style={panelStyle}>
+              <div onClick={()=>togglePanel("produzione")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
+                <span style={{fontSize:16}}>🏭</span>
+                <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Produzione</span>
+                {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
+                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+              </div>
+              {open && <div style={{padding:"12px 14px"}}>
+                <Field label="Data consegna in magazzino" field="dataInMagazzino" type="date"/>
+                <Chip label="Materiale ricevuto e controllato" done={c.ck_mat_ricevuto} onClick={()=>updateCM("ck_mat_ricevuto",!c.ck_mat_ricevuto)}/>
+                <Chip label="Colori verificati" done={c.ck_colori_ok} onClick={()=>updateCM("ck_colori_ok",!c.ck_colori_ok)}/>
+                <Chip label="Accessori completi (maniglie, guarnizioni)" done={c.ck_accessori_ok} onClick={()=>updateCM("ck_accessori_ok",!c.ck_accessori_ok)}/>
+                <Chip label="Data posa confermata al cliente" done={c.ck_posa_confermata} onClick={()=>updateCM("ck_posa_confermata",!c.ck_posa_confermata)}/>
+                <Field label="Note magazzino" field="noteMagazzino" placeholder="Anomalie, sostituzioni..."/>
+              </div>}
+            </div>
+          );
+        })()
+      );
+    }
+
+    // === POSA ===
+    if (c.fase === "posa") {
+      return (
+        (() => {
+          const ndone = [!c.ck_posati,!c.ck_finiture,!c.ck_pulizia,!c.ck_test,!c.ck_foto_posa,!c.ck_cliente_ok].filter(Boolean).length;
+          const open = fasePanelOpen["posa"] !== false;
+          return (
+            <div style={panelStyle}>
+              <div onClick={()=>togglePanel("posa")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
+                <span style={{fontSize:16}}>🔧</span>
+                <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Posa in Opera</span>
+                {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
+                <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
+              </div>
+              {open && <div style={{padding:"12px 14px"}}>
+                <Field label="Data posa effettiva" field="dataPosa" type="date"/>
+                <Field label="Squadra posatori" field="squadraPosa" placeholder="Marco + Luigi..."/>
+                <Chip label="Tutti i vani posati" done={c.ck_posati} onClick={()=>updateCM("ck_posati",!c.ck_posati)}/>
+                <Chip label="Sigillature e finiture completate" done={c.ck_finiture} onClick={()=>updateCM("ck_finiture",!c.ck_finiture)}/>
+                <Chip label="Pulizia cantiere" done={c.ck_pulizia} onClick={()=>updateCM("ck_pulizia",!c.ck_pulizia)}/>
+                <Chip label="Test funzionamento maniglie/chiusure" done={c.ck_test} onClick={()=>updateCM("ck_test",!c.ck_test)}/>
+                <Chip label="Foto lavoro completato scattate" done={c.ck_foto_posa} onClick={()=>updateCM("ck_foto_posa",!c.ck_foto_posa)}/>
+                <Chip label="Cliente presente e soddisfatto" done={c.ck_cliente_ok} onClick={()=>updateCM("ck_cliente_ok",!c.ck_cliente_ok)}/>
+                <Field label="Note posa" field="notePosa" placeholder="Problemi riscontrati, extra..."/>
+              </div>}
+            </div>
+          );
+        })()
+      );
+    }
+
+    // === CHIUSURA ===
+    if (c.fase === "chiusura") {
+      const vaniCalc2 = vaniList.length > 0 ? vaniList : getVaniAttivi(c); const totale = vaniCalc2.reduce((sum, v) => {
+        const m = v.misure||{};
+        const mq = ((m.lCentro||0)/1000) * ((m.hCentro||0)/1000);
+        return sum + mq * parseFloat(c.prezzoMq||350);
+      }, 0);
+      const iva = totale * 0.1;
+      const totIva = totale + iva - (totale*(c.sconto||0)/100);
+      const saldo = totIva - parseFloat(c.accontoRicevuto||0);
+      return (
+        <div style={panelStyle}>
+          <div style={headerStyle}>
+            <span style={{fontSize:16}}>✅</span>
+            <span style={{fontSize:13,fontWeight:700,color:T.text}}>Chiusura Commessa</span>
+          </div>
+          <div style={{padding:"12px 14px"}}>
+            <div style={{padding:"10px 12px",borderRadius:8,background:T.bg,border:`1px solid ${T.bdr}`,marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
+                <span style={{color:T.sub}}>Totale commessa</span><span style={{fontWeight:700}}>€ {totIva.toFixed(2)}</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
+                <span style={{color:T.sub}}>Acconto ricevuto</span><span style={{color:T.grn,fontWeight:700}}>- € {parseFloat(c.accontoRicevuto||0).toFixed(2)}</span>
+              </div>
+              <div style={{borderTop:`1px solid ${T.bdr}`,paddingTop:6,marginTop:2,display:"flex",justifyContent:"space-between",fontSize:15,fontWeight:800}}>
+                <span>Saldo da incassare</span><span style={{color:saldo>0?T.red:T.grn}}>€ {saldo.toFixed(2)}</span>
+              </div>
+            </div>
+            <Field label="Data chiusura" field="dataChiusura" type="date"/>
+            <Field label="Saldo incassato €" field="saldoIncassato" placeholder="0" type="number"/>
+            <Field label="Metodo saldo" field="metodoSaldo" placeholder="Bonifico / Contanti..."/>
+            <Chip label="Saldo incassato" done={c.ck_saldo} onClick={()=>updateCM("ck_saldo",!c.ck_saldo)}/>
+            <Chip label="Fattura emessa" done={c.ck_fattura} onClick={()=>updateCM("ck_fattura",!c.ck_fattura)}/>
+            <Chip label="Garanzia consegnata al cliente" done={c.ck_garanzia} onClick={()=>updateCM("ck_garanzia",!c.ck_garanzia)}/>
+            <Chip label="Scheda commessa archiviata" done={c.ck_archiviata} onClick={()=>updateCM("ck_archiviata",!c.ck_archiviata)}/>
+            {c.ck_saldo && c.ck_fattura && (
+              <div style={{marginTop:8,padding:"12px",borderRadius:8,background:T.grn+"15",border:`1px solid ${T.grn}30`,textAlign:"center"}}>
+                <div style={{fontSize:22}}>🎉</div>
+                <div style={{fontSize:13,fontWeight:800,color:T.grn,marginTop:4}}>Commessa completata!</div>
+                <div style={{fontSize:11,color:T.sub,marginTop:2}}>{c.code} · {c.cliente} {c.cognome||""}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const renderRiepilogo = () => {
+    const c = selectedCM;
+    if (!c) return null;
+    const today = new Date().toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
+    const vaniR = getVaniAttivi(c); const vaniFilled = vaniR.filter(v=>Object.values(v.misure||{}).filter(x=>(x as number)>0).length>=6).length;
+    const fuoriSqN = vaniR.filter(v=>{const d=(v.misure?.d1 as number)>0&&(v.misure?.d2 as number)>0?Math.abs(v.misure.d1-v.misure.d2):null;return (d as number)>5;}).length;
+
+    const SEP = "━━━━━━━━━━━━━━━━━━━━━";
+    const waMsg = [
+      "📋 *SOPRALLUOGO "+c.code+"*",
+      "👤 "+c.cliente+" "+(c.cognome||"")+(c.telefono?" · "+c.telefono:""),
+      "📍 "+c.indirizzo,
+      [c.pianoEdificio, c.mezzoSalita, c.foroScale].filter(Boolean).map((x,i)=>i===0?"🏢 "+x:x).join(" · "),
+      c.sistema?"⚙️ "+c.sistema+" · "+(c.tipo==="nuova"?"Nuova costruzione":"Ristrutturazione"):"",
+      "",
+      ...vaniR.map((v,i)=>{
+        const m=v.misure||{};
+        const tl=TIPOLOGIE_RAPIDE.find(tp=>tp.code===v.tipo)?.label||v.tipo||"—";
+        const diff=m.d1>0&&m.d2>0?Math.abs(m.d1-m.d2):null;
+        const fuori=diff!==null&&(diff as number)>5;
+        const ok=!fuori;
+        const lines=[
+          SEP,
+          "*"+(i+1)+". "+v.nome.toUpperCase()+"* — "+v.tipo+" · "+v.piano+" "+(fuori?"⚠️":"✅"),
+          SEP,
+          "📏 L: "+(m.lAlto||"—")+" / *"+(m.lCentro||"—")+"* / "+(m.lBasso||"—"),
+          "📐 H: "+(m.hSx||"—")+" / *"+(m.hCentro||"—")+"* / "+(m.hDx||"—"),
+          (m.d1>0&&m.d2>0)
+            ?(fuori?"⚠️ D: "+m.d1+" / "+m.d2+" — *FUORI SQUADRA +"+diff+"mm*":"↗ D: "+m.d1+" / "+m.d2+" ✅")
+            :"",
+          (m.spSx>0||m.spDx>0)?"⬛ Sp: "+(m.spSx?"Sx "+m.spSx:"")+(m.spDx?" · Dx "+m.spDx:"")+(m.spSopra?" · Sop "+m.spSopra:""):"",
+          "",
+          v.sistema?"🔧 "+v.sistema+(v.vetro?" · "+v.vetro:""):"",
+          v.coloreInt?"🎨 "+(v.bicolore?"INT: "+v.coloreInt+" / EST: "+v.coloreEst:v.coloreInt):"",
+          v.telaio?"📐 Tel "+v.telaio+(v.telaioAlaZ?" "+v.telaioAlaZ+"mm":"")+(v.rifilato&&(v.rifilSx||v.rifilDx)?" · Rif Sx:"+v.rifilSx+" Dx:"+v.rifilDx+(v.rifilSopra?" Sop:"+v.rifilSopra:""):""):"",
+          (v.coprifilo||v.lamiera)?"🔩 "+(v.coprifilo||"")+(v.lamiera?" / "+v.lamiera:""):"",
+          "",
+          v.cassonetto?"📦 Cass "+v.casH+"×"+v.casP:"",
+          v.accessori?.tapparella?.attivo?"⬇ Tap "+v.accessori.tapparella.colore+" · "+v.accessori.tapparella.l+"×"+v.accessori.tapparella.h:"",
+          v.accessori?.persiana?.attivo?"🪟 Pers "+v.accessori.persiana.colore:"",
+          v.accessori?.zanzariera?.attivo?"🕸 Zan "+v.accessori.zanzariera.l+"×"+v.accessori.zanzariera.h:"",
+          v.note?"📝 "+v.note:"",
+          fuori?"⚠️ Verificare con muratore prima dell'ordine":"",
+        ].filter(x=>x!==undefined&&x!==null&&x!=="");
+        return lines.join("\n");
+      }),
+      SEP,
+      c.note?"📝 *NOTE GENERALI*\n"+c.note+"\n"+SEP:"",
+      "",
+      "_Generato con MASTRO · "+today+"_",
+    ].filter(Boolean).join("\n");
+
+    const BLU="#2563eb", VRD="#059669", ROS="#dc2626", GRY="#94a3b8", AMB="#d97706", VIO="#7c3aed";
+    const FM="'DM Mono',monospace";
+
+    // Disegno SVG per ogni tipologia
+    const DrawVano = ({v}) => {
+      const m = v.misure||{};
+      const lc = m.lCentro||0, hc = m.hCentro||0, hasM = lc>0&&hc>0;
+      const diff = m.d1>0&&m.d2>0 ? Math.abs(m.d1-m.d2) : null;
+      const fuori = diff!==null && diff>5;
+      const t = v.tipo||"";
+      // dimensioni fisse proporzionate al tipo
+      const isPorta = t==="PF1A"||t==="PF2A"||t==="PF3A"||t==="BLI";
+      const isSC = t==="SC2A"||t==="SC4A"||t==="SCRDX"||t==="SCRSX"||t==="ALZDX"||t==="ALZSX"||t==="ALZSC";
+      const W = isSC ? 260 : (t==="F3A"||t==="PF3A") ? 300 : (t==="F2A"||t==="PF2A") ? 220 : 160;
+      const H = isPorta ? 240 : 160;
+      const BW = 6; // bordo telaio fisso
+      const GX = BW+10, GY = BW+10; // inizio vetro/anta
+      const GW = W-GX*2, GH = H-GY*2;
+      const cx = W/2, cy = H/2;
+      const F = "monospace";
+      const OR = "#e09010"; // arancio OB
+
+      // Anta singola (riusabile)
+      const anta1 = (ax,ay,aw,ah,ob,hingeLeft) => {
+        const elems = [];
+        elems.push(<rect key="v" x={ax} y={ay} width={aw} height={ah} fill="#ddeefa"/>);
+        elems.push(<rect key="p" x={ax} y={ay} width={aw} height={ah} fill="none" stroke="#333" strokeWidth={1.2}/>);
+        // triangolo: apice al centro del lato di apertura (opposto al cardine)
+        if(hingeLeft) {
+          // cardine SX → apice centro-DX
+          elems.push(<line key="t1" x1={ax} y1={ay} x2={ax+aw} y2={ay+ah/2} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>);
+          elems.push(<line key="t2" x1={ax} y1={ay+ah} x2={ax+aw} y2={ay+ah/2} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>);
+          if(ob) {
+            // OB aggiunge V vasistas in arancio (apice centro-basso)
+            elems.push(<line key="ob1" x1={ax} y1={ay} x2={ax+aw/2} y2={ay+ah} stroke={OR} strokeWidth={1.2} strokeDasharray="8,4"/>);
+            elems.push(<line key="ob2" x1={ax+aw} y1={ay} x2={ax+aw/2} y2={ay+ah} stroke={OR} strokeWidth={1.2} strokeDasharray="8,4"/>);
+          }
+          elems.push(<rect key="m" x={ax+aw-5} y={ay+ah/2-9} width={5} height={18} fill="white" stroke="#444" strokeWidth={0.8}/>);
+        } else {
+          // cardine DX → apice centro-SX
+          elems.push(<line key="t1" x1={ax+aw} y1={ay} x2={ax} y2={ay+ah/2} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>);
+          elems.push(<line key="t2" x1={ax+aw} y1={ay+ah} x2={ax} y2={ay+ah/2} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>);
+          if(ob) {
+            elems.push(<line key="ob1" x1={ax} y1={ay} x2={ax+aw/2} y2={ay+ah} stroke={OR} strokeWidth={1.2} strokeDasharray="8,4"/>);
+            elems.push(<line key="ob2" x1={ax+aw} y1={ay} x2={ax+aw/2} y2={ay+ah} stroke={OR} strokeWidth={1.2} strokeDasharray="8,4"/>);
+          }
+          elems.push(<rect key="m" x={ax} y={ay+ah/2-9} width={5} height={18} fill="white" stroke="#444" strokeWidth={0.8}/>);
+        }
+        return elems;
+      };
+
+      let body = null;
+
+      if (t==="F1A"||t==="PF1A") {
+        body = anta1(GX,GY,GW,GH,false,true);
+      } else if (t==="F2A"||t==="PF2A") {
+        const hw = Math.floor((GW-8)/2);
+        body = [
+          <rect key="mont" x={GX+hw} y={0} width={8} height={H} fill="white" stroke="#333" strokeWidth={2}/>,
+          ...anta1(GX, GY, hw, GH, false, true).map((e,i)=><g key={"l"+i}>{e}</g>),
+          ...anta1(GX+hw+8, GY, GW-hw-8, GH, false, false).map((e,i)=><g key={"r"+i}>{e}</g>),
+        ];
+      } else if (t==="F3A"||t==="PF3A") {
+        const tw = Math.floor((GW-16)/3);
+        body = [
+          <rect key="m1" x={GX+tw} y={0} width={8} height={H} fill="white" stroke="#333" strokeWidth={2}/>,
+          <rect key="m2" x={GX+tw*2+8} y={0} width={8} height={H} fill="white" stroke="#333" strokeWidth={2}/>,
+          ...anta1(GX, GY, tw, GH, true, true).map((e,i)=><g key={"a"+i}>{e}</g>),
+          ...anta1(GX+tw+8, GY, tw, GH, false, true).map((e,i)=><g key={"b"+i}>{e}</g>),
+          ...anta1(GX+tw*2+16, GY, tw, GH, true, false).map((e,i)=><g key={"c"+i}>{e}</g>),
+        ];
+      } else if (t==="SC2A"||t==="SC4A"||t==="SCRDX"||t==="SCRSX") {
+        const hw = Math.floor(GW/2);
+        body = [
+          <line key="bt" x1={GX} y1={GY-3} x2={GX+GW} y2={GY-3} stroke="#666" strokeWidth={2}/>,
+          <line key="bb" x1={GX} y1={GY+GH+3} x2={GX+GW} y2={GY+GH+3} stroke="#666" strokeWidth={2}/>,
+          <rect key="la" x={GX} y={GY} width={hw} height={GH} fill="#ddeefa" stroke="#333" strokeWidth={1.5}/>,
+          <rect key="lb" x={GX+hw} y={GY} width={GW-hw} height={GH} fill="#ddeefa" fillOpacity={0.4} stroke="#555" strokeWidth={0.8} strokeDasharray="5,3"/>,
+          <rect key="mh" x={GX+hw-4} y={cy-9} width={4} height={18} fill="white" stroke="#444" strokeWidth={0.8}/>,
+          <line key="ar" x1={GX+hw+14} y1={cy} x2={GX+hw+GW*0.35} y2={cy} stroke="#1a56db" strokeWidth={1.2}/>,
+          <polygon key="ap" points={(GX+hw+GW*0.35)+","+(cy-4)+" "+(GX+hw+GW*0.35)+","+(cy+4)+" "+(GX+hw+GW*0.35+8)+","+cy} fill="#1a56db"/>,
+        ];
+      } else if (t==="ALZDX"||t==="ALZSX"||t==="ALZSC") {
+        const hw = Math.floor(GW/2);
+        body = [
+          <line key="bt" x1={GX} y1={GY-3} x2={GX+GW} y2={GY-3} stroke="#666" strokeWidth={2}/>,
+          <line key="bb" x1={GX} y1={GY+GH+3} x2={GX+GW} y2={GY+GH+3} stroke="#666" strokeWidth={2}/>,
+          <rect key="la" x={GX} y={GY} width={hw} height={GH} fill="#ddeefa" stroke="#333" strokeWidth={1.5}/>,
+          <rect key="lb" x={GX+hw} y={GY} width={GW-hw} height={GH} fill="#ddeefa" fillOpacity={0.4} stroke="#555" strokeWidth={0.8} strokeDasharray="5,3"/>,
+          <line key="av" x1={GX+hw+GW*0.22} y1={cy+12} x2={GX+hw+GW*0.22} y2={cy-14} stroke="#1a56db" strokeWidth={1.2}/>,
+          <polygon key="ap" points={(GX+hw+GW*0.22-4)+","+(cy-10)+" "+(GX+hw+GW*0.22+4)+","+(cy-10)+" "+(GX+hw+GW*0.22)+","+(cy-18)} fill="#1a56db"/>,
+        ];
+      } else if (t==="VAS") {
+        body = [
+          <rect key="v" x={GX} y={GY} width={GW} height={GH} fill="#ddeefa"/>,
+          <rect key="p" x={GX} y={GY} width={GW} height={GH} fill="none" stroke="#333" strokeWidth={1.2}/>,
+          <line key="v1" x1={GX} y1={GY} x2={cx} y2={GY+GH} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>,
+          <line key="v2" x1={GX+GW} y1={GY} x2={cx} y2={GY+GH} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>,
+          <rect key="m" x={cx-12} y={GY+GH-4} width={24} height={4} fill="white" stroke="#444" strokeWidth={0.8}/>,
+        ];
+      } else if (t==="RIBALTA") {
+        body = [
+          <rect key="v" x={GX} y={GY} width={GW} height={GH} fill="#ddeefa"/>,
+          <rect key="p" x={GX} y={GY} width={GW} height={GH} fill="none" stroke="#333" strokeWidth={1.2}/>,
+          <line key="v1" x1={GX} y1={GY+GH} x2={cx} y2={GY} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>,
+          <line key="v2" x1={GX+GW} y1={GY+GH} x2={cx} y2={GY} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>,
+          <rect key="m" x={cx-12} y={GY} width={24} height={4} fill="white" stroke="#444" strokeWidth={0.8}/>,
+        ];
+      } else if (t==="BLI") {
+        body = [
+          <rect key="v" x={GX} y={GY} width={GW} height={GH} fill="#ddeefa"/>,
+          <rect key="p" x={GX} y={GY} width={GW} height={GH} fill="none" stroke="#333" strokeWidth={2}/>,
+          <line key="t1" x1={GX} y1={GY} x2={GX+GW} y2={cy} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>,
+          <line key="t2" x1={GX} y1={GY+GH} x2={GX+GW} y2={cy} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>,
+          <rect key="m" x={GX+GW-5} y={cy-11} width={5} height={22} fill="white" stroke="#444" strokeWidth={0.8}/>,
+          <circle key="mk" cx={GX+GW-3} cy={cy} r={5} fill="white" stroke="#333" strokeWidth={1.2}/>,
+        ];
+      } else if (t==="FISDX"||t==="FISSX"||t==="SOPR") {
+        body = [<rect key="v" x={GX} y={GY} width={GW} height={GH} fill="#ddeefa"/>];
+      } else {
+        body = [
+          <rect key="v" x={GX} y={GY} width={GW} height={GH} fill="#ddeefa"/>,
+          <text key="tx" x={cx} y={cy+4} textAnchor="middle" fontSize={10} fill="#888" fontFamily={F}>{t||"?"}</text>
+        ];
+      }
+
+      // soglia per porte
+      const hasSoglia = isPorta || t==="SC2A"||t==="ALZDX"||t==="ALZSX";
+
+      return (
+        <svg viewBox={"0 0 "+W+" "+H} width="100%" style={{display:"block",background:"white",border:"1px solid #ddd",borderRadius:3}}>
+          {/* cassonetto */}
+          {v.cassonetto&&<rect x={0} y={-14} width={W} height={14} fill="#fffde7" stroke="#ca8a04" strokeWidth={0.8}/>}
+          {v.cassonetto&&<text x={cx} y={-4} textAnchor="middle" fontSize={6} fill="#92400e" fontFamily={F} fontWeight="700">{"CASS. "+v.casH+"×"+v.casP}</text>}
+          {/* telaio fisso */}
+          <rect x={1} y={1} width={W-2} height={H-2} fill="white" stroke="#333" strokeWidth={BW}/>
+          {/* soglia */}
+          {hasSoglia&&<line x1={1} y1={H-BW/2} x2={W-1} y2={H-BW/2} stroke="#333" strokeWidth={3}/>}
+          {/* corpo */}
+          {body}
+          {/* quadratura: solo badge, no linee */}
+          {fuori&&<rect x={cx-26} y={cy-9} width={52} height={18} rx={3} fill="#dc2626"/>}
+          {fuori&&<text x={cx} y={cy+4} textAnchor="middle" fontSize={9} fill="white" fontFamily={F} fontWeight="700">{"⚠ +"+diff+"mm"}</text>}
+          {!fuori&&diff!==null&&<rect x={cx-18} y={cy-7} width={36} height={14} rx={3} fill="#15803d"/>}
+          {!fuori&&diff!==null&&<text x={cx} y={cy+4} textAnchor="middle" fontSize={8} fill="white" fontFamily={F} fontWeight="700">{"✓ sq."}</text>}
+          {/* quote */}
+          {hasM&&<rect x={cx-26} y={1} width={52} height={14} rx={2} fill="#1d4ed8"/>}
+          {hasM&&<text x={cx} y={12} textAnchor="middle" fontSize={10} fill="white" fontFamily={F} fontWeight="700">{lc}</text>}
+          {hasM&&<rect x={1} y={cy-8} width={14} height={16} rx={2} fill="#15803d"/>}
+          {hasM&&<text x={8} y={cy+4} textAnchor="middle" fontSize={10} fill="white" fontFamily={F} fontWeight="700" transform={"rotate(-90,8,"+cy+")"}>{hc}</text>}
+          {/* badge telaio/accessori */}
+          {v.telaio&&<text x={GX+2} y={GY+9} fontSize={6} fill="#6d28d9" fontFamily={F} fontWeight="700">{"Tel."+v.telaio+(v.telaio==="Z"&&v.telaioAlaZ?" "+v.telaioAlaZ:"")}</text>}
+          {v.accessori?.tapparella?.attivo&&<text x={GX+GW-2} y={GY+9} textAnchor="end" fontSize={6} fill="#d97706" fontFamily={F} fontWeight="700">TAP</text>}
+          {v.accessori?.zanzariera?.attivo&&<text x={GX+GW-2} y={GY+17} textAnchor="end" fontSize={6} fill="#6d28d9" fontFamily={F} fontWeight="700">ZAN</text>}
+        </svg>
+      );
+    };
+
+    return (
+      <div style={{paddingBottom:110,background:"#f1f5f9",minHeight:"100vh"}}>
+        {/* Header */}
+        <div style={{background:"#0f172a",padding:"13px 16px",display:"flex",alignItems:"center",gap:10,position:"sticky",top:0,zIndex:10}}>
+          <div onClick={()=>setShowRiepilogo(false)} style={{cursor:"pointer",padding:4}}>
+            <Ico d={ICO.back} s={20} c="#64748b"/>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:15,fontWeight:800,color:"white"}}>Riepilogo Sopralluogo</div>
+            <div style={{fontSize:10,color:"#64748b"}}>{c.code} · {c.cliente} {c.cognome||""} · {today}</div>
+          </div>
+          <div style={{padding:"4px 8px",borderRadius:6,background:vaniFilled===vaniR.length?"#16a34a":"#d97706",fontSize:10,fontWeight:700,color:"white"}}>{vaniFilled}/{vaniR.length} ✓</div>
+        </div>
+
+        <div style={{padding:"10px 12px"}}>
+          {/* Dati cantiere */}
+          <div style={{background:"white",borderRadius:10,border:"1px solid #e2e8f0",padding:"12px 14px",marginBottom:10,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+            <div style={{fontSize:9,fontWeight:800,color:BLU,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>📍 Dati Cantiere</div>
+            <div style={{display:"grid",gridTemplateColumns:"80px 1fr",gap:"3px 8px",fontSize:11.5}}>
+              <span style={{color:GRY,fontWeight:600}}>Cliente</span><span style={{fontWeight:700}}>{c.cliente} {c.cognome||""}</span>
+              <span style={{color:GRY,fontWeight:600}}>Indirizzo</span><span>{c.indirizzo}</span>
+              {c.telefono&&<><span style={{color:GRY,fontWeight:600}}>Tel</span><span>{c.telefono}</span></>}
+              {c.pianoEdificio&&<><span style={{color:GRY,fontWeight:600}}>Piano</span><span style={{fontWeight:600}}>{c.pianoEdificio}</span></>}
+              {c.mezzoSalita&&<><span style={{color:GRY,fontWeight:600}}>Salita</span><span>{c.mezzoSalita}</span></>}
+              {c.sistema&&<><span style={{color:GRY,fontWeight:600}}>Sistema</span><span style={{fontWeight:700,color:BLU}}>{c.sistema}</span></>}
+            </div>
+            {c.note&&<div style={{marginTop:8,padding:"5px 8px",background:"#fffbeb",borderRadius:6,fontSize:11,color:"#713f12",borderLeft:"3px solid "+AMB}}>📝 {c.note}</div>}
+          </div>
+
+          {/* Vani */}
+          {vaniR.map((v,vi)=>{
+            const m=v.misure||{};
+            const lc=m.lCentro||0, hc=m.hCentro||0;
+            const diff=m.d1>0&&m.d2>0?Math.abs(m.d1-m.d2):null;
+            const fuori=diff!==null&&(diff as number)>5;
+            const misN=Object.values(m).filter(x=>(x as number)>0).length;
+            const tipLabel=TIPOLOGIE_RAPIDE.find(tp=>tp.code===v.tipo)?.label||v.tipo||"—";
+            return (
+              <div key={v.id} style={{background:"white",borderRadius:10,border:"1.5px solid "+(fuori?"#fca5a5":"#e2e8f0"),marginBottom:10,overflow:"hidden"}}>
+                {/* Header */}
+                <div style={{padding:"8px 12px",background:fuori?"#fef2f2":"#0f172a",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <span style={{fontSize:13,fontWeight:800,color:fuori?"#991b1b":"white"}}>{vi+1}. {v.nome}</span>
+                    <span style={{fontSize:10,color:fuori?"#b91c1c":"#64748b",marginLeft:6}}>{tipLabel} · {v.stanza} · {v.piano}</span>
+                  </div>
+                  <div style={{display:"flex",gap:3}}>
+                    {fuori&&<span style={{padding:"2px 6px",borderRadius:3,background:ROS,color:"white",fontSize:8,fontWeight:800}}>⚠ +{diff}mm</span>}
+                    <span style={{padding:"2px 6px",borderRadius:3,background:misN>=6?"#16a34a":"#d97706",color:"white",fontSize:8,fontWeight:700}}>{misN}mis</span>
+                  </div>
+                </div>
+
+                <div style={{display:"flex"}}>
+                  {/* SVG disegno */}
+                  <div style={{width:"50%",padding:"10px 6px 8px 10px",borderRight:"1px solid #f1f5f9"}}>
+                    <div style={{fontSize:7,fontWeight:700,color:GRY,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>Schema</div>
+                    <DrawVano v={v}/>
+                  </div>
+
+                  {/* Misure */}
+                  <div style={{flex:1,padding:"10px 10px 8px 10px"}}>
+                    <div style={{fontSize:7,fontWeight:700,color:GRY,textTransform:"uppercase",marginBottom:5}}>Misure (mm)</div>
+                    {[["LARGH",BLU,[["Alto",m.lAlto],["Centro●",m.lCentro],["Basso",m.lBasso]]],
+                      ["ALT",VRD,[["Sx",m.hSx],["Centro●",m.hCentro],["Dx",m.hDx]]]
+                    ].map(([lbl,col,rows])=>(
+                      <div key={lbl} style={{marginBottom:5}}>
+                        <div style={{fontSize:7,fontWeight:800,color:col,marginBottom:2,display:"flex",alignItems:"center",gap:2}}>
+                          <span style={{width:6,height:6,borderRadius:1,background:col,display:"inline-block"}}/>
+                          {lbl}
+                        </div>
+                        {rows.map(([l,val])=>(
+                          <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:10.5,padding:"1.5px 0",borderBottom:"1px solid #f8fafc"}}>
+                            <span style={{color:GRY,fontSize:9.5}}>{l}</span>
+                            <span style={{fontWeight:700,color:val?"#0f172a":"#e2e8f0",fontFamily:"'DM Mono',monospace"}}>{val||"—"}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    {(m.d1>0||m.d2>0)&&<div style={{marginBottom:4}}>
+                      <div style={{fontSize:7,fontWeight:800,color:fuori?ROS:VIO,marginBottom:2}}>DIAG. {fuori?"⚠ +"+diff:"✓"}</div>
+                      {[["D1↗",m.d1],["D2↘",m.d2]].map(([l,val])=>(
+                        <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:10.5,padding:"1px 0"}}>
+                          <span style={{color:GRY,fontSize:9.5}}>{l}</span>
+                          <span style={{fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{val||"—"}</span>
+                        </div>
+                      ))}
+                    </div>}
+                    {(m.spSx>0||m.spDx>0)&&<div>
+                      <div style={{fontSize:7,fontWeight:800,color:AMB,marginBottom:2}}>SPALL.</div>
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                        {[["Sx",m.spSx],["Dx",m.spDx],["Sop",m.spSopra]].filter(([,val])=>val>0).map(([l,val])=>(
+                          <span key={l} style={{fontSize:10}}><span style={{color:GRY,fontSize:9}}>{l} </span><strong style={{fontFamily:"'DM Mono',monospace"}}>{val}</strong></span>
+                        ))}
+                      </div>
+                    </div>}
+                  </div>
+                </div>
+
+                {/* Prodotto */}
+                {(v.sistema||v.vetro||v.telaio||v.accessori?.tapparella?.attivo||v.accessori?.zanzariera?.attivo||v.accessori?.persiana?.attivo||v.cassonetto||v.note)&&(
+                  <div style={{padding:"7px 12px",background:"#f8fafc",borderTop:"1px solid #f1f5f9"}}>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:3,marginBottom:3}}>
+                      {v.sistema&&<span style={{padding:"2px 7px",borderRadius:4,background:"#eff6ff",color:"#1d4ed8",fontSize:9.5,fontWeight:700}}>⚙ {v.sistema}</span>}
+                      {v.vetro&&<span style={{padding:"2px 7px",borderRadius:4,background:"#f0fdf4",color:"#15803d",fontSize:9.5,fontWeight:700}}>🔲 {v.vetro}</span>}
+                      {v.coloreInt&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fafafa",border:"1px solid #e2e8f0",color:"#374151",fontSize:9.5}}>🎨 {v.bicolore?"INT:"+v.coloreInt+"/EST:"+v.coloreEst:v.coloreInt}</span>}
+                      {v.telaio&&<span style={{padding:"2px 7px",borderRadius:4,background:"#f5f3ff",color:"#6d28d9",fontSize:9.5,fontWeight:700}}>📐 Tel.{v.telaio}{v.telaio==="Z"&&v.telaioAlaZ?" ("+v.telaioAlaZ+"mm)":""}</span>}
+                      {v.rifilato&&(v.rifilSx||v.rifilDx)&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fdf4ff",color:"#7e22ce",fontSize:9.5}}>Rif Sx:{v.rifilSx} Dx:{v.rifilDx} Sop:{v.rifilSopra}</span>}
+                      {v.coprifilo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fefce8",color:"#92400e",fontSize:9.5}}>🔩 {v.coprifilo}</span>}
+                      {v.lamiera&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fff7ed",color:"#9a3412",fontSize:9.5}}>📏 {v.lamiera}</span>}
+                    </div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
+                      {v.cassonetto&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fef3c7",color:"#b45309",fontSize:9.5,fontWeight:700}}>📦 Cass. {v.casH}×{v.casP}</span>}
+                      {v.accessori?.tapparella?.attivo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fef3c7",color:"#b45309",fontSize:9.5,fontWeight:700}}>⬇ Tap. {v.accessori.tapparella.colore} {v.accessori.tapparella.l}×{v.accessori.tapparella.h}</span>}
+                      {v.accessori?.persiana?.attivo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#eff6ff",color:"#1e40af",fontSize:9.5,fontWeight:700}}>🪟 Pers. {v.accessori.persiana.colore}</span>}
+                      {v.accessori?.zanzariera?.attivo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fdf4ff",color:"#6b21a8",fontSize:9.5,fontWeight:700}}>🕸 Zan. {v.accessori.zanzariera.l}×{v.accessori.zanzariera.h}</span>}
+                    </div>
+                    {v.note&&<div style={{marginTop:5,fontSize:10.5,color:"#475569",fontStyle:"italic",padding:"3px 6px",background:"#fffbeb",borderRadius:4,borderLeft:"2px solid "+AMB}}>📝 {v.note}</div>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Sommario */}
+          <div style={{background:"#0f172a",borderRadius:10,padding:"12px 14px",marginBottom:12}}>
+            <div style={{fontSize:9,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Sommario</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+              {[["Vani",vaniR.length,"#60a5fa"],["Misure ✓",vaniFilled,"#4ade80"],["⚠ Fuori sq.",fuoriSqN,fuoriSqN>0?"#fbbf24":"#4ade80"]].map(([l,val,col])=>(
+                <div key={l} style={{textAlign:"center",padding:"8px 4px",background:"rgba(255,255,255,0.05)",borderRadius:8}}>
+                  <div style={{fontSize:22,fontWeight:800,color:col,fontFamily:"'DM Mono',monospace"}}>{val}</div>
+                  <div style={{fontSize:8,color:"#94a3b8",marginTop:2}}>{l}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+          {/* Anteprima messaggio WA */}
+          <div style={{background:"#dcf8c6",border:"1.5px solid #16a34a",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+            <div style={{fontSize:9,fontWeight:800,color:"#166534",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>📱 Anteprima messaggio</div>
+            <pre style={{fontFamily:"'DM Mono',monospace",fontSize:9.5,color:"#14532d",whiteSpace:"pre-wrap",lineHeight:1.65,margin:0,maxHeight:220,overflow:"auto"}}>{waMsg}</pre>
+          </div>
+
+        {/* Barra invio */}
+        <div style={{position:"fixed",bottom:0,left:0,right:0,background:"white",borderTop:"2px solid #e2e8f0",padding:"10px 12px 22px",boxShadow:"0 -6px 20px rgba(0,0,0,0.08)"}}>
+          <div style={{fontSize:9,fontWeight:700,color:GRY,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:7,textAlign:"center"}}>Invia riepilogo</div>
+          <div style={{display:"flex",gap:8}}>
+            <div onClick={()=>window.open("https://wa.me/?text="+encodeURIComponent(waMsg))}
+              style={{flex:1,padding:"13px 8px",borderRadius:11,background:"#16a34a",color:"white",textAlign:"center",cursor:"pointer",fontWeight:800,fontSize:13}}>💬 WhatsApp</div>
+            <div onClick={()=>window.open("mailto:?subject="+encodeURIComponent("Sopralluogo "+c.code)+"&body="+encodeURIComponent(waMsg.replace(/\*/g,"")))}
+              style={{flex:1,padding:"13px 8px",borderRadius:11,background:BLU,color:"white",textAlign:"center",cursor:"pointer",fontWeight:800,fontSize:13}}>📧 Email</div>
+            <div onClick={()=>window.print()}
+              style={{padding:"13px 14px",borderRadius:11,background:"#f1f5f9",color:"#475569",cursor:"pointer",fontWeight:800,fontSize:15}}>🖨</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+// =======================================================
+// MASTRO ERP v2 — PARTE 3/5
+// Righe 2639-3594: Vano Detail Wizard completo
+// =======================================================
+  /* == VANO DETAIL — WIZARD A STEP == */
+  const STEPS = [
+    { id: "larghezze", title: "LARGHEZZE", desc: "Misura la larghezza in 3 punti: alto, centro, basso", color: "#507aff", icon: "📏", fields: ["lAlto", "lCentro", "lBasso"], labels: ["Larghezza ALTO", "Larghezza CENTRO (luce netta)", "Larghezza BASSO"] },
+    { id: "altezze", title: "ALTEZZE", desc: "Misura l'altezza in 3 punti: sinistra, centro, destra", color: "#34c759", icon: "📐", fields: ["hSx", "hCentro", "hDx"], labels: ["Altezza SINISTRA", "Altezza CENTRO", "Altezza DESTRA"] },
+    { id: "diagonali", title: "DIAGONALI", desc: "Misura le 2 diagonali per verificare la squadra", color: "#ff9500", icon: "✕", fields: ["d1", "d2"], labels: ["Diagonale 1 ↗", "Diagonale 2 ↘"] },
+    { id: "spallette", title: "SPALLETTE", desc: "Misura le spallette e l'imbotte", color: "#32ade6", icon: "🧱", fields: ["spSx", "spDx", "spSopra", "imbotte"], labels: ["Spalletta SINISTRA", "Spalletta DESTRA", "Spalletta SOPRA", "Profondità IMBOTTE"] },
+    { id: "davanzale", title: "DAVANZALE", desc: "Davanzale, soglia e cassonetto", color: "#ff2d55", icon: "⬇", fields: ["davProf", "davSporg", "soglia"], labels: ["Davanzale PROFONDITÀ", "Davanzale SPORGENZA", "Altezza SOGLIA"] },
+    { id: "accessori", title: "ACCESSORI", desc: "Tapparella, persiana, zanzariera", color: "#af52de", icon: "+" },
+    { id: "disegno", title: "DISEGNO + FOTO", desc: "Disegna, fotografa e annota il vano", color: "#ff6b6b", icon: "📷" },
+    { id: "riepilogo", title: "RIEPILOGO", desc: "Anteprima completa del vano", color: "#34c759", icon: "📋" },
+  ];
+
+  const renderVanoDetail = () => {
+    const v = selectedVano;
+    const m = v.misure || {};
+    const step = STEPS[vanoStep];
+    const filled = Object.values(m).filter(x => (x as number) > 0).length;
+    const TIPO_TIPS = { Scorrevole: { t: "Scorrevole (alzante/traslante)", dim: "2000 × 2200 mm", w: ["Binario inferiore: serve spazio incasso", "Verifica portata parete"] }, Portafinestra: { t: "Portafinestra standard", dim: "800-900 × 2200 mm", w: ["Soglia a taglio termico", "Verifica altezza architrave"] }, Finestra: { t: "Finestra", dim: "1200 × 1400 mm", w: ["Verifica spazio per anta"] } };
+    const tip = TIPO_TIPS[v.tipo] || null;
+    const hasWarnings = !m.lAlto && !m.lCentro && !m.lBasso;
+    const hasHWarnings = !m.hSx && !m.hCentro && !m.hDx;
+    const fSq = m.d1 > 0 && m.d2 > 0 ? Math.abs(m.d1 - m.d2) : null;
+
+    // Mini SVG per step
+    const MiniSVG = ({ type }) => {
+      const w = 60, h = 70;
+      return (
+        <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} style={{ display: "block" }}>
+          <rect x={5} y={5} width={w-10} height={h-10} fill={step.color + "12"} stroke={step.color + "40"} strokeWidth={1.5} rx={3} />
+          {type === "larghezze" && <>
+            <line x1={10} y1={18} x2={w-10} y2={18} stroke={step.color} strokeWidth={1.2} strokeDasharray="3,2" />
+            <line x1={10} y1={h/2} x2={w-10} y2={h/2} stroke={step.color} strokeWidth={1.2} strokeDasharray="3,2" />
+            <line x1={10} y1={h-18} x2={w-10} y2={h-18} stroke={step.color} strokeWidth={1.2} strokeDasharray="3,2" />
+          </>}
+          {type === "altezze" && <>
+            <line x1={14} y1={10} x2={14} y2={h-10} stroke={step.color} strokeWidth={1.2} strokeDasharray="3,2" />
+            <line x1={w/2} y1={10} x2={w/2} y2={h-10} stroke={step.color} strokeWidth={1.2} strokeDasharray="3,2" />
+            <line x1={w-14} y1={10} x2={w-14} y2={h-10} stroke={step.color} strokeWidth={1.2} strokeDasharray="3,2" />
+          </>}
+          {type === "diagonali" && <>
+            <line x1={10} y1={10} x2={w-10} y2={h-10} stroke={step.color} strokeWidth={1.2} strokeDasharray="3,2" />
+            <line x1={w-10} y1={10} x2={10} y2={h-10} stroke={step.color} strokeWidth={1.2} strokeDasharray="3,2" />
+          </>}
+          {type === "spallette" && <>
+            <rect x={2} y={5} width={10} height={h-10} fill={step.color + "25"} stroke={step.color+"60"} rx={1} />
+            <rect x={w-12} y={5} width={10} height={h-10} fill={step.color + "25"} stroke={step.color+"60"} rx={1} />
+            <rect x={5} y={2} width={w-10} height={8} fill={step.color + "18"} stroke={step.color+"40"} rx={1} />
+          </>}
+          {type === "davanzale" && <>
+            <rect x={5} y={h-16} width={w-10} height={10} fill={step.color + "25"} stroke={step.color+"60"} rx={1} />
+          </>}
+        </svg>
+      );
+    };
+
+    // Inline input renderer (no sub-component = no focus loss)
+    const bInput = (label, field) => (
+      <div key={field} style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 4 }}>{label}</div>
+        <input
+          key={`input-${field}`}
+          style={{ width: "100%", padding: "14px 16px", fontSize: 17, fontWeight: 500, fontFamily: FM, textAlign: "center", border: `1px solid ${T.bdr}`, borderRadius: 12, background: m[field] > 0 ? step.color + "08" : T.card, color: T.text, outline: "none", boxSizing: "border-box" }}
+          type="number" inputMode="numeric" placeholder="Tocca per inserire" value={m[field] || ""}
+          onChange={e => updateMisura(v.id, field, e.target.value)}
+        />
+      </div>
+    );
+
+    return (
+      <div style={{ paddingBottom: 80, background: T.bg }}>
+        {/* Back + vano name */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", background: T.card, borderBottom: `1px solid ${T.bdr}` }}>
+          <div onClick={() => { setSelectedVano(null); setVanoStep(0); }} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>{v.nome}</div>
+            <div style={{ fontSize: 10, color: T.sub }}>{TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.label || v.tipo} · {v.stanza} · {v.piano}</div>
+          </div>
+          <div onClick={() => { setShowAIPhoto(true); setAiPhotoStep(0); }} style={{ padding: "5px 10px", borderRadius: 8, background: "linear-gradient(135deg, #af52de20, #007aff20)", border: "1px solid #af52de40", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontSize: 14 }}>🤖</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "#af52de" }}>AI</span>
+          </div>
+        </div>
+
+        {/* == INFO VANO — fisarmoniche (solo step 0) == */}
+        {vanoStep === 0 && (() => {
+          const updateV = (field, val) => {
+            setCantieri(cs => cs.map(c => c.id === selectedCM?.id
+              ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, [field]: val } : vn) } : r2) } : c));
+            setSelectedVano(prev => ({ ...prev, [field]: val }));
+          };
+          const cats = ["Finestre","Balconi","Scorrevoli","Persiane","Altro"];
+          const pianiList = ["S2","S1","PT","P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12","P13","P14","P15","P16","P17","P18","P19","P20","M"];
+          const coloriRAL = ["RAL 9010","RAL 9016","RAL 9001","RAL 7016","RAL 7021","RAL 8014","RAL 8016","RAL 1013","Altro"];
+
+          const sections = [
+            { id:"accesso", icon:"🏗", label:"Accesso / Difficoltà",
+              badge: v.difficoltaSalita||null,
+              body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{display:"flex",gap:4}}>
+                  {[{id:"facile",l:"Facile",c:T.grn,e:"✅"},{id:"media",l:"Media",c:T.orange,e:"⚠️"},{id:"difficile",l:"Difficile",c:T.red,e:"🔴"}].map(d=>(
+                    <div key={d.id} onClick={()=>updateV("difficoltaSalita",d.id)}
+                      style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1.5px solid ${v.difficoltaSalita===d.id?d.c:T.bdr}`,background:v.difficoltaSalita===d.id?d.c+"15":T.card,textAlign:"center",cursor:"pointer"}}>
+                      <div style={{fontSize:13}}>{d.e}</div>
+                      <div style={{fontSize:10,fontWeight:700,color:v.difficoltaSalita===d.id?d.c:T.sub}}>{d.l}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:2}}>MEZZO DI SALITA</div>
+                <select style={S.select} value={v.mezzoSalita||""} onChange={e=>updateV("mezzoSalita",e.target.value)}>
+                  <option value="">— Seleziona —</option>
+                  {mezziSalita.map(m=><option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+            },
+            { id:"tipologia", icon:"🪟", label:"Tipologia",
+              badge: v.tipo||null,
+              body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bdr}`,paddingBottom:0,marginBottom:4}}>
+                  {cats.map(cat=>(
+                    <div key={cat} onClick={()=>setTipCat(cat)}
+                      style={{padding:"5px 8px",fontSize:10,fontWeight:700,cursor:"pointer",color:tipCat===cat?T.acc:T.sub,borderBottom:`2px solid ${tipCat===cat?T.acc:"transparent"}`,marginBottom:-1,whiteSpace:"nowrap"}}>
+                      {cat}
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:4,WebkitOverflowScrolling:"touch"}}>
+                  {TIPOLOGIE_RAPIDE.filter(t=>t.cat===tipCat).map(t=>(
+                    <div key={t.code} onClick={()=>updateV("tipo",t.code)}
+                      style={{padding:"7px 10px",borderRadius:10,border:`1.5px solid ${v.tipo===t.code?T.acc:T.bdr}`,background:v.tipo===t.code?T.accLt:T.card,fontSize:11,fontWeight:700,color:v.tipo===t.code?T.acc:T.text,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>
+                      {t.icon} {t.code}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            },
+            { id:"posizione", icon:"🏠", label:"Stanza / Piano",
+              badge: v.stanza?`${v.stanza} · ${v.piano}`:null,
+              body: <div style={{display:"flex",gap:8}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>STANZA</div>
+                  <select style={S.select} value={v.stanza||""} onChange={e=>updateV("stanza",e.target.value)}>
+                    {["Soggiorno","Cucina","Camera","Bagno","Studio","Ingresso","Corridoio","Altro"].map(x=><option key={x}>{x}</option>)}
+                  </select>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>PIANO</div>
+                  <select style={S.select} value={v.piano||""} onChange={e=>updateV("piano",e.target.value)}>
+                    {pianiList.map(p=><option key={p} value={p}>{p==="S2"?"S2 — 2° Seminterrato":p==="S1"?"S1 — Seminterrato":p==="PT"?"PT — Piano Terra":p==="M"?"M — Mansarda":`${p} — ${p.replace("P","")}° Piano`}</option>)}
+                  </select>
+                </div>
+                <div style={{width:80}}>
+                  <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>PEZZI</div>
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <div onClick={()=>updateV("pezzi",Math.max(1,(v.pezzi||1)-1))} style={{width:28,height:32,borderRadius:6,background:T.bg,border:`1px solid ${T.bdr}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:16,fontWeight:700,color:T.sub}}>−</div>
+                    <div style={{flex:1,textAlign:"center",fontSize:16,fontWeight:800,color:T.acc}}>{v.pezzi||1}</div>
+                    <div onClick={()=>updateV("pezzi",(v.pezzi||1)+1)} style={{width:28,height:32,borderRadius:6,background:T.bg,border:`1px solid ${T.bdr}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:16,fontWeight:700,color:T.sub}}>+</div>
+                  </div>
+                </div>
+              </div>
+            },
+            { id:"sistema", icon:"⚙️", label:"Sistema / Vetro",
+              badge: v.sistema?v.sistema.split(" ").slice(0,2).join(" · "):null,
+              body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>SISTEMA</div>
+                  <select style={S.select} value={v.sistema||""} onChange={e=>updateV("sistema",e.target.value)}>
+                    <option value="">— Seleziona —</option>
+                    {sistemiDB.map(s=><option key={s.id} value={`${s.marca} ${s.sistema}`}>{s.marca} {s.sistema}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>VETRO</div>
+                  <select style={S.select} value={v.vetro||""} onChange={e=>updateV("vetro",e.target.value)}>
+                    <option value="">— Seleziona —</option>
+                    {vetriDB.map(g=><option key={g.id} value={g.code}>{g.code} Ug={g.ug}</option>)}
+                  </select>
+                </div>
+              </div>
+            },
+            { id:"colori", icon:"🎨", label:"Colori profili",
+              badge: v.coloreInt||null,
+              body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                  <div style={{fontSize:10,fontWeight:700,color:T.sub}}>INT</div>
+                  <div onClick={()=>updateV("bicolore",!v.bicolore)}
+                    style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:v.bicolore?T.accLt:"transparent",border:`1px solid ${v.bicolore?T.acc:T.bdr}`,color:v.bicolore?T.acc:T.sub,cursor:"pointer",fontWeight:600}}>
+                    Bicolore {v.bicolore?"✓":""}
+                  </div>
+                </div>
+                {!v.bicolore
+                  ? <select style={S.select} value={v.coloreInt||""} onChange={e=>updateV("coloreInt",e.target.value)}>
+                      <option value="">— Seleziona —</option>
+                      {coloriDB.map(c=><option key={c.id} value={c.code}>{c.code} — {c.nome}</option>)}
+                    </select>
+                  : <div style={{display:"flex",gap:6}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:9,color:T.sub,marginBottom:2}}>INT</div>
+                        <select style={S.select} value={v.coloreInt||""} onChange={e=>updateV("coloreInt",e.target.value)}>
+                          <option value="">—</option>{coloriDB.map(c=><option key={c.id} value={c.code}>{c.code}</option>)}
+                        </select>
+                      </div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:9,color:T.sub,marginBottom:2}}>EST</div>
+                        <select style={S.select} value={v.coloreEst||""} onChange={e=>updateV("coloreEst",e.target.value)}>
+                          <option value="">—</option>{coloriDB.map(c=><option key={c.id} value={c.code}>{c.code}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                }
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>ACCESSORI</div>
+                  <select style={S.select} value={v.coloreAcc||""} onChange={e=>updateV("coloreAcc",e.target.value)}>
+                    <option value="">— Come profili —</option>
+                    {coloriDB.map(c=><option key={c.id} value={c.code}>{c.code} — {c.nome}</option>)}
+                  </select>
+                </div>
+              </div>
+            },
+            { id:"telaio", icon:"📐", label:"Telaio / Rifilato",
+              badge: v.telaio?(v.telaio==="Z"?"Telaio Z":"Telaio L"):(v.rifilato?"Rifilato":null),
+              body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{display:"flex",gap:6}}>
+                  {[{id:"Z",l:"Telaio a Z"},{id:"L",l:"Telaio a L"}].map(t=>(
+                    <div key={t.id} onClick={()=>updateV("telaio",v.telaio===t.id?"":t.id)}
+                      style={{flex:1,padding:"9px",borderRadius:8,border:`1.5px solid ${v.telaio===t.id?T.acc:T.bdr}`,background:v.telaio===t.id?T.accLt:T.card,textAlign:"center",fontSize:12,fontWeight:700,color:v.telaio===t.id?T.acc:T.sub,cursor:"pointer"}}>
+                      {t.l}
+                    </div>
+                  ))}
+                </div>
+                {v.telaio==="Z" && <div>
+                  <div style={{fontSize:10,color:T.sub,fontWeight:600,marginBottom:2}}>Lunghezza ala (mm)</div>
+                  <input style={S.input} type="number" inputMode="numeric" placeholder="es. 35" value={v.telaioAlaZ||""} onChange={e=>updateV("telaioAlaZ",e.target.value)}/>
+                </div>}
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div onClick={()=>updateV("rifilato",!v.rifilato)}
+                    style={{width:40,height:22,borderRadius:11,background:v.rifilato?T.acc:T.bdr,cursor:"pointer",position:"relative",flexShrink:0}}>
+                    <div style={{position:"absolute",top:2,left:v.rifilato?20:2,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left 0.15s"}}/>
+                  </div>
+                  <span style={{fontSize:12,fontWeight:600,color:T.text}}>Rifilato</span>
+                </div>
+                {v.rifilato && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  {[["rifilSx","↙ Sx"],["rifilDx","↘ Dx"],["rifilSopra","↑ Sopra"],["rifilSotto","↓ Sotto"]].map(([f,l])=>(
+                    <div key={f}><div style={{fontSize:9,color:T.sub,fontWeight:600,marginBottom:2}}>{l} (mm)</div>
+                    <input style={S.input} type="number" inputMode="numeric" placeholder="0" value={v[f]||""} onChange={e=>updateV(f,e.target.value)}/></div>
+                  ))}
+                </div>}
+              </div>
+            },
+            { id:"finiture", icon:"🔩", label:"Coprifilo / Lamiera",
+              badge: (v.coprifilo||v.lamiera)?"✓":null,
+              body: <div style={{display:"flex",gap:8}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>COPRIFILO</div>
+                  <select style={S.select} value={v.coprifilo||""} onChange={e=>updateV("coprifilo",e.target.value)}>
+                    <option value="">— No —</option>
+                    {coprifiliDB.map(c=><option key={c.id} value={c.cod}>{c.cod} — {c.nome}</option>)}
+                  </select>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>LAMIERA</div>
+                  <select style={S.select} value={v.lamiera||""} onChange={e=>updateV("lamiera",e.target.value)}>
+                    <option value="">— No —</option>
+                    {lamiereDB.map(l=><option key={l.id} value={l.cod}>{l.cod} — {l.nome}</option>)}
+                  </select>
+                </div>
+              </div>
+            },
+          ];
+
+          return (
+            <div style={{padding:"6px 16px 2px"}}>
+              {sections.map(sec=>{
+                const isOpen = vanoInfoOpen===sec.id;
+                return (
+                  <div key={sec.id} style={{marginBottom:3,borderRadius:10,border:`1px solid ${isOpen?T.acc+"50":T.bdr}`,overflow:"hidden"}}>
+                    <div onClick={()=>setVanoInfoOpen(isOpen?null:sec.id)}
+                      style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 12px",background:isOpen?T.acc+"06":T.card,cursor:"pointer"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                        <span style={{fontSize:14}}>{sec.icon}</span>
+                        <span style={{fontSize:12,fontWeight:600,color:T.text}}>{sec.label}</span>
+                        {sec.badge && <span style={{...S.badge(T.accLt,T.acc),fontSize:9,padding:"1px 6px"}}>{sec.badge}</span>}
+                      </div>
+                      <span style={{fontSize:9,color:T.sub,display:"inline-block",transform:isOpen?"rotate(180deg)":"none",transition:"transform 0.15s"}}>▼</span>
+                    </div>
+                    {isOpen && <div style={{padding:"12px",background:T.bg,borderTop:`1px solid ${T.bdr}`}}>{sec.body}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
+        {/* Dots progress */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 5, padding: "14px 16px 6px" }}>
+          {STEPS.map((s, i) => (
+            <div key={i} onClick={() => setVanoStep(i)} style={{ width: i === vanoStep ? 18 : 8, height: 8, borderRadius: 4, background: i === vanoStep ? s.color : i < vanoStep ? s.color + "60" : T.bdr, cursor: "pointer", transition: "all 0.2s" }} />
+          ))}
+        </div>
+
+        <div style={{ padding: "8px 16px" }}>
+          {/* Step header card */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: step.color + "10", borderRadius: 14, border: `1px solid ${step.color}25`, marginBottom: 12 }}>
+            {(vanoStep <= 4) && <MiniSVG type={step.id} />}
+            {vanoStep > 4 && <div style={{ width: 50, height: 50, borderRadius: 12, background: step.color + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{step.icon}</div>}
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: step.color }}>{step.icon} {step.title}</div>
+              <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{step.desc}</div>
+              {step.fields && <div style={{ fontSize: 11, fontWeight: 700, color: T.text, marginTop: 2 }}>{step.fields.filter(f => m[f] > 0).length}/{step.fields.length} inserite</div>}
+            </div>
+          </div>
+
+          {/* Warnings */}
+          {vanoStep <= 2 && (hasWarnings || hasHWarnings) && (
+            <div style={{ padding: "8px 14px", borderRadius: 10, background: "#fff3e0", border: "1px solid #ffe0b2", marginBottom: 12, fontSize: 11, color: "#e65100" }}>
+              {hasWarnings && <div>⚠ Nessuna larghezza inserita</div>}
+              {hasHWarnings && <div>⚠ Nessuna altezza inserita</div>}
+            </div>
+          )}
+
+          {/* === STEP 0: LARGHEZZE === */}
+          {vanoStep === 0 && (
+            <>
+              {bInput("Larghezza ALTO", "lAlto")}
+              {bInput("Larghezza CENTRO (luce netta)", "lCentro")}
+              {bInput("Larghezza BASSO", "lBasso")}
+              {tip && (
+                <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fff8e1", border: "1px solid #ffecb3", marginTop: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f57f17" }}>💡 {tip.t}</div>
+                  <div style={{ fontSize: 11, color: "#795548" }}>Dimensioni tipiche: {tip.dim}</div>
+                  {tip.w.map((w, i) => <div key={i} style={{ fontSize: 10, color: "#e65100", marginTop: 2 }}>⚠ {w}</div>)}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* === STEP 1: ALTEZZE === */}
+          {vanoStep === 1 && (
+            <>
+              {bInput("Altezza SINISTRA", "hSx")}
+              {bInput("Altezza CENTRO", "hCentro")}
+              {bInput("Altezza DESTRA", "hDx")}
+              {tip && (
+                <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fff8e1", border: "1px solid #ffecb3", marginTop: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f57f17" }}>💡 {tip.t}</div>
+                  <div style={{ fontSize: 11, color: "#795548" }}>Dimensioni tipiche: {tip.dim}</div>
+                  {tip.w.map((w, i) => <div key={i} style={{ fontSize: 10, color: "#e65100", marginTop: 2 }}>⚠ {w}</div>)}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* === STEP 2: DIAGONALI === */}
+          {vanoStep === 2 && (
+            <>
+              {bInput("Diagonale 1 ↗", "d1")}
+              {bInput("Diagonale 2 ↘", "d2")}
+              {fSq !== null && fSq > 3 && (
+                <div style={{ padding: "10px 14px", borderRadius: 10, background: "#ffebee", border: "1px solid #ef9a9a", marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#c62828" }}>⚠ Fuori squadra: {fSq}mm</div>
+                  <div style={{ fontSize: 11, color: "#b71c1c" }}>Differenza superiore a 3mm — segnalare in ufficio</div>
+                </div>
+              )}
+              {fSq !== null && fSq <= 3 && (
+                <div style={{ padding: "10px 14px", borderRadius: 10, background: "#e8f5e9", border: "1px solid #a5d6a7" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#2e7d32" }}>✅ In squadra — differenza: {fSq}mm</div>
+                </div>
+              )}
+              {tip && (
+                <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fff8e1", border: "1px solid #ffecb3", marginTop: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f57f17" }}>💡 {tip.t}</div>
+                  <div style={{ fontSize: 11, color: "#795548" }}>Dimensioni tipiche: {tip.dim}</div>
+                  {tip.w.map((w, i) => <div key={i} style={{ fontSize: 10, color: "#e65100", marginTop: 2 }}>⚠ {w}</div>)}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* === STEP 3: SPALLETTE === */}
+          {vanoStep === 3 && (
+            <>
+              {bInput("Spalletta SINISTRA", "spSx")}
+              {bInput("Spalletta DESTRA", "spDx")}
+              {bInput("Spalletta SOPRA", "spSopra")}
+              {bInput("Profondità IMBOTTE", "imbotte")}
+              {/* DISEGNO LIBERO SPALLETTE */}
+              <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, marginTop: 8, overflow: "hidden" }}>
+                <div style={{ padding: "8px 14px", borderBottom: `1px solid ${T.bdr}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#32ade6" }}>✏️ Disegno spallette</span>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => { const ctx = spCanvasRef.current?.getContext("2d"); ctx?.clearRect(0, 0, 380, 200); }} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>🗝‘ Pulisci</button>
+                    <button style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: T.grn, color: "#fff", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>💾 Salva</button>
+                  </div>
+                </div>
+                <canvas ref={spCanvasRef} width={380} height={200} style={{ width: "100%", height: 200, background: "#fff", touchAction: "none", cursor: "crosshair" }}
+                  onPointerDown={e=>{spCanvasRef.current?.setPointerCapture(e.pointerId);setSpDrawing(true);const cv=spCanvasRef.current;const ctx=cv?.getContext("2d");if(ctx&&cv){const r=cv.getBoundingClientRect();const sx=cv.width/r.width,sy=cv.height/r.height;ctx.beginPath();ctx.moveTo((e.clientX-r.left)*sx,(e.clientY-r.top)*sy);ctx.strokeStyle=penColor;ctx.lineWidth=penSize;ctx.lineCap="round";ctx.lineJoin="round";}}}
+                  onPointerMove={e=>{if(!spDrawing)return;const cv=spCanvasRef.current;const ctx=cv?.getContext("2d");if(ctx&&cv){const r=cv.getBoundingClientRect();const sx=cv.width/r.width,sy=cv.height/r.height;ctx.lineTo((e.clientX-r.left)*sx,(e.clientY-r.top)*sy);ctx.stroke();}}}
+                  onPointerUp={() => setSpDrawing(false)}
+                  onPointerLeave={() => setSpDrawing(false)}
+                />
+                <div style={{ padding: "6px 14px", display: "flex", gap: 4 }}>
+                  {["#1d1d1f", "#ff3b30", "#007aff", "#34c759", "#ff9500"].map(c => (
+                    <div key={c} onClick={() => setPenColor(c)} style={{ width: 20, height: 20, borderRadius: "50%", background: c, border: penColor === c ? `3px solid ${T.acc}` : "2px solid transparent", cursor: "pointer" }} />
+                  ))}
+                  <div style={{ marginLeft: "auto", display: "flex", gap: 3 }}>
+                    {[1, 2, 4].map(s => (
+                      <div key={s} onClick={() => setPenSize(s)} style={{ width: 22, height: 22, borderRadius: 6, background: penSize === s ? T.accLt : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                        <div style={{ width: s * 2 + 2, height: s * 2 + 2, borderRadius: "50%", background: T.text }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* === STEP 4: DAVANZALE === */}
+          {vanoStep === 4 && (
+            <>
+              {bInput("Davanzale PROFONDITÀ", "davProf")}
+              {bInput("Davanzale SPORGENZA", "davSporg")}
+              {bInput("Altezza SOGLIA", "soglia")}
+              {/* Cassonetto toggle */}
+              <div style={{ marginTop: 8, padding: "12px 16px", borderRadius: 12, border: `1px dashed ${T.bdr}`, display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => {
+                const nv = { ...v, cassonetto: !v.cassonetto };
+                setSelectedVano(nv);
+                if(selectedRilievo){const updR3={...selectedRilievo,vani:selectedRilievo.vani.map(x=>x.id===v.id?nv:x)};setCantieri(cs=>cs.map(c=>c.id===selectedCM?.id?{...c,rilievi:c.rilievi.map(r2=>r2.id===selectedRilievo.id?updR3:r2)}:c));setSelectedRilievo(updR3);}
+              }}>
+                <span style={{ fontSize: 12, color: T.sub }}>+</span>
+                <span style={{ fontSize: 14 }}>🧊</span>
+                <span style={{ fontSize: 13, color: T.sub }}>{v.cassonetto ? "Cassonetto attivo" : "Ha un cassonetto? Tocca per aggiungere"}</span>
+              </div>
+              {v.cassonetto && (
+                <div style={{ marginTop: 8 }}>
+                  {bInput("Cassonetto ALTEZZA", "casH")}
+                  {bInput("Cassonetto PROFONDITÀ", "casP")}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* === STEP 5: ACCESSORI === */}
+          {vanoStep === 5 && (
+            <>
+              {["tapparella", "persiana", "zanzariera", "cassonetto"].map(acc => {
+                if (acc === "cassonetto") {
+                  return (
+                    <div key={acc} onClick={() => {
+                      const nv = { ...v, cassonetto: !v.cassonetto };
+                      setSelectedVano(nv);
+                      if(selectedRilievo){const updR3={...selectedRilievo,vani:selectedRilievo.vani.map(x=>x.id===v.id?nv:x)};setCantieri(cs=>cs.map(c=>c.id===selectedCM?.id?{...c,rilievi:c.rilievi.map(r2=>r2.id===selectedRilievo.id?updR3:r2)}:c));setSelectedRilievo(updR3);}
+                    }} style={{ padding: "14px 16px", borderRadius: 12, border: `1px dashed ${v.cassonetto ? "#ff9500" : T.bdr}`, background: v.cassonetto ? "#fff8e1" : T.card, marginBottom: 8, cursor: "pointer", textAlign: "center" }}>
+                      <span style={{ fontSize: 12, color: v.cassonetto ? "#ff9500" : T.sub }}>+ 🧊 {v.cassonetto ? "Cassonetto attivo — tocca per rimuovere" : "Aggiungi Cassonetto"}</span>
+                    </div>
+                  );
+                }
+                const a = v.accessori?.[acc] || { attivo: false };
+                const accColors = { tapparella: "#ff9500", persiana: "#007aff", zanzariera: "#ff2d55" };
+                const accIcons = { tapparella: "🪟", persiana: "🏠", zanzariera: "🦟" };
+                return (
+                  <div key={acc} style={{ marginBottom: 8, borderRadius: 12, border: `1px ${a.attivo ? "solid" : "dashed"} ${a.attivo ? accColors[acc] + "40" : T.bdr}`, overflow: "hidden", background: T.card }}>
+                    {!a.attivo ? (
+                      <div onClick={() => toggleAccessorio(v.id, acc)} style={{ padding: "14px 16px", textAlign: "center", cursor: "pointer" }}>
+                        <span style={{ fontSize: 12, color: T.sub }}>+ {accIcons[acc]} Aggiungi {acc.charAt(0).toUpperCase() + acc.slice(1)}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${T.bdr}` }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: accColors[acc] }}>{accIcons[acc]} {acc.charAt(0).toUpperCase() + acc.slice(1)}</span>
+                          <div onClick={() => toggleAccessorio(v.id, acc)} style={{ fontSize: 11, color: T.sub, cursor: "pointer" }}>▲ Chiudi</div>
+                        </div>
+                        <div style={{ padding: "12px 16px" }}>
+                          <div style={{ marginBottom: 10 }}>
+                            <div style={{ fontSize: 11, color: T.text, marginBottom: 4 }}>Larghezza</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <input style={{ flex: 1, padding: "10px", fontSize: 14, fontFamily: FM, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card }} type="number" inputMode="numeric" placeholder="" value={v.accessori?.[acc]?.l || ""} onChange={e => updateAccessorio(v.id, acc, "l", parseInt(e.target.value) || 0)} />
+                              <span style={{ fontSize: 11, color: T.sub, background: T.bg, padding: "6px 8px", borderRadius: 6 }}>mm</span>
+                            </div>
+                          </div>
+                          <div style={{ marginBottom: 10 }}>
+                            <div style={{ fontSize: 11, color: T.text, marginBottom: 4 }}>Altezza</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <input style={{ flex: 1, padding: "10px", fontSize: 14, fontFamily: FM, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card }} type="number" inputMode="numeric" placeholder="" value={v.accessori?.[acc]?.h || ""} onChange={e => updateAccessorio(v.id, acc, "h", parseInt(e.target.value) || 0)} />
+                              <span style={{ fontSize: 11, color: T.sub, background: T.bg, padding: "6px 8px", borderRadius: 6 }}>mm</span>
+                            </div>
+                          </div>
+                          {acc === "tapparella" && (
+                            <>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6, textTransform: "uppercase" }}>Materiale</div>
+                              <div style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap" }}>
+                                {["PVC", "Alluminio", "Acciaio", "Legno"].map(mat => (
+                                  <div key={mat} onClick={() => updateAccessorio(v.id, acc, "materiale", mat)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${v.accessori?.[acc]?.materiale === mat ? "#ff9500" : T.bdr}`, background: v.accessori?.[acc]?.materiale === mat ? "#ff950018" : T.card, fontSize: 12, cursor: "pointer", fontWeight: v.accessori?.[acc]?.materiale === mat ? 700 : 400, color: v.accessori?.[acc]?.materiale === mat ? "#ff9500" : T.text }}>{mat}</div>
+                                ))}
+                              </div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6, textTransform: "uppercase" }}>Motorizzata</div>
+                              <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+                                {["Sì", "No"].map(mot => (
+                                  <div key={mot} onClick={() => updateAccessorio(v.id, acc, "motorizzata", mot)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${v.accessori?.[acc]?.motorizzata === mot ? "#34c759" : T.bdr}`, background: v.accessori?.[acc]?.motorizzata === mot ? "#34c75918" : T.card, fontSize: 12, cursor: "pointer", fontWeight: v.accessori?.[acc]?.motorizzata === mot ? 700 : 400, color: v.accessori?.[acc]?.motorizzata === mot ? "#34c759" : T.text }}>{mot}</div>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                          <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6, textTransform: "uppercase" }}>Colore</div>
+                          <select style={{ width: "100%", padding: "10px", fontSize: 12, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card, fontFamily: FF }} value={v.accessori?.[acc]?.colore || ""} onChange={e => updateAccessorio(v.id, acc, "colore", e.target.value)}>
+                            <option value="">Colore</option>
+                            {coloriDB.map(c => <option key={c.id} value={c.code}>{c.code} — {c.nome}</option>)}
+                          </select>
+                          <div onClick={() => toggleAccessorio(v.id, acc)} style={{ marginTop: 10, padding: "8px", borderRadius: 8, border: `1px dashed #ef5350`, textAlign: "center", fontSize: 11, color: "#ef5350", cursor: "pointer" }}>
+                            🗝‘ Rimuovi {acc}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          )}
+
+          {/* === STEP 6: DISEGNO + FOTO + NOTE === */}
+          {vanoStep === 6 && (
+            <>
+              {/* Disegno mano libera */}
+              <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, marginBottom: 12, overflow: "hidden" }}>
+                <div style={{ padding: "10px 14px", borderBottom: `1px solid ${T.bdr}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#ff6b6b" }}>✏️ Disegno a mano libera</span>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => { const ctx = canvasRef.current?.getContext("2d"); ctx?.clearRect(0, 0, 380, 340); }} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>🗝‘ Pulisci</button>
+                    <button style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#ff3b30", color: "#fff", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>💾 Salva</button>
+                  </div>
+                </div>
+                <canvas ref={canvasRef} width={380} height={340} style={{ width: "100%", height: 340, background: "#fff", touchAction: "none", cursor: "crosshair" }}
+                  onPointerDown={e=>{canvasRef.current?.setPointerCapture(e.pointerId);setIsDrawing(true);const cv=canvasRef.current;const ctx=cv?.getContext("2d");if(ctx&&cv){const r=cv.getBoundingClientRect();const sx=cv.width/r.width,sy=cv.height/r.height;ctx.beginPath();ctx.moveTo((e.clientX-r.left)*sx,(e.clientY-r.top)*sy);ctx.strokeStyle=penColor;ctx.lineWidth=penSize;ctx.lineCap="round";ctx.lineJoin="round";}}}
+                  onPointerMove={e=>{if(!isDrawing)return;const cv=canvasRef.current;const ctx=cv?.getContext("2d");if(ctx&&cv){const r=cv.getBoundingClientRect();const sx=cv.width/r.width,sy=cv.height/r.height;ctx.lineTo((e.clientX-r.left)*sx,(e.clientY-r.top)*sy);ctx.stroke();}}}
+                  onPointerUp={() => setIsDrawing(false)}
+                  onPointerLeave={() => setIsDrawing(false)}
+                />
+                <div style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 4 }}>
+                  {["#1d1d1f", "#ff3b30", "#007aff", "#34c759", "#ff9500", "#af52de", "#ff2d55", "#ffffff"].map(c => (
+                    <div key={c} onClick={() => setPenColor(c)} style={{ width: 22, height: 22, borderRadius: "50%", background: c, border: penColor === c ? `3px solid ${T.acc}` : c === "#ffffff" ? `1px solid ${T.bdr}` : "2px solid transparent", cursor: "pointer" }} />
+                  ))}
+                  <div style={{ width: 1, height: 20, background: T.bdr, margin: "0 4px" }} />
+                  <div style={{ width: 28, height: 28, borderRadius: 6, background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                    <span style={{ fontSize: 12 }}>🩹</span>
+                  </div>
+                  <div style={{ marginLeft: "auto", display: "flex", gap: 3 }}>
+                    {[1, 2, 4, 6].map(s => (
+                      <div key={s} onClick={() => setPenSize(s)} style={{ width: 24, height: 24, borderRadius: 6, background: penSize === s ? T.accLt : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                        <div style={{ width: s * 2 + 1, height: s * 2 + 1, borderRadius: "50%", background: T.text }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Foto */}
+              <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 14, marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.blue }}>📷 FOTO ({(v.foto && Object.keys(v.foto).length) || 0})</div>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <button onClick={() => document.getElementById("fotoVanoInput").click()}
+                      style={{ padding: "4px 10px", borderRadius: 6, background: T.acc, color: "#fff", border: "none", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>📷 Foto</button>
+                    <button onClick={() => { setPendingFotoCat(null); videoVanoRef.current?.click(); }}
+                      style={{ padding: "4px 10px", borderRadius: 6, background: T.blue, color: "#fff", border: "none", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>🎬 Video</button>
+                  </div>
+                </div>
+                <input ref={fotoVanoRef} type="file" accept="image/*" capture="environment" multiple style={{ display: "none" }}
+                  onChange={e => {
+                    const cat = pendingFotoCat;
+                    Array.from(e.target.files || []).forEach(file => {
+                      const r = new FileReader();
+                      r.onload = ev => {
+                        const key = "foto_" + Date.now() + "_" + file.name;
+                        const fotoObj = { dataUrl: ev.target.result, nome: file.name, tipo: "foto", categoria: cat || null };
+                        setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: { ...(vn.foto||{}), [key]: fotoObj } } : vn) } : r2) } : c));
+                        setSelectedVano(prev => ({ ...prev, foto: { ...(prev.foto||{}), [key]: fotoObj } }));
+                      };
+                      r.readAsDataURL(file);
+                    });
+                    setPendingFotoCat(null);
+                    e.target.value = "";
+                  }}/>
+                <input ref={videoVanoRef} type="file" accept="video/*" capture="environment" style={{ display: "none" }}
+                  onChange={e => {
+                    const file = e.target.files?.[0]; if (!file) return;
+                    const key = "video_" + Date.now();
+                    setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: { ...(vn.foto||{}), [key]: { nome: file.name, tipo: "video" } } } : vn) } : r2) } : c));
+                    setSelectedVano(prev => ({ ...prev, foto: { ...(prev.foto||{}), [key]: { nome: file.name, tipo: "video" } } }));
+                    e.target.value = "";
+                  }}/>
+                <div style={{ fontSize: 10, color: T.sub, marginBottom: 6 }}>{Object.keys(v.foto||{}).length} allegati</div>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {[
+                    { n: "Panoramica", r: true, c: "#ff3b30" }, { n: "Spalle muro", r: true, c: "#007aff" }, { n: "Soglia", r: true, c: "#007aff" },
+                    { n: "Cassonetto", r: false, c: "#34c759" }, { n: "Dettagli critici", r: true, c: "#ff3b30" }, { n: "Imbotto", r: false, c: "#34c759" },
+                    { n: "Contesto", r: false, c: "#34c759" }, { n: "Altro", r: false, c: "#34c759" },
+                  ].map((cat, i) => {
+                    const fotoCount = Object.values(v.foto||{}).filter(f=>f.categoria===cat.n).length;
+                    return (
+                    <div key={i} onClick={()=>{ setPendingFotoCat(cat.n); fotoVanoRef.current?.click(); }}
+                      style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${fotoCount>0 ? "#34c759" : cat.r ? cat.c + "40" : T.bdr}`, background: fotoCount>0 ? "#34c75915" : cat.r ? cat.c + "08" : "transparent", fontSize: 10, fontWeight: 600, color: fotoCount>0 ? "#1a9e40" : cat.r ? cat.c : T.sub, cursor: "pointer", display: "flex", alignItems: "center", gap: 3, position:"relative" }}>
+                      {fotoCount>0 ? <span style={{fontSize:8,background:"#34c759",color:"#fff",borderRadius:"50%",width:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900}}>{fotoCount}</span> : cat.r ? <span style={{ fontSize: 8 }}>✕</span> : null}
+                      <span style={{ fontSize: 10 }}>📷</span> {cat.n}
+                    </div>
+                    );
+                  })}
+                </div>
+                {Object.keys(v.foto||{}).length === 0
+                  ? <div style={{ textAlign: "center", padding: "16px 0", color: T.sub, fontSize: 11 }}>Nessun allegato — tocca 📷 Foto o 🎬 Video</div>
+                  : <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                      {Object.entries(v.foto||{}).map(([k, f]) => (
+                        <div key={k} style={{ position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden", background: T.bg, border: `1px solid ${T.bdr}` }}>
+                          {f.tipo === "foto" && f.dataUrl
+                            ? <img src={f.dataUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt={f.nome}/>
+                            : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 2 }}>
+                                <span style={{ fontSize: 24 }}>🎬</span>
+                                <span style={{ fontSize: 8, color: T.sub, textAlign: "center", padding: "0 4px" }}>{f.nome?.slice(0,12)}</span>
+                              </div>
+                          }
+                          {f.categoria && <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,0.6)",color:"#fff",fontSize:7,fontWeight:700,padding:"2px 3px",textAlign:"center",lineHeight:1.2}}>{f.categoria}</div>}
+                          <div onClick={() => {
+                            const newFoto = { ...(v.foto||{}) }; delete newFoto[k];
+                            setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: newFoto } : vn) } : r2) } : c));
+                            setSelectedVano(prev => ({ ...prev, foto: newFoto }));
+                          }} style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%", background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>✕</div>
+                        </div>
+                      ))}
+                    </div>
+                }
+              </div>
+
+              {/* Note */}
+              <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#ff9500", marginBottom: 8 }}>📝 NOTE</div>
+                <textarea style={{ width: "100%", padding: 10, fontSize: 13, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card, minHeight: 60, resize: "vertical", fontFamily: FF, boxSizing: "border-box" }} placeholder="Note sul vano..." defaultValue={v.note || ""} />
+              </div>
+            </>
+          )}
+
+          {/* === STEP 7: RIEPILOGO === */}
+          {vanoStep === 7 && (
+            <>
+              <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 16, marginBottom: 12 }}>
+                <div style={{ textAlign: "center", marginBottom: 14 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>{v.nome}</div>
+                  <div style={{ fontSize: 12, color: T.sub }}>{v.tipo} • {v.stanza} • {v.piano}</div>
+                </div>
+                {/* Larghezze */}
+                <div style={{ borderRadius: 10, border: `1px solid #507aff25`, overflow: "hidden", marginBottom: 8 }}>
+                  <div style={{ padding: "6px 12px", background: "#507aff10", fontSize: 11, fontWeight: 700, color: "#507aff" }}>📏 LARGHEZZE</div>
+                  {[["Alto", m.lAlto], ["Centro", m.lCentro], ["Basso", m.lBasso]].map(([l, val]) => (
+                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
+                      <span style={{ color: T.text }}>{l}</span>
+                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Altezze */}
+                <div style={{ borderRadius: 10, border: `1px solid #34c75925`, overflow: "hidden", marginBottom: 8 }}>
+                  <div style={{ padding: "6px 12px", background: "#34c75910", fontSize: 11, fontWeight: 700, color: "#34c759" }}>📐 ALTEZZE</div>
+                  {[["Sinistra", m.hSx], ["Centro", m.hCentro], ["Destra", m.hDx]].map(([l, val]) => (
+                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
+                      <span>{l}</span>
+                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Diagonali */}
+                <div style={{ borderRadius: 10, border: `1px solid #ff950025`, overflow: "hidden", marginBottom: 8 }}>
+                  <div style={{ padding: "6px 12px", background: "#ff950010", fontSize: 11, fontWeight: 700, color: "#ff9500" }}>✕ DIAGONALI</div>
+                  {[["D1", m.d1], ["D2", m.d2], ["Fuori squadra", fSq !== null ? `${fSq}mm` : ""]].map(([l, val]) => (
+                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
+                      <span>{l}</span>
+                      <span style={{ fontFamily: FM, fontWeight: 600, color: l === "Fuori squadra" && fSq > 3 ? "#ff3b30" : val ? T.text : T.sub2 }}>{val || "—"}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Spallette */}
+                <div style={{ borderRadius: 10, border: `1px solid #32ade625`, overflow: "hidden", marginBottom: 8 }}>
+                  <div style={{ padding: "6px 12px", background: "#32ade610", fontSize: 11, fontWeight: 700, color: "#32ade6" }}>🧱 SPALLETTE</div>
+                  {[["Sinistra", m.spSx], ["Destra", m.spDx], ["Sopra", m.spSopra], ["Imbotte", m.imbotte]].map(([l, val]) => (
+                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
+                      <span>{l}</span>
+                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Davanzale */}
+                <div style={{ borderRadius: 10, border: `1px solid #ff2d5525`, overflow: "hidden", marginBottom: 8 }}>
+                  <div style={{ padding: "6px 12px", background: "#ff2d5510", fontSize: 11, fontWeight: 700, color: "#ff2d55" }}>⬇ DAVANZALE</div>
+                  {[["Profondità", m.davProf], ["Sporgenza", m.davSporg], ["Soglia", m.soglia]].map(([l, val]) => (
+                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
+                      <span>{l}</span>
+                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Accessori */}
+                {(v.accessori?.tapparella?.attivo || v.accessori?.persiana?.attivo || v.accessori?.zanzariera?.attivo) && (
+                  <div style={{ borderRadius: 10, border: `1px solid #af52de25`, overflow: "hidden", marginBottom: 8 }}>
+                    <div style={{ padding: "6px 12px", background: "#af52de10", fontSize: 11, fontWeight: 700, color: "#af52de" }}>✚ ACCESSORI</div>
+                    {v.accessori?.tapparella?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>🪟 Tapparella</div>}
+                    {v.accessori?.persiana?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>🏠 Persiana</div>}
+                    {v.accessori?.zanzariera?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>🦟 Zanzariera</div>}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* === NAV BUTTONS === */}
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            {vanoStep > 0 && (
+              <button onClick={() => setVanoStep(s => s - 1)} style={{ flex: 1, padding: "14px", borderRadius: 12, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: FF, color: T.text }}>← Indietro</button>
+            )}
+            {vanoStep < 7 && (
+              <button onClick={() => setVanoStep(s => s + 1)} style={{ flex: vanoStep === 0 ? "1 1 100%" : 1, padding: "14px", borderRadius: 12, border: "none", background: step.color, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>Avanti →</button>
+            )}
+            {vanoStep === 7 && (
+              <button onClick={() => { setVanoStep(0); goBack(); }} style={{ flex: 1, padding: "14px", borderRadius: 12, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>💾 SALVA TUTTO</button>
+            )}
+          </div>
+
+          {/* === RIEPILOGO RAPIDO === */}
+          <div style={{ marginTop: 12, padding: "8px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Riepilogo rapido</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {[
+                ["L", m.lCentro || m.lAlto || m.lBasso],
+                ["H", m.hCentro || m.hSx || m.hDx],
+                ["D1", m.d1], ["D2", m.d2],
+                ["F.sq", fSq !== null ? `${fSq}` : null],
+              ].map(([l, val]) => (
+                <div key={l} style={{ padding: "3px 8px", borderRadius: 4, background: T.bg, fontSize: 10, fontFamily: FM, color: val ? T.text : T.sub2 }}>

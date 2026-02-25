@@ -1,0 +1,2000 @@
+﻿// =======================================================
+// MASTRO ERP v2 — PARTE 1/5
+// Righe 1-1280: Costanti, Dati Demo (incluse visite/vaniList/euro/scadenza),
+//               MOTIVI_BLOCCO, AFASE, useDragOrder hook, Home, Helpers, Stili
+// Continuazione in PARTE2
+// =======================================================
+// components/MastroERP.tsx
+// MASTRO ERP — adattato per Next.js + Supabase
+"use client";
+import React, { useState, useRef, useCallback, useEffect } from "react";
+import { getAziendaId, loadAllData, saveCantiere, saveEvent, deleteEvent as deleteEventDB, saveContatto, saveTeamMember, saveTask, saveAzienda, saveVano, deleteVano, saveMateriali, savePipeline } from "@/lib/supabase-sync";
+
+/* =======================================================
+   MASTRO MISURE — v15 COMPLETE REBUILD
+   Tutte le feature recuperate + design Apple chiaro
+   ======================================================= */
+
+const FONT = "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;600&display=swap";
+const FF = "'Plus Jakarta Sans',sans-serif";
+const FM = "'JetBrains Mono',monospace";
+
+/* == TEMI == */
+const THEMES = {
+  chiaro: {
+    name: "Chiaro", emoji: "☀️",
+    bg: "#f5f5f7", bg2: "#ffffff", card: "#ffffff", card2: "#f8f8fa",
+    bdr: "#e5e5ea", bdrL: "#d1d1d6", text: "#1d1d1f", sub: "#86868b", sub2: "#aeaeb2",
+    acc: "#0066cc", accD: "#0055aa", accLt: "rgba(0,102,204,0.08)", accBg: "linear-gradient(135deg,#0066cc,#0055aa)",
+    grn: "#34c759", grnLt: "rgba(52,199,89,0.08)",
+    red: "#ff3b30", redLt: "rgba(255,59,48,0.08)",
+    orange: "#ff9500", orangeLt: "rgba(255,149,0,0.08)",
+    blue: "#007aff", blueLt: "rgba(0,122,255,0.08)",
+    purple: "#af52de", purpleLt: "rgba(175,82,222,0.08)",
+    cyan: "#32ade6", cyanLt: "rgba(50,173,230,0.08)",
+    cardSh: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
+    cardShH: "0 4px 12px rgba(0,0,0,0.08)",
+    r: 12, r2: 16
+  },
+  scuro: {
+    name: "Scuro", emoji: "🌙",
+    bg: "#000000", bg2: "#1c1c1e", card: "#1c1c1e", card2: "#2c2c2e",
+    bdr: "#38383a", bdrL: "#48484a", text: "#f2f2f7", sub: "#8e8e93", sub2: "#636366",
+    acc: "#0a84ff", accD: "#0070e0", accLt: "rgba(10,132,255,0.12)", accBg: "linear-gradient(135deg,#0a84ff,#0070e0)",
+    grn: "#30d158", grnLt: "rgba(48,209,88,0.12)",
+    red: "#ff453a", redLt: "rgba(255,69,58,0.12)",
+    orange: "#ff9f0a", orangeLt: "rgba(255,159,10,0.12)",
+    blue: "#0a84ff", blueLt: "rgba(10,132,255,0.12)",
+    purple: "#bf5af2", purpleLt: "rgba(191,90,242,0.12)",
+    cyan: "#64d2ff", cyanLt: "rgba(100,210,255,0.12)",
+    cardSh: "0 1px 3px rgba(0,0,0,0.3)",
+    cardShH: "0 4px 12px rgba(0,0,0,0.4)",
+    r: 12, r2: 16
+  },
+  oceano: {
+    name: "Oceano", emoji: "🌊",
+    bg: "#0f1923", bg2: "#162231", card: "#1a2a3a", card2: "#1f3040",
+    bdr: "#2a3f55", bdrL: "#345070", text: "#e8ecf0", sub: "#7a90a5", sub2: "#4a6070",
+    acc: "#4fc3f7", accD: "#29b6f6", accLt: "rgba(79,195,247,0.12)", accBg: "linear-gradient(135deg,#4fc3f7,#29b6f6)",
+    grn: "#66bb6a", grnLt: "rgba(102,187,106,0.12)",
+    red: "#ef5350", redLt: "rgba(239,83,80,0.12)",
+    orange: "#ffa726", orangeLt: "rgba(255,167,38,0.12)",
+    blue: "#42a5f5", blueLt: "rgba(66,165,245,0.12)",
+    purple: "#ab47bc", purpleLt: "rgba(171,71,188,0.12)",
+    cyan: "#26c6da", cyanLt: "rgba(38,198,218,0.12)",
+    cardSh: "0 1px 3px rgba(0,0,0,0.25)",
+    cardShH: "0 4px 12px rgba(0,0,0,0.35)",
+    r: 12, r2: 16
+  }
+};
+
+/* == PIPELINE 7+1 FASI == */
+const PIPELINE_DEFAULT = [
+  { id: "sopralluogo", nome: "Sopralluogo", ico: "🔍", color: "#007aff", attiva: true },
+  { id: "preventivo", nome: "Preventivo", ico: "📋", color: "#ff9500", attiva: true },
+  { id: "conferma", nome: "Conferma", ico: "✍️", color: "#af52de", attiva: true },
+  { id: "misure", nome: "Misure", ico: "📐", color: "#5856d6", attiva: true },
+  { id: "ordini", nome: "Ordini", ico: "📦", color: "#ff2d55", attiva: true },
+  { id: "produzione", nome: "Produzione", ico: "🏭", color: "#ff9500", attiva: true },
+  { id: "posa", nome: "Posa", ico: "🔧", color: "#34c759", attiva: true },
+  { id: "chiusura", nome: "Chiusura", ico: "✅", color: "#30b0c7", attiva: true },
+];
+
+/* == MOTIVI BLOCCO SOPRALLUOGO == */
+const MOTIVI_BLOCCO = [
+  "Cliente assente",
+  "Vano inaccessibile",
+  "Materiale da rimuovere",
+  "Lavori in corso",
+  "Arredo da spostare",
+  "Altro"
+];
+
+/* == AZIONE SUGGERITA PER FASE == */
+const AFASE = {
+  sopralluogo: { i: "📐", t: "Pianifica sopralluogo",  c: "#007aff" },
+  preventivo:  { i: "📝", t: "Invia preventivo",        c: "#ff9500" },
+  conferma:    { i: "✍️", t: "Fai firmare contratto",   c: "#af52de" },
+  misure:      { i: "📏", t: "Esegui rilievo misure",   c: "#5856d6" },
+  ordini:      { i: "🛒", t: "Conferma ordine",          c: "#ff2d55" },
+  produzione:  { i: "🏭", t: "Monitora produzione",      c: "#ff9500" },
+  posa:        { i: "🔧", t: "Schedula posa",            c: "#34c759" },
+  chiusura:    { i: "✅", t: "Richiedi saldo finale",    c: "#30b0c7" },
+};
+
+/* == DATI DEMO == */
+const CANTIERI_INIT = [];
+
+const TASKS_INIT = [];
+
+
+// === AI INBOX — email in arrivo con classificazione AI ===
+const AI_INBOX_INIT = [];
+
+const MSGS_INIT = [];
+
+const TEAM_INIT = [
+  { id: 1, nome: "", ruolo: "Titolare", compiti: "Gestione commesse, preventivi, rapporti clienti", colore: "#007aff" },
+];
+
+const CONTATTI_INIT = [];
+
+const COLORI_INIT = [
+  { id: 1, nome: "Bianco", code: "RAL 9010", hex: "#f5f5f0", tipo: "RAL" },
+  { id: 2, nome: "Grigio antracite", code: "RAL 7016", hex: "#383e42", tipo: "RAL" },
+  { id: 3, nome: "Nero", code: "RAL 9005", hex: "#0e0e10", tipo: "RAL" },
+  { id: 4, nome: "Marrone", code: "RAL 8014", hex: "#4a3728", tipo: "RAL" },
+  { id: 5, nome: "Noce", code: "Noce", hex: "#6b4226", tipo: "Legno" },
+  { id: 6, nome: "Rovere", code: "Rovere", hex: "#a0784a", tipo: "Legno" },
+];
+
+const SISTEMI_INIT = [
+  { id: 1, marca: "Aluplast", sistema: "Ideal 4000", euroMq: 180, prezzoMq: 180, sovRAL: 12, sovLegno: 22, colori: ["RAL 9010", "RAL 7016", "RAL 9005", "Noce"], sottosistemi: ["Classicline", "Roundline"] },
+  { id: 2, marca: "Schüco", sistema: "CT70", euroMq: 280, prezzoMq: 280, sovRAL: 15, sovLegno: 25, colori: ["RAL 9010", "RAL 7016", "RAL 9005"], sottosistemi: ["Classic", "Rondo"] },
+  { id: 3, marca: "Rehau", sistema: "S80", euroMq: 220, prezzoMq: 220, sovRAL: 12, sovLegno: 20, colori: ["RAL 9010", "RAL 7016", "Noce"], sottosistemi: ["Geneo", "Synego"] },
+  { id: 4, marca: "Finstral", sistema: "FIN-Project", euroMq: 350, prezzoMq: 350, sovRAL: 18, sovLegno: 30, colori: ["RAL 9010", "RAL 7016", "RAL 9005", "Rovere"], sottosistemi: ["Nova-line", "Step-line"] },
+];
+
+const VETRI_INIT = [
+  { id: 1, nome: "Doppio basso emissivo", code: "4/16/4 BE", ug: 1.1, prezzoMq: 45 },
+  { id: 2, nome: "Triplo basso emissivo", code: "4/12/4/12/4 BE", ug: 0.6, prezzoMq: 75 },
+  { id: 3, nome: "Doppio sicurezza", code: "33.1/16/4 BE", ug: 1.1, prezzoMq: 65 },
+  { id: 4, nome: "Triplo sicurezza", code: "33.1/12/4/12/4 BE", ug: 0.6, prezzoMq: 90 },
+  { id: 5, nome: "Satinato", code: "4/16/4 SAT", ug: 1.1, prezzoMq: 55 },
+  { id: 6, nome: "Fonoisolante", code: "44.2/20/6 BE", ug: 1.0, prezzoMq: 110 },
+];
+
+const TIPOLOGIE_RAPIDE = [
+  // Finestre
+  { code: "F1A",    label: "Finestra 1 anta",           icon: "🪟", cat: "Finestre" },
+  { code: "F2A",    label: "Finestra 2 ante",            icon: "🪟", cat: "Finestre" },
+  { code: "F3A",    label: "Finestra 3 ante",            icon: "🪟", cat: "Finestre" },
+  { code: "F4A",    label: "Finestra 4 ante",            icon: "🪟", cat: "Finestre" },
+  { code: "F2AFISDX", label: "Finestra 2A + Fisso DX",  icon: "🪟", cat: "Finestre" },
+  { code: "F2AFISSX", label: "Finestra 2A + Fisso SX",  icon: "🪟", cat: "Finestre" },
+  { code: "FISDX",  label: "Fisso DX",                  icon: "▮",  cat: "Finestre" },
+  { code: "FISSX",  label: "Fisso SX",                  icon: "▮",  cat: "Finestre" },
+  { code: "VAS",    label: "Vasistas",                  icon: "⬇",  cat: "Finestre" },
+  { code: "RIBALTA",label: "Ribalta",                   icon: "⬆",  cat: "Finestre" },
+  // Balconi / Portafinestre
+  { code: "PF1A",   label: "Balcone 1 anta",            icon: "🚪", cat: "Balconi" },
+  { code: "PF2A",   label: "Balcone 2 ante",            icon: "🚪", cat: "Balconi" },
+  { code: "PF3A",   label: "Balcone 3 ante",            icon: "🚪", cat: "Balconi" },
+  { code: "PF4A",   label: "Balcone 4 ante",            icon: "🚪", cat: "Balconi" },
+  { code: "PF2AFISDX", label: "Balcone 2A + Fisso DX", icon: "🚪", cat: "Balconi" },
+  { code: "PF2AFISSX", label: "Balcone 2A + Fisso SX", icon: "🚪", cat: "Balconi" },
+  // Scorrevoli / Alzanti
+  { code: "SC2A",   label: "Scorrevole 2 ante",         icon: "↔️", cat: "Scorrevoli" },
+  { code: "SC4A",   label: "Scorrevole 4 ante",         icon: "↔️", cat: "Scorrevoli" },
+  { code: "SCRDX",  label: "Scorrevole DX",             icon: "▶",  cat: "Scorrevoli" },
+  { code: "SCRSX",  label: "Scorrevole SX",             icon: "◀",  cat: "Scorrevoli" },
+  { code: "ALZDX",  label: "Alzante DX",                icon: "⬆",  cat: "Scorrevoli" },
+  { code: "ALZSX",  label: "Alzante SX",                icon: "⬆",  cat: "Scorrevoli" },
+  // Persiane
+  { code: "PERS1A", label: "Persiana 1 anta",           icon: "🌂", cat: "Persiane" },
+  { code: "PERS2A", label: "Persiana 2 ante",           icon: "🌂", cat: "Persiane" },
+  { code: "TAPP",   label: "Tapparella",                icon: "⬇",  cat: "Persiane" },
+  { code: "ZANZ",   label: "Zanzariera",                icon: "🕸",  cat: "Persiane" },
+  // Altro
+  { code: "SOPR",   label: "Sopraluce",                 icon: "△",  cat: "Altro" },
+  { code: "MONO",   label: "Monoblocco",                icon: "⬜",  cat: "Altro" },
+  { code: "BLI",    label: "Porta blindata",            icon: "🛡",  cat: "Altro" },
+];
+
+const COPRIFILI_INIT = [
+  { id: 1, nome: "Coprifilo piatto 40mm", cod: "CP40", prezzoMl: 4.5 },
+  { id: 2, nome: "Coprifilo piatto 50mm", cod: "CP50", prezzoMl: 5.5 },
+  { id: 3, nome: "Coprifilo piatto 70mm", cod: "CP70", prezzoMl: 7.0 },
+  { id: 4, nome: "Coprifilo angolare 40mm", cod: "CA40", prezzoMl: 5.0 },
+  { id: 5, nome: "Coprifilo a Z 50mm", cod: "CZ50", prezzoMl: 6.0 },
+];
+
+const LAMIERE_INIT = [
+  { id: 1, nome: "Lamiera davanzale 200mm", cod: "LD200", prezzoMl: 8.0 },
+  { id: 2, nome: "Lamiera davanzale 250mm", cod: "LD250", prezzoMl: 9.5 },
+  { id: 3, nome: "Lamiera davanzale 300mm", cod: "LD300", prezzoMl: 11.0 },
+  { id: 4, nome: "Scossalina 150mm", cod: "SC150", prezzoMl: 7.0 },
+  { id: 5, nome: "Scossalina 200mm", cod: "SC200", prezzoMl: 8.5 },
+];
+
+/* == ICONS SVG == */
+const Ico = ({ d, s = 20, c = "#888", sw = 1.8 }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+);
+const ICO = {
+  home: <><path d="M2 12L12 3l10 9"/><path d="M5 9.5V20a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V9.5"/></>,
+  calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><rect x="7" y="14" width="2" height="2" rx="0.5" fill="currentColor"/><rect x="11" y="14" width="2" height="2" rx="0.5" fill="currentColor"/><rect x="15" y="14" width="2" height="2" rx="0.5" fill="currentColor"/></>,
+  chat: <><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M7 8h10M7 12h6"/></>,
+  settings: <><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></>,
+  back: <><polyline points="15 18 9 12 15 6"/></>,
+  plus: <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
+  check: <><polyline points="20 6 9 17 4 12"/></>,
+  phone: <><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></>,
+  map: <><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></>,
+  camera: <><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>,
+  file: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>,
+  send: <><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>,
+  pen: <><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></>,
+  trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>,
+  user: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+  star: <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></>,
+  alert: <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>,
+  search: <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
+  filter: <><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 10h8M5 6h14M11 14h2M10 18h4"/></>,
+  ai: <><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></>,
+};
+
+/* == MISURE PUNTI == */
+const PUNTI_MISURE = [
+  { key: "lAlto", label: "L alto", x: 95, y: 8, color: "acc" },
+  { key: "lCentro", label: "L centro", x: 95, y: 125, color: "acc" },
+  { key: "lBasso", label: "L basso", x: 95, y: 242, color: "acc" },
+  { key: "hSx", label: "H sx", x: 8, y: 125, color: "blue", rot: true },
+  { key: "hCentro", label: "H centro", x: 95, y: 170, color: "blue" },
+  { key: "hDx", label: "H dx", x: 182, y: 125, color: "blue", rot: true },
+  { key: "d1", label: "D1 ↗", x: 50, y: 55, color: "purple" },
+  { key: "d2", label: "D2 ↘", x: 140, y: 55, color: "purple" },
+];
+
+/* ====================================== */
+/* ==          MAIN COMPONENT          == */
+/* ====================================== */
+
+/* == HOOK DRAG ORDER == */
+function useDragOrder(init) {
+  const [order, setOrder] = React.useState(init);
+  const [dragging, setDragging] = React.useState(null);
+  const [over, setOver] = React.useState(null);
+  function start(id) { setDragging(id); }
+  function onOver(id) { if (dragging && dragging !== id) setOver(id); }
+  function drop(id) {
+    if (!dragging || dragging === id) { setDragging(null); setOver(null); return; }
+    setOrder(o => { const a = [...o], f = a.indexOf(dragging), t = a.indexOf(id); a.splice(f,1); a.splice(t,0,dragging); return a; });
+    setDragging(null); setOver(null);
+  }
+  function end() { setDragging(null); setOver(null); }
+  return { order, setOrder, dragging, over, start, onOver, drop, end };
+}
+
+export default function MastroMisure({ user, azienda: aziendaInit }: { user?: any, azienda?: any }) {
+  const [theme, setTheme] = useState("chiaro");
+  const T = THEMES[theme];
+  
+  const [tab, setTab] = useState("home");
+  const WIDGET_IDS = ["banner", "urgenti", "calendario", "email", "commesse"];
+  const drag = useDragOrder(WIDGET_IDS);
+  const [homeEditMode, setHomeEditMode] = useState(false);
+  // Wizard nuova visita
+  const [cmSubTab, setCmSubTab] = useState("sopralluoghi"); // "sopralluoghi" | "misure" | "info"
+  const [nvView, setNvView] = useState(false);
+  const [nvStep, setNvStep] = useState(1);
+  const [nvData, setNvData] = useState({ data: "", ora: "", rilevatore: "" });
+  const [nvTipo, setNvTipo] = useState("rilievo"); // "rilievo" | "definitiva" | "modifica"
+  const [nvMotivoModifica, setNvMotivoModifica] = useState("");
+  const [nvVani, setNvVani] = useState([]);
+  const [nvBlocchi, setNvBlocchi] = useState({});
+  const [nvNote, setNvNote] = useState("");
+  // Calendario griglia espandibile
+  const [expandedDay, setExpandedDay] = useState(null); // ISO string del giorno espanso
+  const [cantieri, setCantieri] = useState(CANTIERI_INIT);
+  const [tasks, setTasks] = useState(TASKS_INIT);
+  const [msgs, setMsgs] = useState(MSGS_INIT);
+  const [selectedMsg, setSelectedMsg] = useState(null);
+  const [replyText, setReplyText] = useState("");
+  const [team, setTeam] = useState(TEAM_INIT);
+  const [coloriDB, setColoriDB] = useState(COLORI_INIT);
+  const [sistemiDB, setSistemiDB] = useState(SISTEMI_INIT);
+  const [vetriDB, setVetriDB] = useState(VETRI_INIT);
+  const [coprifiliDB, setCoprifiliDB] = useState(COPRIFILI_INIT);
+  const [lamiereDB, setLamiereDB] = useState(LAMIERE_INIT);
+  const [pipelineDB, setPipelineDB] = useState(PIPELINE_DEFAULT);
+  const [faseOpen, setFaseOpen] = useState(true);
+  const [sogliaDays, setSogliaDays] = useState(5);
+  const [showFirmaModal, setShowFirmaModal] = useState(false);
+  const [firmaDrawing, setFirmaDrawing] = useState(false);
+  const [firmaDataUrl, setFirmaDataUrl] = useState(null);
+  const [showPreventivoModal, setShowPreventivoModal] = useState(false);
+  const [favTipologie, setFavTipologie] = useState(["F1A", "F2A", "PF2A", "SC2A", "FISDX", "VAS"]);
+  
+  // Navigation
+  const [selectedCM, setSelectedCM] = useState(null);
+  const [selectedRilievo, setSelectedRilievo] = useState(null); // rilievo aperto
+  const [showNuovoRilievo, setShowNuovoRilievo] = useState(false);
+  const [nuovoRilTipo, setNuovoRilTipo] = useState("rilievo");
+  const [nuovoRilData, setNuovoRilData] = useState({ data: "", ora: "", rilevatore: "", note: "", motivoModifica: "" });
+  const [selectedVano, setSelectedVano] = useState(null);
+  const [filterFase, setFilterFase] = useState("tutte");
+  const [searchQ, setSearchQ] = useState("");
+  const [showModal, setShowModal] = useState(null); // 'task' | 'commessa' | 'vano' | null
+  const [settingsTab, setSettingsTab] = useState("generali");
+  const [showRiepilogo, setShowRiepilogo] = useState(false);
+  const [riepilogoSending, setRiepilogoSending] = useState(false);
+
+  // === ONBOARDING TUTORIAL ===
+  const [tutoStep, setTutoStep] = useState(0);
+  React.useEffect(() => {
+    try { if (!localStorage.getItem("mastro:onboarded")) setTutoStep(1); } catch(e){}
+  }, []);
+  const closeTuto = () => { setTutoStep(0); try { localStorage.setItem("mastro:onboarded", "1"); } catch(e){} };
+  const nextTuto = () => { if (tutoStep >= 7) closeTuto(); else setTutoStep(tutoStep + 1); };
+
+  const [aziendaInfo, setAziendaInfo] = useState({
+    ragione: aziendaInit?.ragione || "Walter Cozza Serramenti SRL",
+    piva: aziendaInit?.piva || "",
+    indirizzo: aziendaInit?.indirizzo || "",
+    telefono: aziendaInit?.telefono || "",
+    email: aziendaInit?.email || "",
+    website: "",
+    iban: "",
+    cciaa: "",
+    logo: null,
+  });
+  const logoInputRef = useRef(null);
+  const [aiChat, setAiChat] = useState(false);
+  const [aiInput, setAiInput] = useState("");
+  const [aiMsgs, setAiMsgs] = useState([{ role: "ai", text: "Ciao Fabio! Sono MASTRO AI. Chiedimi qualsiasi cosa sulle tue commesse, task o misure." }]);
+  
+  // Send commessa modal
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sendOpts, setSendOpts] = useState({ misure: true, foto: true, disegno: true, note: true, accessori: true });
+  const [sendConfirm, setSendConfirm] = useState(null);
+  
+  // Vano wizard step
+  const [vanoStep, setVanoStep] = useState(0);
+  const spCanvasRef = useRef(null);
+  const [spDrawing, setSpDrawing] = useState(false); // "sent" | null
+  
+  // Agenda
+  const [agendaView, setAgendaView] = useState("mese"); // "giorno" | "settimana" | "mese"
+  const [cmFaseIdx, setCmFaseIdx] = useState(0); // filtro fase widget commesse dashboard
+  const [cmView, setCmView] = useState<"card"|"list">("card"); // vista commesse: card grande | lista compatta
+  const [fasePanelOpen, setFasePanelOpen] = useState<Record<string,boolean>>({}); // accordion checklist per fase
+  const [catIdx, setCatIdx] = useState(0); // categoria widget allerte dashboard
+  const [selDate, setSelDate] = useState(new Date());
+  const [showNewEvent, setShowNewEvent] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showMailModal, setShowMailModal] = useState<{ev: any, cm: any} | null>(null);
+  const [mailBody, setMailBody] = useState("");
+  const [newEvent, setNewEvent] = useState({ text: "", time: "", tipo: "appuntamento", cm: "", persona: "", date: "", reminder: "", addr: "" });
+  const [events, setEvents] = useState(() => {
+    const t = new Date(); const td = t.toISOString().split("T")[0];
+    const tm = new Date(t); tm.setDate(tm.getDate() + 1); const tmStr = tm.toISOString().split("T")[0];
+    const t2 = new Date(t); t2.setDate(t2.getDate() + 2); const t2Str = t2.toISOString().split("T")[0];
+    return [];
+  });
+  
+    // Advance fase notification
+  const [faseNotif, setFaseNotif] = useState(null);
+  
+  // AI Photo
+  const [showAIPhoto, setShowAIPhoto] = useState(false);
+  const [aiPhotoStep, setAiPhotoStep] = useState(0); // 0=ready, 1=analyzing, 2=done
+  const [settingsModal, setSettingsModal] = useState(null); // {type, item?}
+  const [settingsForm, setSettingsForm] = useState({});
+  const [showAllegatiModal, setShowAllegatiModal] = useState(null); // "nota" | "vocale" | "video" | null
+  const [allegatiText, setAllegatiText] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+  const [recSeconds, setRecSeconds] = useState(0);
+  const recInterval = useRef(null);
+  const [playingId, setPlayingId] = useState(null);
+  const [playProgress, setPlayProgress] = useState(0);
+  const playInterval = useRef(null);
+  const [selectedTask, setSelectedTask] = useState(null);
+  
+  // Drawing state
+  const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const fotoInputRef = useRef(null);
+  const firmaRef = useRef(null);
+  const fotoVanoRef = useRef(null);
+  const calTouchStartRef = React.useRef(0);
+  const calTouchEndRef = React.useRef(0);
+  const [pendingFotoCat, setPendingFotoCat] = useState(null);
+  const videoVanoRef = useRef(null);
+  const ripFotoRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [penColor, setPenColor] = useState("#1d1d1f");
+  const [penSize, setPenSize] = useState(2);
+  const [drawPaths, setDrawPaths] = useState([]);
+
+  // New task form
+  const [newTask, setNewTask] = useState({ text: "", meta: "", time: "", priority: "media", cm: "" });
+  const [taskAllegati, setTaskAllegati] = useState([]); // allegati for new task
+  const [msgFilter, setMsgFilter] = useState("tutti"); // tutti/email/whatsapp/sms/telegram
+  const [msgSearch, setMsgSearch] = useState("");
+  const [showCompose, setShowCompose] = useState(false);
+  const [composeMsg, setComposeMsg] = useState({ to: "", text: "", canale: "whatsapp", cm: "" });
+  const [fabOpen, setFabOpen] = useState(false);
+  const [contatti, setContatti] = useState(CONTATTI_INIT);
+  const [msgSubTab, setMsgSubTab] = useState("chat"); // "chat" | "rubrica" | "ai"
+  const [aiInbox, setAiInbox] = useState(AI_INBOX_INIT);
+  const [selectedAiMsg, setSelectedAiMsg] = useState(null);
+  const [rubricaSearch, setRubricaSearch] = useState("");
+  const [rubricaFilter, setRubricaFilter] = useState("tutti"); // tutti/preferiti/team/clienti/fornitori
+  const [globalSearch, setGlobalSearch] = useState("");
+  // New commessa form
+  const [newCM, setNewCM] = useState({ cliente: "", indirizzo: "", telefono: "", sistema: "", tipo: "nuova", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "", note: "" });
+  const [ripSearch, setRipSearch] = useState("");
+  const [ripCMSel, setRipCMSel] = useState(null);
+  const [ripProblema, setRipProblema] = useState("");
+  const [ripFotos, setRipFotos] = useState([]);
+  const [ripUrgenza, setRipUrgenza] = useState("media");
+  // New vano form
+  const [vanoInfoOpen, setVanoInfoOpen] = useState(null); // which accordion section is open
+  const [tipCat, setTipCat] = useState("Finestre");
+  const [newVano, setNewVano] = useState({ nome: "", tipo: "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", pezzi: 1 });
+  const [customPiani, setCustomPiani] = useState(["S1", "PT", "P1", "P2", "P3"]);
+  const [mezziSalita, setMezziSalita] = useState(["Scala interna", "Scala esterna", "Scala aerea", "Scala a mano", "Gru", "Elevatore", "Ponteggio", "Nessuno"]);
+  const [showAddPiano, setShowAddPiano] = useState(false);
+  const [newPiano, setNewPiano] = useState("");
+
+  // Responsive width
+  const [winW, setWinW] = useState(typeof window !== "undefined" ? window.innerWidth : 430);
+  useEffect(() => {
+    const h = () => setWinW(window.innerWidth);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+
+  // == Persistence ==
+  useEffect(()=>{
+      try{const _v=localStorage.getItem("mastro:cantieri");if(_v)setCantieri(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:tasks");if(_v)setTasks(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:events");if(_v)setEvents(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:colori");if(_v)setColoriDB(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:sistemi");if(_v)setSistemiDB(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:vetri");if(_v)setVetriDB(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:coprifili");if(_v)setCoprifiliDB(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:lamiere");if(_v)setLamiereDB(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:team");if(_v)setTeam(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:contatti");if(_v)setContatti(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:pipeline");if(_v)setPipelineDB(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:azienda");if(_v)setAziendaInfo(JSON.parse(_v));}catch(e){}
+},[]);
+  useEffect(()=>{try{localStorage.setItem("mastro:cantieri",JSON.stringify(cantieri));}catch(e){}},[cantieri]);
+  useEffect(()=>{try{localStorage.setItem("mastro:tasks",JSON.stringify(tasks));}catch(e){}},[tasks]);
+  useEffect(()=>{try{localStorage.setItem("mastro:events",JSON.stringify(events));}catch(e){}},[events]);
+  useEffect(()=>{try{localStorage.setItem("mastro:colori",JSON.stringify(coloriDB));}catch(e){}},[coloriDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:sistemi",JSON.stringify(sistemiDB));}catch(e){}},[sistemiDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:vetri",JSON.stringify(vetriDB));}catch(e){}},[vetriDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:coprifili",JSON.stringify(coprifiliDB));}catch(e){}},[coprifiliDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:lamiere",JSON.stringify(lamiereDB));}catch(e){}},[lamiereDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:team",JSON.stringify(team));}catch(e){}},[team]);
+  useEffect(()=>{try{localStorage.setItem("mastro:contatti",JSON.stringify(contatti));}catch(e){}},[contatti]);
+  useEffect(()=>{try{localStorage.setItem("mastro:pipeline",JSON.stringify(pipelineDB));}catch(e){}},[pipelineDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:azienda",JSON.stringify(aziendaInfo));}catch(e){}},[aziendaInfo]);
+
+  // === SUPABASE DATA LAYER ===
+  const [azId, setAzId] = useState<string | null>(null);
+  const [dbLoading, setDbLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const id = await getAziendaId();
+        if (!mounted || !id) { setDbLoading(false); return; }
+        setAzId(id);
+        const data = await loadAllData(id);
+        if (!mounted) return;
+        if (data.cantieri.length > 0) setCantieri(data.cantieri);
+        if (data.events.length > 0) setEvents(data.events);
+        if (data.contatti.length > 0) setContatti(data.contatti);
+        if (data.team.length > 0) setTeam(data.team);
+        if (data.tasks.length > 0) setTasks(data.tasks);
+        if (data.msgs.length > 0) setMsgs(data.msgs);
+        if (data.sistemi) setSistemiDB(data.sistemi);
+        if (data.colori) setColoriDB(data.colori);
+        if (data.vetri) setVetriDB(data.vetri);
+        if (data.coprifili) setCoprifiliDB(data.coprifili);
+        if (data.lamiere) setLamiereDB(data.lamiere);
+        if (data.pipeline) setPipelineDB(data.pipeline);
+        if (data.azienda) setAziendaInfo(prev => ({
+          ...prev,
+          ragione: data.azienda.ragione || prev.ragione,
+          piva: data.azienda.piva || prev.piva,
+          indirizzo: data.azienda.indirizzo || prev.indirizzo,
+          telefono: data.azienda.telefono || prev.telefono,
+          email: data.azienda.email || prev.email,
+        }));
+      } catch (e) { console.error('Supabase load error:', e); }
+      if (mounted) setDbLoading(false);
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => { if (!azId || dbLoading) return; cantieri.forEach(ct => saveCantiere(azId, ct)); }, [cantieri, azId, dbLoading]);
+  useEffect(() => { if (!azId || dbLoading) return; events.forEach(ev => saveEvent(azId, ev)); }, [events, azId, dbLoading]);
+  useEffect(() => { if (!azId || dbLoading) return; contatti.forEach(ct => saveContatto(azId, ct)); }, [contatti, azId, dbLoading]);
+  useEffect(() => { if (!azId || dbLoading) return; team.forEach(t => saveTeamMember(azId, t)); }, [team, azId, dbLoading]);
+  useEffect(() => { if (!azId || dbLoading) return; saveAzienda(azId, aziendaInfo); }, [aziendaInfo, azId, dbLoading]);
+  useEffect(() => { if (!azId || dbLoading) return; savePipeline(azId, pipelineDB); }, [pipelineDB, azId, dbLoading]);
+
+
+  const PIPELINE = pipelineDB.filter(p => p.attiva !== false);
+  const parseDataCM = (s) => {
+    const oggi0 = new Date(); oggi0.setHours(0,0,0,0);
+    if(!s) return null;
+    if(s==="oggi"||s==="Oggi"||s==="Adesso") return oggi0;
+    const mesi2 = {gen:0,feb:1,mar:2,apr:3,mag:4,giu:5,lug:6,ago:7,set:8,ott:9,nov:10,dic:11};
+    const m2 = s.toLowerCase().match(/(\d+)\s+([a-z]+)/);
+    if(m2) return new Date(oggi0.getFullYear(), mesi2[m2[2]]??0, parseInt(m2[1]));
+    return null;
+  };
+  const giorniFermaCM = (c) => {
+    const oggi0 = new Date(); oggi0.setHours(0,0,0,0);
+    const d = parseDataCM(c.aggiornato);
+    if(!d) return 0;
+    return Math.floor((oggi0 - d) / 86400000);
+  };
+  const isTablet = winW >= 768;
+  const isDesktop = winW >= 1024;
+
+  const goBack = () => {
+    if (showRiepilogo) { setShowRiepilogo(false); return; }
+    if (selectedVano) { setSelectedVano(null); setVanoStep(0); return; }
+    if (showNuovoRilievo) { setShowNuovoRilievo(false); return; }
+    if (selectedRilievo) { setSelectedRilievo(null); return; }
+    if (selectedCM) { setSelectedCM(null); return; }
+  };
+
+  /* == Helpers == */
+  // Ritorna i vani del rilievo attivo (o dell'ultimo se nessuno selezionato)
+  const getVaniCM = (c) => {
+    if (!c?.rilievi || c.rilievi.length === 0) return [];
+    if (selectedRilievo && selectedCM?.id === c.id) return selectedRilievo.vani || [];
+    return c.rilievi[c.rilievi.length - 1]?.vani || [];
+  };
+  const getVaniAttivi = (c) => {
+    if (!c?.rilievi || c.rilievi.length === 0) return [];
+    // Per stats generali: tutti i vani dell'ultimo rilievo
+    return c.rilievi[c.rilievi.length - 1]?.vani || [];
+  };
+  const countVani = () => cantieri.reduce((s, c) => s + getVaniAttivi(c).length, 0);
+  const urgentCount = () => cantieri.filter(c => c.alert).length;
+  const readyCount = () => cantieri.filter(c => c.fase === "posa" || c.fase === "chiusura").length;
+  const faseIndex = (fase) => PIPELINE.findIndex(p => p.id === fase);
+  const priColor = (p) => p === "alta" ? T.red : p === "media" ? T.orange : T.sub2;
+
+  const toggleTask = (id) => setTasks(ts => ts.map(t => t.id === id ? { ...t, done: !t.done } : t));
+
+  const addTask = () => {
+    if (!newTask.text.trim()) return;
+    setTasks(ts => [...ts, { id: Date.now(), ...newTask, done: false, allegati: [...taskAllegati] }]);
+    setTaskAllegati([]);
+    setNewTask({ text: "", meta: "", time: "", priority: "media", cm: "" });
+    setShowModal(null);
+  };
+
+  const addCommessa = () => {
+    if (!newCM.cliente.trim()) return;
+    const code = "S-" + String(cantieri.length + 1).padStart(4, "0");
+    const nc = { id: Date.now(), code, cliente: newCM.cliente, cognome: newCM.cognome||"", indirizzo: newCM.indirizzo, telefono: newCM.telefono, email: newCM.email||"", fase: "sopralluogo", rilievi: [], sistema: newCM.sistema, tipo: newCM.tipo, difficoltaSalita: newCM.difficoltaSalita, mezzoSalita: newCM.mezzoSalita, foroScale: newCM.foroScale, pianoEdificio: newCM.pianoEdificio, note: newCM.note, allegati: [], creato: new Date().toLocaleDateString("it-IT",{day:"numeric",month:"short"}), aggiornato: new Date().toLocaleDateString("it-IT",{day:"numeric",month:"short"}), log: [{ chi: "Fabio", cosa: "creato la commessa", quando: "Adesso", color: T.sub }] };
+    setCantieri(cs => [nc, ...cs]);
+    setNewCM({ cliente: "", cognome: "", indirizzo: "", telefono: "", email: "", sistema: "", tipo: "nuova", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "", note: "" });
+    setShowModal(null);
+    setSelectedCM(nc);
+    setTab("commesse");
+  };
+
+  const addVano = () => {
+    if (!selectedCM || !selectedRilievo) return;
+    const tipObj = TIPOLOGIE_RAPIDE.find(t => t.code === newVano.tipo);
+    const nome = newVano.nome.trim() || `${tipObj?.label || newVano.tipo} ${(selectedRilievo.vani?.length || 0) + 1}`;
+    const v = { id: Date.now(), nome, tipo: newVano.tipo, stanza: newVano.stanza, piano: newVano.piano, sistema: newVano.sistema, pezzi: newVano.pezzi||1, coloreInt: newVano.coloreInt, coloreEst: newVano.coloreEst, bicolore: newVano.bicolore, coloreAcc: newVano.coloreAcc, vetro: newVano.vetro, telaio: newVano.telaio, telaioAlaZ: newVano.telaioAlaZ, rifilato: newVano.rifilato, rifilSx: newVano.rifilSx, rifilDx: newVano.rifilDx, rifilSopra: newVano.rifilSopra, rifilSotto: newVano.rifilSotto, coprifilo: newVano.coprifilo, lamiera: newVano.lamiera, misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } };
+    const updRilievo = { ...selectedRilievo, vani: [...(selectedRilievo.vani || []), v] };
+    setCantieri(cs => cs.map(c => c.id === selectedCM.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRilievo : r), aggiornato: "Oggi" } : c));
+    setSelectedRilievo(updRilievo);
+    setSelectedCM(prev => ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo.id ? updRilievo : r) }));
+    setNewVano(prev => ({ nome: "", tipo: prev.tipo, stanza: "Soggiorno", piano: prev.piano, sistema: prev.sistema, coloreInt: prev.coloreInt, coloreEst: prev.coloreEst, bicolore: prev.bicolore, coloreAcc: prev.coloreAcc, vetro: prev.vetro, telaio: prev.telaio, telaioAlaZ: prev.telaioAlaZ, rifilato: prev.rifilato, rifilSx: prev.rifilSx, rifilDx: prev.rifilDx, rifilSopra: prev.rifilSopra, rifilSotto: prev.rifilSotto, coprifilo: prev.coprifilo, lamiera: prev.lamiera }));
+    setShowModal(null);
+    setSelectedVano(v);
+    setVanoStep(0);
+  };
+
+  const updateMisura = (vanoId, key, value) => {
+    const numVal = parseInt(value) || 0;
+    if (selectedRilievo) {
+      const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.map(v => v.id === vanoId ? { ...v, misure: { ...v.misure, [key]: numVal } } : v) };
+      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
+      setSelectedRilievo(updRil);
+      setSelectedCM(prev => prev ? ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) }) : prev);
+    }
+    if (selectedVano?.id === vanoId) setSelectedVano(prev => ({ ...prev, misure: { ...prev.misure, [key]: numVal } }));
+  };
+
+  const toggleAccessorio = (vanoId, acc) => {
+    if (selectedRilievo) {
+      const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.map(v => v.id === vanoId ? { ...v, accessori: { ...v.accessori, [acc]: { ...v.accessori[acc], attivo: !v.accessori[acc].attivo } } } : v) };
+      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
+      setSelectedRilievo(updRil);
+    }
+    if (selectedVano?.id === vanoId) setSelectedVano(prev => ({ ...prev, accessori: { ...prev.accessori, [acc]: { ...prev.accessori[acc], attivo: !prev.accessori[acc].attivo } } }));
+  };
+
+  const updateAccessorio = (vanoId, acc, field, value) => {
+    if (selectedRilievo) {
+      const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.map(v => v.id === vanoId ? { ...v, accessori: { ...v.accessori, [acc]: { ...v.accessori[acc], [field]: value } } } : v) };
+      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
+      setSelectedRilievo(updRil);
+      setSelectedCM(prev => prev ? ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) }) : prev);
+    }
+    if (selectedVano?.id === vanoId) setSelectedVano(prev => ({ ...prev, accessori: { ...prev.accessori, [acc]: { ...prev.accessori[acc], [field]: value } } }));
+  };
+
+  // DELETE functions
+  const deleteTask = (taskId) => { if ((()=>{try{return window.confirm("Eliminare questo task?");}catch(e){return false;}})()) setTasks(ts => ts.filter(t => t.id !== taskId)); };
+  const deleteVano = (vanoId) => {
+    if (!(()=>{try{return window.confirm("Eliminare questo vano e tutte le sue misure?");}catch(e){return false;}})()) return;
+    if (selectedRilievo) {
+      const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.filter(v => v.id !== vanoId) };
+      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
+      setSelectedRilievo(updRil);
+      setSelectedCM(prev => prev ? ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) }) : prev);
+    }
+    if (selectedVano?.id === vanoId) { setSelectedVano(null); setVanoStep(0); }
+  };
+  const deleteCommessa = (cmId) => {
+    if (!(()=>{try{return window.confirm("Eliminare questa commessa e tutti i suoi vani?");}catch(e){return false;}})()) return;
+    setCantieri(cs => cs.filter(c => c.id !== cmId));
+    if (selectedCM?.id === cmId) { setSelectedCM(null); setSelectedVano(null); }
+  };
+  const deleteEvent = (evId) => { if ((()=>{try{return window.confirm("Eliminare questo evento?");}catch(e){return false;}})()) setEvents(ev => ev.filter(e => e.id !== evId)); };
+  const deleteMsg = (msgId) => { if ((()=>{try{return window.confirm("Eliminare questo messaggio?");}catch(e){return false;}})()) setMsgs(ms => ms.filter(m => m.id !== msgId)); };
+
+  const addAllegato = (tipo, content) => {
+    if (!selectedCM) return;
+    const a = { id: Date.now(), tipo, nome: content || (tipo === "file" ? "Allegato" : tipo === "vocale" ? "Nota vocale" : tipo === "video" ? "Video" : "Nota"), data: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }), durata: tipo === "vocale" ? "0:" + String(Math.floor(Math.random() * 30 + 5)).padStart(2, "0") : tipo === "video" ? "0:" + String(Math.floor(Math.random() * 45 + 10)).padStart(2, "0") : "" };
+    setCantieri(cs => cs.map(x => x.id === selectedCM.id ? { ...x, allegati: [...(x.allegati || []), a] } : x));
+    setSelectedCM(p => ({ ...p, allegati: [...(p.allegati || []), a] }));
+  };
+
+  const playAllegato = (id) => {
+    if (playingId === id) { clearInterval(playInterval.current); setPlayingId(null); setPlayProgress(0); return; }
+    clearInterval(playInterval.current);
+    setPlayingId(id); setPlayProgress(0);
+    let prog = 0;
+    playInterval.current = setInterval(() => { prog += 2; setPlayProgress(prog); if (prog >= 100) { clearInterval(playInterval.current); setPlayingId(null); setPlayProgress(0); } }, 100);
+  };
+
+  // SETTINGS CRUD
+  const addSettingsItem = () => {
+    const f = settingsForm;
+    if (settingsModal === "sistema" && f.marca && f.sistema) {
+      setSistemiDB(s => [...s, { id: Date.now(), marca: f.marca, sistema: f.sistema, euroMq: parseInt(f.euroMq)||0, prezzoMq: parseFloat(f.prezzoMq||f.euroMq)||0, sovRAL: parseInt(f.sovRAL)||0, sovLegno: parseInt(f.sovLegno)||0, colori: [], sottosistemi: f.sottosistemi ? f.sottosistemi.split(",").map(s => s.trim()) : [] }]);
+    } else if (settingsModal === "colore" && f.nome && f.code) {
+      setColoriDB(c => [...c, { id: Date.now(), nome: f.nome, code: f.code, hex: f.hex || "#888888", tipo: f.tipo || "RAL" }]);
+    } else if (settingsModal === "vetro" && f.nome && f.code) {
+      setVetriDB(v => [...v, { id: Date.now(), nome: f.nome, code: f.code, ug: parseFloat(f.ug)||1.0, prezzoMq: parseFloat(f.prezzoMq)||0 }]);
+    } else if (settingsModal === "coprifilo" && f.nome && f.cod) {
+      setCoprifiliDB(c => [...c, { id: Date.now(), nome: f.nome, cod: f.cod, prezzoMl: parseFloat(f.prezzoMl)||0 }]);
+    } else if (settingsModal === "lamiera" && f.nome && f.cod) {
+      setLamiereDB(l => [...l, { id: Date.now(), nome: f.nome, cod: f.cod, prezzoMl: parseFloat(f.prezzoMl)||0 }]);
+    } else if (settingsModal === "tipologia" && f.code && f.label) {
+      TIPOLOGIE_RAPIDE.push({ code: f.code, label: f.label, icon: f.icon || "🪟" });
+    } else if (settingsModal === "membro" && f.nome) {
+      const colori = ["#007aff","#34c759","#af52de","#ff9500","#ff3b30","#5ac8fa"];
+      setTeam(t => [...t, { id: Date.now(), nome: f.nome, ruolo: f.ruolo || "Posatore", compiti: f.compiti || "", colore: colori[t.length % colori.length] }]);
+    } else return;
+    setSettingsModal(null); setSettingsForm({});
+  };
+  const deleteSettingsItem = (type, id) => {
+    if (!(()=>{try{return window.confirm("Eliminare?");}catch(e){return false;}})()) return;
+    if (type === "sistema") setSistemiDB(s => s.filter(x => x.id !== id));
+    if (type === "colore") setColoriDB(c => c.filter(x => x.id !== id));
+    if (type === "vetro") setVetriDB(v => v.filter(x => x.id !== id));
+    if (type === "coprifilo") setCoprifiliDB(c => c.filter(x => x.id !== id));
+    if (type === "lamiera") setLamiereDB(l => l.filter(x => x.id !== id));
+  };
+
+  const advanceFase = (cmId) => {
+    const FASE_TEAM = { preventivo: "Sara Greco", conferma: "Sara Greco", misure: "Marco Ferraro", ordini: "Sara Greco", produzione: "Marco Ferraro", posa: "Marco Ferraro", chiusura: "Fabio Cozza" };
+    setCantieri(cs => cs.map(c => {
+      if (c.id !== cmId) return c;
+      const idx = faseIndex(c.fase);
+      if (idx < PIPELINE.length - 1) {
+        const next = PIPELINE[idx + 1];
+        return { ...c, fase: next.id, log: [{ chi: "Fabio", cosa: `avanzato a ${next.nome}`, quando: "Adesso", color: next.color }, ...c.log] };
+      }
+      return c;
+    }));
+    if (selectedCM?.id === cmId) {
+      const idx = faseIndex(selectedCM.fase);
+      if (idx < PIPELINE.length - 1) {
+        const next = PIPELINE[idx + 1];
+        const addetto = FASE_TEAM[next.id] || "Fabio Cozza";
+        setSelectedCM(prev => ({ ...prev, fase: next.id, log: [{ chi: "Fabio", cosa: `avanzato a ${next.nome}`, quando: "Adesso", color: next.color }, ...prev.log] }));
+        setFaseNotif({ fase: next.nome, addetto, color: next.color });
+        setTimeout(() => setFaseNotif(null), 4000);
+      }
+    }
+  };
+
+  const addEvent = () => {
+    const _evTitle = newEvent.text.trim() || (newEvent.persona ? "Appuntamento " + newEvent.persona : "");
+    if (!_evTitle) return;
+    newEvent.text = _evTitle;
+    if ((newEvent as any)._newCliente && (newEvent as any)._nomeCliente) {
+      const nc = { id: "CT-" + Date.now(), nome: (newEvent as any)._nomeCliente, cognome: (newEvent as any)._cognomeCliente || "", tipo: "cliente", telefono: (newEvent as any)._telCliente || "", indirizzo: (newEvent as any)._addrCliente || "" };
+      setContatti(prev => [...prev, nc]);
+      newEvent.persona = nc.nome + (nc.cognome ? " " + nc.cognome : "");
+    }
+    if (!newEvent.time) newEvent.time = "09:00";
+    setEvents(ev => [...ev, { id: Date.now(), ...newEvent, date: newEvent.date || selDate.toISOString().split("T")[0], addr: newEvent.addr || "", color: newEvent.tipo === "appuntamento" ? "#007aff" : newEvent.tipo === "sopr_riparazione" ? "#FF6B00" : newEvent.tipo === "riparazione" ? "#FF3B30" : newEvent.tipo === "collaudo" ? "#5856D6" : newEvent.tipo === "garanzia" ? "#8E8E93" : "#ff9500" }]);
+    setNewEvent({ text: "", time: "", tipo: "appuntamento", cm: "", persona: "", date: "", reminder: "", addr: "" });
+    setShowNewEvent(false);
+  };
+
+  const sendCommessa = () => {
+    setSendConfirm("sent");
+    setTimeout(() => { setSendConfirm(null); setShowSendModal(false); }, 2500);
+  };
+
+  const handleAI = () => {
+    if (!aiInput.trim()) return;
+    const q = aiInput.toLowerCase();
+    setAiMsgs(m => [...m, { role: "user", text: aiInput }]);
+    setAiInput("");
+    let resp = "Non ho capito, prova a riformulare la domanda.";
+    if (q.includes("oggi") || q.includes("programma")) {
+      const t = tasks.filter(x => !x.done);
+      resp = `Oggi hai ${t.length} task aperti:\n${t.map((x, i) => `${i + 1}. ${x.text}${x.time ? ` (${x.time})` : ""}`).join("\n")}`;
+    } else if (q.includes("commess") || q.includes("stato") || q.includes("pipeline")) {
+      resp = `Hai ${cantieri.length} commesse:\n${cantieri.map(c => `• ${c.code} ${c.cliente} — ${PIPELINE.find(p => p.id === c.fase)?.nome}`).join("\n")}`;
+    } else if (q.includes("vani") || q.includes("misur")) {
+      resp = `Totale vani: ${countVani()}\nCommesse con vani da misurare:\n${cantieri.filter(c => getVaniAttivi(c).some(v => Object.keys(v.misure || {}).length < 6)).map(c => `• ${c.code}: ${getVaniAttivi(c).filter(v => Object.keys(v.misure || {}).length < 6).length} vani incompleti`).join("\n")}`;
+    } else if (q.includes("urgent") || q.includes("priorit")) {
+      const u = tasks.filter(x => x.priority === "alta" && !x.done);
+      resp = u.length ? `Task urgenti:\n${u.map(x => `• ${x.text}`).join("\n")}` : "Nessun task urgente!";
+    }
+    setTimeout(() => setAiMsgs(m => [...m, { role: "ai", text: resp }]), 300);
+  };
+
+  const exportPDF = () => {
+    if (!selectedCM) return;
+    const cm = selectedCM;
+    let html = `<html><head><title>MASTRO MISURE — ${cm.code}</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px}h1{color:#0066cc;border-bottom:3px solid #0066cc;padding-bottom:10px}h2{color:#333;margin-top:30px}.vano{border:1px solid #ddd;border-radius:8px;padding:15px;margin:10px 0;page-break-inside:avoid}.misure-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.m-item{background:#f5f5f7;padding:6px 10px;border-radius:4px;font-size:13px}.m-label{color:#666;font-size:11px}.m-val{font-weight:700;color:#1d1d1f}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.info{color:#666;font-size:13px}@media print{body{padding:0}}</style></head><body>`;
+    html += `<div class="header"><div><h1>MASTRO MISURE</h1><p class="info">Report Misure — ${cm.code}</p></div><div style="text-align:right"><p><strong>${cm.cliente}</strong></p><p class="info">${cm.indirizzo}</p><p class="info">Sistema: ${cm.sistema || "N/D"} | Tipo: ${cm.tipo === "riparazione" ? "Riparazione" : "Nuova"}</p></div></div>`;
+    cm.vani.forEach((v, i) => {
+      const m = v.misure || {};
+      html += `<div class="vano"><h3>${i + 1}. ${v.nome} — ${v.tipo} (${v.stanza}, ${v.piano})</h3><div class="misure-grid">`;
+      [["L alto", m.lAlto], ["L centro", m.lCentro], ["L basso", m.lBasso], ["H sinistra", m.hSx], ["H centro", m.hCentro], ["H destra", m.hDx], ["Diag. 1", m.d1], ["Diag. 2", m.d2], ["Spall. SX", m.spSx], ["Spall. DX", m.spDx], ["Architrave", m.arch], ["Dav. int.", m.davInt], ["Dav. est.", m.davEst]].forEach(([l, val]) => {
+        html += `<div class="m-item"><div class="m-label">${l}</div><div class="m-val">${val || "—"} mm</div></div>`;
+      });
+      html += `</div>`;
+      if (v.cassonetto) html += `<p style="margin-top:8px;font-size:13px">Cassonetto: ${v.casH || "—"} × ${v.casP || "—"} mm</p>`;
+      if (v.note) html += `<p style="margin-top:4px;font-size:12px;color:#666">Note: ${v.note}</p>`;
+      html += `</div>`;
+    });
+    html += `<div style="margin-top:40px;border-top:1px solid #ddd;padding-top:20px;display:flex;justify-content:space-between"><div><p class="info">Firma tecnico</p><div style="border-bottom:1px solid #333;width:200px;height:40px"></div></div><div><p class="info">Firma cliente</p><div style="border-bottom:1px solid #333;width:200px;height:40px"></div></div></div>`;
+    html += `<p style="text-align:center;margin-top:30px;color:#999;font-size:11px">Generato da MASTRO MISURE — ${new Date().toLocaleDateString("it-IT")}</p></body></html>`;
+    const w = window.open("", "_blank");
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 500);
+  };
+
+  /* ======= STYLES ======= */
+  const fs = isDesktop ? 1.1 : isTablet ? 1.05 : 1;
+  const S = {
+    app: { fontFamily: FF, background: T.bg, color: T.text, width: "100%", minHeight: "100vh", position: "relative", WebkitFontSmoothing: "antialiased" },
+    header: { padding: `${14*fs}px ${16*fs}px ${12*fs}px`, background: T.card, borderBottom: `1px solid ${T.bdr}`, display: "flex", alignItems: "center", gap: 10 },
+    headerTitle: { fontSize: 19*fs, fontWeight: 700, letterSpacing: -0.3, color: T.text },
+    headerSub: { fontSize: 12*fs, color: T.sub, marginTop: 1 },
+    section: { margin: `0 ${16*fs}px`, padding: "10px 0 4px", display: "flex", justifyContent: "space-between", alignItems: "center" },
+    sectionTitle: { fontSize: 13*fs, fontWeight: 700, color: T.text },
+    sectionBtn: { fontSize: 12*fs, color: T.acc, fontWeight: 600, background: "none", border: "none", cursor: "pointer" },
+    card: { background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, boxShadow: T.cardSh, overflow: "hidden", marginBottom: 8, cursor: "pointer", transition: "box-shadow 0.15s" },
+    cardInner: { padding: `${12*fs}px ${14*fs}px` },
+    chip: (active) => ({ padding: `${6*fs}px ${12*fs}px`, borderRadius: 8, border: `1px solid ${active ? T.acc : T.bdr}`, background: active ? T.acc : T.card, color: active ? "#fff" : T.text, fontSize: 12*fs, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, transition: "all 0.15s" }),
+    stat: { flex: 1, textAlign: "center", padding: `${10*fs}px 4px`, background: T.card, cursor: "pointer" },
+    statNum: { fontSize: 18*fs, fontWeight: 700 },
+    statLabel: { fontSize: 9*fs, color: T.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3, marginTop: 1 },
+    badge: (bg, color) => ({ fontSize: 11*fs, fontWeight: 600, padding: `${3*fs}px ${8*fs}px`, borderRadius: 6, background: bg, color, display: "inline-block" }),
+    input: { width: "100%", padding: `${10*fs}px ${12*fs}px`, borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 14*fs, color: T.text, outline: "none", fontFamily: FF, boxSizing: "border-box" },
+    select: { width: "100%", padding: `${10*fs}px ${12*fs}px`, borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 14*fs, color: T.text, outline: "none", fontFamily: FF, boxSizing: "border-box" },
+    btn: { width: "100%", padding: `${14*fs}px`, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 15*fs, fontWeight: 700, cursor: "pointer", fontFamily: FF },
+    btnCancel: { width: "100%", padding: `${12*fs}px`, borderRadius: 10, border: "none", background: "none", color: T.sub, fontSize: 14*fs, fontWeight: 600, cursor: "pointer", fontFamily: FF },
+    tabBar: { position: "fixed", bottom: 0, left: 0, right: 0, width: "100%", background: T.card + "ee", backdropFilter: "blur(20px)", borderTop: `1px solid ${T.bdr}`, display: "flex", padding: `${6*fs}px 0 ${8*fs}px`, zIndex: 100 },
+    tabItem: (active) => ({ flex: 1, textAlign: "center", padding: "4px 0", cursor: "pointer", opacity: active ? 1 : 0.5, transition: "opacity 0.15s" }),
+    tabLabel: (active) => ({ fontSize: 10*fs, fontWeight: 600, color: active ? T.acc : T.sub, marginTop: 1 }),
+    modal: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", justifyContent: "center", alignItems: "flex-end" },
+    modalInner: { background: T.card, borderRadius: "16px 16px 0 0", width: "100%", maxWidth: isDesktop ? 600 : 500, padding: `${20*fs}px ${16*fs}px ${30*fs}px`, maxHeight: "85vh", overflowY: "auto" },
+    modalTitle: { fontSize: 17*fs, fontWeight: 700, marginBottom: 16, color: T.text },
+    fieldLabel: { fontSize: 12*fs, fontWeight: 600, color: T.sub, marginBottom: 4, display: "block" },
+    pipeStep: (done, current) => ({ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 52, cursor: "pointer" }),
+    pipeCircle: (done, current, color) => ({ width: current ? 32 : 26, height: current ? 32 : 26, borderRadius: "50%", background: done ? color : "transparent", border: done ? "none" : current ? `3px solid ${color}` : `2px dashed ${T.bdr}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: current ? 14 : 12, boxShadow: current ? `0 0 12px ${color}40` : "none", transition: "all 0.2s" }),
+    pipeLine: (done) => ({ flex: 1, height: 2, background: done ? T.grn : T.bdr, minWidth: 12, alignSelf: "center", marginTop: -14 }),
+    pipeLabel: (current) => ({ fontSize: 9*fs, fontWeight: current ? 700 : 500, color: current ? T.text : T.sub, marginTop: 4, textAlign: "center", maxWidth: 52 }),
+  };
+
+  /* ======= CALENDAR STRIP ======= */
+  const today = new Date();
+  const calDays = Array.from({ length: 9 }, (_, i) => {
+    const d = new Date(today); d.setDate(d.getDate() + i - 2);
+    return { day: d.getDate(), name: ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"][d.getDay()], isToday: i === 2, hasDot: [0, 2, 4, 6].includes(i) };
+  });
+
+  /* ======= PIPELINE COMPONENT ======= */
+  const PipelineBar = ({ fase }) => {
+    const idx = faseIndex(fase);
+    return (
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 0, overflowX: "auto", padding: "8px 0", WebkitOverflowScrolling: "touch" }}>
+        {PIPELINE.map((p, i) => {
+          const done = i < idx;
+          const current = i === idx;
+          return (
+            <div key={p.id} style={{ display: "flex", alignItems: "flex-start", flex: i < PIPELINE.length - 1 ? 1 : "none" }}>
+              <div style={S.pipeStep(done, current)}>
+                <div style={S.pipeCircle(done, current, p.color)}>
+                  {done ? <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span> : <span>{p.ico}</span>}
+                </div>
+                <div style={S.pipeLabel(current)}>{p.nome}</div>
+              </div>
+              {i < PIPELINE.length - 1 && <div style={S.pipeLine(done)} />}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  /* ======= VANO SVG SCHEMA ======= */
+  const VanoSVG = ({ v, onTap }) => {
+    const m = v.misure || {};
+    return (
+      <svg viewBox="0 0 200 260" style={{ width: "100%", maxWidth: 280, display: "block", margin: "0 auto" }}>
+        {/* Vano outline */}
+        <rect x="30" y="15" width="140" height="220" fill={T.accLt} stroke={T.acc} strokeWidth={1.5} rx={2} />
+        {/* Spallette */}
+        <rect x="15" y="12" width="15" height="226" fill={T.blueLt} stroke={T.blue} strokeWidth={0.5} rx={1} strokeDasharray="3,2" />
+        <rect x="170" y="12" width="15" height="226" fill={T.blueLt} stroke={T.blue} strokeWidth={0.5} rx={1} strokeDasharray="3,2" />
+        {/* Cassonetto */}
+        {v.cassonetto && <rect x="28" y="0" width="144" height="15" fill={T.orangeLt} stroke={T.orange} strokeWidth={0.5} rx={2} />}
+        {v.cassonetto && <text x="100" y="11" textAnchor="middle" fontSize={7} fill={T.orange} fontFamily={FM}>CASSONETTO</text>}
+        {/* Davanzale */}
+        <line x1="25" y1="237" x2="175" y2="237" stroke={T.sub2} strokeWidth={1} strokeDasharray="4,3" />
+        <text x="100" y="252" textAnchor="middle" fontSize={8} fill={T.sub2} fontFamily={FM}>Davanzale</text>
+        {/* 3 Larghezze lines */}
+        <line x1="35" y1="28" x2="165" y2="28" stroke={T.acc + "40"} strokeWidth={0.5} strokeDasharray="3,3" />
+        <line x1="35" y1="125" x2="165" y2="125" stroke={T.acc + "40"} strokeWidth={0.5} strokeDasharray="3,3" />
+        <line x1="35" y1="222" x2="165" y2="222" stroke={T.acc + "40"} strokeWidth={0.5} strokeDasharray="3,3" />
+        {/* 3 Altezze lines */}
+        <line x1="35" y1="20" x2="35" y2="232" stroke={T.blue + "40"} strokeWidth={0.5} strokeDasharray="3,3" />
+        <line x1="100" y1="20" x2="100" y2="232" stroke={T.blue + "40"} strokeWidth={0.5} strokeDasharray="3,3" />
+        <line x1="165" y1="20" x2="165" y2="232" stroke={T.blue + "40"} strokeWidth={0.5} strokeDasharray="3,3" />
+        {/* Diagonals */}
+        <line x1="35" y1="20" x2="165" y2="232" stroke={T.purple + "30"} strokeWidth={0.5} strokeDasharray="4,3" />
+        <line x1="165" y1="20" x2="35" y2="232" stroke={T.purple + "30"} strokeWidth={0.5} strokeDasharray="4,3" />
+        {/* Tap points */}
+        {PUNTI_MISURE.map(p => {
+          const val = m[p.key];
+          const col = T[p.color] || T.acc;
+          return (
+            <g key={p.key} onClick={() => onTap && onTap(p.key)} style={{ cursor: "pointer" }}>
+              <circle cx={p.x} cy={p.y} r={val ? 14 : 12} fill={val ? col + "20" : T.bdr + "60"} stroke={val ? col : T.sub2} strokeWidth={val ? 1.5 : 1} />
+              <text x={p.x} y={p.y + (val ? 1 : 4)} textAnchor="middle" fontSize={val ? 8 : 7} fill={val ? col : T.sub} fontWeight={val ? 700 : 500} fontFamily={FM} dominantBaseline="middle">
+                {val || p.label}
+              </text>
+            </g>
+          );
+        })}
+        {/* Spalletta labels */}
+        <text x="22" y="130" textAnchor="middle" fontSize={7} fill={T.sub} fontFamily={FM} transform="rotate(-90,22,130)">
+          Sp.SX {m.spSx || ""}
+        </text>
+        <text x="178" y="130" textAnchor="middle" fontSize={7} fill={T.sub} fontFamily={FM} transform="rotate(90,178,130)">
+          Sp.DX {m.spDx || ""}
+        </text>
+      </svg>
+    );
+  };
+
+  /* ======= FILTERED CANTIERI ======= */
+  const filtered = cantieri.filter(c => {
+    if (filterFase !== "tutte" && c.fase !== filterFase) return false;
+    if (searchQ && !c.cliente.toLowerCase().includes(searchQ.toLowerCase()) && !c.code.toLowerCase().includes(searchQ.toLowerCase())) return false;
+    return true;
+  });
+
+  /* ==================================== */
+  /* ====       RENDER SECTIONS       == */
+  /* ==================================== */
+
+  /* == HOME TAB == */
+  const renderHome = () => (
+    <div style={{ paddingBottom: 80 }}>
+      {/* Header */}
+      <div style={{ padding: "14px 16px 12px", background: T.card, borderBottom: `1px solid ${T.bdr}` }}>
+        {/* Logo row */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {/* Logo — quadrato nero con M bianca, uguale in tutte le app MASTRO */}
+            <div style={{ width: 44, height: 44, borderRadius: 10, background: T.text, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ fontSize: 22, fontWeight: 800, color: T.card, fontFamily: FF, letterSpacing: -1 }}>M</span>
+            </div>
+            <div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: T.text, letterSpacing: -0.3, lineHeight: 1.1 }}>MASTRO</div>
+              <div style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>misure</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 20 }}>⛅</span>
+                <span style={{ fontSize: 18, fontWeight: 600 }}>12°</span>
+              </div>
+              <div style={{ fontSize: 11, color: T.sub }}>Cosenza</div>
+            </div>
+            <div onClick={() => setHomeEditMode(e => !e)}
+              style={{ padding: "4px 10px", borderRadius: 7, background: homeEditMode ? T.acc : T.bg, border: `1px solid ${homeEditMode ? T.acc : T.bdr}`, fontSize: 11, fontWeight: 700, color: homeEditMode ? "#fff" : T.sub, cursor: "pointer" }}>
+              {homeEditMode ? "✓ Fine" : "✏ Riordina"}
+            </div>
+          </div>
+        </div>
+        {/* Saluto */}
+        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.3 }}>
+          {(() => { const h = today.getHours(); return h < 12 ? "Buongiorno" : h < 18 ? "Buon pomeriggio" : "Buonasera"; })()}, Fabio
+        </div>
+        <div style={{ fontSize: 12, color: T.sub, marginTop: 1 }}>
+          {today.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+        </div>
+      </div>
+
+
+
+      {/* Global search */}
+      <div style={{ padding: "0 16px", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
+          <Ico d={ICO.search} s={16} c={T.sub} />
+          <input
+            style={{ flex: 1, border: "none", background: "transparent", fontSize: 13, color: T.text, outline: "none", fontFamily: FF }}
+            placeholder="Cerca commesse, clienti, vani..."
+            value={globalSearch}
+            onChange={e => setGlobalSearch(e.target.value)}
+          />
+          {globalSearch && <div onClick={() => setGlobalSearch("")} style={{ cursor: "pointer", fontSize: 14, color: T.sub }}>✕</div>}
+        </div>
+        {globalSearch.trim().length > 1 && (() => {
+          const q = globalSearch.toLowerCase();
+          const cmResults = cantieri.filter(c => c.cliente?.toLowerCase().includes(q) || c.code?.toLowerCase().includes(q) || c.indirizzo?.toLowerCase().includes(q));
+          const vanoResults = cantieri.flatMap(c => getVaniAttivi(c).filter(v => v.nome?.toLowerCase().includes(q) || v.tipo?.toLowerCase().includes(q) || v.stanza?.toLowerCase().includes(q)).map(v => ({ ...v, cmCode: c.code, cmCliente: c.cliente, cmId: c.id, cm: c })));
+          const taskResults = tasks.filter(t => t.text?.toLowerCase().includes(q) || t.meta?.toLowerCase().includes(q));
+          const evResults = events.filter(e => e.text?.toLowerCase().includes(q) || e.persona?.toLowerCase().includes(q));
+          const total = cmResults.length + vanoResults.length + taskResults.length + evResults.length;
+          return total > 0 ? (
+            <div style={{ background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}`, marginTop: 6, maxHeight: 280, overflowY: "auto" }}>
+              {cmResults.map(c => (
+                <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); setGlobalSearch(""); }} style={{ padding: "10px 14px", borderBottom: `1px solid ${T.bg}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>📁</span>
+                  <div><div style={{ fontSize: 12, fontWeight: 600 }}>{c.cliente}</div><div style={{ fontSize: 10, color: T.sub }}>{c.code} · {c.indirizzo}</div></div>
+                </div>
+              ))}
+              {vanoResults.map(v => (
+                <div key={v.id} onClick={() => { setSelectedCM(v.cm); setSelectedVano(v); setTab("commesse"); setGlobalSearch(""); }} style={{ padding: "10px 14px", borderBottom: `1px solid ${T.bg}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>🪟</span>
+                  <div><div style={{ fontSize: 12, fontWeight: 600 }}>{v.nome}</div><div style={{ fontSize: 10, color: T.sub }}>{v.cmCode} · {v.stanza} · {v.tipo}</div></div>
+                </div>
+              ))}
+              {taskResults.map(t => (
+                <div key={t.id} onClick={() => { setGlobalSearch(""); }} style={{ padding: "10px 14px", borderBottom: `1px solid ${T.bg}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>☑️</span>
+                  <div><div style={{ fontSize: 12, fontWeight: 600 }}>{t.text}</div><div style={{ fontSize: 10, color: T.sub }}>{t.cm || "Task"} · {t.meta}</div></div>
+                </div>
+              ))}
+              {evResults.map(e => (
+                <div key={e.id} onClick={() => { setTab("agenda"); setAgendaView("giorno"); setSelDate(new Date(e.date)); setGlobalSearch(""); }} style={{ padding: "10px 14px", borderBottom: `1px solid ${T.bg}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>📅</span>
+                  <div><div style={{ fontSize: 12, fontWeight: 600 }}>{e.text}</div><div style={{ fontSize: 10, color: T.sub }}>{e.date} {e.time} · {e.persona}</div></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ padding: "10px 14px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}`, marginTop: 6, fontSize: 12, color: T.sub, textAlign: "center" }}>Nessun risultato per "{globalSearch}"</div>
+          );
+        })()}
+      </div>
+
+      {/* == SEZIONI RIORDINABILI == */}
+      {(() => {
+        const sections = {
+          banner: (() => {
+            const todayISO = today.toISOString().split("T")[0];
+            const todayEvents = events.filter(e => e.date === todayISO).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
+            const urgenti = cantieri.filter(c => c.alert);
+            // Calcola giorni ferma
+            const oggi2 = new Date(); oggi2.setHours(0,0,0,0);
+            // parseDataCM defined at component level
+            // giorniFermaCM defined at component level
+            const SOGLIA_GIORNI = sogliaDays;
+            const ferme = cantieri.filter(c => c.fase !== "chiusura" && giorniFermaCM(c) >= SOGLIA_GIORNI);
+            const misureInAttesa = cantieri.filter(c => c.fase === "misure" && getVaniAttivi(c).some(v => Object.keys(v.misure || {}).length < 4));
+            const preventiviDaFare = cantieri.filter(c => c.fase === "preventivo");
+            const taskUrgenti = tasks.filter(t => !t.done && t.priority === "alta");
+            const nextEvent = todayEvents[0];
+            let banner = null;
+            if (urgenti.length > 0) { const c=urgenti[0]; banner = { color:T.red, bg:"rgba(255,59,48,0.07)", border:"rgba(255,59,48,0.18)", tag:"⚠️ URGENTE", title:c.alert, sub:`${c.code} · ${c.cliente}`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
+            else if (nextEvent) { banner = { color:nextEvent.color||T.acc, bg:`${nextEvent.color||T.acc}10`, border:`${nextEvent.color||T.acc}25`, tag:`📅 OGGI ${nextEvent.time?"ALLE "+nextEvent.time:""}`, title:nextEvent.text, sub:[nextEvent.persona,nextEvent.cm,nextEvent.addr].filter(Boolean).join(" · "), act:()=>{setTab("agenda");setAgendaView("giorno");setSelDate(new Date(nextEvent.date));} }; }
+            else if (misureInAttesa.length > 0) { const c=misureInAttesa[0]; const mn=getVaniAttivi(c).filter(v=>Object.keys(v.misure||{}).length<4).length; banner = { color:T.orange, bg:"rgba(255,149,0,0.07)", border:"rgba(255,149,0,0.18)", tag:"📐 MISURE IN ATTESA", title:`${c.code} · ${c.cliente}`, sub:`${mn} ${mn===1?"vano":"vani"} da misurare`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
+            else if (preventiviDaFare.length > 0) { banner = { color:"#7c3aed", bg:"rgba(124,58,237,0.07)", border:"rgba(124,58,237,0.18)", tag:"📋 PREVENTIVI", title:`${preventiviDaFare.length} ${preventiviDaFare.length===1?"preventivo da inviare":"preventivi da inviare"}`, sub:preventiviDaFare.map(c=>c.code).join(" · "), act:()=>setTab("commesse") }; }
+            else if (taskUrgenti.length > 0) { const t=taskUrgenti[0]; banner = { color:T.red, bg:"rgba(255,59,48,0.07)", border:"rgba(255,59,48,0.18)", tag:"⚡ TASK URGENTE", title:t.text, sub:t.cm?`Commessa ${t.cm}`:(t.meta||""), act:()=>{} }; }
+            else if (ferme.length > 0) { const c=ferme[0]; const gg=giorniFermaCM(c); banner = { color:"#ff6b00", bg:"rgba(255,107,0,0.07)", border:"rgba(255,107,0,0.18)", tag:`🔔 FERMA DA ${gg} GIORNI`, title:`${c.code} · ${c.cliente}`, sub:`In fase "${PIPELINE.find(p=>p.id===c.fase)?.nome||c.fase}" dal ${c.aggiornato}${ferme.length>1?" · e altre "+(ferme.length-1):""}`, act:()=>{setSelectedCM(c);setTab("commesse");} }; }
+            else { banner = { color:T.grn, bg:"rgba(52,199,89,0.07)", border:"rgba(52,199,89,0.18)", tag:"✅ TUTTO IN ORDINE", title:"Nessuna azione urgente", sub:`${cantieri.length} commesse attive`, act:null }; }
+            return (
+              <div onClick={banner.act} style={{ margin:"0 16px 12px", borderRadius:12, background:banner.bg, border:`1px solid ${banner.border}`, padding:"12px 14px", cursor:banner.act?"pointer":"default", position:"relative", overflow:"hidden" }}>
+                <div style={{ position:"absolute", left:0, top:0, bottom:0, width:3, background:banner.color, borderRadius:"12px 0 0 12px" }}/>
+                <div style={{ paddingLeft:8 }}>
+                  <div style={{ fontSize:9, fontWeight:800, color:banner.color, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4, fontFamily:FM }}>{banner.tag}</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:T.text, lineHeight:1.3, marginBottom:2 }}>{banner.title}</div>
+                  {banner.sub && <div style={{ fontSize:12, color:T.sub, lineHeight:1.4 }}>{banner.sub}</div>}
+                  {banner.act && <div style={{ marginTop:6, fontSize:11, fontWeight:700, color:banner.color }}>Tocca per aprire →</div>}
+                </div>
+              </div>
+            );
+          })(),
+
+          calendario: (() => {
+            const dateStr2 = (d) => d.toISOString().split("T")[0];
+            const todayISO = dateStr2(today);
+            const dashY = selDate.getFullYear(), dashMo = selDate.getMonth();
+            const handleCalSwipe = () => {
+              const diff = calTouchStartRef.current - calTouchEndRef.current;
+              if (Math.abs(diff) < 50) return;
+              const d = new Date(selDate); const dir = diff > 0 ? 1 : -1;
+              if (agendaView === "giorno") d.setDate(d.getDate() + dir);
+              else if (agendaView === "settimana") d.setDate(d.getDate() + dir * 7);
+              else d.setMonth(d.getMonth() + dir);
+              setSelDate(d);
+            };
+            const navPrev = () => { const d = new Date(selDate); if (agendaView === "giorno") d.setDate(d.getDate()-1); else if (agendaView === "settimana") d.setDate(d.getDate()-7); else d.setMonth(d.getMonth()-1); setSelDate(d); };
+            const navNext = () => { const d = new Date(selDate); if (agendaView === "giorno") d.setDate(d.getDate()+1); else if (agendaView === "settimana") d.setDate(d.getDate()+7); else d.setMonth(d.getMonth()+1); setSelDate(d); };
+            const getWeekDays = () => { const d = new Date(selDate); const day = d.getDay(); const mo = day === 0 ? -6 : 1 - day; return Array.from({length:7}, (_,i) => { const wd = new Date(d); wd.setDate(d.getDate() + mo + i); return wd; }); };
+            const weekDays = getWeekDays();
+            const firstDay = new Date(dashY, dashMo, 1).getDay();
+            const calOff = firstDay === 0 ? 6 : firstDay - 1;
+            const dIM = new Date(dashY, dashMo+1, 0).getDate();
+            const cells = Array.from({length: calOff + dIM}, (_,i) => i < calOff ? null : i - calOff + 1);
+            const hdrL = agendaView === "giorno" ? selDate.toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" }) : agendaView === "settimana" ? weekDays[0].getDate() + "–" +  weekDays[6].getDate() + " " + selDate.toLocaleDateString("it-IT", { month:"long", year:"numeric" }) : selDate.toLocaleDateString("it-IT", { month:"long", year:"numeric" });
+            const hours = [7,8,9,10,11,12,13,14,15,16,17,18,19];
+            const dayEvs = events.filter(e => e.date === dateStr2(selDate)).sort((a,b) => (a.time||"99").localeCompare(b.time||"99"));
+            return (<div style={{ marginBottom:12 }}>
+                <div style={S.section}><div style={S.sectionTitle}>Calendario</div><div onClick={() => { setTab("agenda"); }} style={{ padding:"4px 10px", borderRadius:6, fontSize:10, fontWeight:700, cursor:"pointer", color:T.acc }}> Apri  </div></div>
+                <div style={{ padding:"0 16px" }}>
+                  <div style={{ background:T.card, borderRadius:T.r, border:`1px solid ${T.bdr}`, overflow:"hidden" }}
+                    onTouchStart={(e) => { calTouchStartRef.current = e.targetTouches[0].clientX; }}
+                    onTouchMove={(e) => { calTouchEndRef.current = e.targetTouches[0].clientX; }}
+                    onTouchEnd={handleCalSwipe}>
+                    <div style={{ display:"flex", borderBottom:`1px solid ${T.bdr}`, background:T.bg }}>
+                      {["giorno","settimana","mese"].map(v => (<div key={v} onClick={() => setAgendaView(v)} style={{ flex:1, padding:"8px 4px", textAlign:"center", fontSize:11, fontWeight:700, background: agendaView === v ? T.acc : "transparent", color: agendaView === v ? "#fff" : T.sub, cursor:"pointer", textTransform:"capitalize", transition:"all 0.2s" }}>{v}</div>))}
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 12px", borderBottom:`1px solid ${T.bdr}` }}>
+                      <div onClick={navPrev} style={{ width:28, height:28, borderRadius:8, background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:14, color:T.sub }}>‹</div>
+                      <div onClick={() => setSelDate(new Date())} style={{ fontSize:12, fontWeight:700, color:T.text, textTransform:"capitalize", cursor:"pointer" }}>{hdrL}</div><div onClick={() => setSelDate(new Date())} style={{ fontSize:10, fontWeight:700, color:"#fff", background:T.acc, cursor:"pointer", padding:"3px 10px", borderRadius:12, marginLeft:8 }}>Oggi</div>
+                      <div onClick={navNext} style={{ width:28, height:28, borderRadius:8, background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:14, color:T.sub }}>›</div>
+                    </div>
+                    {agendaView === "giorno" && (<div style={{ maxHeight:360, overflowY:"auto" }}>
+                        {dayEvs.length === 0 ? (<div style={{ padding:"24px 16px", textAlign:"center", color:T.sub, fontSize:13 }}>Nessun evento</div>) : (<div style={{ padding:"8px 0" }}>
+                            {hours.map(h => { const hStr = String(h).padStart(2,"0"); const hEvs = dayEvs.filter(e => e.time && e.time.startsWith(hStr));
+                              return (<div key={h} style={{ display:"flex", minHeight: hEvs.length > 0 ? 48 : 28, borderBottom:`1px solid ${T.bdr}20` }}>
+                                  <div style={{ width:42, fontSize:10, fontWeight:600, color:T.sub, textAlign:"right", padding:"4px 8px 0 0" }}>{hStr}:00</div>
+                                  <div style={{ flex:1, padding:"2px 8px 2px 0" }}>
+                                    {hEvs.map(ev => (<div key={ev.id} onClick={() => setSelectedEvent(ev)} style={{ padding:"6px 10px", borderRadius:8, marginBottom:2, background:(ev.color||T.acc)+"15", borderLeft:`3px solid ${ev.color||T.acc}`, cursor:"pointer" }}>
+                                        <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{ev.text}</div>
+                                        <div style={{ fontSize:10, color:T.sub }}>{[ev.time, ev.persona, ev.cm, ev.addr].filter(Boolean).join("  ")}</div>
+                                      </div>))}
+                                  </div></div>); })}
+                          </div>)}
+                      </div>)}
+                    {agendaView === "settimana" && (<div>
+                        <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", borderBottom:`1px solid ${T.bdr}` }}>
+                          {weekDays.map((wd,i) => { const wdISO = dateStr2(wd); const isT = wdISO === todayISO; const wEvs = events.filter(e => e.date === wdISO);
+                            return (<div key={i} onClick={() => { setSelDate(new Date(wd)); setAgendaView("giorno"); }}
+                                style={{ textAlign:"center", padding:"6px 2px", cursor:"pointer", borderRight: i<6 ? `1px solid ${T.bdr}` : "none", background: isT ? T.accLt : "transparent" }}>
+                                <div style={{ fontSize:9, fontWeight:600, color: i>=5 ? T.orange : T.sub, textTransform:"uppercase" }}>{wd.toLocaleDateString("it-IT",{weekday:"short"}).slice(0,3)}</div>
+                                <div style={{ fontSize:14, fontWeight: isT ? 800 : 500, marginTop:2, width:24, height:24, borderRadius:"50%", display:"inline-flex", alignItems:"center", justifyContent:"center", background: isT ? T.acc : "transparent", color: isT ? "#fff" : T.text }}>{wd.getDate()}</div>
+                                {wEvs.length > 0 && <div style={{ display:"flex", justifyContent:"center", gap:2, marginTop:3 }}>{wEvs.slice(0,3).map((ev,j) => <div key={j} style={{ width:5, height:5, borderRadius:"50%", background:ev.color||T.acc }}/>)}</div>}
+                              </div>); })}
+                        </div>
+                        <div style={{ maxHeight:200, overflowY:"auto", padding:"6px 0" }}>
+                          {weekDays.map(wd => { const wdISO = dateStr2(wd); const wEvs = events.filter(e => e.date === wdISO).sort((a,b) => (a.time||"99").localeCompare(b.time||"99"));
+                            if (wEvs.length === 0) return null;
+                            return wEvs.map(ev => (<div key={ev.id} onClick={() => { setSelDate(new Date(wd)); setAgendaView("giorno"); }}
+                                style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 12px", cursor:"pointer", borderBottom:`1px solid ${T.bdr}20` }}>
+                                <div style={{ width:4, height:24, borderRadius:2, background:ev.color||T.acc, flexShrink:0 }}/>
+                                <div style={{ flex:1, minWidth:0 }}><div style={{ fontSize:11, fontWeight:700, color:T.text, overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis" }}>{ev.text}</div>
+                                  <div style={{ fontSize:10, color:T.sub }}>{wd.toLocaleDateString("it-IT",{weekday:"short",day:"numeric"}).slice(0,6)} {ev.time ? " "+ev.time : ""}</div></div>
+                              </div>)); })}
+                        </div></div>)}
+                    {agendaView === "mese" && (<div>
+                        <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", borderBottom:`1px solid ${T.bdr}` }}>
+                          {["Lun","Mar","Mer","Gio","Ven","Sab","Dom"].map((d,i) => (<div key={i} style={{ textAlign:"center", fontSize:9, fontWeight:700, color: i>=5 ? T.orange : T.sub, padding:"5px 2px", borderRight: i<6 ? `1px solid ${T.bdr}` : "none" }}>{d}</div>))}
+                        </div>
+                        <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)" }}>
+                          {cells.map((day,i) => {
+                            if (!day) return <div key={i} style={{ borderRight:`1px solid ${T.bdr}`, borderBottom:`1px solid ${T.bdr}`, minHeight:44 }}/>;
+                            const iso = dashY + "-" + String(dashMo+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
+                            const isT = iso === todayISO; const evs = events.filter(e => e.date === iso); const col = i % 7; const isW = col >= 5;
+                            return (<div key={i} onClick={() => { setSelDate(new Date(iso+"T12:00:00")); setAgendaView("giorno"); }}
+                                style={{ minHeight:44, padding:"3px 2px", borderRight: col<6 ? `1px solid ${T.bdr}` : "none", borderBottom:`1px solid ${T.bdr}`, background: isW ? T.bg+"80" : T.card, cursor:"pointer" }}>
+                                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                                  <div style={{ width:20, height:20, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight: isT ? 800 : 400, background: isT ? T.acc : "transparent", color: isT ? "#fff" : isW ? T.orange : T.text }}>{day}</div>
+                                  {evs.length > 0 && <div style={{ fontSize:8, fontWeight:700, color:"#fff", background:evs[0].color||T.acc, borderRadius:8, padding:"1px 4px" }}>{evs.length}</div>}
+                                </div>
+                                {evs.slice(0,1).map(ev => (<div key={ev.id} style={{ fontSize:8, fontWeight:600, padding:"1px 2px", borderRadius:2, marginTop:1, background:(ev.color||T.acc)+"20", borderLeft:`2px solid ${ev.color||T.acc}`, overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis", color:ev.color||T.acc }}>{ev.time?.slice(0,5)} {ev.text}</div>))}
+                              </div>); })}
+                        </div></div>)}
+                  </div></div></div>);
+          })(),
+
+          email: (() => {
+            const emailsOnly = msgs.filter(m => m.canale === "email");
+            const unreadEmails = emailsOnly.filter(m => !m.read).length;
+            return (
+              <div style={{ marginBottom:12 }}>
+                <div style={S.section}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <div style={S.sectionTitle}>Email</div>
+                    {unreadEmails>0 && <div style={{ ...S.badge(T.redLt, T.red), fontSize:10 }}>{unreadEmails}</div>}
+                  </div>
+                  <button style={S.sectionBtn} onClick={() => { setMsgFilter("email"); setTab("messaggi"); }}>Vedi tutte</button>
+                </div>
+                <div style={{ padding:"0 16px" }}>
+                  <div style={{ background:T.card, borderRadius:T.r, border:`1px solid ${T.bdr}`, overflow:"hidden" }}>
+                    {emailsOnly.length===0
+                      ? <div style={{ padding:"16px", textAlign:"center", fontSize:12, color:T.sub }}>Nessuna email</div>
+                      : emailsOnly.slice(0,3).map((m,i) => (
+                        <div key={m.id} onClick={() => { setMsgs(ms => ms.map(x => x.id===m.id?{...x,read:true}:x)); setSelectedMsg(m); }}
+                          style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"11px 14px", borderBottom:i<Math.min(emailsOnly.length,3)-1?`1px solid ${T.bg}`:"none", cursor:"pointer", background:m.read?"transparent":T.acc+"05" }}>
+                          <div style={{ width:8, height:8, borderRadius:"50%", background:m.read?"transparent":T.acc, flexShrink:0, marginTop:5 }}/>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ display:"flex", justifyContent:"space-between", gap:8 }}>
+                              <div style={{ fontSize:13, fontWeight:m.read?500:700, color:T.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.from}</div>
+                              <div style={{ fontSize:10, color:T.sub, flexShrink:0 }}>{m.time}</div>
+                            </div>
+                            <div style={{ fontSize:12, color:T.sub, marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.preview}</div>
+                            {m.cm && <span style={{ ...S.badge(T.accLt, T.acc), marginTop:3, display:"inline-block" }}>{m.cm}</span>}
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              </div>
+            );
+          })(),
+
+          commesse: (() => {
+            const fasi = ["tutte", ...PIPELINE.filter(p=>p.attiva).map(p=>p.id)];
+            const faseSel = fasi[cmFaseIdx];
+            const cmFiltrate = faseSel === "tutte" ? cantieri : cantieri.filter(c => c.fase === faseSel);
+            let swCmX = 0;
+            const onSwCmStart = (e) => { swCmX = e.touches[0].clientX; };
+            const onSwCmEnd = (e) => {
+              const dx = e.changedTouches[0].clientX - swCmX;
+              if (Math.abs(dx) > 40) setCmFaseIdx(i => Math.max(0, Math.min(fasi.length-1, i+(dx<0?1:-1))));
+            };
+            const oggi = new Date().toISOString().split("T")[0];
+            return (
+              <div>
+                <div style={S.section}>
+                  <div style={S.sectionTitle}>📁 Commesse <span style={{ fontSize:11, color:T.sub, fontWeight:500 }}>{cmFiltrate.length}</span></div>
+                  <button style={S.sectionBtn} onClick={() => setTab("commesse")}>Vedi tutte</button>
+                </div>
+                {/* Filtro fasi swipeable */}
+                <div style={{ display:"flex", gap:5, padding:"0 16px 10px", overflowX:"auto" }} onTouchStart={onSwCmStart} onTouchEnd={onSwCmEnd}>
+                  {fasi.map((f,i) => {
+                    const p = PIPELINE.find(x=>x.id===f);
+                    const n = f==="tutte" ? cantieri.length : cantieri.filter(c=>c.fase===f).length;
+                    return (
+                      <div key={f} onClick={() => setCmFaseIdx(i)} style={{
+                        padding:"5px 10px", borderRadius:20, fontSize:11, fontWeight:700,
+                        cursor:"pointer", flexShrink:0, whiteSpace:"nowrap",
+                        background: cmFaseIdx===i ? (p?.color||T.acc) : T.card,
+                        color: cmFaseIdx===i ? "#fff" : T.sub,
+                        border: `1px solid ${cmFaseIdx===i ? (p?.color||T.acc) : T.bdr}`,
+                      }}>
+                        {p?.ico||"📁"} {p?.nome||"Tutte"} {n>0&&<span style={{fontWeight:800}}>{n}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Lista commesse */}
+                <div style={{ padding:"0 16px" }} onTouchStart={onSwCmStart} onTouchEnd={onSwCmEnd}>
+                  {cmFiltrate.length === 0 ? (
+                    <div style={{ textAlign:"center", padding:"20px", color:T.sub, fontSize:12 }}>Nessuna commessa in questa fase</div>
+                  ) : cmFiltrate.map(c => {
+                    const p = PIPELINE.find(x=>x.id===c.fase);
+                    const vaniA = getVaniAttivi(c);
+                    const vaniMis = vaniA.filter(v => Object.values(v.misure||{}).filter(x=>(x as number)>0).length >= 6).length;
+                    const prog = vaniA.length > 0 ? Math.round(vaniMis/vaniA.length*100) : 0;
+                    const faseIdx = PIPELINE.findIndex(x=>x.id===c.fase);
+                    const progFase = faseIdx >= 0 ? Math.round((faseIdx+1)/PIPELINE.length*100) : 0;
+                    const gg = giorniFermaCM(c);
+                    const isScaduta = c.scadenza && c.scadenza < oggi;
+                    const isFerma = gg >= sogliaDays && c.fase !== "chiusura";
+                    return (
+                      <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); }} style={{
+                        ...S.card, marginBottom:8, padding:"11px 13px", cursor:"pointer",
+                        borderLeft: `3px solid ${isFerma ? T.red : isScaduta ? T.orange : p?.color||T.acc}`,
+                      }}>
+                        <div style={{ display:"flex", alignItems:"flex-start", gap:8 }}>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                              <span style={{ fontSize:11, color:T.sub, fontFamily:FM }}>{c.code}</span>
+                              <span style={{ fontSize:14, fontWeight:700, color:T.text }}>{c.cliente}</span>
+                              {isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.red, background:T.redLt, borderRadius:8, padding:"1px 6px" }}>FERMA {gg}gg</span>}
+                              {isScaduta && !isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.orange, background:T.orangeLt, borderRadius:8, padding:"1px 6px" }}>SCADUTA</span>}
+                            </div>
+                            <div style={{ fontSize:11, color:T.sub, marginTop:2 }}>{c.indirizzo||"—"}</div>
+                            {/* Badge fase + scadenza */}
+                            <div style={{ display:"flex", gap:5, marginTop:5, flexWrap:"wrap", alignItems:"center" }}>
+                              <span style={{ ...S.badge(p?.color+"18"||T.accLt, p?.color||T.acc), fontSize:10 }}>{p?.ico} {p?.nome||c.fase}</span>
+                              {c.scadenza && <span style={{ fontSize:10, color: isScaduta ? T.red : T.sub }}>📅 {c.scadenza}</span>}
+                              {c.importo && <span style={{ fontSize:10, color:T.grn, fontWeight:700 }}>€{c.importo}</span>}
+                            </div>
+                          </div>
+                          <span style={{ color:T.sub, fontSize:16, flexShrink:0 }}>›</span>
+                        </div>
+                        {/* Barra avanzamento fase */}
+                        <div style={{ marginTop:8 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
+                            <span style={{ fontSize:10, color:T.sub }}>Avanzamento pipeline</span>
+                            <span style={{ fontSize:10, fontWeight:700, color: isFerma ? T.red : p?.color||T.acc }}>{progFase}%</span>
+                          </div>
+                          <div style={{ height:4, borderRadius:2, background:T.bg, overflow:"hidden" }}>
+                            <div style={{ height:"100%", width:`${progFase}%`, background: isFerma ? T.red : p?.color||T.acc, borderRadius:2, transition:"width 0.3s" }}/>
+                          </div>
+                          {vaniA.length > 0 && (
+                            <div style={{ fontSize:10, color:T.sub, marginTop:4 }}>
+                              🪟 {vaniMis}/{vaniA.length} vani misurati
+                              {prog === 100 && <span style={{ color:T.grn, fontWeight:700 }}> ✅ Completo</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })(),
+        };
+
+        const LABELS = { banner:"🔔 Avviso", urgenti:"⚠️ Urgenti", calendario:"📅 Calendario", email:"📧 Email", commesse:"📁 Commesse" };
+
+        // Widget urgenti: centro allerta multi-categoria con swipe
+        const urgentiCM = cantieri.filter(c => giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura");
+        const todayEventsUrgenti = events.filter(e => e.date === new Date().toISOString().split("T")[0]).sort((a,b) => (a.time||"99").localeCompare(b.time||"99"));
+        const prevInAttesa = cantieri.filter(c => c.fase === "preventivo" && giorniFermaCM(c) > 5);
+        const vaniBloccatiAll = cantieri.flatMap(c => {
+          const r = c.rilievi?.[c.rilievi.length-1];
+          return (r?.vani||[]).filter(v => v.note?.startsWith("🔴 BLOCCATO")).map(v => ({ ...v, cm: c }));
+        });
+        const vaniIncompleti = cantieri.flatMap(c => {
+          const r = c.rilievi?.[c.rilievi.length-1];
+          return (r?.vani||[]).filter(v => {
+            const n = Object.values(v.misure||{}).filter(x=>(x as number)>0).length;
+            return n > 0 && n < 6 && !v.note?.startsWith("🔴 BLOCCATO");
+          }).map(v => ({ ...v, cm: c }));
+        });
+
+        const allertaCategorie = [
+          { id: "ferme", ico: "⚠️", label: "Ferme", count: urgentiCM.length, color: T.red },
+          { id: "oggi", ico: "📅", label: "Oggi", count: todayEventsUrgenti.length, color: T.blue },
+          { id: "prev", ico: "💰", label: "Preventivi", count: prevInAttesa.length, color: T.orange },
+          { id: "vani", ico: "🪟", label: "Vani", count: vaniBloccatiAll.length + vaniIncompleti.length, color: T.purple },
+        ].filter(c => c.count > 0);
+
+        const totalAllerte = allertaCategorie.reduce((s,c) => s+c.count, 0);
+
+        sections["urgenti"] = totalAllerte > 0 ? (() => {
+          const cat = allertaCategorie[Math.min(catIdx, allertaCategorie.length-1)];
+          let swX = 0;
+          const onSwipeStart = (e) => { swX = e.touches[0].clientX; };
+          const onSwipeEnd = (e) => {
+            const dx = e.changedTouches[0].clientX - swX;
+            if (Math.abs(dx) > 40) setCatIdx(i => Math.max(0, Math.min(allertaCategorie.length-1, i + (dx<0?1:-1))));
+          };
+          return (
+            <div style={{ padding: "0 16px" }}>
+              {/* Header con tab categorie */}
+              <div style={S.section}>
+                <div style={S.sectionTitle}>⚡ Allerte <span style={{ fontSize:11, fontWeight:700, color:"#fff", background:T.red, borderRadius:10, padding:"1px 7px", marginLeft:4 }}>{totalAllerte}</span></div>
+              </div>
+              {/* Tab categorie */}
+              <div style={{ display:"flex", gap:6, marginBottom:10, overflowX:"auto" }}>
+                {allertaCategorie.map((c,i) => (
+                  <div key={c.id} onClick={() => setCatIdx(i)} style={{
+                    padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0,
+                    background: catIdx===i ? c.color : T.card,
+                    color: catIdx===i ? "#fff" : T.sub,
+                    border: `1px solid ${catIdx===i ? c.color : T.bdr}`,
+                  }}>
+                    {c.ico} {c.label} <span style={{ fontWeight:800 }}>{c.count}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Contenuto categoria con swipe */}
+              <div onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd}>
+                {cat?.id === "ferme" && urgentiCM.map(c => (
+                  <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); }} style={{
+                    padding:"11px 13px", borderRadius:10, background:"rgba(255,59,48,0.07)",
+                    border:"1px solid rgba(255,59,48,0.15)", borderLeft:`3px solid ${T.red}`,
+                    cursor:"pointer", marginBottom:6, display:"flex", alignItems:"center", gap:10
+                  }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:9, fontWeight:800, color:T.red, letterSpacing:1 }}>⚠ FERMA DA {giorniFermaCM(c)} GIORNI</div>
+                      <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{c.cliente}</div>
+                      <div style={{ fontSize:11, color:T.sub }}>{c.code} · {c.fase} · {c.indirizzo||"—"}</div>
+                    </div>
+                    <span style={{ color:T.sub, fontSize:16 }}>›</span>
+                  </div>
+                ))}
+                {cat?.id === "oggi" && todayEventsUrgenti.map(ev => (
+                  <div key={ev.id} onClick={() => { setTab("agenda"); setAgendaView("giorno"); setSelDate(new Date()); }} style={{
+                    padding:"11px 13px", borderRadius:10, background:`${ev.color||T.blue}10`,
+                    border:`1px solid ${ev.color||T.blue}25`, borderLeft:`3px solid ${ev.color||T.blue}`,
+                    cursor:"pointer", marginBottom:6, display:"flex", alignItems:"center", gap:10
+                  }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:9, fontWeight:800, color:ev.color||T.blue, letterSpacing:1 }}>📅 OGGI {ev.time||""}</div>
+                      <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{ev.text}</div>
+                      <div style={{ fontSize:11, color:T.sub }}>{[ev.persona, ev.addr, ev.cm].filter(Boolean).join(" · ")}</div>
+                    </div>
+                    {ev.addr && <div onClick={e=>{e.stopPropagation();window.open("https://maps.google.com/?q="+encodeURIComponent(ev.addr));}} style={{ padding:"5px 8px", borderRadius:7, background:T.blueLt, color:T.blue, fontSize:10, fontWeight:700, flexShrink:0 }}>🗝º</div>}
+                  </div>
+                ))}
+                {cat?.id === "prev" && prevInAttesa.map(c => (
+                  <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); }} style={{
+                    padding:"11px 13px", borderRadius:10, background:"rgba(255,149,0,0.07)",
+                    border:"1px solid rgba(255,149,0,0.18)", borderLeft:`3px solid ${T.orange}`,
+                    cursor:"pointer", marginBottom:6, display:"flex", alignItems:"center", gap:10
+                  }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:9, fontWeight:800, color:T.orange, letterSpacing:1 }}>💰 PREVENTIVO IN ATTESA {giorniFermaCM(c)}gg</div>
+                      <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{c.cliente}</div>
+                      <div style={{ fontSize:11, color:T.sub }}>{c.code} · {c.sistema||"—"}</div>
+                    </div>
+                    <span style={{ color:T.sub, fontSize:16 }}>›</span>
+                  </div>
+                ))}
+                {cat?.id === "vani" && [
+                  ...vaniBloccatiAll.map(v => ({...v, tipo_alert:"bloccato"})),
+                  ...vaniIncompleti.map(v => ({...v, tipo_alert:"incompleto"}))
+                ].map((v,i) => (
+                  <div key={i} onClick={() => { setSelectedCM(v.cm); setTab("commesse"); }} style={{
+                    padding:"11px 13px", borderRadius:10,
+                    background: v.tipo_alert==="bloccato" ? "rgba(255,59,48,0.07)" : "rgba(255,149,0,0.07)",
+                    border: `1px solid ${v.tipo_alert==="bloccato" ? "rgba(255,59,48,0.18)" : "rgba(255,149,0,0.18)"}`,
+                    borderLeft: `3px solid ${v.tipo_alert==="bloccato" ? T.red : T.orange}`,
+                    cursor:"pointer", marginBottom:6, display:"flex", alignItems:"center", gap:10
+                  }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:9, fontWeight:800, color: v.tipo_alert==="bloccato"?T.red:T.orange, letterSpacing:1 }}>
+                        {v.tipo_alert==="bloccato" ? "🔴 VANO BLOCCATO" : "⚠ MISURE INCOMPLETE"}
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:700, marginTop:2 }}>{v.nome} — {v.cm.cliente}</div>
+                      <div style={{ fontSize:11, color:T.sub }}>{v.cm.code} · {v.tipo_alert==="bloccato" ? (v.note||"").replace("🔴 BLOCCATO: ","") : `${Object.values(v.misure||{}).filter(x=>(x as number)>0).length}/6 misure`}</div>
+                    </div>
+                    <span style={{ color:T.sub, fontSize:16 }}>›</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })() : null;
+
+        return drag.order.map((id) => {
+          if (!sections[id]) return null;
+          const isDrag = drag.dragging === id;
+          const isOver = drag.over === id;
+          return (
+            <div key={id}
+              draggable={homeEditMode}
+              onDragStart={() => { if(homeEditMode) drag.start(id); }}
+              onDragOver={e => { e.preventDefault(); if(homeEditMode) drag.onOver(id); }}
+              onDrop={e => { e.preventDefault(); if(homeEditMode) drag.drop(id); }}
+              onDragEnd={() => { if(homeEditMode) drag.end(); }}
+              style={{ opacity: isDrag ? 0.4 : 1, transition:"opacity 0.15s",
+                outline: isOver ? `2px dashed ${T.acc}` : "none",
+                borderRadius: 12, position:"relative" }}>
+              {homeEditMode && (
+                <div style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", zIndex:10, display:"flex", alignItems:"center", gap:6,
+                  background:T.card, border:`1px solid ${T.bdr}`, borderRadius:8, padding:"4px 10px", boxShadow:"0 1px 6px rgba(0,0,0,0.08)", pointerEvents:"none" }}>
+                  <span style={{ fontSize:14, color:T.sub }}>☰</span>
+                  <span style={{ fontSize:11, fontWeight:700, color:T.sub }}>{LABELS[id]}</span>
+                </div>
+              )}
+              <div style={{ filter: homeEditMode ? "brightness(0.97)" : "none", transition:"filter 0.15s" }}>
+                {sections[id]}
+              </div>
+            </div>
+          );
+        });
+      })()}
+    </div>
+  );
+// =======================================================
+// MASTRO ERP v2 — PARTE 2/5
+// Righe 1281-2638: renderCMCard (con AFASE+euro+scadenza+borderLeft),
+//                 renderCommesse, renderCMDetail (wizard 4-step + 3 tab
+//                 sopralluoghi/misure/info + cronologia visite),
+//                 renderRiepilogo, renderFasePanel
+// =======================================================
+  /* == COMMESSA CARD == */
+  const renderCMCard = (c, inGrid) => {
+    const fase = PIPELINE.find(p => p.id === c.fase);
+    const progress = ((faseIndex(c.fase) + 1) / PIPELINE.length) * 100;
+    const az = AFASE[c.fase] || AFASE["sopralluogo"];
+    const TODAY_ISO = new Date().toISOString().split("T")[0];
+    const isScad = c.scadenza && c.scadenza < TODAY_ISO;
+    const isUrgente = (giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura") || isScad;
+    // Conta vani misurati da visite
+    const vaniMisurati = c.vaniList?.length > 0
+      ? [...new Set((c.visite || []).flatMap(v => v.vaniMisurati))].length
+      : null;
+    return (
+      <div key={c.id} style={{
+        ...S.card,
+        margin: inGrid ? "0" : "0 16px 8px",
+        borderLeft: `3px solid ${isUrgente ? T.red : progress > 50 ? T.grn : T.blue}`
+      }} onClick={() => { setSelectedCM(c); setTab("commesse"); }}>
+        <div style={S.cardInner}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.sub, fontFamily: FM }}>{c.code}</span>
+                <span style={{ fontSize: 15, fontWeight: 600 }}>{c.cliente}</span>
+              </div>
+              <div style={{ fontSize: 12, color: T.sub, marginTop: 3 }}>
+                {c.indirizzo}
+                {vaniMisurati !== null
+                  ? ` · ${vaniMisurati}/${c.vaniList.length} vani rilevati`
+                  : ` · ${(c.rilievi||[]).length} rilievi`}
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+              {isUrgente && <span style={{ ...S.badge(T.redLt, T.red), fontSize: 9 }}>FERMA</span>}
+              {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>🔧</span>}
+              <span style={S.badge(fase?.color + "18", fase?.color)}>{fase?.nome}</span>
+            </div>
+          </div>
+          {c.alert && <div style={{ ...S.badge(c.alert.includes("Nessun") ? T.orangeLt : T.redLt, c.alert.includes("Nessun") ? T.orange : T.red), marginTop: 6 }}>{c.alert}</div>}
+          <div style={{ height: 3, background: T.bdr, borderRadius: 2, marginTop: 8 }}>
+            <div style={{ height: "100%", borderRadius: 2, background: isUrgente ? T.red : fase?.color, width: `${progress}%`, transition: "width 0.3s" }} />
+          </div>
+          {/* Box azione suggerita per fase */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "7px 10px", borderRadius: 7, marginTop: 8,
+            background: isUrgente ? T.redLt : az.c + "12",
+            border: `1px solid ${isUrgente ? T.red + "30" : az.c + "30"}`
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 14 }}>{isUrgente ? "🔴" : az.i}</span>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: isUrgente ? T.red : az.c }}>
+                  {isUrgente ? "Commessa bloccata" : az.t}
+                </div>
+                <div style={{ fontSize: 10, color: T.sub, marginTop: 1 }}>
+                  {Math.round(progress)}%
+                  {c.euro ? ` · €${c.euro.toLocaleString("it-IT")}` : ""}
+                  {c.scadenza ? <span style={{ color: isScad ? T.red : T.sub }}>
+                    {` · scad. ${new Date(c.scadenza + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" })}`}
+                  </span> : null}
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: "5px 10px", borderRadius: 6, background: isUrgente ? T.red : az.c, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
+              {isUrgente ? "Sblocca" : "→"}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /* == COMMESSE TAB == */
+  // ============================================================
+  // RENDER LISTA RILIEVI (livello intermedio: commessa → rilievi)
+  // ============================================================
+  const renderRilieviList = () => {
+    const c = selectedCM;
+    const rilievi = c.rilievi || [];
+
+    const salvaRilievo = () => {
+      const n = rilievi.length + 1;
+      const nr = {
+        id: Date.now(), n,
+        data: nuovoRilData.data || new Date().toISOString().split("T")[0],
+        ora: nuovoRilData.ora || "",
+        rilevatore: nuovoRilData.rilevatore || "",
+        tipo: nuovoRilTipo,
+        motivoModifica: nuovoRilData.motivoModifica || "",
+        note: nuovoRilData.note || "",
+        stato: "nuovo",
+        vani: [],
+      };
+      const updCM = { ...c, rilievi: [...rilievi, nr], aggiornato: "Oggi" };
+      setCantieri(cs => cs.map(x => x.id === c.id ? updCM : x));
+      setSelectedCM(updCM);
+      setShowNuovoRilievo(false);
+      setNuovoRilData({ data: "", ora: "", rilevatore: "", note: "", motivoModifica: "" });
+      setNuovoRilTipo("rilievo");
+      setSelectedRilievo(nr);
+    };
+
+    // == WIZARD NUOVO RILIEVO ==
+    if (showNuovoRilievo) return (
+      <div style={{ paddingBottom: 80 }}>
+        <div style={S.header}>
+          <div onClick={() => setShowNuovoRilievo(false)} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
+          <div style={{ flex: 1 }}>
+            <div style={S.headerTitle}>Nuovo Rilievo</div>
+            <div style={S.headerSub}>{c.code} · {c.cliente} {c.cognome}</div>
+          </div>
+        </div>
+        <div style={{ padding: 16 }}>
+          {/* Tipo */}
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Tipo di visita</div>
+          {[
+            { k: "rilievo",    ico: "📐", l: "Rilievo misure",    d: "Misuri i vani del cantiere" },
+            { k: "definitiva", ico: "✅", l: "Misure definitive", d: "Conferma finale — si va in produzione" },
+            { k: "modifica",   ico: "🔧", l: "Modifica",          d: "Cliente cambia configurazione o aggiunge vani" },
+          ].map(t => (
+            <div key={t.k} onClick={() => setNuovoRilTipo(t.k)}
+              style={{ ...S.card, padding: "12px 14px", marginBottom: 8, cursor: "pointer",
+                border: `1.5px solid ${nuovoRilTipo === t.k ? T.acc : T.bdr}`,
+                background: nuovoRilTipo === t.k ? T.accLt : T.card,
+                display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ fontSize: 22 }}>{t.ico}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: nuovoRilTipo === t.k ? T.acc : T.text }}>{t.l}</div>
+                <div style={{ fontSize: 11, color: T.sub }}>{t.d}</div>
+              </div>
+              {nuovoRilTipo === t.k && <div style={{ width: 18, height: 18, borderRadius: "50%", background: T.acc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11 }}>✓</div>}
+            </div>
+          ))}
+          {nuovoRilTipo === "modifica" && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>MOTIVO MODIFICA</div>
+              <input style={S.input} placeholder="Es: cliente cambia 3 balconi in finestre..." value={nuovoRilData.motivoModifica} onChange={e => setNuovoRilData(d => ({...d, motivoModifica: e.target.value}))} />
+            </div>
+          )}
+          {/* Dati */}
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, marginBottom: 8, marginTop: 16, textTransform: "uppercase", letterSpacing: 0.5 }}>Data e rilevatore</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>DATA</div>
+              <input style={S.input} type="date" value={nuovoRilData.data} onChange={e => setNuovoRilData(d => ({...d, data: e.target.value}))} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>ORA</div>
+              <input style={S.input} type="time" value={nuovoRilData.ora} onChange={e => setNuovoRilData(d => ({...d, ora: e.target.value}))} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>RILEVATORE</div>
+            <input style={S.input} placeholder="Chi esegue il rilievo..." value={nuovoRilData.rilevatore} onChange={e => setNuovoRilData(d => ({...d, rilevatore: e.target.value}))} />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>NOTE</div>
+            <textarea style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="Note preliminari..." value={nuovoRilData.note} onChange={e => setNuovoRilData(d => ({...d, note: e.target.value}))} />
+          </div>
+          <button onClick={salvaRilievo} style={{ ...S.btn, width: "100%", marginTop: 20, background: T.grn }}>✓ Crea Rilievo</button>
+        </div>
+      </div>
+    );
+
+    // == REPORT DIFFERENZE ==
+    const renderReportDiff = () => {
+      if (rilievi.length < 2) return (
+        <div style={{ padding: 20, textAlign: "center", color: T.sub, fontSize: 12 }}>
+          Servono almeno 2 rilievi per generare il report differenze.
+        </div>
+      );
+      return (
+        <div style={{ padding: "0 16px 80px" }}>
+          {rilievi.slice(1).map((r, idx) => {
+            const prev = rilievi[idx];
+            const prevVani = prev?.vani || [];
+            const currVani = r.vani || [];
+            const aggiunti = currVani.filter(v => !prevVani.some(p => p.nome.replace(" ❌","") === v.nome.replace(" ❌","")));
+            const rimossi  = prevVani.filter(p => !currVani.some(v => v.nome.replace(" ❌","") === p.nome.replace(" ❌","")));
+            const modificati = currVani.filter(v => {
+              const match = prevVani.find(p => p.nome.replace(" ❌","") === v.nome.replace(" ❌",""));
+              if (!match) return false;
+              return JSON.stringify(v.misure) !== JSON.stringify(match.misure) ||
+                     v.sistema !== match.sistema || v.tipo !== match.tipo;
+            });
+            return (
+              <div key={r.id} style={{ ...S.card, marginBottom: 12 }}>
+                <div style={{ padding: "11px 14px", borderBottom: `1px solid ${T.bdr}`, display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ fontSize: 20 }}>🔀</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>R{prev.n} → R{r.n}</div>
+                    <div style={{ fontSize: 11, color: T.sub }}>
+                      {new Date(prev.data + "T12:00:00").toLocaleDateString("it-IT", { day:"numeric", month:"short" })} → {new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { day:"numeric", month:"short" })}
+                    </div>
+                  </div>
+                  {aggiunti.length + rimossi.length + modificati.length === 0
+                    ? <span style={S.badge(T.grnLt, T.grn)}>Nessuna differenza</span>
+                    : <span style={S.badge(T.orangeLt, T.orange)}>{aggiunti.length + rimossi.length + modificati.length} diff</span>}
+                </div>
+                <div style={{ padding: "10px 14px" }}>
+                  {aggiunti.length > 0 && (
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.grn, marginBottom: 4 }}>+ AGGIUNTI</div>
+                      {aggiunti.map(v => <span key={v.id} style={{ ...S.badge(T.grnLt, T.grn), marginRight: 4, marginBottom: 4, display: "inline-block" }}>+ {v.nome.replace(" ❌","")}</span>)}
+                    </div>
+                  )}
+                  {rimossi.length > 0 && (
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.red, marginBottom: 4 }}>- RIMOSSI</div>
+                      {rimossi.map(v => <span key={v.id} style={{ ...S.badge(T.redLt, T.red), marginRight: 4, marginBottom: 4, display: "inline-block" }}>- {v.nome.replace(" ❌","")}</span>)}
+                    </div>
+                  )}
+                  {modificati.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.orange, marginBottom: 6 }}>~ MODIFICATI</div>
+                      {modificati.map(v => {
+                        const match = prevVani.find(p => p.nome.replace(" ❌","") === v.nome.replace(" ❌",""));
+                        const diffMisure = Object.entries(v.misure || {}).filter(([k, val]) => match?.misure?.[k] !== val);
+                        return (
+                          <div key={v.id} style={{ marginBottom: 8, padding: "8px 10px", background: T.orangeLt, borderRadius: 8, border: `1px solid ${T.orange}30` }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: T.orange, marginBottom: 4 }}>~ {v.nome.replace(" ❌","")}</div>
+                            {v.sistema !== match?.sistema && <div style={{ fontSize: 11, color: T.text, marginBottom: 2 }}>Sistema: <strong>{match?.sistema || "—"}</strong> → <strong>{v.sistema}</strong></div>}
+                            {v.tipo !== match?.tipo && <div style={{ fontSize: 11, color: T.text, marginBottom: 2 }}>Tipo: <strong>{match?.tipo || "—"}</strong> → <strong>{v.tipo}</strong></div>}
+                            {diffMisure.slice(0, 5).map(([k, val]) => (
+                              <div key={k} style={{ fontSize: 11, color: T.sub }}>
+                                {k}: <span style={{ color: T.red }}>{match?.misure?.[k] || 0}</span> → <span style={{ color: T.grn }}>{val as any}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {aggiunti.length + rimossi.length + modificati.length === 0 && (
+                    <div style={{ fontSize: 12, color: T.sub }}>Nessuna variazione tra i due rilievi.</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
+    // == LISTA RILIEVI ==
+    const tipoColor = { rilievo: T.blue, definitiva: T.grn, modifica: T.orange };
+    const tipoIco   = { rilievo: "📐", definitiva: "✅", modifica: "🔧" };
+    const [rilTab, setRilTab] = (window as any).__rilTab__ || [null, null];
+    // Use local state via component trick: riutilizza cmSubTab per il tab rilievi/report
+    return (
+      <div style={{ paddingBottom: 80 }}>
+        {/* Header */}
+        <div style={S.header}>
+          <div onClick={() => { setSelectedCM(null); setSelectedRilievo(null); }} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
+          <div style={{ flex: 1 }}>
+            <div style={S.headerTitle}>{c.code} · {c.cliente} {c.cognome || ""}</div>
+            <div style={S.headerSub}>{c.indirizzo}</div>
+          </div>
+          <div onClick={() => setShowNuovoRilievo(true)}
+            style={{ padding: "7px 14px", borderRadius: 9, background: T.acc, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            + Rilievo
+          </div>
+        </div>
+
+        {/* Info badges */}
+        <div style={{ padding: "8px 16px", display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <PipelineBar fase={c.fase} />
+        </div>
+        <div style={{ padding: "0 16px 8px", display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {c.sistema && <span style={S.badge(T.blueLt, T.blue)}>{c.sistema}</span>}
+          {c.tipo === "nuova" && <span style={S.badge(T.grnLt, T.grn)}>🆕 Nuova</span>}
+          {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>🔧 Riparazione</span>}
+          {c.telefono && <span onClick={() => window.open(`tel:${c.telefono}`)} style={{ ...S.badge(T.grnLt, T.grn), cursor: "pointer" }}>📞 {c.telefono}</span>}
+          {c.euro > 0 && <span style={S.badge(T.accLt, T.acc)}>€{c.euro.toLocaleString("it-IT")}</span>}
+        </div>
+
+        {/* Tab: Rilievi | Report */}
+        <div style={{ display: "flex", borderBottom: `1px solid ${T.bdr}`, margin: "0 0 4px 0" }}>
+          {["rilievi", "report"].map(t => (
+            <div key={t} onClick={() => setCmSubTab(t)}
+              style={{ flex: 1, padding: "9px 4px", textAlign: "center", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                borderBottom: `2px solid ${cmSubTab === t ? T.acc : "transparent"}`,
+                color: cmSubTab === t ? T.acc : T.sub, textTransform: "capitalize" }}>
+              {t === "rilievi" ? `📁 Rilievi (${rilievi.length})` : "📊 Report Differenze"}
+            </div>
+          ))}
+        </div>
+
+        {/* TAB REPORT */}
+        {cmSubTab === "report" && renderReportDiff()}
+
+        {/* TAB RILIEVI */}
+        {cmSubTab !== "report" && (
+          <div style={{ padding: "8px 16px" }}>
+            {rilievi.length === 0 && (
+              <div style={{ textAlign: "center", padding: "32px 16px" }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 6 }}>Nessun rilievo ancora</div>
+                <div style={{ fontSize: 12, color: T.sub, marginBottom: 20 }}>Crea il primo rilievo per iniziare a misurare i vani</div>
+                <button onClick={() => setShowNuovoRilievo(true)} style={{ ...S.btn, margin: "0 auto" }}>+ Crea primo rilievo</button>
+              </div>
+            )}
+            {[...rilievi].reverse().map((r, idx) => {
+              const vaniCount = (r.vani || []).length;
+              const vaniMisurati = (r.vani || []).filter(v => Object.values(v.misure || {}).filter(x => (x as number) > 0).length >= 6).length;
+              const colore = tipoColor[r.tipo] || T.blue;
+              const ico = tipoIco[r.tipo] || "📐";
+              const isUltimo = idx === 0;
+              return (
+                <div key={r.id} onClick={() => { setSelectedRilievo(r); setCmSubTab("sopralluoghi"); }}
+                  style={{ ...S.card, marginBottom: 10, cursor: "pointer", overflow: "hidden",
+                    border: `1.5px solid ${isUltimo ? colore + "50" : T.bdr}`,
+                    background: isUltimo ? colore + "06" : T.card }}>
+                  {/* Header rilievo */}
+                  <div style={{ padding: "13px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 10, background: colore + "15", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0, border: `1.5px solid ${colore}30` }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: colore, fontFamily: FM }}>R{r.n}</div>
+                      <div style={{ fontSize: 14 }}>{ico}</div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700 }}>
+                          {new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}
+                        </div>
+                        {isUltimo && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: colore, color: "#fff" }}>ULTIMO</span>}
+                      </div>
+                      <div style={{ fontSize: 11, color: T.sub }}>
+                        {r.ora && `🕐 ${r.ora} · `}👤 {r.rilevatore || "—"}
+                      </div>
+                      {r.motivoModifica && <div style={{ fontSize: 11, color: T.orange, marginTop: 2 }}>🔧 {r.motivoModifica}</div>}
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: colore }}>{vaniCount}</div>
+                      <div style={{ fontSize: 10, color: T.sub }}>vani</div>
+                    </div>
+                    <span style={{ transform: "rotate(180deg)", display:"inline-flex", marginLeft: 4 }}><Ico d={ICO.back} s={14} c={T.sub} /></span>
+                  </div>
+                  {/* Barra progresso vani */}
+                  {vaniCount > 0 && (
+                    <div style={{ padding: "0 14px 12px" }}>
+                      <div style={{ height: 4, background: T.bdr, borderRadius: 2, overflow: "hidden", marginBottom: 3 }}>
+                        <div style={{ height: "100%", width: `${Math.round(vaniMisurati / vaniCount * 100)}%`, background: vaniMisurati === vaniCount ? T.grn : colore, borderRadius: 2 }} />
+                      </div>
+                      <div style={{ fontSize: 10, color: T.sub }}>{vaniMisurati}/{vaniCount} vani con misure</div>
+                    </div>
+                  )}
+                  {/* Note */}
+                  {r.note && <div style={{ padding: "0 14px 10px", fontSize: 11, color: T.sub, fontStyle: "italic" }}>"{r.note}"</div>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Card compatta per vista lista
+  const renderCMCardCompact = (c) => {
+    const fase = PIPELINE.find(p => p.id === c.fase);
+    const TODAY_ISO = new Date().toISOString().split("T")[0];
+    const isScad = c.scadenza && c.scadenza < TODAY_ISO;
+    const isFerma = giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura";
+    const vaniA = getVaniAttivi(c);
+    const vaniMis = vaniA.filter(v => Object.values(v.misure||{}).filter(x=>(x as number)>0).length >= 6).length;
+    const vaniInc = vaniA.filter(v => { const n=Object.values(v.misure||{}).filter(x=>(x as number)>0).length; return n>0&&n<6; }).length;
+    const vaniBloc = vaniA.filter(v => v.note?.startsWith("🔴 BLOCCATO")).length;
+    const az = AFASE[c.fase] || AFASE["sopralluogo"];
+    const faseIdx = PIPELINE.findIndex(x => x.id === c.fase);
+    const progFase = faseIdx >= 0 ? Math.round((faseIdx+1)/PIPELINE.length*100) : 0;
+    return (
+      <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); }}
+        style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:`1px solid ${T.bdr}`,
+          borderLeft:`3px solid ${isFerma?T.red:isScad?T.orange:fase?.color||T.acc}`,
+          background: isFerma ? "rgba(255,59,48,0.03)" : T.card, cursor:"pointer" }}>
+        {/* Colonna sinistra: codice + cliente */}
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+            <span style={{ fontSize:10, color:T.sub, fontFamily:FM }}>{c.code}</span>
+            <span style={{ fontSize:14, fontWeight:700 }}>{c.cliente}</span>
+            {isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.red, background:T.redLt, borderRadius:6, padding:"1px 5px" }}>FERMA {giorniFermaCM(c)}gg</span>}
+            {isScad && !isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.orange, background:T.orangeLt, borderRadius:6, padding:"1px 5px" }}>SCAD</span>}
+          </div>
+          <div style={{ display:"flex", gap:8, marginTop:3, alignItems:"center", flexWrap:"wrap" }}>
+            <span style={{ ...S.badge(fase?.color+"18"||T.accLt, fase?.color||T.acc), fontSize:10 }}>{fase?.ico} {fase?.nome}</span>
+            {c.euro && <span style={{ fontSize:11, color:T.grn, fontWeight:700 }}>€{c.euro.toLocaleString("it-IT")}</span>}
+            {c.scadenza && <span style={{ fontSize:10, color: isScad ? T.red : T.sub }}>📅 {c.scadenza}</span>}
+          </div>
+        </div>
+        {/* Colonna destra: info mancanti */}
+        <div style={{ textAlign:"right", flexShrink:0, minWidth:80 }}>
+          {vaniA.length > 0 ? (
+            <div style={{ fontSize:11, fontWeight:600 }}>
+              {vaniBloc > 0 && <div style={{ color:T.red }}>🔴 {vaniBloc} bloccati</div>}
+              {vaniInc > 0 && <div style={{ color:T.orange }}>⚠ {vaniInc} incompleti</div>}
+              {vaniBloc===0 && vaniInc===0 && <div style={{ color:T.grn }}>✅ {vaniMis}/{vaniA.length}</div>}
+            </div>
+          ) : (
+            <div style={{ fontSize:10, color:T.sub }}>Nessun vano</div>
+          )}
+          <div style={{ marginTop:4, fontSize:10, color: isFerma?T.red:fase?.color||T.acc, fontWeight:700 }}>{progFase}%</div>
+          <div style={{ marginTop:3, height:3, width:60, background:T.bdr, borderRadius:2, marginLeft:"auto" }}>
+            <div style={{ height:"100%", width:`${progFase}%`, background:isFerma?T.red:fase?.color||T.acc, borderRadius:2 }}/>
+          </div>
+        </div>
+        <span style={{ color:T.sub, fontSize:16 }}>›</span>
+      </div>
+    );
+  };
+
+  
+  const renderCommesse = () => {
+    if (showRiepilogo && selectedCM) return renderRiepilogo();
+    if (selectedVano) return renderVanoDetail();
+
+      if (selectedRilievo) return renderCMDetail();
+    if (selectedCM) return renderRilieviList();
+    return (
+      <div style={{ paddingBottom: 80 }}>
+        <div style={S.header}>
+          <div style={{ flex: 1 }}>
+            <div style={S.headerTitle}>Commesse</div>
+            <div style={S.headerSub}>{cantieri.length} totali · {filtered.length} visibili</div>
+          </div>
+          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+            {/* Toggle vista */}
+            <div style={{ display:"flex", background:T.bg, borderRadius:8, padding:2, gap:1 }}>
+              <div onClick={() => setCmView("list")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="list"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Lista compatta">☰</div>
+              <div onClick={() => setCmView("card")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="card"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Card grandi">▦</div>
+            </div>
+            <div onClick={() => setShowModal("commessa")} style={{ width:36, height:36, borderRadius:10, background:T.acc, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:20, fontWeight:300 }}>+</div>
+          </div>
+        </div>
+
+        {/* Filtri fase */}
+        <div style={{ display:"flex", gap:6, padding:"4px 16px 10px", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
+          <div style={S.chip(filterFase === "tutte")} onClick={() => setFilterFase("tutte")}>Tutte ({cantieri.length})</div>
+          {PIPELINE.map(p => {
+            const n = cantieri.filter(c => c.fase === p.id).length;
+            return n > 0 ? <div key={p.id} style={S.chip(filterFase === p.id)} onClick={() => setFilterFase(p.id)}>{p.ico} {p.nome} ({n})</div> : null;
+          })}
+        </div>
+
+        {/* Search */}
+        <div style={{ padding:"0 16px", marginBottom:10 }}>
+          <input style={{ ...S.input, width:"100%", boxSizing:"border-box" }} placeholder="Cerca per cliente, codice, indirizzo..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
+        </div>
+
+        {/* Lista o Card */}
+        {cmView === "list" ? (
+          <div style={{ background:T.card, margin:"0 16px", borderRadius:T.r, border:`1px solid ${T.bdr}`, overflow:"hidden" }}>
+            {filtered.length === 0
+              ? <div style={{ padding:"24px", textAlign:"center", color:T.sub }}>Nessuna commessa trovata</div>
+              : filtered.map(c => renderCMCardCompact(c))
+            }
+          </div>
+        ) : (
+          <div style={isDesktop ? { display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, padding:"0 16px" } : isTablet ? { display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, padding:"0 16px" } : {}}>
+            {filtered.map(c => renderCMCard(c, isTablet || isDesktop))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /* == COMMESSA DETAIL == */
+  const renderCMDetail = () => {
+    const c = selectedCM;
+    const r = selectedRilievo; // rilievo corrente
+    const fase = PIPELINE.find(p => p.id === c.fase);
+
+    // Vani del rilievo corrente
+    const vaniList = r?.vani || [];
+    // Compatibilità wizard vecchio
+    const viste = []; // non più usato con nuova arch
+    const vaniM: number[] = [];
+    const vaniA = vaniList;
+    const tipoRil = r?.tipo || "rilievo";
+    const tipoColRil = tipoRil === "definitiva" ? T.grn : tipoRil === "modifica" ? T.orange : T.blue;
+    const tipoIcoRil = tipoRil === "definitiva" ? "✅" : tipoRil === "modifica" ? "🔧" : "📐";
+    const tipoLblRil = tipoRil === "definitiva" ? "Misure Definitive" : tipoRil === "modifica" ? "Modifica" : "Rilievo Misure";
+
+    // Calcolo avanzamento misure
+    const vaniMisurati = vaniList.filter(v => Object.values(v.misure || {}).filter(x => (x as number) > 0).length >= 6);
+    const vaniBloccati = vaniList.filter(v => v.note?.startsWith("🔴 BLOCCATO"));
+    const vaniDaFare   = vaniList.filter(v => vaniMisurati.every(m => m.id !== v.id));
+    const progVani = vaniList.length > 0 ? Math.round(vaniMisurati.length / vaniList.length * 100) : 0;
+    const tutteMis = vaniMisurati.length === vaniList.length && vaniList.length > 0;
+
+    // == Wizard helpers (legacy) ==
+    function togV(id) { setNvVani(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]); }
+    function togB(id) {
+      setNvBlocchi(b => b[id]
+        ? (()=>{ const n = {...b}; delete n[id]; return n; })()
+        : { ...b, [id]: { motivo: "", note: "" } }
+      );
+    }
+    function sbF(id, f, v) { setNvBlocchi(b => ({ ...b, [id]: { ...b[id], [f]: v } })); }
+    function salvaVisita() {
+      const vaniBloccati = Object.entries(nvBlocchi).map(([id, b]) => ({
+        vanoId: parseInt(id), motivo: b.motivo || "Altro", note: b.note || ""
+      }));
+      const stato = nvTipo === "modifica" ? "modifica" :
+        nvVani.length === vaniA.length && vaniBloccati.length === 0 ? "completo" : "parziale";
+      const nuova = {
+        id: Date.now(), n: viste.length + 1,
+        data: nvData.data || new Date().toISOString().split("T")[0],
+        ora: nvData.ora || "", rilevatore: nvData.rilevatore || "",
+        tipo: nvTipo, motivoModifica: nvMotivoModifica,
+        stato, vaniMisurati: nvVani.map(Number), vaniBloccati, note: nvNote
+      };
+      setCantieri(cs => cs.map(x => x.id === c.id ? { ...x, visite: [...(x.visite||[]), nuova] } : x));
+      setSelectedCM(prev => ({ ...prev, visite: [...(prev.visite||[]), nuova] }));
+      setNvView(false); setNvStep(1);
+      setNvData({ data: "", ora: "", rilevatore: "" });
+      setNvTipo("rilievo"); setNvMotivoModifica("");
+      setNvVani([]); setNvBlocchi({}); setNvNote("");
+    }
+
+    // == VISTA WIZARD ==
+    if (nvView) return (
+      <div style={{ paddingBottom: 80 }}>
+        {/* Header wizard */}
+        <div style={{ ...S.header }}>
+          <div onClick={() => { setNvView(false); setNvStep(1); }} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
+          <div style={{ flex: 1 }}>
+            <div style={S.headerTitle}>Nuova visita</div>
+            <div style={S.headerSub}>{c.code} · {c.cliente}</div>
+          </div>
+          <div style={{ fontSize: 11, color: T.sub }}>Step {nvStep}/5</div>
+        </div>
+        {/* Tab step */}
+        <div style={{ display: "flex", background: T.card, borderBottom: `1px solid ${T.bdr}` }}>
+          {["Tipo", "Dati", "Vani", "Blocchi", "Salva"].map((l, i) => (
+            <div key={i} onClick={() => i < nvStep && setNvStep(i+1)}
+              style={{ flex: 1, padding: "8px 4px", textAlign: "center", fontSize: 10, fontWeight: 600,
+                borderBottom: `2px solid ${nvStep===i+1 ? T.acc : "transparent"}`,
+                color: nvStep===i+1 ? T.acc : T.sub, cursor: i < nvStep ? "pointer" : "default" }}>
+              {l}
+            </div>
+          ))}
+        </div>
+        <div style={{ padding: "16px" }}>
+          {/* STEP 1 — Tipo visita */}
+          {nvStep === 1 && <>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>🏷 Tipo di visita</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 16 }}>Seleziona il tipo di sopralluogo</div>
+            {[
+              { k: "rilievo",    ico: "📐", label: "Rilievo misure",     desc: "Prima visita o misure di vani mancanti" },
+              { k: "definitiva", ico: "✅", label: "Misure definitive",  desc: "Conferma finale di tutte le misure" },
+              { k: "modifica",   ico: "🔧", label: "Modifica cantiere",  desc: "Variazione, problema o sopralluogo post-vendita" },
+            ].map(t => (
+              <div key={t.k} onClick={() => setNvTipo(t.k)}
+                style={{ ...S.card, padding: "13px 14px", marginBottom: 10, cursor: "pointer",
+                  border: `1.5px solid ${nvTipo === t.k ? T.acc : T.bdr}`,
+                  background: nvTipo === t.k ? T.accLt : T.card,
+                  display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ fontSize: 24 }}>{t.ico}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: nvTipo === t.k ? T.acc : T.text }}>{t.label}</div>
+                  <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{t.desc}</div>
+                </div>
+                <div style={{ width: 20, height: 20, borderRadius: "50%",
+                  border: `2px solid ${nvTipo === t.k ? T.acc : T.bdr}`,
+                  background: nvTipo === t.k ? T.acc : "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#fff", fontSize: 12 }}>{nvTipo === t.k ? "✓" : ""}</div>
+              </div>
+            ))}
+            {nvTipo === "modifica" && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>MOTIVO MODIFICA</div>
+                <input style={S.input} placeholder="Es: cliente ha cambiato idea su un vano, problema rilevato..." value={nvMotivoModifica} onChange={e => setNvMotivoModifica(e.target.value)} />
+              </div>
+            )}
+            <button onClick={() => setNvStep(2)} style={{ ...S.btn, marginTop: 12, width: "100%" }}>Avanti →</button>
