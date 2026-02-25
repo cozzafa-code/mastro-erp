@@ -23,8 +23,13 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Utente non autenticato → redirect al login (tranne /login e /api/*)
-  if (!user && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/api')) {
+  // Pagine pubbliche: landing (/), login, API
+  const isPublic = request.nextUrl.pathname === '/'
+    || request.nextUrl.pathname.startsWith('/login')
+    || request.nextUrl.pathname.startsWith('/api')
+
+  // Utente non autenticato su pagina protetta → redirect al login
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
