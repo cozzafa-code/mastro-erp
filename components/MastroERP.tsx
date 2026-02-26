@@ -3486,8 +3486,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         {/* == INFO VANO — fisarmoniche (solo step 0) == */}
         {vanoStep === 0 && (() => {
           const updateV = (field, val) => {
+            const updRil = selectedRilievo ? { ...selectedRilievo, vani: selectedRilievo.vani.map(vn => vn.id === v.id ? { ...vn, [field]: val } : vn) } : null;
             setCantieri(cs => cs.map(c => c.id === selectedCM?.id
-              ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, [field]: val } : vn) } : r2) } : c));
+              ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? (updRil || r2) : r2) } : c));
+            if (updRil) setSelectedRilievo(updRil);
+            setSelectedCM(prev => prev ? ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo?.id ? (updRil || r) : r) }) : prev);
             setSelectedVano(prev => ({ ...prev, [field]: val }));
           };
           const cats = ["Finestre","Balconi","Scorrevoli","Persiane","Altro"];
