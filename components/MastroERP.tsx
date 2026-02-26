@@ -3019,9 +3019,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       const fuori = diff!==null && diff>5;
       const t = v.tipo||"";
       // dimensioni fisse proporzionate al tipo
-      const isPorta = t==="PF1A"||t==="PF2A"||t==="PF3A"||t==="BLI";
+      const isPorta = t==="PF1A"||t==="PF2A"||t==="PF3A"||t==="PF4A"||t==="BLI"||t==="PF2AFISDX"||t==="PF2AFISSX";
       const isSC = t==="SC2A"||t==="SC4A"||t==="SCRDX"||t==="SCRSX"||t==="ALZDX"||t==="ALZSX"||t==="ALZSC";
-      const W = isSC ? 260 : (t==="F3A"||t==="PF3A") ? 300 : (t==="F2A"||t==="PF2A") ? 220 : 160;
+      const W = isSC ? 260 : (t==="F4A"||t==="PF4A"||t==="SC4A") ? 340 : (t==="F3A"||t==="PF3A"||t==="F2AFISDX"||t==="F2AFISSX"||t==="PF2AFISDX"||t==="PF2AFISSX") ? 300 : (t==="F2A"||t==="PF2A"||t==="PERS2A") ? 220 : 160;
       const H = isPorta ? 240 : 160;
       const BW = 6; // bordo telaio fisso
       const GX = BW+10, GY = BW+10; // inizio vetro/anta
@@ -3079,6 +3079,82 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           ...anta1(GX+tw+8, GY, tw, GH, false, true).map((e,i)=><g key={"b"+i}>{e}</g>),
           ...anta1(GX+tw*2+16, GY, tw, GH, true, false).map((e,i)=><g key={"c"+i}>{e}</g>),
         ];
+      } else if (t==="F4A"||t==="PF4A") {
+        const qw = Math.floor((GW-24)/4);
+        body = [
+          <rect key="m1" x={GX+qw} y={0} width={8} height={H} fill="white" stroke="#333" strokeWidth={2}/>,
+          <rect key="m2" x={GX+qw*2+8} y={0} width={8} height={H} fill="white" stroke="#333" strokeWidth={2}/>,
+          <rect key="m3" x={GX+qw*3+16} y={0} width={8} height={H} fill="white" stroke="#333" strokeWidth={2}/>,
+          ...anta1(GX, GY, qw, GH, false, true).map((e,i)=><g key={"a"+i}>{e}</g>),
+          ...anta1(GX+qw+8, GY, qw, GH, false, false).map((e,i)=><g key={"b"+i}>{e}</g>),
+          ...anta1(GX+qw*2+16, GY, qw, GH, false, true).map((e,i)=><g key={"c"+i}>{e}</g>),
+          ...anta1(GX+qw*3+24, GY, qw, GH, false, false).map((e,i)=><g key={"d"+i}>{e}</g>),
+        ];
+      } else if (t==="F2AFISDX"||t==="PF2AFISDX") {
+        const tw = Math.floor((GW-16)/3);
+        body = [
+          <rect key="m1" x={GX+tw} y={0} width={8} height={H} fill="white" stroke="#333" strokeWidth={2}/>,
+          <rect key="m2" x={GX+tw*2+8} y={0} width={8} height={H} fill="white" stroke="#333" strokeWidth={2}/>,
+          ...anta1(GX, GY, tw, GH, false, true).map((e,i)=><g key={"a"+i}>{e}</g>),
+          ...anta1(GX+tw+8, GY, tw, GH, false, false).map((e,i)=><g key={"b"+i}>{e}</g>),
+          <rect key="fix" x={GX+tw*2+16} y={GY} width={tw} height={GH} fill="#ddeefa"/>,
+          <rect key="fixb" x={GX+tw*2+16} y={GY} width={tw} height={GH} fill="none" stroke="#333" strokeWidth={1.2}/>,
+          <text key="fixt" x={GX+tw*2+16+tw/2} y={cy+4} textAnchor="middle" fontSize={8} fill="#888" fontFamily={F}>FISSO</text>,
+        ];
+      } else if (t==="F2AFISSX"||t==="PF2AFISSX") {
+        const tw = Math.floor((GW-16)/3);
+        body = [
+          <rect key="m1" x={GX+tw} y={0} width={8} height={H} fill="white" stroke="#333" strokeWidth={2}/>,
+          <rect key="m2" x={GX+tw*2+8} y={0} width={8} height={H} fill="white" stroke="#333" strokeWidth={2}/>,
+          <rect key="fix" x={GX} y={GY} width={tw} height={GH} fill="#ddeefa"/>,
+          <rect key="fixb" x={GX} y={GY} width={tw} height={GH} fill="none" stroke="#333" strokeWidth={1.2}/>,
+          <text key="fixt" x={GX+tw/2} y={cy+4} textAnchor="middle" fontSize={8} fill="#888" fontFamily={F}>FISSO</text>,
+          ...anta1(GX+tw+8, GY, tw, GH, false, true).map((e,i)=><g key={"a"+i}>{e}</g>),
+          ...anta1(GX+tw*2+16, GY, tw, GH, false, false).map((e,i)=><g key={"b"+i}>{e}</g>),
+        ];
+      } else if (t==="PERS1A") {
+        body = [
+          <rect key="v" x={GX} y={GY} width={GW} height={GH} fill="#e8f5e9"/>,
+          <rect key="p" x={GX} y={GY} width={GW} height={GH} fill="none" stroke="#333" strokeWidth={1.2}/>,
+          ...Array.from({length:8}).map((_,i)=><line key={"sl"+i} x1={GX} y1={GY+GH*i/8} x2={GX+GW} y2={GY+GH*i/8} stroke="#66bb6a" strokeWidth={0.6}/>),
+          <line key="t1" x1={GX} y1={GY} x2={GX+GW} y2={cy} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>,
+          <line key="t2" x1={GX} y1={GY+GH} x2={GX+GW} y2={cy} stroke="#333" strokeWidth={1} strokeDasharray="8,4"/>,
+        ];
+      } else if (t==="PERS2A") {
+        const hw = Math.floor((GW-8)/2);
+        body = [
+          <rect key="m" x={GX+hw} y={0} width={8} height={H} fill="white" stroke="#333" strokeWidth={2}/>,
+          <rect key="vl" x={GX} y={GY} width={hw} height={GH} fill="#e8f5e9"/>,
+          <rect key="vr" x={GX+hw+8} y={GY} width={GW-hw-8} height={GH} fill="#e8f5e9"/>,
+          ...Array.from({length:8}).map((_,i)=><line key={"sl"+i} x1={GX} y1={GY+GH*i/8} x2={GX+hw} y2={GY+GH*i/8} stroke="#66bb6a" strokeWidth={0.6}/>),
+          ...Array.from({length:8}).map((_,i)=><line key={"sr"+i} x1={GX+hw+8} y1={GY+GH*i/8} x2={GX+GW} y2={GY+GH*i/8} stroke="#66bb6a" strokeWidth={0.6}/>),
+          <rect key="pl" x={GX} y={GY} width={hw} height={GH} fill="none" stroke="#333" strokeWidth={1.2}/>,
+          <rect key="pr" x={GX+hw+8} y={GY} width={GW-hw-8} height={GH} fill="none" stroke="#333" strokeWidth={1.2}/>,
+        ];
+      } else if (t==="MONO") {
+        body = [
+          <rect key="v" x={GX} y={GY} width={GW} height={GH} fill="#e3f2fd"/>,
+          <rect key="p" x={GX} y={GY} width={GW} height={GH} fill="none" stroke="#333" strokeWidth={1.2}/>,
+          <rect key="cas" x={GX} y={GY-12} width={GW} height={12} fill="#fff8e1" stroke="#ca8a04" strokeWidth={0.6}/>,
+          <text key="ct" x={cx} y={GY-4} textAnchor="middle" fontSize={6} fill="#92400e" fontFamily={F} fontWeight="700">CASSONETTO</text>,
+          <rect key="tap" x={GX+GW-8} y={GY} width={8} height={GH} fill="#ffecb3" stroke="#ff8f00" strokeWidth={0.5}/>,
+          <text key="tt" x={cx} y={cy+4} textAnchor="middle" fontSize={10} fill="#666" fontFamily={F}>MONO</text>,
+        ];
+      } else if (t==="TAPP") {
+        body = [
+          <rect key="v" x={GX} y={GY} width={GW} height={GH} fill="#fff8e1"/>,
+          <rect key="p" x={GX} y={GY} width={GW} height={GH} fill="none" stroke="#333" strokeWidth={1.2}/>,
+          ...Array.from({length:12}).map((_,i)=><line key={"h"+i} x1={GX+2} y1={GY+GH*i/12} x2={GX+GW-2} y2={GY+GH*i/12} stroke="#ff8f00" strokeWidth={0.8}/>),
+          <text key="tt" x={cx} y={cy+4} textAnchor="middle" fontSize={9} fill="#e65100" fontFamily={F} fontWeight="700">TAPPARELLA</text>,
+        ];
+      } else if (t==="ZANZ") {
+        body = [
+          <rect key="v" x={GX} y={GY} width={GW} height={GH} fill="#f3e5f5"/>,
+          <rect key="p" x={GX} y={GY} width={GW} height={GH} fill="none" stroke="#333" strokeWidth={1.2}/>,
+          ...Array.from({length:6}).map((_,i)=><line key={"hh"+i} x1={GX+2} y1={GY+GH*i/6} x2={GX+GW-2} y2={GY+GH*i/6} stroke="#ce93d8" strokeWidth={0.4}/>),
+          ...Array.from({length:6}).map((_,i)=><line key={"vv"+i} x1={GX+GW*i/6} y1={GY+2} x2={GX+GW*i/6} y2={GY+GH-2} stroke="#ce93d8" strokeWidth={0.4}/>),
+          <text key="tt" x={cx} y={cy+4} textAnchor="middle" fontSize={9} fill="#7b1fa2" fontFamily={F} fontWeight="700">ZANZARIERA</text>,
+        ];
       } else if (t==="SC2A"||t==="SC4A"||t==="SCRDX"||t==="SCRSX") {
         const hw = Math.floor(GW/2);
         body = [
@@ -3135,7 +3211,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       }
 
       // soglia per porte
-      const hasSoglia = isPorta || t==="SC2A"||t==="ALZDX"||t==="ALZSX";
+      const hasSoglia = isPorta || t==="SC2A"||t==="SC4A"||t==="ALZDX"||t==="ALZSX";
 
       return (
         <svg viewBox={"0 0 "+W+" "+H} width="100%" style={{display:"block",background:"white",border:"1px solid #ddd",borderRadius:3}}>
