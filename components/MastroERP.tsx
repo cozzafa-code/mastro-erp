@@ -3330,15 +3330,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 // =======================================================
   /* == VANO DETAIL — WIZARD A STEP == */
   const STEPS = [
-    { id: "larghezze", title: "LARGHEZZE", desc: "Misura la larghezza in 3 punti: alto, centro, basso", color: "#507aff", icon: "📏", fields: ["lAlto", "lCentro", "lBasso"], labels: ["Larghezza ALTO", "Larghezza CENTRO (luce netta)", "Larghezza BASSO"] },
-    { id: "altezze", title: "ALTEZZE", desc: "Misura l'altezza in 3 punti: sinistra, centro, destra", color: "#34c759", icon: "📐", fields: ["hSx", "hCentro", "hDx"], labels: ["Altezza SINISTRA", "Altezza CENTRO", "Altezza DESTRA"] },
-    { id: "diagonali", title: "DIAGONALI", desc: "Misura le 2 diagonali per verificare la squadra", color: "#ff9500", icon: "✕", fields: ["d1", "d2"], labels: ["Diagonale 1 ↗", "Diagonale 2 ↘"] },
-    { id: "spallette", title: "SPALLETTE", desc: "Misura le spallette e l'imbotte", color: "#32ade6", icon: "🧱", fields: ["spSx", "spDx", "spSopra", "imbotte"], labels: ["Spalletta SINISTRA", "Spalletta DESTRA", "Spalletta SOPRA", "Profondità IMBOTTE"] },
-    { id: "davanzale", title: "DAVANZALE", desc: "Davanzale, soglia e cassonetto", color: "#ff2d55", icon: "⬇", fields: ["davProf", "davSporg", "soglia"], labels: ["Davanzale PROFONDITÀ", "Davanzale SPORGENZA", "Altezza SOGLIA"] },
-    { id: "accessori", title: "ACCESSORI", desc: "Tapparella, persiana, zanzariera", color: "#af52de", icon: "+" },
-    { id: "disegno", title: "DISEGNO + FOTO", desc: "Disegna, fotografa e annota il vano", color: "#ff6b6b", icon: "📷" },
+    { id: "misure", title: "MISURE", desc: "Larghezze, altezze e diagonali", color: "#507aff", icon: "📏" },
+    { id: "dettagli", title: "DETTAGLI", desc: "Spallette, davanzale, accessori, foto", color: "#af52de", icon: "⚙" },
     { id: "riepilogo", title: "RIEPILOGO", desc: "Anteprima completa del vano", color: "#34c759", icon: "📋" },
   ];
+  const [detailOpen, setDetailOpen] = useState<Record<string,boolean>>({});
 
   const renderVanoDetail = () => {
     const v = selectedVano;
@@ -3630,26 +3626,27 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         <div style={{ padding: "8px 16px" }}>
           {/* Step header card */}
           <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: step.color + "10", borderRadius: 14, border: `1px solid ${step.color}25`, marginBottom: 12 }}>
-            {(vanoStep <= 4) && <MiniSVG type={step.id} />}
-            {vanoStep > 4 && <div style={{ width: 50, height: 50, borderRadius: 12, background: step.color + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{step.icon}</div>}
+            <div style={{ width: 50, height: 50, borderRadius: 12, background: step.color + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{step.icon}</div>
             <div>
               <div style={{ fontSize: 15, fontWeight: 800, color: step.color }}>{step.icon} {step.title}</div>
               <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{step.desc}</div>
-              {step.fields && <div style={{ fontSize: 11, fontWeight: 700, color: T.text, marginTop: 2 }}>{step.fields.filter(f => m[f] > 0).length}/{step.fields.length} inserite</div>}
+              {vanoStep === 0 && <div style={{ fontSize: 11, fontWeight: 700, color: T.text, marginTop: 2 }}>{["lAlto","lCentro","lBasso","hSx","hCentro","hDx","d1","d2"].filter(f => m[f] > 0).length}/8 inserite</div>}
             </div>
           </div>
 
           {/* Warnings */}
-          {vanoStep <= 2 && (hasWarnings || hasHWarnings) && (
+          {vanoStep === 0 && (hasWarnings || hasHWarnings) && (
             <div style={{ padding: "8px 14px", borderRadius: 10, background: "#fff3e0", border: "1px solid #ffe0b2", marginBottom: 12, fontSize: 11, color: "#e65100" }}>
               {hasWarnings && <div>⚠ Nessuna larghezza inserita</div>}
               {hasHWarnings && <div>⚠ Nessuna altezza inserita</div>}
             </div>
           )}
 
-          {/* === STEP 0: LARGHEZZE === */}
+          {/* === STEP 0: MISURE (larghezze + altezze + diagonali) === */}
           {vanoStep === 0 && (
             <>
+              {/* LARGHEZZE */}
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#507aff", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>📏 Larghezze</div>
               {bInput("Larghezza ALTO", "lAlto")}
               {m.lAlto > 0 && !m.lCentro && !m.lBasso && (
                 <div onClick={() => { updateMisura(v.id, "lCentro", m.lAlto); updateMisura(v.id, "lBasso", m.lAlto); }} style={{ margin: "-4px 0 12px", padding: "10px", borderRadius: 10, background: T.accLt, border: `1px solid ${T.acc}40`, textAlign: "center", cursor: "pointer", fontSize: 13, fontWeight: 700, color: T.acc }}>
@@ -3658,19 +3655,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               )}
               {bInput("Larghezza CENTRO (luce netta)", "lCentro")}
               {bInput("Larghezza BASSO", "lBasso")}
-              {tip && (
-                <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fff8e1", border: "1px solid #ffecb3", marginTop: 4 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f57f17" }}>💡 {tip.t}</div>
-                  <div style={{ fontSize: 11, color: "#795548" }}>Dimensioni tipiche: {tip.dim}</div>
-                  {tip.w.map((w, i) => <div key={i} style={{ fontSize: 10, color: "#e65100", marginTop: 2 }}>⚠ {w}</div>)}
-                </div>
-              )}
-            </>
-          )}
 
-          {/* === STEP 1: ALTEZZE === */}
-          {vanoStep === 1 && (
-            <>
+              {/* ALTEZZE */}
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#34c759", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, marginTop: 16, display: "flex", alignItems: "center", gap: 6, borderTop: `1px solid ${T.bdr}`, paddingTop: 16 }}>📐 Altezze</div>
               {bInput("Altezza SINISTRA", "hSx")}
               {m.hSx > 0 && !m.hCentro && !m.hDx && (
                 <div onClick={() => { updateMisura(v.id, "hCentro", m.hSx); updateMisura(v.id, "hDx", m.hSx); }} style={{ margin: "-4px 0 12px", padding: "10px", borderRadius: 10, background: T.accLt, border: `1px solid ${T.acc}40`, textAlign: "center", cursor: "pointer", fontSize: 13, fontWeight: 700, color: T.acc }}>
@@ -3679,19 +3666,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               )}
               {bInput("Altezza CENTRO", "hCentro")}
               {bInput("Altezza DESTRA", "hDx")}
-              {tip && (
-                <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fff8e1", border: "1px solid #ffecb3", marginTop: 4 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f57f17" }}>💡 {tip.t}</div>
-                  <div style={{ fontSize: 11, color: "#795548" }}>Dimensioni tipiche: {tip.dim}</div>
-                  {tip.w.map((w, i) => <div key={i} style={{ fontSize: 10, color: "#e65100", marginTop: 2 }}>⚠ {w}</div>)}
-                </div>
-              )}
-            </>
-          )}
 
-          {/* === STEP 2: DIAGONALI === */}
-          {vanoStep === 2 && (
-            <>
+              {/* DIAGONALI */}
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#ff9500", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, marginTop: 16, display: "flex", alignItems: "center", gap: 6, borderTop: `1px solid ${T.bdr}`, paddingTop: 16 }}>✕ Diagonali</div>
               {bInput("Diagonale 1 ↗", "d1")}
               {bInput("Diagonale 2 ↘", "d2")}
               {fSq !== null && fSq > 3 && (
@@ -3705,19 +3682,23 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   <div style={{ fontSize: 12, fontWeight: 700, color: "#2e7d32" }}>✅ In squadra — differenza: {fSq}mm</div>
                 </div>
               )}
-              {tip && (
-                <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fff8e1", border: "1px solid #ffecb3", marginTop: 4 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f57f17" }}>💡 {tip.t}</div>
-                  <div style={{ fontSize: 11, color: "#795548" }}>Dimensioni tipiche: {tip.dim}</div>
-                  {tip.w.map((w, i) => <div key={i} style={{ fontSize: 10, color: "#e65100", marginTop: 2 }}>⚠ {w}</div>)}
-                </div>
-              )}
             </>
           )}
 
-          {/* === STEP 3: SPALLETTE === */}
-          {vanoStep === 3 && (
+          {/* === STEP 1: DETTAGLI (accordion) === */}
+          {vanoStep === 1 && (
             <>
+              {/* Spallette */}
+              <div onClick={() => setDetailOpen(d => ({...d, spallette: !d.spallette}))} style={{ padding: "12px 16px", borderRadius: 12, border: `1px solid ${detailOpen.spallette ? "#32ade6" : T.bdr}`, background: detailOpen.spallette ? "#32ade608" : T.card, marginBottom: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>🧱</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: detailOpen.spallette ? "#32ade6" : T.text }}>Spallette</span>
+                  {(m.spSx||m.spDx||m.spSopra||m.imbotte) && <span style={{ fontSize: 10, color: "#32ade6", fontWeight: 700, background: "#32ade615", padding: "2px 8px", borderRadius: 6 }}>{[m.spSx,m.spDx,m.spSopra,m.imbotte].filter(x=>x>0).length}/4</span>}
+                </div>
+                <span style={{ fontSize: 13, color: T.sub, transform: detailOpen.spallette ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s" }}>▾</span>
+              </div>
+              {detailOpen.spallette && (
+                <div style={{ marginBottom: 12 }}>
               {bInput("Spalletta SINISTRA", "spSx")}
               {bInput("Spalletta DESTRA", "spDx")}
               {bInput("Spalletta SOPRA", "spSopra")}
@@ -3750,12 +3731,19 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   </div>
                 </div>
               </div>
-            </>
-          )}
-
-          {/* === STEP 4: DAVANZALE === */}
-          {vanoStep === 4 && (
-            <>
+                </div>
+              )}
+              {/* Davanzale + Cassonetto */}
+              <div onClick={() => setDetailOpen(d => ({...d, davanzale: !d.davanzale}))} style={{ padding: "12px 16px", borderRadius: 12, border: `1px solid ${detailOpen.davanzale ? "#ff2d55" : T.bdr}`, background: detailOpen.davanzale ? "#ff2d5508" : T.card, marginBottom: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>⬇</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: detailOpen.davanzale ? "#ff2d55" : T.text }}>Davanzale + Cassonetto</span>
+                  {(m.davProf||m.davSporg||m.soglia||v.cassonetto) && <span style={{ fontSize: 10, color: "#ff2d55", fontWeight: 700, background: "#ff2d5515", padding: "2px 8px", borderRadius: 6 }}>{v.cassonetto ? "🧊" : ""} {[m.davProf,m.davSporg,m.soglia].filter(x=>x>0).length}/3</span>}
+                </div>
+                <span style={{ fontSize: 13, color: T.sub, transform: detailOpen.davanzale ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s" }}>▾</span>
+              </div>
+              {detailOpen.davanzale && (
+                <div style={{ marginBottom: 12 }}>
               {bInput("Davanzale PROFONDITÀ", "davProf")}
               {bInput("Davanzale SPORGENZA", "davSporg")}
               {bInput("Altezza SOGLIA", "soglia")}
@@ -3778,12 +3766,19 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   {bInput("Cielino PROFONDITÀ", "casPCiel")}
                 </div>
               )}
-            </>
-          )}
-
-          {/* === STEP 5: ACCESSORI === */}
-          {vanoStep === 5 && (
-            <>
+                </div>
+              )}
+              {/* Accessori */}
+              <div onClick={() => setDetailOpen(d => ({...d, accessori: !d.accessori}))} style={{ padding: "12px 16px", borderRadius: 12, border: `1px solid ${detailOpen.accessori ? "#af52de" : T.bdr}`, background: detailOpen.accessori ? "#af52de08" : T.card, marginBottom: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>✚</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: detailOpen.accessori ? "#af52de" : T.text }}>Accessori</span>
+                  {(v.accessori?.tapparella?.attivo||v.accessori?.persiana?.attivo||v.accessori?.zanzariera?.attivo) && <span style={{ fontSize: 10, color: "#af52de", fontWeight: 700, background: "#af52de15", padding: "2px 8px", borderRadius: 6 }}>{[v.accessori?.tapparella?.attivo,v.accessori?.persiana?.attivo,v.accessori?.zanzariera?.attivo].filter(Boolean).length} attivi</span>}
+                </div>
+                <span style={{ fontSize: 13, color: T.sub, transform: detailOpen.accessori ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s" }}>▾</span>
+              </div>
+              {detailOpen.accessori && (
+                <div style={{ marginBottom: 12 }}>
               {["tapparella", "persiana", "zanzariera", "cassonetto"].map(acc => {
                 if (acc === "cassonetto") {
                   const casColor = "#b45309";
@@ -3933,12 +3928,19 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   </div>
                 );
               })}
-            </>
-          )}
-
-          {/* === STEP 6: DISEGNO + FOTO + NOTE === */}
-          {vanoStep === 6 && (
-            <>
+                </div>
+              )}
+              {/* Foto + Note */}
+              <div onClick={() => setDetailOpen(d => ({...d, disegno: !d.disegno}))} style={{ padding: "12px 16px", borderRadius: 12, border: `1px solid ${detailOpen.disegno ? "#ff6b6b" : T.bdr}`, background: detailOpen.disegno ? "#ff6b6b08" : T.card, marginBottom: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>📷</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: detailOpen.disegno ? "#ff6b6b" : T.text }}>Foto + Note</span>
+                  {(v.note) && <span style={{ fontSize: 10, color: "#ff6b6b", fontWeight: 700, background: "#ff6b6b15", padding: "2px 8px", borderRadius: 6 }}>📝</span>}
+                </div>
+                <span style={{ fontSize: 13, color: T.sub, transform: detailOpen.disegno ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s" }}>▾</span>
+              </div>
+              {detailOpen.disegno && (
+                <div style={{ marginBottom: 12 }}>
               {/* Disegno mano libera */}
               <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, marginBottom: 12, overflow: "hidden" }}>
                 <div style={{ padding: "10px 14px", borderBottom: `1px solid ${T.bdr}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -4053,11 +4055,14 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#ff9500", marginBottom: 8 }}>📝 NOTE</div>
                 <textarea style={{ width: "100%", padding: 10, fontSize: 13, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card, minHeight: 60, resize: "vertical", fontFamily: FF, boxSizing: "border-box" }} placeholder="Note sul vano..." defaultValue={v.note || ""} />
               </div>
+                </div>
+              )}
             </>
           )}
 
+
           {/* === STEP 7: RIEPILOGO === */}
-          {vanoStep === 7 && (
+          {vanoStep === 2 && (
             <>
               <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 16, marginBottom: 12 }}>
                 <div style={{ textAlign: "center", marginBottom: 14 }}>
@@ -4132,10 +4137,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             {vanoStep > 0 && (
               <button onClick={() => setVanoStep(s => s - 1)} style={{ flex: 1, padding: "14px", borderRadius: 12, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: FF, color: T.text }}>← Indietro</button>
             )}
-            {vanoStep < 7 && (
-              <button onClick={() => setVanoStep(s => s + 1)} style={{ flex: vanoStep === 0 ? "1 1 100%" : 1, padding: "14px", borderRadius: 12, border: "none", background: step.color, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>Avanti →</button>
+            {vanoStep < 2 && (
+              <button onClick={() => setVanoStep(s => s + 1)} style={{ flex: 1, padding: "14px", borderRadius: 12, border: "none", background: step.color, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>{vanoStep === 0 ? "Dettagli →" : "Riepilogo →"}</button>
             )}
-            {vanoStep === 7 && (
+            {vanoStep === 0 && (
+              <button onClick={() => setVanoStep(2)} style={{ padding: "14px 16px", borderRadius: 12, border: `1px solid ${T.grn}`, background: T.grn + "15", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FF, color: T.grn }}>✓ Fine</button>
+            )}
+            {vanoStep === 2 && (
               <button onClick={() => { setVanoStep(0); goBack(); }} style={{ flex: 1, padding: "14px", borderRadius: 12, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>💾 SALVA TUTTO</button>
             )}
           </div>
@@ -6228,13 +6236,13 @@ Fabio Cozza - Walter Cozza Serramenti` },
                 {vaniSenzaSistema.length>0 && (
                   <div style={{fontSize:11,color:"#7a4500",marginBottom:4}}>
                     • {vaniSenzaSistema.length} vano/i senza sistema assegnato → prezzo €0
-                    <div onClick={()=>{setShowPreventivoModal(false);setSelectedVano(vaniSenzaSistema[0]);setVanoStep(2);}} style={{display:"inline",marginLeft:8,color:"#007aff",fontWeight:700,cursor:"pointer"}}>Vai →</div>
+                    <div onClick={()=>{setShowPreventivoModal(false);setSelectedVano(vaniSenzaSistema[0]);setVanoStep(0);}} style={{display:"inline",marginLeft:8,color:"#007aff",fontWeight:700,cursor:"pointer"}}>Vai →</div>
                   </div>
                 )}
                 {vaniSenzaMisure.length>0 && (
                   <div style={{fontSize:11,color:"#7a4500"}}>
                     • {vaniSenzaMisure.length} vano/i senza misure → calcolo non accurato
-                    <div onClick={()=>{setShowPreventivoModal(false);setSelectedVano(vaniSenzaMisure[0]);setVanoStep(1);}} style={{display:"inline",marginLeft:8,color:"#007aff",fontWeight:700,cursor:"pointer"}}>Vai →</div>
+                    <div onClick={()=>{setShowPreventivoModal(false);setSelectedVano(vaniSenzaMisure[0]);setVanoStep(0);}} style={{display:"inline",marginLeft:8,color:"#007aff",fontWeight:700,cursor:"pointer"}}>Vai →</div>
                   </div>
                 )}
               </div>
