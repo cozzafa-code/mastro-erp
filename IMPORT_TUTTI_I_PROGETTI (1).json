@@ -1,0 +1,490 @@
+[
+  {
+    "project": {
+      "name": "MIO",
+      "icon": "💜",
+      "color": "#9B59B6",
+      "desc": "Il tuo posto. Social privato senza algoritmo.",
+      "status": "lab"
+    },
+    "apps": [
+      {
+        "name": "Core Social",
+        "icon": "👥",
+        "price": "Free",
+        "phase": 1,
+        "desc": "Cerchi come luoghi, feed privato",
+        "tasks": [
+          { "text": "Prototipo React V11", "owner": "F", "done": true },
+          { "text": "Onboarding 30 secondi", "owner": "F", "done": true },
+          { "text": "Cerchi come luoghi (animazione entrata)", "owner": "F", "done": true },
+          { "text": "Brain Dump → Solo io default", "owner": "F", "done": true },
+          { "text": "Piazze demoted (fuori bottom bar)", "owner": "F", "done": true },
+          { "text": "Privacy visibile (🔒 su ogni post)", "owner": "F", "done": true },
+          { "text": "Schema DB Supabase (users, circles, spaces, posts)", "owner": "F" },
+          { "text": "Auth + profili utente", "owner": "F" },
+          { "text": "Real-time feed per cerchio", "owner": "F" },
+          { "text": "Sistema inviti (link + landing page)", "owner": "F" },
+          { "text": "Push notifications", "owner": "F" }
+        ]
+      },
+      {
+        "name": "Cose Decise",
+        "icon": "✅",
+        "price": "Pro",
+        "phase": 1,
+        "desc": "Killer feature: memoria decisioni condivise",
+        "tasks": [
+          { "text": "UI prototipo (domanda→voto→risultato)", "owner": "F", "done": true },
+          { "text": "Engine votazione real-time", "owner": "F" },
+          { "text": "Cronologia decisioni per cerchio", "owner": "F" },
+          { "text": "Ricerca 'chi l'aveva detto?'", "owner": "F" },
+          { "text": "Notifica risultato finale", "owner": "F" }
+        ]
+      },
+      {
+        "name": "Spazi Dinamici",
+        "icon": "📂",
+        "price": "Pro",
+        "phase": 2,
+        "desc": "Sub-folder dentro ogni Cerchio",
+        "tasks": [
+          { "text": "CRUD spazi dentro cerchi", "owner": "F" },
+          { "text": "Permessi per spazio", "owner": "F" },
+          { "text": "Archivio contenuti per spazio", "owner": "F" }
+        ]
+      },
+      {
+        "name": "Respira",
+        "icon": "🧘",
+        "price": "Free",
+        "phase": 3,
+        "desc": "Benessere digitale integrato",
+        "tasks": [
+          { "text": "Animazione orb respirazione", "owner": "F", "done": true },
+          { "text": "Tracker benessere settimanale", "owner": "F" }
+        ]
+      }
+    ],
+    "phases": [
+      {
+        "name": "Prototipo",
+        "months": "Completato",
+        "tasks": [
+          { "text": "React V11 completo", "done": true },
+          { "text": "Validazione concept UX", "done": true }
+        ]
+      },
+      {
+        "name": "MVP Backend",
+        "months": "Q3 2026",
+        "tasks": [
+          "Schema Supabase + Auth",
+          "API cerchi + post + inviti",
+          "Cose Decise engine",
+          "React Native con Expo"
+        ]
+      },
+      {
+        "name": "Beta Privata",
+        "months": "Q4 2026",
+        "tasks": [
+          "20 famiglie/coppie beta tester",
+          "Iterazione su feedback",
+          "Monetizzazione Pro (4.99€/mo)"
+        ]
+      }
+    ],
+    "sprint": [],
+    "lifeTasks": []
+  },
+
+  {
+    "project": {
+      "name": "RISOLTO",
+      "icon": "🔍",
+      "color": "#E67E22",
+      "desc": "Problemi reali. Soluzioni vere.",
+      "status": "lab"
+    },
+    "apps": [
+      {
+        "name": "Search Engine",
+        "icon": "🔎",
+        "price": "Free",
+        "phase": 1,
+        "desc": "Doppio motore: classico + semantico AI",
+        "tasks": [
+          { "text": "Wireframe 3 schermate", "owner": "F", "done": true },
+          { "text": "Concept motore A (fulltext)", "owner": "F", "done": true },
+          { "text": "Concept motore B (semantic AI)", "owner": "F", "done": true },
+          { "text": "Schema DB soluzioni strutturate", "owner": "F" },
+          { "text": "UI ricerca con suggerimenti", "owner": "F" },
+          { "text": "Ranking 'più risolutive'", "owner": "F" },
+          { "text": "Aggregazione AI (su 42 casi: 18 era il filtro...)", "owner": "F" }
+        ]
+      },
+      {
+        "name": "Scrivi Soluzione",
+        "icon": "✍️",
+        "price": "Free",
+        "phase": 1,
+        "desc": "Wizard 5 passi: problema→indagine→soluzione→costo→tempo",
+        "tasks": [
+          { "text": "Wizard UI 5 step con progress bar", "owner": "F", "done": true },
+          { "text": "Format strutturato (problema→provato→soluzione→tempo→costo)", "owner": "F" },
+          { "text": "Upload foto prima/dopo", "owner": "F" },
+          { "text": "Tag automatico categoria", "owner": "F" }
+        ]
+      },
+      {
+        "name": "Profilo Risolutore",
+        "icon": "🏆",
+        "price": "Business",
+        "phase": 2,
+        "desc": "Reputazione per artigiani verificati",
+        "tasks": [
+          { "text": "Badge e livelli (soluzioni verificate)", "owner": "F" },
+          { "text": "Profilo pubblico artigiano", "owner": "F" },
+          { "text": "Geolocalizzazione (artigiani nella tua zona)", "owner": "F" },
+          { "text": "'Mi ha risolto il problema' → ranking", "owner": "F" }
+        ]
+      }
+    ],
+    "phases": [
+      {
+        "name": "Concept",
+        "months": "Completato",
+        "tasks": [
+          { "text": "Wireframe 3 schermate", "done": true },
+          { "text": "Architettura doppio motore definita", "done": true }
+        ]
+      },
+      {
+        "name": "MVP Casa",
+        "months": "2027 H1",
+        "tasks": [
+          "Verticale casa/elettrodomestici",
+          "Pre-popolare 100 soluzioni reali",
+          "Lancio beta",
+          "Motore fulltext funzionante"
+        ]
+      },
+      {
+        "name": "AI + Scale",
+        "months": "2027 H2",
+        "tasks": [
+          "Motore semantico AI",
+          "Espansione: auto, burocrazia",
+          "Profili Business artigiani (10-20€/mo)"
+        ]
+      }
+    ],
+    "sprint": [],
+    "lifeTasks": []
+  },
+
+  {
+    "project": {
+      "name": "MOBILIERE PRO",
+      "icon": "🪑",
+      "color": "#8B6914",
+      "desc": "Configuratore 3D mobili per artigiani",
+      "status": "lab"
+    },
+    "apps": [
+      {
+        "name": "Configuratore 3D",
+        "icon": "🎨",
+        "price": "49€",
+        "phase": 1,
+        "desc": "Three.js rendering fotorealistico",
+        "tasks": [
+          { "text": "Rendering Three.js fotorealistico", "owner": "F", "done": true },
+          { "text": "17 tipi di mobile (armadio→vetrina)", "owner": "F", "done": true },
+          { "text": "10 materiali con venature procedurali", "owner": "F", "done": true },
+          { "text": "4 tipi maniglie", "owner": "F", "done": true },
+          { "text": "Ante e cassetti animati (click)", "owner": "F", "done": true },
+          { "text": "Editor interno (ripiani, divisori, cassetti)", "owner": "F", "done": true },
+          { "text": "Room designer con pareti e pavimento", "owner": "F", "done": true },
+          { "text": "Salvataggio progetti cloud", "owner": "F" },
+          { "text": "Condivisione link 3D al cliente", "owner": "F" }
+        ]
+      },
+      {
+        "name": "Lista Taglio",
+        "icon": "📋",
+        "price": "—",
+        "phase": 1,
+        "desc": "Generazione automatica pezzi + misure",
+        "tasks": [
+          { "text": "Calcolo automatico tutti i pezzi", "owner": "F", "done": true },
+          { "text": "Prezzi per materiale al m²", "owner": "F", "done": true },
+          { "text": "Totale progetto in tempo reale", "owner": "F", "done": true },
+          { "text": "Export PDF lista taglio", "owner": "F" },
+          { "text": "Export CSV per macchine CNC", "owner": "F" }
+        ]
+      },
+      {
+        "name": "Catalogo Modelli",
+        "icon": "📚",
+        "price": "Pro",
+        "phase": 2,
+        "desc": "Libreria modelli salvati e template",
+        "tasks": [
+          { "text": "Salva/carica configurazioni", "owner": "F" },
+          { "text": "Template preimpostati per tipo", "owner": "F" },
+          { "text": "Duplica e modifica modello", "owner": "F" },
+          { "text": "Galleria showroom virtuale", "owner": "F" }
+        ]
+      }
+    ],
+    "phases": [
+      {
+        "name": "Prototipo",
+        "months": "Completato",
+        "tasks": [
+          { "text": "V7 React + Three.js funzionante", "done": true },
+          { "text": "Editor interno + lista taglio", "done": true }
+        ]
+      },
+      {
+        "name": "SaaS",
+        "months": "2027",
+        "tasks": [
+          "Backend Supabase (progetti, utenti)",
+          "Pricing Free/Pro/Business",
+          "Export PDF preventivo",
+          "Lancio verticale mobilieri"
+        ]
+      }
+    ],
+    "sprint": [],
+    "lifeTasks": []
+  },
+
+  {
+    "project": {
+      "name": "SCUOLA VIVA",
+      "icon": "📚",
+      "color": "#2ECC71",
+      "desc": "La scuola che ti viene incontro. AI homeschooling.",
+      "status": "lab"
+    },
+    "apps": [
+      {
+        "name": "Lezioni AI",
+        "icon": "🎓",
+        "price": "9.90€",
+        "phase": 1,
+        "desc": "Lezioni generate da AI + curriculum italiano",
+        "tasks": [
+          { "text": "Prototipo V6 completo", "owner": "F", "done": true },
+          { "text": "Insegnante virtuale interattivo", "owner": "F", "done": true },
+          { "text": "Curriculum 36 settimane", "owner": "F", "done": true },
+          { "text": "Esercizi misti (quiz, vero/falso, tema)", "owner": "F", "done": true },
+          { "text": "Correzione automatica AI", "owner": "F", "done": true },
+          { "text": "Integrazione Indicazioni Nazionali MIM", "owner": "F" },
+          { "text": "Tutor AI (guida senza dare risposte)", "owner": "F" },
+          { "text": "Diario di bordo per esame fine anno", "owner": "F" }
+        ]
+      },
+      {
+        "name": "Dashboard Genitore",
+        "icon": "👨‍👩‍👧‍👦",
+        "price": "—",
+        "phase": 1,
+        "desc": "Monitoraggio progressi figli",
+        "tasks": [
+          { "text": "Vista progressi per materia", "owner": "F" },
+          { "text": "Tracker vs Indicazioni Nazionali", "owner": "F" },
+          { "text": "Report settimanale automatico", "owner": "F" },
+          { "text": "Alert materie in ritardo", "owner": "F" }
+        ]
+      },
+      {
+        "name": "Gamification",
+        "icon": "🎮",
+        "price": "Free",
+        "phase": 2,
+        "desc": "Punti, badge, livelli per motivazione",
+        "tasks": [
+          { "text": "Sistema punti per lezione completata", "owner": "F" },
+          { "text": "Badge per traguardi", "owner": "F" },
+          { "text": "Classifica fratelli (Walter vs Lucrezia)", "owner": "F" },
+          { "text": "Missioni settimanali", "owner": "F" }
+        ]
+      }
+    ],
+    "phases": [
+      {
+        "name": "Prototipo",
+        "months": "Completato",
+        "tasks": [
+          { "text": "V6 con tutte le feature core", "done": true },
+          { "text": "Briefing + analisi mercato", "done": true }
+        ]
+      },
+      {
+        "name": "Beta Famiglia",
+        "months": "Chiang Mai 2026",
+        "tasks": [
+          "Walter e Lucrezia usano ogni giorno",
+          "Iterazione su feedback reale",
+          "Preparazione esame giugno 2027"
+        ]
+      },
+      {
+        "name": "Lancio",
+        "months": "2027 H1",
+        "tasks": [
+          "Landing page + waitlist",
+          "10-20 famiglie beta gratuite",
+          "Lancio 9.90€/mo (target: 100 clienti)",
+          "Fase 2: modalità doposcuola"
+        ]
+      }
+    ],
+    "sprint": [],
+    "lifeTasks": []
+  },
+
+  {
+    "project": {
+      "name": "TRADEVO",
+      "icon": "📈",
+      "color": "#E74C3C",
+      "desc": "Impara il trading come non l'hai mai fatto.",
+      "status": "lab"
+    },
+    "apps": [
+      {
+        "name": "Percorsi",
+        "icon": "🎯",
+        "price": "Free/19.90€",
+        "phase": 1,
+        "desc": "Lezioni interattive con grafico animato",
+        "tasks": [
+          { "text": "Concept piattaforma completo", "owner": "F", "done": true },
+          { "text": "Architettura 3 livelli (Base/Inter/Avanzato)", "owner": "F", "done": true },
+          { "text": "UI grafico interattivo + overlay didattici", "owner": "F" },
+          { "text": "Quiz visivi ('Trova il support')", "owner": "F" },
+          { "text": "Integrazione TradingView widget", "owner": "F" },
+          { "text": "Modulo Principiante gratuito (candele→MA→RSI)", "owner": "F" },
+          { "text": "Modulo Intermedio (Order Blocks, FVG, liquidity)", "owner": "F" },
+          { "text": "Modulo Avanzato ICT/SMC", "owner": "F" }
+        ]
+      },
+      {
+        "name": "Simulatore",
+        "icon": "🎮",
+        "price": "Pro",
+        "phase": 2,
+        "desc": "Paper trading con dati storici reali",
+        "tasks": [
+          { "text": "Replay mercato storico", "owner": "F" },
+          { "text": "Piazza ordini virtuali", "owner": "F" },
+          { "text": "Tracking performance", "owner": "F" },
+          { "text": "Analisi errori con AI", "owner": "F" }
+        ]
+      },
+      {
+        "name": "Community",
+        "icon": "👥",
+        "price": "Pro",
+        "phase": 3,
+        "desc": "Analisi condivise e classifiche",
+        "tasks": [
+          { "text": "Condivisione setup", "owner": "F" },
+          { "text": "Leaderboard paper trading", "owner": "F" },
+          { "text": "Chat studenti per livello", "owner": "F" }
+        ]
+      }
+    ],
+    "phases": [
+      {
+        "name": "Concept",
+        "months": "Completato",
+        "tasks": [
+          { "text": "Spec piattaforma completa", "done": true },
+          { "text": "Struttura 3 livelli definita", "done": true }
+        ]
+      },
+      {
+        "name": "MVP",
+        "months": "2027",
+        "tasks": [
+          "Modulo Principiante gratuito (7 lezioni)",
+          "Widget TradingView integrato",
+          "Quiz interattivi funzionanti",
+          "Lancio beta"
+        ]
+      }
+    ],
+    "sprint": [],
+    "lifeTasks": []
+  },
+
+  {
+    "project": {
+      "name": "FlowMargin",
+      "icon": "⏱️",
+      "color": "#3498DB",
+      "desc": "Sistema operativo di produzione leggero",
+      "status": "lab"
+    },
+    "apps": [
+      {
+        "name": "Timer Produzione",
+        "icon": "⏱️",
+        "price": "29€",
+        "phase": 1,
+        "desc": "Tracking tempo per job/fase/corsia",
+        "tasks": [
+          { "text": "App Flutter completa", "owner": "F", "done": true },
+          { "text": "DB SQLite locale", "owner": "F", "done": true },
+          { "text": "Timer per fase di produzione", "owner": "F", "done": true },
+          { "text": "Budget vs tempo reale", "owner": "F", "done": true },
+          { "text": "Deploy su Vercel", "owner": "F", "done": true },
+          { "text": "Export CSV report", "owner": "F", "done": true },
+          { "text": "Versione web Next.js (per integrazione MASTRO)", "owner": "F" },
+          { "text": "Sync cloud multi-operatore", "owner": "F" }
+        ]
+      },
+      {
+        "name": "Dashboard",
+        "icon": "📊",
+        "price": "—",
+        "phase": 2,
+        "desc": "Analytics produzione",
+        "tasks": [
+          { "text": "Grafici tempo per fase", "owner": "F" },
+          { "text": "Confronto budget vs consuntivo", "owner": "F" },
+          { "text": "Report PDF automatico", "owner": "F" },
+          { "text": "Notifiche sforamenti tempo", "owner": "F" }
+        ]
+      }
+    ],
+    "phases": [
+      {
+        "name": "V1 Locale",
+        "months": "Completato",
+        "tasks": [
+          { "text": "Flutter + SQLite funzionante", "done": true },
+          { "text": "Deploy Vercel", "done": true }
+        ]
+      },
+      {
+        "name": "V2 Cloud",
+        "months": "2027",
+        "tasks": [
+          "Migrazione a Next.js + Supabase",
+          "Multi-utente con ruoli",
+          "Integrazione modulo MASTRO Produzione"
+        ]
+      }
+    ],
+    "sprint": [],
+    "lifeTasks": []
+  }
+]
