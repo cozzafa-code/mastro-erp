@@ -412,6 +412,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [playingId, setPlayingId] = useState(null);
   const [playProgress, setPlayProgress] = useState(0);
   const playInterval = useRef(null);
+  const mediaRecorderRef = useRef<MediaRecorder|null>(null);
+  const mediaStreamRef = useRef<MediaStream|null>(null);
+  const mediaChunksRef = useRef<Blob[]>([]);
+  const audioPlayRef = useRef<HTMLAudioElement|null>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement|null>(null);
   
   // Drawing state
   const canvasRef = useRef(null);
@@ -689,19 +694,86 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const deleteEvent = (evId) => { if ((()=>{try{return window.confirm("Eliminare questo evento?");}catch(e){return false;}})()) setEvents(ev => ev.filter(e => e.id !== evId)); };
   const deleteMsg = (msgId) => { if ((()=>{try{return window.confirm("Eliminare questo messaggio?");}catch(e){return false;}})()) setMsgs(ms => ms.filter(m => m.id !== msgId)); };
 
-  const addAllegato = (tipo, content) => {
+  const addAllegato = (tipo, content, dataUrl?: string, durata?: string) => {
     if (!selectedCM) return;
-    const a = { id: Date.now(), tipo, nome: content || (tipo === "file" ? "Allegato" : tipo === "vocale" ? "Nota vocale" : tipo === "video" ? "Video" : "Nota"), data: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }), durata: tipo === "vocale" ? "0:" + String(Math.floor(Math.random() * 30 + 5)).padStart(2, "0") : tipo === "video" ? "0:" + String(Math.floor(Math.random() * 45 + 10)).padStart(2, "0") : "" };
+    const a = { id: Date.now(), tipo, nome: content || (tipo === "file" ? "Allegato" : tipo === "vocale" ? "Nota vocale" : tipo === "video" ? "Video" : "Nota"), data: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }), durata: durata || "", dataUrl: dataUrl || "" };
     setCantieri(cs => cs.map(x => x.id === selectedCM.id ? { ...x, allegati: [...(x.allegati || []), a] } : x));
     setSelectedCM(p => ({ ...p, allegati: [...(p.allegati || []), a] }));
   };
 
   const playAllegato = (id) => {
-    if (playingId === id) { clearInterval(playInterval.current); setPlayingId(null); setPlayProgress(0); return; }
+    if (playingId === id) {
+      if (audioPlayRef.current) { audioPlayRef.current.pause(); audioPlayRef.current = null; }
+      clearInterval(playInterval.current); setPlayingId(null); setPlayProgress(0); return;
+    }
     clearInterval(playInterval.current);
-    setPlayingId(id); setPlayProgress(0);
-    let prog = 0;
-    playInterval.current = setInterval(() => { prog += 2; setPlayProgress(prog); if (prog >= 100) { clearInterval(playInterval.current); setPlayingId(null); setPlayProgress(0); } }, 100);
+    // find allegato dataUrl
+    const allAllegati = (selectedCM?.allegati || []);
+    const found = allAllegati.find(a => a.id === id);
+    if (found?.dataUrl) {
+      const audio = new Audio(found.dataUrl);
+      audioPlayRef.current = audio;
+      setPlayingId(id); setPlayProgress(0);
+      audio.onended = () => { setPlayingId(null); setPlayProgress(0); audioPlayRef.current = null; };
+      audio.ontimeupdate = () => { if (audio.duration) setPlayProgress((audio.currentTime / audio.duration) * 100); };
+      audio.play().catch(() => {});
+    } else {
+      // fallback: fake progress for old entries without dataUrl
+      setPlayingId(id); setPlayProgress(0);
+      let prog = 0;
+      playInterval.current = setInterval(() => { prog += 2; setPlayProgress(prog); if (prog >= 100) { clearInterval(playInterval.current); setPlayingId(null); setPlayProgress(0); } }, 100);
+    }
+  };
+
+  const stopAllMedia = () => {
+    if (mediaStreamRef.current) { mediaStreamRef.current.getTracks().forEach(t => t.stop()); mediaStreamRef.current = null; }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") { mediaRecorderRef.current.stop(); }
+    mediaRecorderRef.current = null;
+    mediaChunksRef.current = [];
+  };
+
+  const startMediaRecording = async (tipo: "vocale" | "video") => {
+    try {
+      const constraints = tipo === "video" ? { audio: true, video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } } : { audio: true };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      mediaStreamRef.current = stream;
+      if (tipo === "video" && videoPreviewRef.current) { videoPreviewRef.current.srcObject = stream; videoPreviewRef.current.play().catch(() => {}); }
+      const mimeType = tipo === "video" 
+        ? (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus") ? "video/webm;codecs=vp9,opus" : "video/webm")
+        : (MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm");
+      const recorder = new MediaRecorder(stream, { mimeType });
+      mediaChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) mediaChunksRef.current.push(e.data); };
+      recorder.start(200);
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true); setRecSeconds(0);
+      recInterval.current = setInterval(() => setRecSeconds(s => s + 1), 1000);
+    } catch (err) {
+      alert("⚠️ Impossibile accedere al " + (tipo === "video" ? "camera/microfono" : "microfono") + ". Controlla i permessi del browser.\n\n" + (err as Error).message);
+    }
+  };
+
+  const stopMediaRecording = (tipo: "vocale" | "video") => {
+    clearInterval(recInterval.current);
+    const secs = recSeconds;
+    return new Promise<void>((resolve) => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.onstop = () => {
+          const blob = new Blob(mediaChunksRef.current, { type: tipo === "video" ? "video/webm" : "audio/webm" });
+          const url = URL.createObjectURL(blob);
+          const durStr = Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0");
+          const nome = tipo === "video" 
+            ? "Video " + new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })
+            : "Nota vocale " + new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+          addAllegato(tipo, nome, url, durStr);
+          stopAllMedia();
+          setIsRecording(false); setRecSeconds(0); setShowAllegatiModal(null);
+          resolve();
+        };
+        mediaRecorderRef.current.stop();
+      } else { setIsRecording(false); setRecSeconds(0); resolve(); }
+      if (mediaStreamRef.current) { mediaStreamRef.current.getTracks().forEach(t => t.stop()); mediaStreamRef.current = null; }
+    });
   };
 
   // SETTINGS CRUD
@@ -7420,16 +7492,16 @@ Fabio Cozza - Walter Cozza Serramenti` },
                         {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
                       </div>
                     )}
+                    {isRecording && (
+                      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 3, marginBottom: 12, height: 30 }}>
+                        {Array.from({ length: 20 }).map((_, i) => (
+                          <div key={i} style={{ width: 3, borderRadius: 2, background: T.red, height: Math.random() * 24 + 6, animation: "pulse 0.5s infinite", animationDelay: `${i * 0.05}s` }} />
+                        ))}
+                      </div>
+                    )}
                     <div onClick={() => {
-                      if (!isRecording) {
-                        setIsRecording(true); setRecSeconds(0);
-                        recInterval.current = setInterval(() => setRecSeconds(s => s + 1), 1000);
-                      } else {
-                        clearInterval(recInterval.current);
-                        setIsRecording(false);
-                        addAllegato("vocale", "Nota vocale " + new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }));
-                        setShowAllegatiModal(null); setRecSeconds(0);
-                      }
+                      if (!isRecording) { startMediaRecording("vocale"); }
+                      else { stopMediaRecording("vocale"); }
                     }} style={{ width: 70, height: 70, borderRadius: "50%", background: isRecording ? "linear-gradient(135deg, #ff3b30, #cc0000)" : "linear-gradient(135deg, #ff3b30, #ff6b6b)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", cursor: "pointer", boxShadow: isRecording ? "0 0 24px rgba(255,59,48,0.5)" : "0 4px 16px rgba(255,59,48,0.3)", animation: isRecording ? "pulse 1.5s infinite" : "none" }}>
                       <span style={{ fontSize: 28, color: "#fff" }}>{isRecording ? "⏹" : "🎤"}</span>
                     </div>
@@ -7443,22 +7515,20 @@ Fabio Cozza - Walter Cozza Serramenti` },
               {showAllegatiModal === "video" && (
                 <>
                   <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>🎬 Video</div>
-                  <div style={{ textAlign: "center", padding: "20px 0" }}>
+                  <div style={{ textAlign: "center", padding: "10px 0" }}>
+                    {/* Video preview */}
+                    <div style={{ width: "100%", height: 200, background: "#000", borderRadius: 12, marginBottom: 12, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <video ref={videoPreviewRef} playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover", display: isRecording ? "block" : "none" }} />
+                      {!isRecording && <span style={{ color: "#555", fontSize: 12 }}>L'anteprima apparirà qui</span>}
+                    </div>
                     {isRecording && (
-                      <div style={{ fontSize: 24, fontWeight: 700, fontFamily: FM, color: T.red, marginBottom: 12 }}>
-                        {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
+                      <div style={{ fontSize: 20, fontWeight: 700, fontFamily: FM, color: T.red, marginBottom: 8 }}>
+                        ⏺ {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
                       </div>
                     )}
                     <div onClick={() => {
-                      if (!isRecording) {
-                        setIsRecording(true); setRecSeconds(0);
-                        recInterval.current = setInterval(() => setRecSeconds(s => s + 1), 1000);
-                      } else {
-                        clearInterval(recInterval.current);
-                        setIsRecording(false);
-                        addAllegato("video", "Video " + new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }));
-                        setShowAllegatiModal(null); setRecSeconds(0);
-                      }
+                      if (!isRecording) { startMediaRecording("video"); }
+                      else { stopMediaRecording("video"); }
                     }} style={{ width: 70, height: 70, borderRadius: "50%", background: isRecording ? "linear-gradient(135deg, #ff3b30, #cc0000)" : "linear-gradient(135deg, #007aff, #5856d6)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", cursor: "pointer", boxShadow: isRecording ? "0 0 24px rgba(255,59,48,0.5)" : "0 4px 16px rgba(0,122,255,0.3)", animation: isRecording ? "pulse 1.5s infinite" : "none" }}>
                       <span style={{ fontSize: 28, color: "#fff" }}>{isRecording ? "⏹" : "🎬"}</span>
                     </div>
@@ -7468,7 +7538,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                   </div>
                 </>
               )}
-              <button onClick={() => { clearInterval(recInterval.current); setIsRecording(false); setRecSeconds(0); setShowAllegatiModal(null); }} style={S.btnCancel}>Annulla</button>
+              <button onClick={() => { stopAllMedia(); clearInterval(recInterval.current); setIsRecording(false); setRecSeconds(0); setShowAllegatiModal(null); }} style={S.btnCancel}>Annulla</button>
             </div>
           </div>
         )}
