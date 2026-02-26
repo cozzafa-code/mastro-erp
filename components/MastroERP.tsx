@@ -305,6 +305,16 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [tipoCassonettoDB, setTipoCassonettoDB] = useState([
     { id: "tc1", code: "Monoblocco" }, { id: "tc2", code: "Esterno" }, { id: "tc3", code: "A scomparsa" }, { id: "tc4", code: "Sopraluce" }
   ]);
+  const [ctProfDB, setCtProfDB] = useState([
+    { id: "cp1", code: "40" }, { id: "cp2", code: "45" }, { id: "cp3", code: "50" }, { id: "cp4", code: "55" }, { id: "cp5", code: "60" }, { id: "cp6", code: "65" }, { id: "cp7", code: "70" }
+  ]);
+  const [ctSezioniDB, setCtSezioniDB] = useState([
+    { id: "cs1", code: "56×40" }, { id: "cs2", code: "56×50" }, { id: "cs3", code: "56×60" }, { id: "cs4", code: "56×70" }, { id: "cs5", code: "76×50" }, { id: "cs6", code: "76×60" }
+  ]);
+  const [ctCieliniDB, setCtCieliniDB] = useState([
+    { id: "cc1", code: "A tampone" }, { id: "cc2", code: "A tappo" }, { id: "cc3", code: "Frontale" }
+  ]);
+  const [ctOffset, setCtOffset] = useState(10); // mm per lato (totale = x2)
   const [pipelineDB, setPipelineDB] = useState(PIPELINE_DEFAULT);
   const [faseOpen, setFaseOpen] = useState(true);
   const [sogliaDays, setSogliaDays] = useState(5);
@@ -2560,6 +2570,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   {/* Tags */}
                   <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
                     {fotoCount > 0 && <span style={S.badge(T.blueLt, T.blue)}>{fotoCount} foto</span>}
+                    {v.controtelaio?.tipo && <span style={S.badge("#dbeafe", "#2563eb")}>🔲 CT {v.controtelaio.tipo==="singolo"?"Sing.":v.controtelaio.tipo==="doppio"?"Doppio":"Cass."}</span>}
                     {v.cassonetto && <span style={S.badge(T.orangeLt, T.orange)}>Cassonetto</span>}
                     {v.accessori?.tapparella?.attivo && <span style={S.badge(T.grnLt, T.grn)}>Tapparella</span>}
                     {v.accessori?.zanzariera?.attivo && <span style={S.badge(T.purpleLt, T.purple)}>Zanzariera</span>}
@@ -3395,9 +3406,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 </div>
 
                 {/* Prodotto */}
-                {(v.sistema||v.vetro||v.telaio||v.accessori?.tapparella?.attivo||v.accessori?.zanzariera?.attivo||v.accessori?.persiana?.attivo||v.cassonetto||v.note)&&(
+                {(v.sistema||v.vetro||v.telaio||v.accessori?.tapparella?.attivo||v.accessori?.zanzariera?.attivo||v.accessori?.persiana?.attivo||v.cassonetto||v.note||v.controtelaio?.tipo)&&(
                   <div style={{padding:"7px 12px",background:"#f8fafc",borderTop:"1px solid #f1f5f9"}}>
                     <div style={{display:"flex",flexWrap:"wrap",gap:3,marginBottom:3}}>
+                      {v.controtelaio?.tipo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#dbeafe",color:"#1e40af",fontSize:9.5,fontWeight:700}}>🔲 CT {v.controtelaio.tipo==="singolo"?"Sing.":v.controtelaio.tipo==="doppio"?"Doppio":"Cass."} {v.controtelaio.l||""}×{v.controtelaio.h||""}{v.controtelaio.prof?" P"+v.controtelaio.prof:""}</span>}
                       {v.sistema&&<span style={{padding:"2px 7px",borderRadius:4,background:"#eff6ff",color:"#1d4ed8",fontSize:9.5,fontWeight:700}}>⚙ {v.sistema}</span>}
                       {v.vetro&&<span style={{padding:"2px 7px",borderRadius:4,background:"#f0fdf4",color:"#15803d",fontSize:9.5,fontWeight:700}}>🔲 {v.vetro}</span>}
                       {v.coloreInt&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fafafa",border:"1px solid #e2e8f0",color:"#374151",fontSize:9.5}}>🎨 {v.bicolore?"INT:"+v.coloreInt+"/EST:"+v.coloreEst:v.coloreInt}</span>}
@@ -3553,6 +3565,118 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           const coloriRAL = ["RAL 9010","RAL 9016","RAL 9001","RAL 7016","RAL 7021","RAL 8014","RAL 8016","RAL 1013","Altro"];
 
           const sections = [
+            { id:"controtelaio", icon:"🔲", label:"Controtelaio",
+              badge: v.controtelaio?.tipo ? (v.controtelaio.tipo==="singolo"?"Singolo":v.controtelaio.tipo==="doppio"?"Doppio":"Con cassonetto") : null,
+              body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:2}}>TIPO CONTROTELAIO</div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                  {[{id:"",l:"Nessuno",c:T.sub},{id:"singolo",l:"Singolo",c:"#2563eb"},{id:"doppio",l:"Doppio",c:"#7c3aed"},{id:"cassonetto",l:"Con Cassonetto",c:"#b45309"}].map(ct=>(
+                    <div key={ct.id} onClick={()=>updateV("controtelaio",{...(v.controtelaio||{}),tipo:ct.id})}
+                      style={{flex:1,padding:"8px 6px",borderRadius:8,border:`1.5px solid ${v.controtelaio?.tipo===ct.id?ct.c:T.bdr}`,background:v.controtelaio?.tipo===ct.id?ct.c+"15":T.card,textAlign:"center",cursor:"pointer",minWidth:70}}>
+                      <div style={{fontSize:11,fontWeight:700,color:v.controtelaio?.tipo===ct.id?ct.c:T.sub}}>{ct.l}</div>
+                    </div>
+                  ))}
+                </div>
+                {v.controtelaio?.tipo==="singolo" && <>
+                  <div style={{display:"flex",gap:6}}>
+                    <div style={{flex:1}}><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>LARGHEZZA</div>
+                      <input style={S.input} type="number" inputMode="numeric" placeholder="mm" value={v.controtelaio?.l||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,l:parseInt(e.target.value)||0})}/></div>
+                    <div style={{flex:1}}><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>ALTEZZA</div>
+                      <input style={S.input} type="number" inputMode="numeric" placeholder="mm" value={v.controtelaio?.h||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,h:parseInt(e.target.value)||0})}/></div>
+                  </div>
+                  <div><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>PROFONDITÀ</div>
+                    <select style={S.select} value={v.controtelaio?.prof||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,prof:e.target.value})}>
+                      <option value="">— Seleziona —</option>
+                      {ctProfDB.map(p=><option key={p.id} value={p.code}>{p.code} mm</option>)}
+                    </select></div>
+                  {v.controtelaio?.l > 0 && v.controtelaio?.h > 0 && (
+                    <div onClick={()=>{
+                      const off = ctOffset;
+                      const cl = v.controtelaio.l - off*2;
+                      const ch = v.controtelaio.h - off*2;
+                      updateMisura(v.id,"lAlto",cl); updateMisura(v.id,"lCentro",cl); updateMisura(v.id,"lBasso",cl);
+                      updateMisura(v.id,"hSx",ch); updateMisura(v.id,"hCentro",ch); updateMisura(v.id,"hDx",ch);
+                    }} style={{padding:"10px",borderRadius:10,background:"#2563eb15",border:"1.5px solid #2563eb40",textAlign:"center",cursor:"pointer"}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#2563eb"}}>⚡ Calcola infisso (offset −{ctOffset}mm/lato)</div>
+                      <div style={{fontSize:10,color:"#2563eb80",marginTop:2}}>{v.controtelaio.l-ctOffset*2} × {v.controtelaio.h-ctOffset*2} mm</div>
+                    </div>
+                  )}
+                </>}
+                {v.controtelaio?.tipo==="doppio" && <>
+                  <div style={{display:"flex",gap:6}}>
+                    <div style={{flex:1}}><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>LARGHEZZA</div>
+                      <input style={S.input} type="number" inputMode="numeric" placeholder="mm" value={v.controtelaio?.l||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,l:parseInt(e.target.value)||0})}/></div>
+                    <div style={{flex:1}}><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>ALTEZZA</div>
+                      <input style={S.input} type="number" inputMode="numeric" placeholder="mm" value={v.controtelaio?.h||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,h:parseInt(e.target.value)||0})}/></div>
+                  </div>
+                  <div><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>SEZIONE INTERNA (infisso interno)</div>
+                    <select style={S.select} value={v.controtelaio?.sezInt||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,sezInt:e.target.value})}>
+                      <option value="">— Seleziona —</option>
+                      {ctSezioniDB.map(s=><option key={s.id} value={s.code}>{s.code}</option>)}
+                    </select></div>
+                  <div><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>SEZIONE ESTERNA (infisso esterno)</div>
+                    <select style={S.select} value={v.controtelaio?.sezEst||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,sezEst:e.target.value})}>
+                      <option value="">— Seleziona —</option>
+                      {ctSezioniDB.map(s=><option key={s.id} value={s.code}>{s.code}</option>)}
+                    </select></div>
+                  <div><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>DISTANZIALE</div>
+                    <input style={S.input} type="text" placeholder="es. 30mm" value={v.controtelaio?.distanziale||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,distanziale:e.target.value})}/></div>
+                  {v.controtelaio?.l > 0 && v.controtelaio?.h > 0 && (
+                    <div onClick={()=>{
+                      const off = ctOffset;
+                      const cl = v.controtelaio.l - off*2;
+                      const ch = v.controtelaio.h - off*2;
+                      updateMisura(v.id,"lAlto",cl); updateMisura(v.id,"lCentro",cl); updateMisura(v.id,"lBasso",cl);
+                      updateMisura(v.id,"hSx",ch); updateMisura(v.id,"hCentro",ch); updateMisura(v.id,"hDx",ch);
+                    }} style={{padding:"10px",borderRadius:10,background:"#7c3aed15",border:"1.5px solid #7c3aed40",textAlign:"center",cursor:"pointer"}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#7c3aed"}}>⚡ Calcola infisso (offset −{ctOffset}mm/lato)</div>
+                      <div style={{fontSize:10,color:"#7c3aed80",marginTop:2}}>{v.controtelaio.l-ctOffset*2} × {v.controtelaio.h-ctOffset*2} mm</div>
+                    </div>
+                  )}
+                </>}
+                {v.controtelaio?.tipo==="cassonetto" && <>
+                  <div style={{display:"flex",gap:6}}>
+                    <div style={{flex:1}}><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>LARGH. VANO</div>
+                      <input style={S.input} type="number" inputMode="numeric" placeholder="mm" value={v.controtelaio?.l||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,l:parseInt(e.target.value)||0})}/></div>
+                    <div style={{flex:1}}><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>ALT. MAX VANO</div>
+                      <input style={S.input} type="number" inputMode="numeric" placeholder="mm" value={v.controtelaio?.h||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,h:parseInt(e.target.value)||0})}/></div>
+                  </div>
+                  <div style={{marginTop:4,padding:"6px 0",borderTop:`1px dashed ${T.bdr}`}}>
+                    <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:4}}>CASSONETTO</div>
+                  </div>
+                  <div style={{display:"flex",gap:6}}>
+                    <div style={{flex:1}}><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>H CASSONETTO</div>
+                      <input style={S.input} type="number" inputMode="numeric" placeholder="mm" value={v.controtelaio?.hCass||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,hCass:parseInt(e.target.value)||0})}/></div>
+                    <div style={{flex:1}}><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>P CASSONETTO</div>
+                      <input style={S.input} type="number" inputMode="numeric" placeholder="mm" value={v.controtelaio?.pCass||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,pCass:parseInt(e.target.value)||0})}/></div>
+                  </div>
+                  <div><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>SEZIONE CONTROTELAIO</div>
+                    <select style={S.select} value={v.controtelaio?.sezione||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,sezione:e.target.value})}>
+                      <option value="">— Seleziona —</option>
+                      {ctSezioniDB.map(s=><option key={s.id} value={s.code}>{s.code}</option>)}
+                    </select></div>
+                  <div><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>SPALLA CONTROTELAIO</div>
+                    <input style={S.input} type="text" placeholder="es. 120mm" value={v.controtelaio?.spalla||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,spalla:e.target.value})}/></div>
+                  <div><div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:2}}>MODELLO CIELINO</div>
+                    <select style={S.select} value={v.controtelaio?.cielino||""} onChange={e=>updateV("controtelaio",{...v.controtelaio,cielino:e.target.value})}>
+                      <option value="">— Seleziona —</option>
+                      {ctCieliniDB.map(c=><option key={c.id} value={c.code}>{c.code}</option>)}
+                    </select></div>
+                  {v.controtelaio?.l > 0 && v.controtelaio?.h > 0 && (
+                    <div onClick={()=>{
+                      const off = ctOffset;
+                      const cl = v.controtelaio.l - off*2;
+                      const hInf = v.controtelaio.h - (v.controtelaio.hCass||0) - off*2;
+                      updateMisura(v.id,"lAlto",cl); updateMisura(v.id,"lCentro",cl); updateMisura(v.id,"lBasso",cl);
+                      updateMisura(v.id,"hSx",hInf); updateMisura(v.id,"hCentro",hInf); updateMisura(v.id,"hDx",hInf);
+                    }} style={{padding:"10px",borderRadius:10,background:"#b4530915",border:"1.5px solid #b4530940",textAlign:"center",cursor:"pointer"}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#b45309"}}>⚡ Calcola infisso (offset −{ctOffset}mm/lato)</div>
+                      <div style={{fontSize:10,color:"#b4530980",marginTop:2}}>L: {v.controtelaio.l-ctOffset*2} · H: {v.controtelaio.h-(v.controtelaio.hCass||0)-ctOffset*2} mm</div>
+                    </div>
+                  )}
+                </>}
+              </div>
+            },
             { id:"accesso", icon:"🏗", label:"Accesso / Difficoltà",
               badge: v.difficoltaSalita||null,
               body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -4233,6 +4357,35 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     </div>
                   ))}
                 </div>
+                {/* Controtelaio */}
+                {v.controtelaio?.tipo && (
+                  <div style={{ borderRadius: 10, border: `1px solid #2563eb25`, overflow: "hidden", marginBottom: 8 }}>
+                    <div style={{ padding: "6px 12px", background: "#2563eb10", fontSize: 11, fontWeight: 700, color: "#2563eb" }}>🔲 CONTROTELAIO {v.controtelaio.tipo==="singolo"?"SINGOLO":v.controtelaio.tipo==="doppio"?"DOPPIO":"CON CASSONETTO"}</div>
+                    {[["Larghezza", v.controtelaio.l], ["Altezza", v.controtelaio.h]].map(([l, val]) => (
+                      <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
+                        <span>{l}</span>
+                        <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
+                      </div>
+                    ))}
+                    {v.controtelaio.tipo==="singolo" && v.controtelaio.prof && (
+                      <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
+                        <span>Profondità</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.prof}mm</span>
+                      </div>
+                    )}
+                    {v.controtelaio.tipo==="doppio" && <>
+                      {v.controtelaio.sezInt && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>Sez. interna</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.sezInt}</span></div>}
+                      {v.controtelaio.sezEst && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>Sez. esterna</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.sezEst}</span></div>}
+                      {v.controtelaio.distanziale && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>Distanziale</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.distanziale}</span></div>}
+                    </>}
+                    {v.controtelaio.tipo==="cassonetto" && <>
+                      {v.controtelaio.hCass && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>H Cassonetto</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.hCass}</span></div>}
+                      {v.controtelaio.pCass && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>P Cassonetto</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.pCass}</span></div>}
+                      {v.controtelaio.sezione && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>Sezione</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.sezione}</span></div>}
+                      {v.controtelaio.spalla && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>Spalla</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.spalla}</span></div>}
+                      {v.controtelaio.cielino && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>Cielino</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.cielino}</span></div>}
+                    </>}
+                  </div>
+                )}
                 {/* Spallette */}
                 <div style={{ borderRadius: 10, border: `1px solid #32ade625`, overflow: "hidden", marginBottom: 8 }}>
                   <div style={{ padding: "6px 12px", background: "#32ade610", fontSize: 11, fontWeight: 700, color: "#32ade6" }}>🧱 SPALLETTE</div>
@@ -5085,7 +5238,7 @@ Grazie per il suo messaggio.
       {/* Settings sub-tabs — scrollable */}
       <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "8px 16px 12px", borderRadius: 8, border: `1px solid ${T.bdr}` }}>
         <div style={{ display: "flex", minWidth: "max-content" }}>
-          {[{ id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "team", l: "👥 Team" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "tapparella", l: "⬇ Tapparella" }, { id: "persiana", l: "🏠 Persiana" }, { id: "zanzariera", l: "🦟 Zanzariera" }, { id: "cassonetto", l: "🧊 Cassonetto" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "guida", l: "📖 Guida" }].map(t => (
+          {[{ id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "team", l: "👥 Team" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "controtelaio", l: "🔲 Controtelaio" }, { id: "tapparella", l: "⬇ Tapparella" }, { id: "persiana", l: "🏠 Persiana" }, { id: "zanzariera", l: "🦟 Zanzariera" }, { id: "cassonetto", l: "🧊 Cassonetto" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "guida", l: "📖 Guida" }].map(t => (
             <div key={t.id} onClick={() => setSettingsTab(t.id)} style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 600, background: settingsTab === t.id ? T.acc : T.card, color: settingsTab === t.id ? "#fff" : T.sub, cursor: "pointer", whiteSpace: "nowrap" }}>
               {t.l}
             </div>
@@ -5421,6 +5574,48 @@ Grazie per il suo messaggio.
         )}
 
         {/* === SALITA === */}
+        {settingsTab === "controtelaio" && (
+          <>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura profondità, sezioni e modelli cielino per i controtelai</div>
+            
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>📏 Profondità disponibili (mm)</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>
+              {ctProfDB.map(p => (
+                <div key={p.id} style={{display:"flex",alignItems:"center",gap:4,padding:"6px 10px",borderRadius:8,border:`1px solid ${T.bdr}`,background:T.card}}>
+                  <span style={{fontSize:12,fontWeight:600}}>{p.code}</span>
+                  <div onClick={() => setCtProfDB(prev => prev.filter(x => x.id !== p.id))} style={{ cursor: "pointer", fontSize: 10, color: T.sub }}>✕</div>
+                </div>
+              ))}
+            </div>
+            <div onClick={() => { let n; try{n=window.prompt("Nuova profondità (mm):");}catch(e){} if (n?.trim()) setCtProfDB(prev => [...prev, { id: "cp" + Date.now(), code: n.trim() }]); }} style={{ padding: "10px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>+ Aggiungi profondità</div>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>📐 Sezioni controtelaio</div>
+            {ctSezioniDB.map(s => (
+              <div key={s.id} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{s.code}</span>
+                <div onClick={() => setCtSezioniDB(prev => prev.filter(x => x.id !== s.id))} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
+              </div></div>
+            ))}
+            <div onClick={() => { let n; try{n=window.prompt("Nuova sezione (es. 56×40):");}catch(e){} if (n?.trim()) setCtSezioniDB(prev => [...prev, { id: "cs" + Date.now(), code: n.trim() }]); }} style={{ padding: "10px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>+ Aggiungi sezione</div>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>🔲 Modelli cielino</div>
+            {ctCieliniDB.map(c => (
+              <div key={c.id} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{c.code}</span>
+                <div onClick={() => setCtCieliniDB(prev => prev.filter(x => x.id !== c.id))} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
+              </div></div>
+            ))}
+            <div onClick={() => { let n; try{n=window.prompt("Nuovo modello cielino:");}catch(e){} if (n?.trim()) setCtCieliniDB(prev => [...prev, { id: "cc" + Date.now(), code: n.trim() }]); }} style={{ padding: "10px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>+ Aggiungi cielino</div>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>⚡ Offset calcolo infisso</div>
+            <div style={{ fontSize: 10, color: T.sub, marginBottom: 6 }}>Millimetri da sottrarre per lato (L e H) quando si calcola l'infisso dal controtelaio</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <input style={{...S.input,width:80,textAlign:"center",fontSize:16,fontWeight:700}} type="number" inputMode="numeric" value={ctOffset} onChange={e=>setCtOffset(parseInt(e.target.value)||0)} />
+              <span style={{fontSize:12,color:T.sub}}>mm/lato → totale −{ctOffset*2}mm</span>
+            </div>
+          </>
+        )}
+
         {settingsTab === "cassonetto" && (
           <>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura i tipi di cassonetto disponibili</div>
