@@ -436,7 +436,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [playProgress, setPlayProgress] = useState(0);
   const playInterval = useRef(null);
   const [viewingVideoId, setViewingVideoId] = useState<number|null>(null);
-  const [viewingPhotoId, setViewingPhotoId] = useState<number|null>(null);
+  const [viewingPhotoId, setViewingPhotoId] = useState<number|string|null>(null);
   const mediaRecorderRef = useRef<MediaRecorder|null>(null);
   const mediaStreamRef = useRef<MediaStream|null>(null);
   const mediaChunksRef = useRef<Blob[]>([]);
@@ -4414,7 +4414,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: T.blue }}>📷 FOTO ({(v.foto && Object.keys(v.foto).length) || 0})</div>
                   <div style={{ display: "flex", gap: 4 }}>
-                    <button onClick={() => document.getElementById("fotoVanoInput").click()}
+                    <button onClick={() => { setPendingFotoCat(null); fotoVanoRef.current?.click(); }}
                       style={{ padding: "4px 10px", borderRadius: 6, background: T.acc, color: "#fff", border: "none", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>📷 Foto</button>
                     <button onClick={() => { setPendingFotoCat(null); videoVanoRef.current?.click(); }}
                       style={{ padding: "4px 10px", borderRadius: 6, background: T.blue, color: "#fff", border: "none", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>🎬 Video</button>
@@ -4440,8 +4440,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   onChange={e => {
                     const file = e.target.files?.[0]; if (!file) return;
                     const key = "video_" + Date.now();
-                    setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: { ...(vn.foto||{}), [key]: { nome: file.name, tipo: "video" } } } : vn) } : r2) } : c));
-                    setSelectedVano(prev => ({ ...prev, foto: { ...(prev.foto||{}), [key]: { nome: file.name, tipo: "video" } } }));
+                    const reader = new FileReader();
+                    reader.onload = ev => {
+                      const vObj = { nome: file.name, tipo: "video", dataUrl: ev.target?.result };
+                      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: { ...(vn.foto||{}), [key]: vObj } } : vn) } : r2) } : c));
+                      setSelectedVano(prev => ({ ...prev, foto: { ...(prev.foto||{}), [key]: vObj } }));
+                    };
+                    reader.readAsDataURL(file);
                     e.target.value = "";
                   }}/>
                 <div style={{ fontSize: 10, color: T.sub, marginBottom: 6 }}>{Object.keys(v.foto||{}).length} allegati</div>
@@ -4463,18 +4468,25 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 </div>
                 {Object.keys(v.foto||{}).length === 0
                   ? <div style={{ textAlign: "center", padding: "16px 0", color: T.sub, fontSize: 11 }}>Nessun allegato — tocca 📷 Foto o 🎬 Video</div>
-                  : <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                  : <>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
                       {Object.entries(v.foto||{}).map(([k, f]) => (
-                        <div key={k} style={{ position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden", background: T.bg, border: `1px solid ${T.bdr}` }}>
+                        <div key={k} onClick={() => { if (f.dataUrl) setViewingPhotoId(viewingPhotoId === k ? null : k as any); }}
+                          style={{ position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden", background: T.bg, border: viewingPhotoId === k ? `2px solid ${T.acc}` : `1px solid ${T.bdr}`, cursor: f.dataUrl ? "pointer" : "default" }}>
                           {f.tipo === "foto" && f.dataUrl
                             ? <img src={f.dataUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt={f.nome}/>
-                            : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 2 }}>
-                                <span style={{ fontSize: 24 }}>🎬</span>
-                                <span style={{ fontSize: 8, color: T.sub, textAlign: "center", padding: "0 4px" }}>{f.nome?.slice(0,12)}</span>
-                              </div>
+                            : f.tipo === "video" && f.dataUrl
+                              ? <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#111" }}>
+                                  <span style={{ fontSize: 28, filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))" }}>▶</span>
+                                </div>
+                              : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 2 }}>
+                                  <span style={{ fontSize: 24 }}>🎬</span>
+                                  <span style={{ fontSize: 8, color: T.sub, textAlign: "center", padding: "0 4px" }}>{f.nome?.slice(0,12)}</span>
+                                </div>
                           }
                           {f.categoria && <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,0.6)",color:"#fff",fontSize:7,fontWeight:700,padding:"2px 3px",textAlign:"center",lineHeight:1.2}}>{f.categoria}</div>}
-                          <div onClick={() => {
+                          <div onClick={(ev) => {
+                            ev.stopPropagation();
                             const newFoto = { ...(v.foto||{}) }; delete newFoto[k];
                             setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: newFoto } : vn) } : r2) } : c));
                             setSelectedVano(prev => ({ ...prev, foto: newFoto }));
@@ -4482,6 +4494,17 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                         </div>
                       ))}
                     </div>
+                    {/* Inline viewer for tapped photo/video */}
+                    {viewingPhotoId && (v.foto||{})[viewingPhotoId as any] && (
+                      <div style={{ marginTop: 8, borderRadius: 12, overflow: "hidden", background: "#000", position: "relative" as const }}>
+                        {(v.foto||{})[viewingPhotoId as any]?.tipo === "video"
+                          ? <video src={(v.foto||{})[viewingPhotoId as any]?.dataUrl} controls playsInline autoPlay style={{ width: "100%", maxHeight: 300 }} />
+                          : <img src={(v.foto||{})[viewingPhotoId as any]?.dataUrl} style={{ width: "100%", maxHeight: 300, objectFit: "contain" }} alt="" />
+                        }
+                        <div onClick={() => setViewingPhotoId(null)} style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,0.6)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>✕</div>
+                      </div>
+                    )}
+                  </>
                 }
               </div>
 
