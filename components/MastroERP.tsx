@@ -699,7 +699,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     } else if (settingsModal === "lamiera" && f.nome && f.cod) {
       setLamiereDB(l => [...l, { id: Date.now(), nome: f.nome, cod: f.cod, prezzoMl: parseFloat(f.prezzoMl)||0 }]);
     } else if (settingsModal === "tipologia" && f.code && f.label) {
-      TIPOLOGIE_RAPIDE.push({ code: f.code, label: f.label, icon: f.icon || "🪟" });
+      TIPOLOGIE_RAPIDE.push({ code: f.code, label: f.label, icon: f.icon || "🪟", cat: f.cat || "Altro", forma: f.forma || "rettangolare" });
     } else if (settingsModal === "membro" && f.nome) {
       const colori = ["#007aff","#34c759","#af52de","#ff9500","#ff3b30","#5ac8fa"];
       setTeam(t => [...t, { id: Date.now(), nome: f.nome, ruolo: f.ruolo || "Posatore", compiti: f.compiti || "", colore: colori[t.length % colori.length] }]);
@@ -3204,10 +3204,43 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       } else if (t==="FISDX"||t==="FISSX"||t==="SOPR") {
         body = [<rect key="v" x={GX} y={GY} width={GW} height={GH} fill="#ddeefa"/>];
       } else {
-        body = [
-          <rect key="v" x={GX} y={GY} width={GW} height={GH} fill="#ddeefa"/>,
-          <text key="tx" x={cx} y={cy+4} textAnchor="middle" fontSize={10} fill="#888" fontFamily={F}>{t||"?"}</text>
-        ];
+        const tipObj = TIPOLOGIE_RAPIDE.find(tp => tp.code === t);
+        const forma = tipObj?.forma || "rettangolare";
+        if (forma === "arco") {
+          body = [
+            <path key="v" d={`M${GX},${GY+GH} L${GX},${GY+GH*0.35} Q${GX},${GY} ${cx},${GY} Q${GX+GW},${GY} ${GX+GW},${GY+GH*0.35} L${GX+GW},${GY+GH} Z`} fill="#ddeefa" stroke="#333" strokeWidth={1.2}/>,
+            <text key="tx" x={cx} y={cy+10} textAnchor="middle" fontSize={9} fill="#555" fontFamily={F} fontWeight="600">{t}</text>
+          ];
+        } else if (forma === "trapezio") {
+          const inset = GW * 0.15;
+          body = [
+            <polygon key="v" points={`${GX+inset},${GY} ${GX+GW-inset},${GY} ${GX+GW},${GY+GH} ${GX},${GY+GH}`} fill="#ddeefa" stroke="#333" strokeWidth={1.2}/>,
+            <text key="tx" x={cx} y={cy+4} textAnchor="middle" fontSize={9} fill="#555" fontFamily={F} fontWeight="600">{t}</text>
+          ];
+        } else if (forma === "triangolo") {
+          body = [
+            <polygon key="v" points={`${cx},${GY} ${GX+GW},${GY+GH} ${GX},${GY+GH}`} fill="#ddeefa" stroke="#333" strokeWidth={1.2}/>,
+            <text key="tx" x={cx} y={GY+GH-10} textAnchor="middle" fontSize={9} fill="#555" fontFamily={F} fontWeight="600">{t}</text>
+          ];
+        } else if (forma === "oblo") {
+          const r = Math.min(GW, GH) / 2;
+          body = [
+            <circle key="v" cx={cx} cy={cy} r={r} fill="#ddeefa" stroke="#333" strokeWidth={1.2}/>,
+            <text key="tx" x={cx} y={cy+4} textAnchor="middle" fontSize={9} fill="#555" fontFamily={F} fontWeight="600">{t}</text>
+          ];
+        } else if (forma === "sagomato") {
+          body = [
+            <path key="v" d={`M${GX},${GY+GH} L${GX},${GY+GH*0.25} Q${GX},${GY} ${GX+GW*0.3},${GY} L${GX+GW*0.7},${GY} Q${GX+GW},${GY+GH*0.15} ${GX+GW},${GY+GH*0.4} L${GX+GW},${GY+GH*0.7} Q${GX+GW*0.8},${GY+GH} ${GX+GW*0.5},${GY+GH} Z`} fill="#ddeefa" stroke="#333" strokeWidth={1.2}/>,
+            <text key="tx" x={cx} y={cy+4} textAnchor="middle" fontSize={8} fill="#555" fontFamily={F} fontWeight="600">{t}</text>,
+            <text key="tx2" x={cx} y={cy+14} textAnchor="middle" fontSize={6} fill="#999" fontFamily={F}>SAGOMATO</text>
+          ];
+        } else {
+          body = [
+            <rect key="v" x={GX} y={GY} width={GW} height={GH} fill="#ddeefa"/>,
+            <rect key="p" x={GX} y={GY} width={GW} height={GH} fill="none" stroke="#333" strokeWidth={1.2}/>,
+            <text key="tx" x={cx} y={cy+4} textAnchor="middle" fontSize={10} fill="#888" fontFamily={F}>{t||"?"}</text>
+          ];
+        }
       }
 
       // soglia per porte
@@ -5262,12 +5295,13 @@ Grazie per il suo messaggio.
                   <div style={{ flex: 1 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, fontFamily: FM }}>{t.code}</span>
                     <span style={{ fontSize: 11, color: T.sub, marginLeft: 6 }}>{t.label}</span>
+                    {t.forma && t.forma !== "rettangolare" && <span style={{ fontSize: 9, color: T.acc, marginLeft: 6, background: T.accLt, padding: "1px 5px", borderRadius: 4 }}>{t.forma}</span>}
                   </div>
                   <Ico d={ICO.pen} s={14} c={T.sub} />
                 </div></div>
               );
             })}
-            <div onClick={() => { setSettingsModal("tipologia"); setSettingsForm({ code: "", label: "", icon: "🪟" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipologia</div>
+            <div onClick={() => { setSettingsModal("tipologia"); setSettingsForm({ code: "", label: "", icon: "🪟", cat: "Altro", forma: "rettangolare" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipologia</div>
           </>
         )}
 
@@ -6651,6 +6685,28 @@ Fabio Cozza - Walter Cozza Serramenti` },
                   <div style={{ width: 60 }}><label style={S.fieldLabel}>Icona</label><input style={S.input} placeholder="🪟" value={settingsForm.icon || ""} onChange={e => setSettingsForm(f => ({ ...f, icon: e.target.value }))} /></div>
                 </div>
                 <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Descrizione</label><input style={S.input} placeholder="es. Finestra 4 ante" value={settingsForm.label || ""} onChange={e => setSettingsForm(f => ({ ...f, label: e.target.value }))} /></div>
+                <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Categoria</label>
+                  <select style={S.select} value={settingsForm.cat || "Altro"} onChange={e => setSettingsForm(f => ({ ...f, cat: e.target.value }))}>
+                    {["Finestre","Balconi","Scorrevoli","Persiane","Altro"].map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Forma base</label>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {[
+                      { id: "rettangolare", label: "Rettangolare", svg: <svg viewBox="0 0 40 32" width={40} height={32}><rect x={2} y={2} width={36} height={28} fill="#ddeefa" stroke="#333" strokeWidth={1.5} rx={1}/></svg> },
+                      { id: "arco", label: "Ad arco", svg: <svg viewBox="0 0 40 36" width={40} height={36}><path d="M2,36 L2,14 Q2,2 20,2 Q38,2 38,14 L38,36 Z" fill="#ddeefa" stroke="#333" strokeWidth={1.5}/></svg> },
+                      { id: "trapezio", label: "Trapezoidale", svg: <svg viewBox="0 0 40 32" width={40} height={32}><polygon points="8,2 32,2 38,30 2,30" fill="#ddeefa" stroke="#333" strokeWidth={1.5}/></svg> },
+                      { id: "triangolo", label: "Triangolare", svg: <svg viewBox="0 0 40 32" width={40} height={32}><polygon points="20,2 38,30 2,30" fill="#ddeefa" stroke="#333" strokeWidth={1.5}/></svg> },
+                      { id: "oblo", label: "Oblò", svg: <svg viewBox="0 0 40 40" width={40} height={40}><circle cx={20} cy={20} r={17} fill="#ddeefa" stroke="#333" strokeWidth={1.5}/></svg> },
+                      { id: "sagomato", label: "Sagomato", svg: <svg viewBox="0 0 40 32" width={40} height={32}><path d="M4,30 L4,10 Q4,2 12,2 L28,2 Q36,6 36,14 L36,24 Q30,30 20,30 Z" fill="#ddeefa" stroke="#333" strokeWidth={1.5}/></svg> },
+                    ].map(f => (
+                      <div key={f.id} onClick={() => setSettingsForm(fm => ({ ...fm, forma: f.id }))} style={{ padding: "6px 8px", borderRadius: 10, border: `2px solid ${settingsForm.forma === f.id ? T.acc : T.bdr}`, background: settingsForm.forma === f.id ? T.accLt : T.card, cursor: "pointer", textAlign: "center", minWidth: 56 }}>
+                        <div>{f.svg}</div>
+                        <div style={{ fontSize: 9, fontWeight: 600, color: settingsForm.forma === f.id ? T.acc : T.sub, marginTop: 2 }}>{f.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </>)}
 
               <button style={S.btn} onClick={addSettingsItem}>Salva</button>
