@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
@@ -13,7 +13,6 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const router = useRouter()
-  const supabase = createClient()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,7 +42,6 @@ export default function LoginPage() {
       return
     }
 
-    // 1. Crea utente
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -58,7 +56,6 @@ export default function LoginPage() {
       return
     }
 
-    // 2. Crea azienda collegata all'utente
     if (authData.user) {
       const { error: azError } = await supabase.from('aziende').insert({
         owner_id: authData.user.id,
@@ -67,14 +64,12 @@ export default function LoginPage() {
       if (azError) console.error('Errore creazione azienda:', azError.message)
     }
 
-    // 3. Se Supabase richiede conferma email
     if (authData.user && !authData.session) {
       setSuccess('Controlla la tua email per confermare la registrazione!')
       setLoading(false)
       return
     }
 
-    // 4. Login automatico se non serve conferma
     router.push('/dashboard')
     router.refresh()
   }
@@ -83,27 +78,17 @@ export default function LoginPage() {
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #1A1A1C 0%, #2d2d30 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 20,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
     }}>
       <div style={{
-        background: '#F2F1EC',
-        borderRadius: 20,
-        padding: '40px 32px',
-        width: '100%',
-        maxWidth: 380,
-        boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+        background: '#F2F1EC', borderRadius: 20, padding: '40px 32px',
+        width: '100%', maxWidth: 380, boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
       }}>
-        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
             fontSize: 28, fontWeight: 900, letterSpacing: '-0.03em',
             color: '#1A1A1C', fontFamily: 'Georgia, serif',
-          }}>
-            MASTRO
-          </div>
+          }}>MASTRO</div>
           <div style={{ fontSize: 11, color: '#86868b', fontWeight: 600, letterSpacing: '0.15em', marginTop: 2 }}>
             ERP SERRAMENTI
           </div>
@@ -116,74 +101,36 @@ export default function LoginPage() {
                 <label style={{ fontSize: 11, fontWeight: 700, color: '#86868b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
                   Il tuo nome
                 </label>
-                <input
-                  type="text"
-                  value={nome}
-                  onChange={e => setNome(e.target.value)}
-                  placeholder="Mario Rossi"
-                  required
-                  style={{
-                    width: '100%', padding: '12px 14px', borderRadius: 10,
-                    border: '1.5px solid #e5e5ea', fontSize: 15, boxSizing: 'border-box',
-                    background: '#fff', outline: 'none', fontFamily: 'inherit',
-                  }}
+                <input type="text" value={nome} onChange={e => setNome(e.target.value)}
+                  placeholder="Mario Rossi" required
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1.5px solid #e5e5ea', fontSize: 15, boxSizing: 'border-box', background: '#fff', outline: 'none', fontFamily: 'inherit' }}
                 />
               </div>
-
               <div style={{ marginBottom: 16 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: '#86868b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
                   Nome azienda
                 </label>
-                <input
-                  type="text"
-                  value={azienda}
-                  onChange={e => setAzienda(e.target.value)}
-                  placeholder="Serramenti Rossi SRL"
-                  required
-                  style={{
-                    width: '100%', padding: '12px 14px', borderRadius: 10,
-                    border: '1.5px solid #e5e5ea', fontSize: 15, boxSizing: 'border-box',
-                    background: '#fff', outline: 'none', fontFamily: 'inherit',
-                  }}
+                <input type="text" value={azienda} onChange={e => setAzienda(e.target.value)}
+                  placeholder="Serramenti Rossi SRL" required
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1.5px solid #e5e5ea', fontSize: 15, boxSizing: 'border-box', background: '#fff', outline: 'none', fontFamily: 'inherit' }}
                 />
               </div>
             </>
           )}
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#86868b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="nome@azienda.it"
-              required
-              style={{
-                width: '100%', padding: '12px 14px', borderRadius: 10,
-                border: '1.5px solid #e5e5ea', fontSize: 15, boxSizing: 'border-box',
-                background: '#fff', outline: 'none', fontFamily: 'inherit',
-              }}
+            <label style={{ fontSize: 11, fontWeight: 700, color: '#86868b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="nome@azienda.it" required
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1.5px solid #e5e5ea', fontSize: 15, boxSizing: 'border-box', background: '#fff', outline: 'none', fontFamily: 'inherit' }}
             />
           </div>
 
           <div style={{ marginBottom: 24 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#86868b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              minLength={6}
-              style={{
-                width: '100%', padding: '12px 14px', borderRadius: 10,
-                border: '1.5px solid #e5e5ea', fontSize: 15, boxSizing: 'border-box',
-                background: '#fff', outline: 'none', fontFamily: 'inherit',
-              }}
+            <label style={{ fontSize: 11, fontWeight: 700, color: '#86868b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>Password</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••" required minLength={6}
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1.5px solid #e5e5ea', fontSize: 15, boxSizing: 'border-box', background: '#fff', outline: 'none', fontFamily: 'inherit' }}
             />
           </div>
 
@@ -192,50 +139,34 @@ export default function LoginPage() {
               {error}
             </div>
           )}
-
           {success && (
             <div style={{ background: '#f0fff4', border: '1px solid #34c759', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#34c759', fontWeight: 600 }}>
               {success}
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%', padding: '14px', borderRadius: 12, border: 'none',
-              background: loading ? '#86868b' : 'linear-gradient(135deg, #D08008, #b86e06)',
-              color: '#fff', fontSize: 15, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer',
-              fontFamily: 'inherit', transition: 'all 0.2s',
-            }}
-          >
+          <button type="submit" disabled={loading} style={{
+            width: '100%', padding: '14px', borderRadius: 12, border: 'none',
+            background: loading ? '#86868b' : 'linear-gradient(135deg, #D08008, #b86e06)',
+            color: '#fff', fontSize: 15, fontWeight: 800,
+            cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+          }}>
             {loading
               ? (mode === 'login' ? 'Accesso in corso...' : 'Registrazione...')
-              : (mode === 'login' ? 'Accedi \u2192' : 'Crea account \u2192')
-            }
+              : (mode === 'login' ? 'Accedi →' : 'Crea account →')}
           </button>
         </form>
 
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: '#86868b' }}>
           {mode === 'login' ? (
-            <>
-              Non hai un account?{' '}
-              <span
-                onClick={() => { setMode('register'); setError(''); setSuccess(''); }}
-                style={{ color: '#D08008', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Registrati gratis
-              </span>
+            <>Non hai un account?{' '}
+              <span onClick={() => { setMode('register'); setError(''); setSuccess(''); }}
+                style={{ color: '#D08008', fontWeight: 700, cursor: 'pointer' }}>Registrati gratis</span>
             </>
           ) : (
-            <>
-              Hai gi&agrave; un account?{' '}
-              <span
-                onClick={() => { setMode('login'); setError(''); setSuccess(''); }}
-                style={{ color: '#D08008', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Accedi
-              </span>
+            <>Hai già un account?{' '}
+              <span onClick={() => { setMode('login'); setError(''); setSuccess(''); }}
+                style={{ color: '#D08008', fontWeight: 700, cursor: 'pointer' }}>Accedi</span>
             </>
           )}
         </div>
