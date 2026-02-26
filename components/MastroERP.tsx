@@ -405,6 +405,29 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [settingsModal, setSettingsModal] = useState(null); // {type, item?}
   const [settingsForm, setSettingsForm] = useState({});
   const [showAllegatiModal, setShowAllegatiModal] = useState(null); // "nota" | "vocale" | "video" | null
+
+  // Auto-start camera preview when video modal opens
+  React.useEffect(() => {
+    if (showAllegatiModal === "video") {
+      (async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+          mediaStreamRef.current = stream;
+          setTimeout(() => {
+            if (videoPreviewRef.current) { videoPreviewRef.current.srcObject = stream; videoPreviewRef.current.play().catch(() => {}); }
+          }, 100);
+        } catch (err) {
+          console.warn("Camera preview failed:", err);
+        }
+      })();
+    } else {
+      // cleanup when modal closes
+      if (mediaStreamRef.current && !isRecording) {
+        mediaStreamRef.current.getTracks().forEach(t => t.stop());
+        mediaStreamRef.current = null;
+      }
+    }
+  }, [showAllegatiModal]);
   const [allegatiText, setAllegatiText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recSeconds, setRecSeconds] = useState(0);
@@ -734,9 +757,21 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
   const startMediaRecording = async (tipo: "vocale" | "video") => {
     try {
-      const constraints = tipo === "video" ? { audio: true, video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } } : { audio: true };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      mediaStreamRef.current = stream;
+      let stream: MediaStream;
+      if (tipo === "video" && mediaStreamRef.current) {
+        // Camera preview already running — add audio track to existing video stream
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const videoTrack = mediaStreamRef.current.getVideoTracks()[0];
+        const audioTrack = audioStream.getAudioTracks()[0];
+        stream = new MediaStream([videoTrack, audioTrack]);
+        mediaStreamRef.current = stream;
+      } else {
+        const constraints = tipo === "video" 
+          ? { audio: true, video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } } 
+          : { audio: true };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        mediaStreamRef.current = stream;
+      }
       if (tipo === "video" && videoPreviewRef.current) { videoPreviewRef.current.srcObject = stream; videoPreviewRef.current.play().catch(() => {}); }
       const mimeType = tipo === "video" 
         ? (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus") ? "video/webm;codecs=vp9,opus" : "video/webm")
@@ -7485,27 +7520,39 @@ Fabio Cozza - Walter Cozza Serramenti` },
               )}
               {showAllegatiModal === "vocale" && (
                 <>
-                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>🎤 Nota vocale</div>
-                  <div style={{ textAlign: "center", padding: "20px 0" }}>
-                    {isRecording && (
-                      <div style={{ fontSize: 24, fontWeight: 700, fontFamily: FM, color: T.red, marginBottom: 12 }}>
-                        {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
-                      </div>
-                    )}
-                    {isRecording && (
-                      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 3, marginBottom: 12, height: 30 }}>
-                        {Array.from({ length: 20 }).map((_, i) => (
-                          <div key={i} style={{ width: 3, borderRadius: 2, background: T.red, height: Math.random() * 24 + 6, animation: "pulse 0.5s infinite", animationDelay: `${i * 0.05}s` }} />
-                        ))}
-                      </div>
-                    )}
+                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #ff3b30, #ff6b6b)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 16, color: "#fff" }}>🎤</span>
+                    </span>
+                    <span>Nota Vocale</span>
+                  </div>
+                  <div style={{ textAlign: "center", padding: "16px 0" }}>
+                    {/* Waveform visualizer */}
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 2, height: 60, marginBottom: 16 }}>
+                      {Array.from({ length: 32 }).map((_, i) => (
+                        <div key={i} style={{
+                          width: 3, borderRadius: 2,
+                          background: isRecording ? "#ff3b30" : T.bdr,
+                          height: isRecording ? (Math.sin(Date.now() / 200 + i * 0.5) * 0.5 + 0.5) * 40 + 8 : 8,
+                          transition: "height 0.15s",
+                          animation: isRecording ? `audioWave 0.6s ease-in-out infinite` : "none",
+                          animationDelay: `${i * 30}ms`,
+                          opacity: isRecording ? 1 : 0.3
+                        }} />
+                      ))}
+                    </div>
+                    <style>{`@keyframes audioWave { 0%,100% { height: 8px; } 50% { height: ${Math.random() * 30 + 20}px; } }`}</style>
+                    {/* Timer */}
+                    <div style={{ fontSize: 32, fontWeight: 700, fontFamily: FM, color: isRecording ? T.red : T.sub, marginBottom: 16, letterSpacing: 2 }}>
+                      {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
+                    </div>
+                    {/* Record button */}
                     <div onClick={() => {
                       if (!isRecording) { startMediaRecording("vocale"); }
                       else { stopMediaRecording("vocale"); }
-                    }} style={{ width: 70, height: 70, borderRadius: "50%", background: isRecording ? "linear-gradient(135deg, #ff3b30, #cc0000)" : "linear-gradient(135deg, #ff3b30, #ff6b6b)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", cursor: "pointer", boxShadow: isRecording ? "0 0 24px rgba(255,59,48,0.5)" : "0 4px 16px rgba(255,59,48,0.3)", animation: isRecording ? "pulse 1.5s infinite" : "none" }}>
+                    }} style={{ width: 70, height: 70, borderRadius: "50%", background: isRecording ? "linear-gradient(135deg, #ff3b30, #cc0000)" : "linear-gradient(135deg, #ff3b30, #ff6b6b)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", cursor: "pointer", boxShadow: isRecording ? "0 0 24px rgba(255,59,48,0.5)" : "0 4px 16px rgba(255,59,48,0.3)" }}>
                       <span style={{ fontSize: 28, color: "#fff" }}>{isRecording ? "⏹" : "🎤"}</span>
                     </div>
-                    <style>{`@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }`}</style>
                     <div style={{ fontSize: 12, color: isRecording ? T.red : T.sub, marginTop: 10, fontWeight: isRecording ? 700 : 400 }}>
                       {isRecording ? "Registrazione... tocca per fermare" : "Tocca per registrare"}
                     </div>
@@ -7514,28 +7561,49 @@ Fabio Cozza - Walter Cozza Serramenti` },
               )}
               {showAllegatiModal === "video" && (
                 <>
-                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>🎬 Video</div>
-                  <div style={{ textAlign: "center", padding: "10px 0" }}>
-                    {/* Video preview */}
-                    <div style={{ width: "100%", height: 200, background: "#000", borderRadius: 12, marginBottom: 12, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <video ref={videoPreviewRef} playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover", display: isRecording ? "block" : "none" }} />
-                      {!isRecording && <span style={{ color: "#555", fontSize: 12 }}>L'anteprima apparirà qui</span>}
+                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #007aff, #5856d6)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 16, color: "#fff" }}>🎬</span>
+                    </span>
+                    <span>Registra Video</span>
+                  </div>
+                  <div style={{ padding: "4px 0" }}>
+                    {/* Camera preview — always visible */}
+                    <div style={{ width: "100%", height: 220, background: "#000", borderRadius: 14, marginBottom: 10, overflow: "hidden", position: "relative" as const }}>
+                      <video ref={videoPreviewRef} playsInline muted autoPlay style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      {/* REC badge */}
+                      {isRecording && (
+                        <div style={{ position: "absolute" as const, top: 10, left: 10, display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.6)", borderRadius: 6, padding: "4px 10px" }}>
+                          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s infinite" }} />
+                          <span style={{ fontSize: 13, fontWeight: 700, fontFamily: FM, color: "#fff" }}>
+                            {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
+                          </span>
+                        </div>
+                      )}
+                      {/* Camera switch hint */}
+                      {!isRecording && (
+                        <div style={{ position: "absolute" as const, bottom: 10, left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.5)", borderRadius: 6, padding: "4px 12px" }}>
+                          <span style={{ fontSize: 10, color: "#fff", fontWeight: 600 }}>📹 Camera posteriore</span>
+                        </div>
+                      )}
                     </div>
-                    {isRecording && (
-                      <div style={{ fontSize: 20, fontWeight: 700, fontFamily: FM, color: T.red, marginBottom: 8 }}>
-                        ⏺ {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
+                    {/* Controls */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, padding: "6px 0" }}>
+                      <div onClick={() => {
+                        if (!isRecording) { startMediaRecording("video"); }
+                        else { stopMediaRecording("video"); }
+                      }} style={{ width: 64, height: 64, borderRadius: "50%", border: "4px solid " + (isRecording ? "#ff3b30" : "#007aff"), background: isRecording ? "#ff3b30" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s" }}>
+                        {isRecording
+                          ? <div style={{ width: 22, height: 22, borderRadius: 4, background: "#fff" }} />
+                          : <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#ff3b30" }} />
+                        }
                       </div>
-                    )}
-                    <div onClick={() => {
-                      if (!isRecording) { startMediaRecording("video"); }
-                      else { stopMediaRecording("video"); }
-                    }} style={{ width: 70, height: 70, borderRadius: "50%", background: isRecording ? "linear-gradient(135deg, #ff3b30, #cc0000)" : "linear-gradient(135deg, #007aff, #5856d6)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", cursor: "pointer", boxShadow: isRecording ? "0 0 24px rgba(255,59,48,0.5)" : "0 4px 16px rgba(0,122,255,0.3)", animation: isRecording ? "pulse 1.5s infinite" : "none" }}>
-                      <span style={{ fontSize: 28, color: "#fff" }}>{isRecording ? "⏹" : "🎬"}</span>
                     </div>
-                    <div style={{ fontSize: 12, color: isRecording ? T.red : T.sub, marginTop: 10, fontWeight: isRecording ? 700 : 400 }}>
-                      {isRecording ? "Registrazione... tocca per fermare" : "Tocca per registrare"}
+                    <div style={{ textAlign: "center", fontSize: 11, color: isRecording ? T.red : T.sub, fontWeight: isRecording ? 700 : 400, marginTop: 2 }}>
+                      {isRecording ? "Tocca per fermare" : "Tocca il cerchio per registrare"}
                     </div>
                   </div>
+                  <style>{`@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
                 </>
               )}
               <button onClick={() => { stopAllMedia(); clearInterval(recInterval.current); setIsRecording(false); setRecSeconds(0); setShowAllegatiModal(null); }} style={S.btnCancel}>Annulla</button>
