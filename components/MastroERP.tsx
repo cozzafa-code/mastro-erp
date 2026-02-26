@@ -449,6 +449,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const fotoInputRef = useRef(null);
   const firmaRef = useRef(null);
   const fotoVanoRef = useRef(null);
+  const cameraPreviewRef = useRef<HTMLVideoElement|null>(null);
+  const cameraStreamRef = useRef<MediaStream|null>(null);
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraMode, setCameraMode] = useState<"foto"|"video">("foto");
   const calTouchStartRef = React.useRef(0);
   const calTouchEndRef = React.useRef(0);
   const [pendingFotoCat, setPendingFotoCat] = useState(null);
@@ -811,6 +815,88 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       } else { setIsRecording(false); setRecSeconds(0); resolve(); }
       if (mediaStreamRef.current) { mediaStreamRef.current.getTracks().forEach(t => t.stop()); mediaStreamRef.current = null; }
     });
+  };
+
+  // CAMERA MODAL — for taking photos and recording videos in vano
+  const openCamera = async (mode: "foto" | "video", cat?: string) => {
+    if (cat !== undefined) setPendingFotoCat(cat);
+    setCameraMode(mode);
+    setShowCameraModal(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }, 
+        audio: mode === "video" 
+      });
+      cameraStreamRef.current = stream;
+      setTimeout(() => {
+        if (cameraPreviewRef.current) { cameraPreviewRef.current.srcObject = stream; cameraPreviewRef.current.play().catch(() => {}); }
+      }, 100);
+    } catch (err) {
+      alert("⚠️ Impossibile accedere alla fotocamera. Controlla i permessi.\n\n" + (err as Error).message);
+      setShowCameraModal(false);
+    }
+  };
+
+  const capturePhoto = () => {
+    const video = cameraPreviewRef.current;
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext("2d");
+    if (ctx) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    const cat = pendingFotoCat;
+    const key = "foto_" + Date.now();
+    const fotoObj = { dataUrl, nome: "Foto " + new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }), tipo: "foto", categoria: cat || null };
+    if (selectedVano && selectedCM && selectedRilievo) {
+      const v = selectedVano;
+      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: { ...(vn.foto||{}), [key]: fotoObj } } : vn) } : r2) } : c));
+      setSelectedVano(prev => ({ ...prev, foto: { ...(prev.foto||{}), [key]: fotoObj } }));
+    }
+    // Flash effect + don't close (allow multiple shots)
+  };
+
+  const startCameraVideoRec = () => {
+    const stream = cameraStreamRef.current;
+    if (!stream) return;
+    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus") ? "video/webm;codecs=vp9,opus" : "video/webm";
+    const recorder = new MediaRecorder(stream, { mimeType });
+    mediaChunksRef.current = [];
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) mediaChunksRef.current.push(e.data); };
+    recorder.start(200);
+    mediaRecorderRef.current = recorder;
+    setIsRecording(true); setRecSeconds(0);
+    recInterval.current = setInterval(() => setRecSeconds(s => s + 1), 1000);
+  };
+
+  const stopCameraVideoRec = () => {
+    clearInterval(recInterval.current);
+    const secs = recSeconds;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(mediaChunksRef.current, { type: "video/webm" });
+        const dataUrl = URL.createObjectURL(blob);
+        const key = "video_" + Date.now();
+        const durStr = Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0");
+        const vObj = { nome: "Video " + new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }), tipo: "video", dataUrl, durata: durStr };
+        if (selectedVano && selectedCM && selectedRilievo) {
+          const v = selectedVano;
+          setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: { ...(vn.foto||{}), [key]: vObj } } : vn) } : r2) } : c));
+          setSelectedVano(prev => ({ ...prev, foto: { ...(prev.foto||{}), [key]: vObj } }));
+        }
+        mediaChunksRef.current = [];
+      };
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false); setRecSeconds(0);
+  };
+
+  const closeCamera = () => {
+    if (isRecording) stopCameraVideoRec();
+    if (cameraStreamRef.current) { cameraStreamRef.current.getTracks().forEach(t => t.stop()); cameraStreamRef.current = null; }
+    setShowCameraModal(false);
+    setPendingFotoCat(null);
   };
 
   // SETTINGS CRUD
@@ -4414,13 +4500,14 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: T.blue }}>📷 FOTO ({(v.foto && Object.keys(v.foto).length) || 0})</div>
                   <div style={{ display: "flex", gap: 4 }}>
-                    <button onClick={() => { setPendingFotoCat(null); fotoVanoRef.current?.click(); }}
+                    <button onClick={() => openCamera("foto", null)}
                       style={{ padding: "4px 10px", borderRadius: 6, background: T.acc, color: "#fff", border: "none", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>📷 Foto</button>
-                    <button onClick={() => { setPendingFotoCat(null); videoVanoRef.current?.click(); }}
+                    <button onClick={() => openCamera("video", null)}
                       style={{ padding: "4px 10px", borderRadius: 6, background: T.blue, color: "#fff", border: "none", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FF }}>🎬 Video</button>
                   </div>
                 </div>
-                <input ref={fotoVanoRef} type="file" accept="image/*" capture="environment" multiple style={{ display: "none" }}
+                {/* Hidden file inputs as fallback */}
+                <input ref={fotoVanoRef} type="file" accept="image/*" multiple style={{ display: "none" }}
                   onChange={e => {
                     const cat = pendingFotoCat;
                     Array.from(e.target.files || []).forEach(file => {
@@ -4458,7 +4545,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   ].map((cat, i) => {
                     const fotoCount = Object.values(v.foto||{}).filter(f=>f.categoria===cat.n).length;
                     return (
-                    <div key={i} onClick={()=>{ setPendingFotoCat(cat.n); fotoVanoRef.current?.click(); }}
+                    <div key={i} onClick={()=>{ openCamera("foto", cat.n); }}
                       style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${fotoCount>0 ? "#34c759" : cat.r ? cat.c + "40" : T.bdr}`, background: fotoCount>0 ? "#34c75915" : cat.r ? cat.c + "08" : "transparent", fontSize: 10, fontWeight: 600, color: fotoCount>0 ? "#1a9e40" : cat.r ? cat.c : T.sub, cursor: "pointer", display: "flex", alignItems: "center", gap: 3, position:"relative" }}>
                       {fotoCount>0 ? <span style={{fontSize:8,background:"#34c759",color:"#fff",borderRadius:"50%",width:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900}}>{fotoCount}</span> : cat.r ? <span style={{ fontSize: 8 }}>✕</span> : null}
                       <span style={{ fontSize: 10 }}>📷</span> {cat.n}
@@ -7661,6 +7748,76 @@ Fabio Cozza - Walter Cozza Serramenti` },
               )}
               <button onClick={() => { stopAllMedia(); clearInterval(recInterval.current); setIsRecording(false); setRecSeconds(0); setShowAllegatiModal(null); }} style={S.btnCancel}>Annulla</button>
             </div>
+          </div>
+        )}
+
+        {/* CAMERA MODAL — foto & video cattura */}
+        {showCameraModal && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "#000", display: "flex", flexDirection: "column" as const }}>
+            {/* Header */}
+            <div style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(0,0,0,0.8)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 14, color: "#fff", fontWeight: 700 }}>
+                  {cameraMode === "foto" ? "📷 Scatta Foto" : "🎬 Registra Video"}
+                </span>
+                {pendingFotoCat && <span style={{ fontSize: 10, color: "#ff9500", fontWeight: 700, background: "rgba(255,149,0,0.2)", padding: "2px 8px", borderRadius: 4 }}>{pendingFotoCat}</span>}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {/* Switch mode */}
+                <div onClick={() => setCameraMode(cameraMode === "foto" ? "video" : "foto")}
+                  style={{ padding: "4px 10px", borderRadius: 6, background: "rgba(255,255,255,0.15)", fontSize: 10, color: "#fff", fontWeight: 600, cursor: "pointer" }}>
+                  {cameraMode === "foto" ? "🎬 Video" : "📷 Foto"}
+                </div>
+                {/* Import from gallery */}
+                <div onClick={() => { fotoVanoRef.current?.click(); }}
+                  style={{ padding: "4px 10px", borderRadius: 6, background: "rgba(255,255,255,0.15)", fontSize: 10, color: "#fff", fontWeight: 600, cursor: "pointer" }}>
+                  🖼 Galleria
+                </div>
+                <div onClick={closeCamera}
+                  style={{ padding: "4px 10px", borderRadius: 6, background: "rgba(255,59,48,0.3)", fontSize: 10, color: "#ff6b6b", fontWeight: 700, cursor: "pointer" }}>
+                  ✕ Chiudi
+                </div>
+              </div>
+            </div>
+            {/* Camera preview */}
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" as const }}>
+              <video ref={cameraPreviewRef} playsInline muted autoPlay style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              {/* REC indicator for video */}
+              {cameraMode === "video" && isRecording && (
+                <div style={{ position: "absolute", top: 16, left: 16, display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,0.6)", borderRadius: 8, padding: "6px 12px" }}>
+                  <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s infinite" }} />
+                  <span style={{ fontSize: 16, fontWeight: 700, fontFamily: FM, color: "#fff" }}>
+                    {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
+                  </span>
+                </div>
+              )}
+              {/* Photo count badge */}
+              {cameraMode === "foto" && (
+                <div style={{ position: "absolute", top: 16, right: 16, background: "rgba(0,0,0,0.6)", borderRadius: 8, padding: "6px 12px" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>
+                    📷 {Object.values(selectedVano?.foto || {}).filter(f => f.tipo === "foto" && (!pendingFotoCat || f.categoria === pendingFotoCat)).length} scattate
+                  </span>
+                </div>
+              )}
+            </div>
+            {/* Controls */}
+            <div style={{ padding: "16px 0 24px", background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", gap: 32 }}>
+              {cameraMode === "foto" ? (
+                <div onClick={capturePhoto}
+                  style={{ width: 72, height: 72, borderRadius: "50%", border: "4px solid #fff", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                  <div style={{ width: 58, height: 58, borderRadius: "50%", background: "#fff" }} />
+                </div>
+              ) : (
+                <div onClick={() => { if (!isRecording) startCameraVideoRec(); else stopCameraVideoRec(); }}
+                  style={{ width: 72, height: 72, borderRadius: "50%", border: "4px solid #fff", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                  {isRecording
+                    ? <div style={{ width: 26, height: 26, borderRadius: 4, background: "#ff3b30" }} />
+                    : <div style={{ width: 58, height: 58, borderRadius: "50%", background: "#ff3b30" }} />
+                  }
+                </div>
+              )}
+            </div>
+            <style>{`@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }`}</style>
           </div>
         )}
 
