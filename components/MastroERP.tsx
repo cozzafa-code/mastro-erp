@@ -302,6 +302,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [tipoMisuraZanzDB, setTipoMisuraZanzDB] = useState([
     { id: "tmz1", code: "Misura muro finito" }, { id: "tmz2", code: "Misura esterna zanzariera" }
   ]);
+  const [tipoCassonettoDB, setTipoCassonettoDB] = useState([
+    { id: "tc1", code: "Monoblocco" }, { id: "tc2", code: "Esterno" }, { id: "tc3", code: "A scomparsa" }, { id: "tc4", code: "Sopraluce" }
+  ]);
   const [pipelineDB, setPipelineDB] = useState(PIPELINE_DEFAULT);
   const [faseOpen, setFaseOpen] = useState(true);
   const [sogliaDays, setSogliaDays] = useState(5);
@@ -637,6 +640,16 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     if (selectedVano?.id === vanoId) setSelectedVano(prev => ({ ...prev, accessori: { ...prev.accessori, [acc]: { ...prev.accessori[acc], [field]: value } } }));
   };
 
+  const updateVanoField = (vanoId, field, value) => {
+    if (selectedRilievo) {
+      const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.map(v => v.id === vanoId ? { ...v, [field]: value } : v) };
+      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
+      setSelectedRilievo(updRil);
+      setSelectedCM(prev => prev ? ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) }) : prev);
+    }
+    if (selectedVano?.id === vanoId) setSelectedVano(prev => ({ ...prev, [field]: value }));
+  };
+
   // DELETE functions
   const deleteTask = (taskId) => { if ((()=>{try{return window.confirm("Eliminare questo task?");}catch(e){return false;}})()) setTasks(ts => ts.filter(t => t.id !== taskId)); };
   const deleteVano = (vanoId) => {
@@ -785,7 +798,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         html += `<div class="m-item"><div class="m-label">${l}</div><div class="m-val">${val || "—"} mm</div></div>`;
       });
       html += `</div>`;
-      if (v.cassonetto) html += `<p style="margin-top:8px;font-size:13px">Cassonetto: ${v.casH || "—"} × ${v.casP || "—"} mm</p>`;
+      if (v.cassonetto) html += `<p style="margin-top:8px;font-size:13px">Cassonetto${v.casTipo ? " " + v.casTipo : ""}: ${(v.misure||{}).casL || "—"}×${(v.misure||{}).casH || "—"}×${(v.misure||{}).casP || "—"} mm</p>`;
       if (v.note) html += `<p style="margin-top:4px;font-size:12px;color:#666">Note: ${v.note}</p>`;
       html += `</div>`;
     });
@@ -2980,7 +2993,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           v.telaio?"📐 Tel "+v.telaio+(v.telaioAlaZ?" "+v.telaioAlaZ+"mm":"")+(v.rifilato&&(v.rifilSx||v.rifilDx)?" · Rif Sx:"+v.rifilSx+" Dx:"+v.rifilDx+(v.rifilSopra?" Sop:"+v.rifilSopra:""):""):"",
           (v.coprifilo||v.lamiera)?"🔩 "+(v.coprifilo||"")+(v.lamiera?" / "+v.lamiera:""):"",
           "",
-          v.cassonetto?"📦 Cass "+v.casH+"×"+v.casP:"",
+          v.cassonetto?"📦 Cass "+(v.misure?.casL||"")+"×"+(v.misure?.casH||"")+"×"+(v.misure?.casP||""):"",
           v.accessori?.tapparella?.attivo?"⬇ Tap "+v.accessori.tapparella.colore+" · "+v.accessori.tapparella.l+"×"+v.accessori.tapparella.h:"",
           v.accessori?.persiana?.attivo?"🪟 Pers "+v.accessori.persiana.colore:"",
           v.accessori?.zanzariera?.attivo?"🕸 Zan "+v.accessori.zanzariera.l+"×"+v.accessori.zanzariera.h:"",
@@ -3128,7 +3141,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         <svg viewBox={"0 0 "+W+" "+H} width="100%" style={{display:"block",background:"white",border:"1px solid #ddd",borderRadius:3}}>
           {/* cassonetto */}
           {v.cassonetto&&<rect x={0} y={-14} width={W} height={14} fill="#fffde7" stroke="#ca8a04" strokeWidth={0.8}/>}
-          {v.cassonetto&&<text x={cx} y={-4} textAnchor="middle" fontSize={6} fill="#92400e" fontFamily={F} fontWeight="700">{"CASS. "+v.casH+"×"+v.casP}</text>}
+          {v.cassonetto&&<text x={cx} y={-4} textAnchor="middle" fontSize={6} fill="#92400e" fontFamily={F} fontWeight="700">{"CASS. "+(v.misure?.casL||"")+"×"+(v.misure?.casH||"")+"×"+(v.misure?.casP||"")}</text>}
           {/* telaio fisso */}
           <rect x={1} y={1} width={W-2} height={H-2} fill="white" stroke="#333" strokeWidth={BW}/>
           {/* soglia */}
@@ -3263,7 +3276,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                       {v.lamiera&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fff7ed",color:"#9a3412",fontSize:9.5}}>📏 {v.lamiera}</span>}
                     </div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
-                      {v.cassonetto&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fef3c7",color:"#b45309",fontSize:9.5,fontWeight:700}}>📦 Cass. {v.casH}×{v.casP}</span>}
+                      {v.cassonetto&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fef3c7",color:"#b45309",fontSize:9.5,fontWeight:700}}>📦 {v.casTipo||"Cass."} {v.misure?.casL||""}×{v.misure?.casH||""}×{v.misure?.casP||""}</span>}
                       {v.accessori?.tapparella?.attivo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fef3c7",color:"#b45309",fontSize:9.5,fontWeight:700}}>⬇ Tap. {v.accessori.tapparella.colore} {v.accessori.tapparella.l}×{v.accessori.tapparella.h}</span>}
                       {v.accessori?.persiana?.attivo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#eff6ff",color:"#1e40af",fontSize:9.5,fontWeight:700}}>🪟 Pers. {v.accessori.persiana.colore}</span>}
                       {v.accessori?.zanzariera?.attivo&&<span style={{padding:"2px 7px",borderRadius:4,background:"#fdf4ff",color:"#6b21a8",fontSize:9.5,fontWeight:700}}>🕸 Zan. {v.accessori.zanzariera.l}×{v.accessori.zanzariera.h}</span>}
@@ -3758,8 +3771,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               </div>
               {v.cassonetto && (
                 <div style={{ marginTop: 8 }}>
+                  {bInput("Cassonetto LARGHEZZA", "casL")}
                   {bInput("Cassonetto ALTEZZA", "casH")}
                   {bInput("Cassonetto PROFONDITÀ", "casP")}
+                  {bInput("Cielino LARGHEZZA", "casLCiel")}
+                  {bInput("Cielino PROFONDITÀ", "casPCiel")}
                 </div>
               )}
             </>
@@ -3770,19 +3786,60 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             <>
               {["tapparella", "persiana", "zanzariera", "cassonetto"].map(acc => {
                 if (acc === "cassonetto") {
+                  const casColor = "#b45309";
+                  const focusNext = (ids, cur) => { const i = ids.indexOf(cur); if (i < ids.length - 1) { const el = document.getElementById(ids[i + 1]); if (el) { el.focus(); el.scrollIntoView({ behavior: "smooth", block: "center" }); } } };
+                  const casIds = [`cas-L-${v.id}`, `cas-H-${v.id}`, `cas-P-${v.id}`, `cas-LC-${v.id}`, `cas-PC-${v.id}`];
+                  const casInput = (label, field, idx) => (
+                    <div key={field} style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 11, color: T.text, marginBottom: 4 }}>{label}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <input id={casIds[idx]} style={{ flex: 1, padding: "10px", fontSize: 14, fontFamily: FM, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card }} type="number" inputMode="numeric" enterKeyHint={idx < 4 ? "next" : "done"} placeholder="" value={m[field] || ""} onChange={e => updateMisura(v.id, field, e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); focusNext(casIds, casIds[idx]); } }} />
+                        <span style={{ fontSize: 11, color: T.sub, background: T.bg, padding: "6px 8px", borderRadius: 6 }}>mm</span>
+                        {idx < 4 && <div onClick={() => focusNext(casIds, casIds[idx])} style={{ padding: "8px 12px", borderRadius: 8, background: casColor, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>→</div>}
+                      </div>
+                    </div>
+                  );
                   return (
-                    <div key={acc} onClick={() => {
-                      const nv = { ...v, cassonetto: !v.cassonetto };
-                      setSelectedVano(nv);
-                      if(selectedRilievo){const updR3={...selectedRilievo,vani:selectedRilievo.vani.map(x=>x.id===v.id?nv:x)};setCantieri(cs=>cs.map(c=>c.id===selectedCM?.id?{...c,rilievi:c.rilievi.map(r2=>r2.id===selectedRilievo.id?updR3:r2)}:c));setSelectedRilievo(updR3);}
-                    }} style={{ padding: "14px 16px", borderRadius: 12, border: `1px dashed ${v.cassonetto ? "#ff9500" : T.bdr}`, background: v.cassonetto ? "#fff8e1" : T.card, marginBottom: 8, cursor: "pointer", textAlign: "center" }}>
-                      <span style={{ fontSize: 12, color: v.cassonetto ? "#ff9500" : T.sub }}>+ 🧊 {v.cassonetto ? "Cassonetto attivo — tocca per rimuovere" : "Aggiungi Cassonetto"}</span>
+                    <div key={acc} style={{ marginBottom: 8, borderRadius: 12, border: `1px ${v.cassonetto ? "solid" : "dashed"} ${v.cassonetto ? casColor + "40" : T.bdr}`, overflow: "hidden", background: T.card }}>
+                      {!v.cassonetto ? (
+                        <div onClick={() => { const nv = { ...v, cassonetto: true }; setSelectedVano(nv); if(selectedRilievo){const updR3={...selectedRilievo,vani:selectedRilievo.vani.map(x=>x.id===v.id?nv:x)};setCantieri(cs=>cs.map(c=>c.id===selectedCM?.id?{...c,rilievi:c.rilievi.map(r2=>r2.id===selectedRilievo.id?updR3:r2)}:c));setSelectedRilievo(updR3);} }} style={{ padding: "14px 16px", textAlign: "center", cursor: "pointer" }}>
+                          <span style={{ fontSize: 12, color: T.sub }}>+ 🧊 Aggiungi Cassonetto</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${T.bdr}` }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: casColor }}>🧊 Cassonetto</span>
+                            <div onClick={() => { const nv = { ...v, cassonetto: false }; setSelectedVano(nv); if(selectedRilievo){const updR3={...selectedRilievo,vani:selectedRilievo.vani.map(x=>x.id===v.id?nv:x)};setCantieri(cs=>cs.map(c=>c.id===selectedCM?.id?{...c,rilievi:c.rilievi.map(r2=>r2.id===selectedRilievo.id?updR3:r2)}:c));setSelectedRilievo(updR3);} }} style={{ fontSize: 11, color: T.sub, cursor: "pointer" }}>▲ Chiudi</div>
+                          </div>
+                          <div style={{ padding: "12px 16px" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6, textTransform: "uppercase" }}>Tipo Cassonetto</div>
+                            <div style={{ display: "flex", gap: 4, marginBottom: 12, flexWrap: "wrap" }}>
+                              {tipoCassonettoDB.map(tc => (
+                                <div key={tc.id} onClick={() => updateVanoField(v.id, "casTipo", tc.code)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${v.casTipo === tc.code ? casColor : T.bdr}`, background: v.casTipo === tc.code ? casColor + "18" : T.card, fontSize: 12, cursor: "pointer", fontWeight: v.casTipo === tc.code ? 700 : 400, color: v.casTipo === tc.code ? casColor : T.text }}>{tc.code}</div>
+                              ))}
+                            </div>
+                            {casInput("Larghezza", "casL", 0)}
+                            {casInput("Altezza", "casH", 1)}
+                            {casInput("Profondità", "casP", 2)}
+                            <div style={{ marginTop: 4, marginBottom: 4, padding: "6px 0", borderTop: `1px dashed ${T.bdr}` }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 2 }}>Cielino</div>
+                            </div>
+                            {casInput("Larghezza Cielino", "casLCiel", 3)}
+                            {casInput("Profondità Cielino", "casPCiel", 4)}
+                            <div onClick={() => { const nv = { ...v, cassonetto: false }; setSelectedVano(nv); if(selectedRilievo){const updR3={...selectedRilievo,vani:selectedRilievo.vani.map(x=>x.id===v.id?nv:x)};setCantieri(cs=>cs.map(c=>c.id===selectedCM?.id?{...c,rilievi:c.rilievi.map(r2=>r2.id===selectedRilievo.id?updR3:r2)}:c));setSelectedRilievo(updR3);} }} style={{ marginTop: 10, padding: "8px", borderRadius: 8, border: `1px dashed #ef5350`, textAlign: "center", fontSize: 11, color: "#ef5350", cursor: "pointer" }}>
+                              🗑 Rimuovi cassonetto
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   );
                 }
                 const a = v.accessori?.[acc] || { attivo: false };
                 const accColors = { tapparella: "#ff9500", persiana: "#007aff", zanzariera: "#ff2d55" };
                 const accIcons = { tapparella: "🪟", persiana: "🏠", zanzariera: "🦟" };
+                const focusNextAcc = (ids, cur) => { const i = ids.indexOf(cur); if (i < ids.length - 1) { const el = document.getElementById(ids[i + 1]); if (el) { el.focus(); el.scrollIntoView({ behavior: "smooth", block: "center" }); } } };
+                const accInputIds = [`${acc}-L-${v.id}`, `${acc}-H-${v.id}`];
                 return (
                   <div key={acc} style={{ marginBottom: 8, borderRadius: 12, border: `1px ${a.attivo ? "solid" : "dashed"} ${a.attivo ? accColors[acc] + "40" : T.bdr}`, overflow: "hidden", background: T.card }}>
                     {!a.attivo ? (
@@ -3799,14 +3856,15 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                           <div style={{ marginBottom: 10 }}>
                             <div style={{ fontSize: 11, color: T.text, marginBottom: 4 }}>Larghezza</div>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <input style={{ flex: 1, padding: "10px", fontSize: 14, fontFamily: FM, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card }} type="number" inputMode="numeric" placeholder="" value={v.accessori?.[acc]?.l || ""} onChange={e => updateAccessorio(v.id, acc, "l", parseInt(e.target.value) || 0)} />
+                              <input id={accInputIds[0]} style={{ flex: 1, padding: "10px", fontSize: 14, fontFamily: FM, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card }} type="number" inputMode="numeric" enterKeyHint="next" placeholder="" value={v.accessori?.[acc]?.l || ""} onChange={e => updateAccessorio(v.id, acc, "l", parseInt(e.target.value) || 0)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); focusNextAcc(accInputIds, accInputIds[0]); } }} />
                               <span style={{ fontSize: 11, color: T.sub, background: T.bg, padding: "6px 8px", borderRadius: 6 }}>mm</span>
+                              <div onClick={() => focusNextAcc(accInputIds, accInputIds[0])} style={{ padding: "8px 12px", borderRadius: 8, background: accColors[acc], color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>→</div>
                             </div>
                           </div>
                           <div style={{ marginBottom: 10 }}>
                             <div style={{ fontSize: 11, color: T.text, marginBottom: 4 }}>Altezza</div>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <input style={{ flex: 1, padding: "10px", fontSize: 14, fontFamily: FM, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card }} type="number" inputMode="numeric" placeholder="" value={v.accessori?.[acc]?.h || ""} onChange={e => updateAccessorio(v.id, acc, "h", parseInt(e.target.value) || 0)} />
+                              <input id={accInputIds[1]} style={{ flex: 1, padding: "10px", fontSize: 14, fontFamily: FM, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card }} type="number" inputMode="numeric" enterKeyHint="done" placeholder="" value={v.accessori?.[acc]?.h || ""} onChange={e => updateAccessorio(v.id, acc, "h", parseInt(e.target.value) || 0)} />
                               <span style={{ fontSize: 11, color: T.sub, background: T.bg, padding: "6px 8px", borderRadius: 6 }}>mm</span>
                             </div>
                           </div>
@@ -4885,7 +4943,7 @@ Grazie per il suo messaggio.
       {/* Settings sub-tabs — scrollable */}
       <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "8px 16px 12px", borderRadius: 8, border: `1px solid ${T.bdr}` }}>
         <div style={{ display: "flex", minWidth: "max-content" }}>
-          {[{ id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "team", l: "👥 Team" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "tapparella", l: "⬇ Tapparella" }, { id: "persiana", l: "🏠 Persiana" }, { id: "zanzariera", l: "🦟 Zanzariera" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "guida", l: "📖 Guida" }].map(t => (
+          {[{ id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "team", l: "👥 Team" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "tapparella", l: "⬇ Tapparella" }, { id: "persiana", l: "🏠 Persiana" }, { id: "zanzariera", l: "🦟 Zanzariera" }, { id: "cassonetto", l: "🧊 Cassonetto" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "guida", l: "📖 Guida" }].map(t => (
             <div key={t.id} onClick={() => setSettingsTab(t.id)} style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 600, background: settingsTab === t.id ? T.acc : T.card, color: settingsTab === t.id ? "#fff" : T.sub, cursor: "pointer", whiteSpace: "nowrap" }}>
               {t.l}
             </div>
@@ -5220,6 +5278,20 @@ Grazie per il suo messaggio.
         )}
 
         {/* === SALITA === */}
+        {settingsTab === "cassonetto" && (
+          <>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura i tipi di cassonetto disponibili</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>🧊 Tipo Cassonetto</div>
+            {tipoCassonettoDB.map(tc => (
+              <div key={tc.id} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{tc.code}</span>
+                <div onClick={() => setTipoCassonettoDB(prev => prev.filter(x => x.id !== tc.id))} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
+              </div></div>
+            ))}
+            <div onClick={() => { let n; try{n=window.prompt("Nuovo tipo cassonetto:");}catch(e){} if (n?.trim()) setTipoCassonettoDB(prev => [...prev, { id: "tc" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipo cassonetto</div>
+          </>
+        )}
+
         {settingsTab === "salita" && (
           <>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Configura i mezzi di salita disponibili</div>
