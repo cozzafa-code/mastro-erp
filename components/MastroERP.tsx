@@ -3206,7 +3206,29 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       } else {
         const tipObj = TIPOLOGIE_RAPIDE.find(tp => tp.code === t);
         const forma = tipObj?.forma || "rettangolare";
-        if (forma === "arco") {
+        if (forma === "fuorisquadro") {
+          // Usa H sx e H dx reali per proporzionare il disegno
+          const hL = m.hSx || m.hCentro || hc || GH;
+          const hR = m.hDx || m.hCentro || hc || GH;
+          const maxH = Math.max(hL, hR, 1);
+          const scaledHL = (hL / maxH) * GH;
+          const scaledHR = (hR / maxH) * GH;
+          const topL = GY + GH - scaledHL;
+          const topR = GY + GH - scaledHR;
+          const btm = GY + GH;
+          body = [
+            <polygon key="v" points={`${GX},${topL} ${GX+GW},${topR} ${GX+GW},${btm} ${GX},${btm}`} fill="#ddeefa" stroke="#333" strokeWidth={1.2}/>,
+            // Diagonale in rosso
+            <line key="diag" x1={GX} y1={topL} x2={GX+GW} y2={btm} stroke="#c62828" strokeWidth={1} strokeDasharray="6,3"/>,
+            // Quote H1 e H2 sui lati
+            <text key="h1" x={GX-2} y={(topL+btm)/2} textAnchor="end" fontSize={8} fill="#c62828" fontFamily={F} fontWeight="700">{"H1\n"+(m.hSx||"")}</text>,
+            <text key="h2" x={GX+GW+2} y={(topR+btm)/2} textAnchor="start" fontSize={8} fill="#1565c0" fontFamily={F} fontWeight="700">{"H2\n"+(m.hDx||"")}</text>,
+            // Label tipo
+            <text key="tx" x={cx} y={btm-8} textAnchor="middle" fontSize={9} fill="#555" fontFamily={F} fontWeight="600">{t}</text>,
+            // Differenza fuorisquadro
+            ...(hL !== hR ? [<text key="diff" x={cx} y={Math.min(topL,topR)-4} textAnchor="middle" fontSize={7} fill="#c62828" fontFamily={F} fontWeight="700">{"Δ "+Math.abs(hL-hR)+"mm"}</text>] : []),
+          ];
+        } else if (forma === "arco") {
           body = [
             <path key="v" d={`M${GX},${GY+GH} L${GX},${GY+GH*0.35} Q${GX},${GY} ${cx},${GY} Q${GX+GW},${GY} ${GX+GW},${GY+GH*0.35} L${GX+GW},${GY+GH} Z`} fill="#ddeefa" stroke="#333" strokeWidth={1.2}/>,
             <text key="tx" x={cx} y={cy+10} textAnchor="middle" fontSize={9} fill="#555" fontFamily={F} fontWeight="600">{t}</text>
@@ -6694,6 +6716,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {[
                       { id: "rettangolare", label: "Rettangolare", svg: <svg viewBox="0 0 40 32" width={40} height={32}><rect x={2} y={2} width={36} height={28} fill="#ddeefa" stroke="#333" strokeWidth={1.5} rx={1}/></svg> },
+                      { id: "fuorisquadro", label: "Fuorisquadro", svg: <svg viewBox="0 0 40 36" width={40} height={36}><polygon points="2,34 2,6 38,2 38,34" fill="#ddeefa" stroke="#333" strokeWidth={1.5}/><line x1="2" y1="6" x2="38" y2="34" stroke="#c62828" strokeWidth={1} strokeDasharray="3,2"/><text x="4" y="20" fontSize="7" fill="#c62828" fontWeight="700">H1</text><text x="32" y="20" fontSize="7" fill="#1565c0" fontWeight="700">H2</text></svg> },
                       { id: "arco", label: "Ad arco", svg: <svg viewBox="0 0 40 36" width={40} height={36}><path d="M2,36 L2,14 Q2,2 20,2 Q38,2 38,14 L38,36 Z" fill="#ddeefa" stroke="#333" strokeWidth={1.5}/></svg> },
                       { id: "trapezio", label: "Trapezoidale", svg: <svg viewBox="0 0 40 32" width={40} height={32}><polygon points="8,2 32,2 38,30 2,30" fill="#ddeefa" stroke="#333" strokeWidth={1.5}/></svg> },
                       { id: "triangolo", label: "Triangolare", svg: <svg viewBox="0 0 40 32" width={40} height={32}><polygon points="20,2 38,30 2,30" fill="#ddeefa" stroke="#333" strokeWidth={1.5}/></svg> },
