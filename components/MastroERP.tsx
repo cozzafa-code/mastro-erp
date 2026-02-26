@@ -296,6 +296,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [tipoMisuraDB, setTipoMisuraDB] = useState([
     { id: "tm1", code: "Punta corta" }, { id: "tm2", code: "Punta lunga" }, { id: "tm3", code: "Muro finito" }, { id: "tm4", code: "Muro grezzo" }
   ]);
+  const [tipoMisuraTappDB, setTipoMisuraTappDB] = useState([
+    { id: "tmt1", code: "Misura luce guida" }, { id: "tmt2", code: "Misura finita tapparella" }
+  ]);
   const [pipelineDB, setPipelineDB] = useState(PIPELINE_DEFAULT);
   const [faseOpen, setFaseOpen] = useState(true);
   const [sogliaDays, setSogliaDays] = useState(5);
@@ -3818,6 +3821,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                                   <div key={mot} onClick={() => updateAccessorio(v.id, acc, "motorizzata", mot)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${v.accessori?.[acc]?.motorizzata === mot ? "#34c759" : T.bdr}`, background: v.accessori?.[acc]?.motorizzata === mot ? "#34c75918" : T.card, fontSize: 12, cursor: "pointer", fontWeight: v.accessori?.[acc]?.motorizzata === mot ? 700 : 400, color: v.accessori?.[acc]?.motorizzata === mot ? "#34c759" : T.text }}>{mot}</div>
                                 ))}
                               </div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6, textTransform: "uppercase" }}>Tipo Misura</div>
+                              <select style={{ width: "100%", padding: "10px", fontSize: 12, border: `1px solid ${T.bdr}`, borderRadius: 8, background: T.card, fontFamily: FF, marginBottom: 10 }} value={v.accessori?.[acc]?.tipoMisura || ""} onChange={e => updateAccessorio(v.id, acc, "tipoMisura", e.target.value)}>
+                                <option value="">— Seleziona tipo misura —</option>
+                                {tipoMisuraTappDB.map(tm => <option key={tm.id} value={tm.code}>{tm.code}</option>)}
+                              </select>
                             </>
                           )}
                           {acc === "persiana" && (
@@ -4865,7 +4873,7 @@ Grazie per il suo messaggio.
       {/* Settings sub-tabs — scrollable */}
       <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "8px 16px 12px", borderRadius: 8, border: `1px solid ${T.bdr}` }}>
         <div style={{ display: "flex", minWidth: "max-content" }}>
-          {[{ id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "team", l: "👥 Team" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "persiana", l: "🏠 Persiana" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "guida", l: "📖 Guida" }].map(t => (
+          {[{ id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "team", l: "👥 Team" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "tapparella", l: "⬇ Tapparella" }, { id: "persiana", l: "🏠 Persiana" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "guida", l: "📖 Guida" }].map(t => (
             <div key={t.id} onClick={() => setSettingsTab(t.id)} style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 600, background: settingsTab === t.id ? T.acc : T.card, color: settingsTab === t.id ? "#fff" : T.sub, cursor: "pointer", whiteSpace: "nowrap" }}>
               {t.l}
             </div>
@@ -5141,6 +5149,20 @@ Grazie per il suo messaggio.
         )}
 
         {/* === SALITA === */}
+        {settingsTab === "tapparella" && (
+          <>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura le opzioni per le tapparelle</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>📏 Tipo Misura Tapparella</div>
+            {tipoMisuraTappDB.map(tm => (
+              <div key={tm.id} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{tm.code}</span>
+                <div onClick={() => setTipoMisuraTappDB(prev => prev.filter(x => x.id !== tm.id))} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
+              </div></div>
+            ))}
+            <div onClick={() => { let n; try{n=window.prompt("Nuovo tipo misura tapparella:");}catch(e){} if (n?.trim()) setTipoMisuraTappDB(prev => [...prev, { id: "tmt" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipo misura</div>
+          </>
+        )}
+
         {settingsTab === "persiana" && (
           <>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura le opzioni per le persiane</div>
