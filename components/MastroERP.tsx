@@ -435,6 +435,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [playingId, setPlayingId] = useState(null);
   const [playProgress, setPlayProgress] = useState(0);
   const playInterval = useRef(null);
+  const [viewingVideoId, setViewingVideoId] = useState<number|null>(null);
+  const [viewingPhotoId, setViewingPhotoId] = useState<number|null>(null);
   const mediaRecorderRef = useRef<MediaRecorder|null>(null);
   const mediaStreamRef = useRef<MediaStream|null>(null);
   const mediaChunksRef = useRef<Blob[]>([]);
@@ -2575,22 +2577,50 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{a.nome}</div>
                       <div style={{ fontSize: 10, color: T.sub }}>{a.data}{a.durata ? ` · ${a.durata}` : ""}</div>
-                      {a.dataUrl && (a.tipo==="foto" ? <a href={a.dataUrl} target="_blank" rel="noreferrer" style={{fontSize:10,color:T.acc,fontWeight:600,marginTop:2,display:"block",textDecoration:"none"}}>🔍 Apri</a> : <a href={a.dataUrl} download={a.nome} style={{fontSize:10,color:T.acc,fontWeight:600,marginTop:2,display:"block",textDecoration:"none"}}>⬇ Scarica</a>)}
                     </div>
-                    {a.tipo==="foto"&&a.dataUrl&&<img src={a.dataUrl} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0}} alt=""/>}
-                    {(a.tipo === "vocale" || a.tipo === "video") && (
+                    {/* Audio: play inline */}
+                    {a.tipo === "vocale" && (
                       <div onClick={() => playAllegato(a.id)} style={{ padding: "3px 8px", borderRadius: 6, background: playingId === a.id ? T.redLt : T.accLt, fontSize: 10, fontWeight: 600, color: playingId === a.id ? T.red : T.acc, cursor: "pointer" }}>
                         {playingId === a.id ? "⏸ Stop" : "▶ Play"}
                       </div>
                     )}
-                    {a.tipo === "foto" && <div onClick={() => alert("📷 Anteprima foto: " + a.nome)} style={{ padding: "3px 8px", borderRadius: 6, background: T.accLt, fontSize: 10, fontWeight: 600, color: T.acc, cursor: "pointer" }}>👁 Vedi</div>}
-                    {a.tipo === "file" && <div onClick={() => alert("📎 Apertura file: " + a.nome)} style={{ padding: "3px 8px", borderRadius: 6, background: T.accLt, fontSize: 10, fontWeight: 600, color: T.acc, cursor: "pointer" }}>📂 Apri</div>}
+                    {/* Video: open/close inline player */}
+                    {a.tipo === "video" && a.dataUrl && (
+                      <div onClick={() => setViewingVideoId(viewingVideoId === a.id ? null : a.id)} style={{ padding: "3px 8px", borderRadius: 6, background: viewingVideoId === a.id ? T.blueLt : T.accLt, fontSize: 10, fontWeight: 600, color: viewingVideoId === a.id ? T.blue : T.acc, cursor: "pointer" }}>
+                        {viewingVideoId === a.id ? "✕ Chiudi" : "▶ Guarda"}
+                      </div>
+                    )}
+                    {a.tipo === "video" && a.dataUrl && (
+                      <a href={a.dataUrl} download={a.nome || "video.webm"} style={{ padding: "3px 8px", borderRadius: 6, background: T.bg, fontSize: 10, fontWeight: 600, color: T.sub, cursor: "pointer", textDecoration: "none" }}>⬇</a>
+                    )}
+                    {/* Photo: toggle inline preview */}
+                    {a.tipo === "foto" && a.dataUrl && (
+                      <div onClick={() => setViewingPhotoId(viewingPhotoId === a.id ? null : a.id)} style={{ padding: "3px 8px", borderRadius: 6, background: T.accLt, fontSize: 10, fontWeight: 600, color: T.acc, cursor: "pointer" }}>
+                        {viewingPhotoId === a.id ? "✕ Chiudi" : "👁 Vedi"}
+                      </div>
+                    )}
+                    {a.tipo === "foto" && a.dataUrl && <img src={a.dataUrl} style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} alt="" />}
+                    {a.tipo === "file" && a.dataUrl && <a href={a.dataUrl} download={a.nome} style={{ padding: "3px 8px", borderRadius: 6, background: T.accLt, fontSize: 10, fontWeight: 600, color: T.acc, cursor: "pointer", textDecoration: "none" }}>📂 Apri</a>}
+                    {/* Delete */}
                     <div onClick={() => { setCantieri(cs => cs.map(x => x.id === c.id ? { ...x, allegati: (x.allegati || []).filter(al => al.id !== a.id) } : x)); setSelectedCM(p => ({ ...p, allegati: (p.allegati || []).filter(al => al.id !== a.id) })); }} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={12} c={T.sub} /></div>
                   </div>
-                  {/* Progress bar for playing */}
-                  {playingId === a.id && (
+                  {/* Audio progress bar */}
+                  {a.tipo === "vocale" && playingId === a.id && (
                     <div style={{ height: 3, background: T.bdr, margin: "0 12px 6px" }}>
-                      <div style={{ height: "100%", background: a.tipo === "video" ? T.blue : T.acc, borderRadius: 2, width: `${playProgress}%`, transition: "width 0.1s linear" }} />
+                      <div style={{ height: "100%", background: T.acc, borderRadius: 2, width: `${playProgress}%`, transition: "width 0.1s linear" }} />
+                    </div>
+                  )}
+                  {/* Inline VIDEO player */}
+                  {a.tipo === "video" && viewingVideoId === a.id && a.dataUrl && (
+                    <div style={{ padding: "6px 12px 10px" }}>
+                      <video src={a.dataUrl} controls playsInline autoPlay
+                        style={{ width: "100%", maxHeight: 280, borderRadius: 10, background: "#000" }} />
+                    </div>
+                  )}
+                  {/* Inline PHOTO full preview */}
+                  {a.tipo === "foto" && viewingPhotoId === a.id && a.dataUrl && (
+                    <div style={{ padding: "6px 12px 10px" }}>
+                      <img src={a.dataUrl} style={{ width: "100%", borderRadius: 10 }} alt={a.nome} />
                     </div>
                   )}
                 </div>
