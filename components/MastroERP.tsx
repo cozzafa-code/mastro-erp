@@ -6700,7 +6700,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
         })()}
         {fabOpen && <div onClick={() => setFabOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", backdropFilter: "blur(4px)", zIndex: 89 }} />}
         {(() => {
-          const lastCM = lastOpenedCMId ? cantieri.find(c => c.id === lastOpenedCMId) : null;
+          const lastCM = lastOpenedCMId ? cantieri.find(c => c.id === lastOpenedCMId) : (cantieri.find(c => c.fase === "misure") || cantieri.find(c => c.fase !== "chiusura") || cantieri[0]);
           const fabItems: Array<{id:string;ico:string;l:string;c:string;action:()=>void}> = [
             { id: "evento", ico: "📅", l: "Appuntamento", c: "#007aff", action: () => { setFabOpen(false); setShowNewEvent(true); } },
             { id: "cliente", ico: "👤", l: "Nuovo cliente", c: "#34c759", action: () => { setFabOpen(false); setShowModal("contatto"); } },
