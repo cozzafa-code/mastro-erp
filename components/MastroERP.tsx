@@ -267,6 +267,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [dayOffset, setDayOffset] = useState(0);
   const [ioChecked, setIoChecked] = useState<Record<string,boolean>>({});
   const [collapsed, setCollapsed] = useState<Record<string,boolean>>({});
+  const [lastOpenedCMId, setLastOpenedCMId] = useState<string|null>(null);
   // Wizard nuova visita
   const [cmSubTab, setCmSubTab] = useState("sopralluoghi"); // "sopralluoghi" | "misure" | "info"
   const [nvView, setNvView] = useState(false);
@@ -494,6 +495,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   useEffect(()=>{try{localStorage.setItem("mastro:contatti",JSON.stringify(contatti));}catch(e){}},[contatti]);
   useEffect(()=>{try{localStorage.setItem("mastro:pipeline",JSON.stringify(pipelineDB));}catch(e){}},[pipelineDB]);
   useEffect(()=>{try{localStorage.setItem("mastro:azienda",JSON.stringify(aziendaInfo));}catch(e){}},[aziendaInfo]);
+  useEffect(() => { if (selectedCM?.id) setLastOpenedCMId(selectedCM.id); }, [selectedCM]);
 
   // === SUPABASE DATA LAYER ===
   const [azId, setAzId] = useState<string | null>(null);
@@ -6697,27 +6699,35 @@ Fabio Cozza - Walter Cozza Serramenti` },
           );
         })()}
         {fabOpen && <div onClick={() => setFabOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", backdropFilter: "blur(4px)", zIndex: 89 }} />}
-        {[
-          { id: "evento", ico: "📅", l: "Appuntamento", c: "#007aff", action: () => { setFabOpen(false); setShowNewEvent(true); } },
-          { id: "cliente", ico: "👤", l: "Nuovo cliente", c: "#34c759", action: () => { setFabOpen(false); setShowModal("contatto"); } },
-          { id: "commessa", ico: "📁", l: "Nuova commessa", c: "#ff9500", action: () => { setFabOpen(false); setShowModal("commessa"); } },
-          { id: "messaggio", ico: "💬", l: "Messaggio", c: "#5856d6", action: () => { setFabOpen(false); setShowCompose(true); } },
-        ].map((item, i) => (
-          <div key={item.id} onClick={item.action} style={{
-            position: "fixed", bottom: 90 + (i + 1) * 58, right: 20, zIndex: 90,
-            display: "flex", alignItems: "center", gap: 10, flexDirection: "row-reverse",
-            opacity: fabOpen ? 1 : 0, transform: fabOpen ? "translateY(0) scale(1)" : "translateY(30px) scale(0.5)",
-            transition: `all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) ${fabOpen ? i * 0.06 : 0}s`,
-            pointerEvents: fabOpen ? "auto" : "none",
-          }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", background: item.c, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, boxShadow: `0 4px 16px ${item.c}50`, cursor: "pointer" }}>
-              {item.ico}
+        {(() => {
+          const lastCM = lastOpenedCMId ? cantieri.find(c => c.id === lastOpenedCMId) : null;
+          const fabItems: Array<{id:string;ico:string;l:string;c:string;action:()=>void}> = [
+            { id: "evento", ico: "📅", l: "Appuntamento", c: "#007aff", action: () => { setFabOpen(false); setShowNewEvent(true); } },
+            { id: "cliente", ico: "👤", l: "Nuovo cliente", c: "#34c759", action: () => { setFabOpen(false); setShowModal("contatto"); } },
+            { id: "commessa", ico: "📁", l: "Nuova commessa", c: "#ff9500", action: () => { setFabOpen(false); setShowModal("commessa"); } },
+            { id: "messaggio", ico: "💬", l: "Messaggio", c: "#5856d6", action: () => { setFabOpen(false); setShowCompose(true); } },
+          ];
+          if (lastCM) {
+            const p = PIPELINE.find(x => x.id === lastCM.fase);
+            fabItems.push({ id: "ultima", ico: p?.ico || "📁", l: `${lastCM.code} · ${lastCM.cliente}`, c: p?.color || T.acc, action: () => { setFabOpen(false); setSelectedCM(lastCM); setTab("commesse"); } });
+          }
+          return fabItems.map((item, i) => (
+            <div key={item.id} onClick={item.action} style={{
+              position: "fixed", bottom: 90 + (i + 1) * 58, right: 20, zIndex: 90,
+              display: "flex", alignItems: "center", gap: 10, flexDirection: "row-reverse",
+              opacity: fabOpen ? 1 : 0, transform: fabOpen ? "translateY(0) scale(1)" : "translateY(30px) scale(0.5)",
+              transition: `all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) ${fabOpen ? i * 0.06 : 0}s`,
+              pointerEvents: fabOpen ? "auto" : "none",
+            }}>
+              <div style={{ width: item.id === "ultima" ? 52 : 48, height: item.id === "ultima" ? 52 : 48, borderRadius: "50%", background: item.id === "ultima" ? `linear-gradient(135deg, ${item.c}, ${item.c}cc)` : item.c, display: "flex", alignItems: "center", justifyContent: "center", fontSize: item.id === "ultima" ? 22 : 20, boxShadow: `0 4px 16px ${item.c}50`, cursor: "pointer", border: item.id === "ultima" ? "2px solid #fff" : "none" }}>
+                {item.ico}
+              </div>
+              <div style={{ padding: "6px 12px", borderRadius: 8, background: T.card, border: `1px solid ${item.id === "ultima" ? item.c + "40" : T.bdr}`, boxShadow: "0 2px 12px rgba(0,0,0,0.1)", fontSize: item.id === "ultima" ? 11 : 12, fontWeight: 700, color: item.c, whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
+                {item.id === "ultima" ? `↩ ${item.l}` : item.l}
+              </div>
             </div>
-            <div style={{ padding: "6px 12px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, boxShadow: "0 2px 12px rgba(0,0,0,0.1)", fontSize: 12, fontWeight: 700, color: item.c, whiteSpace: "nowrap" }}>
-              {item.l}
-            </div>
-          </div>
-        ))}
+          ));
+        })()}
         <div onClick={() => setFabOpen(!fabOpen)} style={{
           position: "fixed", bottom: 90, right: 20, zIndex: 91,
           width: 56, height: 56, borderRadius: "50%",
