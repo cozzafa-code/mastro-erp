@@ -3,12 +3,6 @@ import React, { useState } from "react";
 import MastroAuth from "@/components/MastroAuth";
 import MastroERP from "@/components/MastroERP";
 
-// ═══════════════════════════════════════════════════════════
-// MASTRO — Dashboard Page (Auth Guard)
-// Se non loggato → mostra Login
-// Se loggato → mostra ERP
-// ═══════════════════════════════════════════════════════════
-
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -24,5 +18,5 @@ export default function DashboardPage() {
     );
   }
 
-  return <MastroERP />;
+  return <MastroERP user={user} azienda={profile?.aziende} />;
 }

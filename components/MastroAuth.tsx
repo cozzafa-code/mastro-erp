@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // MASTRO AUTH — Login / Registrazione / Onboarding
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 
 const T = {
   bg: "#F2F1EC", card: "#FFFFFF", text: "#1A1A1C", sub: "#8E8E93",
@@ -38,54 +38,84 @@ export default function MastroAuth({ onAuth }: Props) {
   const [onbTelefono, setOnbTelefono] = useState("");
   const [onbStep, setOnbStep] = useState(1); // 1: azienda, 2: personale
 
-  // Check existing session on mount
+  // Check existing session on mount — WITH TIMEOUT
   useEffect(() => {
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        // Check if has profile
-        const { data: profile } = await supabase
-          .from("profili")
-          .select("*, aziende(*)")
-          .eq("id", session.user.id)
-          .maybeSingle();
-        if (profile) {
-          onAuth(session.user, profile);
-        } else {
-          setStep("onboarding");
-        }
-      } else {
+    let mounted = true;
+    let resolved = false;
+
+    // Timeout: se Supabase non risponde in 2 secondi, vai al login
+    const timeout = setTimeout(() => {
+      if (!resolved && mounted) {
+        console.warn("Supabase timeout — fallback to login");
+        resolved = true;
         setStep("login");
+      }
+    }, 2000);
+
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (resolved || !mounted) return;
+        resolved = true;
+        clearTimeout(timeout);
+
+        if (session?.user) {
+          // Entra subito — profilo caricato in background
+          onAuth(session.user, null);
+          // Tenta di caricare il profilo in background (non bloccante)
+          try {
+            const { data: profile } = await supabase
+              .from("profili")
+              .select("*, aziende(*)")
+              .eq("id", session.user.id)
+              .maybeSingle();
+            if (mounted && profile) {
+              onAuth(session.user, profile);
+            }
+          } catch {}
+        } else {
+          if (mounted) setStep("login");
+        }
+      } catch (e) {
+        console.error("Auth check error:", e);
+        if (!resolved && mounted) {
+          resolved = true;
+          clearTimeout(timeout);
+          setStep("login");
+        }
       }
     })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
-        const { data: profile } = await supabase
-          .from("profili")
-          .select("*, aziende(*)")
-          .eq("id", session.user.id)
-          .maybeSingle();
-        if (profile) {
-          onAuth(session.user, profile);
-        } else {
-          setStep("onboarding");
-        }
+        // Entra subito
+        onAuth(session.user, null);
+        // Profilo in background
+        try {
+          const { data: profile } = await supabase
+            .from("profili")
+            .select("*, aziende(*)")
+            .eq("id", session.user.id)
+            .maybeSingle();
+          if (profile) onAuth(session.user, profile);
+        } catch {}
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => { mounted = false; clearTimeout(timeout); subscription.unsubscribe(); };
   }, []);
 
   const handleLogin = async () => {
     setError(""); setLoading(true);
     try {
-      const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+      const loginPromise = supabase.auth.signInWithPassword({ email, password });
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout: server non raggiungibile. Riprova.")), 8000));
+      const { data, error: err } = await Promise.race([loginPromise, timeoutPromise]) as any;
       if (err) throw err;
       // onAuthStateChange handles the rest
     } catch (err: any) {
-      setError(err.message === "Invalid login credentials" 
-        ? "Email o password errati" 
+      setError(err.message === "Invalid login credentials"
+        ? "Email o password errati"
         : err.message || "Errore di login");
     }
     setLoading(false);
@@ -155,7 +185,7 @@ export default function MastroAuth({ onAuth }: Props) {
     }
   };
 
-  // ── Loading screen ──
+  // —— Loading screen ——
   if (step === "loading") {
     return (
       <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FF }}>
@@ -170,7 +200,7 @@ export default function MastroAuth({ onAuth }: Props) {
     );
   }
 
-  // ── Onboarding screen ──
+  // —— Onboarding screen ——
   if (step === "onboarding") {
     return (
       <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FF, padding: 20 }}>
@@ -192,7 +222,7 @@ export default function MastroAuth({ onAuth }: Props) {
           {onbStep === 1 ? (
             <>
               <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 16 }}>🏢 La tua azienda</div>
-              
+
               <label style={{ fontSize: 11, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 4 }}>Ragione sociale *</label>
               <input value={onbRagione} onChange={e => setOnbRagione(e.target.value)} placeholder="Es. Rossi Serramenti SRL"
                 style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${T.bdr}`, fontSize: 14, fontFamily: FF, marginBottom: 14, boxSizing: "border-box", outline: "none" }}
@@ -211,7 +241,7 @@ export default function MastroAuth({ onAuth }: Props) {
           ) : (
             <>
               <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 16 }}>👤 I tuoi dati</div>
-              
+
               <label style={{ fontSize: 11, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 4 }}>Nome *</label>
               <input value={onbNome} onChange={e => setOnbNome(e.target.value)} placeholder="Fabio"
                 style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${T.bdr}`, fontSize: 14, fontFamily: FF, marginBottom: 14, boxSizing: "border-box", outline: "none" }}
@@ -249,7 +279,7 @@ export default function MastroAuth({ onAuth }: Props) {
     );
   }
 
-  // ── Login / Register ──
+  // —— Login / Register ——
   const isRegister = step === "register";
 
   return (
@@ -336,7 +366,7 @@ export default function MastroAuth({ onAuth }: Props) {
 
         {/* Footer */}
         <div style={{ textAlign: "center", marginTop: 20, fontSize: 11, color: T.sub }}>
-          MASTRO © 2026 — Sistema Operativo Serramentista
+          MASTRO ® 2026 — Sistema Operativo Serramentista
         </div>
       </div>
     </div>
