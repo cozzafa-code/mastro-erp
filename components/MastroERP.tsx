@@ -5019,17 +5019,6 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
           );
         })()}
 
-        {/* ═══ CHIUDI COMMESSA — visibile ═══ */}
-        {c.fase !== "chiusura" && (
-          <div style={{ margin: "16px 16px 8px", padding: 14, borderRadius: 12, background: "linear-gradient(135deg, #34c75915, #34c75908)", border: "2px solid #34c759", textAlign: "center" }}>
-            <button onClick={() => { if(confirm("Chiudi commessa " + c.code + "? Puoi riaprirla dopo.")) setFaseTo(c.id, "chiusura"); }}
-              style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: FF, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              🎉 CHIUDI COMMESSA
-            </button>
-            <div style={{ fontSize: 9, color: "#34c759", marginTop: 4 }}>Segna la commessa come completata</div>
-          </div>
-        )}
-
         {/* Tab: Rilievi | Report */}
         <div style={{ display: "flex", borderBottom: `1px solid ${T.bdr}`, margin: "0 0 4px 0" }}>
           {["rilievi", "report"].map(t => (
@@ -12175,6 +12164,36 @@ Fabio Cozza - Walter Cozza Serramenti` },
                       <label style={S.fieldLabel}>Cliente o commessa esistente</label>
                       <input style={S.input} placeholder="Cerca nome, codice CM, indirizzo…"
                         value={ripSearch} onChange={e => { setRipSearch(e.target.value); if(ripCMSel) setRipCMSel(null); }}/>
+                      {/* Rubrica button when empty */}
+                      {!ripSearch && !ripCMSel && (
+                        <div onClick={() => setRipSearch(" ")} style={{ margin:"6px 0", padding:"8px 12px", borderRadius:8, border:"1.5px dashed "+T.acc+"60", background:T.acc+"06", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                          <span style={{ fontSize:14 }}>📒</span>
+                          <span style={{ fontSize:11, fontWeight:700, color:T.acc }}>Scegli dalla rubrica</span>
+                        </div>
+                      )}
+                      {/* Contatti rubrica results */}
+                      {ripSearch.length >= 1 && !ripCMSel && (() => {
+                        const qr = ripSearch.trim().toLowerCase();
+                        const ctMatches = qr.length > 0
+                          ? contatti.filter(ct => ct.tipo === "cliente" && (ct.nome?.toLowerCase().includes(qr) || (ct.cognome||"").toLowerCase().includes(qr))).slice(0, 5)
+                          : contatti.filter(ct => ct.tipo === "cliente").slice(0, 8);
+                        if (ctMatches.length === 0 && cmResults.length === 0) return null;
+                        return ctMatches.length > 0 && cmResults.length === 0 ? (
+                          <div style={{ marginTop:4, background:T.card, border:"1.5px solid "+T.acc+"40", borderRadius:10, overflow:"hidden", maxHeight:200, overflowY:"auto" }}>
+                            <div style={{ padding:"5px 10px", fontSize:9, fontWeight:700, color:T.acc, background:T.acc+"08", borderBottom:"1px solid "+T.acc+"20" }}>📒 Rubrica ({ctMatches.length})</div>
+                            {ctMatches.map(ct => (
+                              <div key={ct.id} onClick={() => { setRipSearch(ct.nome + " " + (ct.cognome||"")); setNewCM(x=>({...x, cliente: ct.nome, cognome: ct.cognome||"", indirizzo: ct.indirizzo||"", telefono: ct.telefono||"", email: ct.email||"" })); }}
+                                style={{ padding:"8px 12px", borderBottom:"1px solid "+T.bdr+"40", cursor:"pointer", display:"flex", alignItems:"center", gap:8 }}>
+                                <span style={{ fontSize:14 }}>📒</span>
+                                <div style={{ flex:1 }}>
+                                  <div style={{ fontSize:12, fontWeight:700 }}>{ct.nome} {ct.cognome||""}</div>
+                                  <div style={{ fontSize:9, color:T.sub }}>{ct.telefono} {ct.indirizzo ? "· "+ct.indirizzo : ""}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
                       {cmResults.length > 0 && !ripCMSel && (
                         <div style={{ marginTop:4, background:T.card, border:`1px solid ${T.bdr}`, borderRadius:10, overflow:"hidden" }}>
                           {cmResults.slice(0,4).map(c => (
@@ -12377,11 +12396,22 @@ Fabio Cozza - Walter Cozza Serramenti` },
                         <input style={{...S.input,flex:1}} placeholder="Nome" value={newCM.cliente} onChange={e=>setNewCM(c=>({...c,cliente:e.target.value}))}/>
                         <input style={{...S.input,flex:1}} placeholder="Cognome" value={newCM.cognome||""} onChange={e=>setNewCM(c=>({...c,cognome:e.target.value}))}/>
                       </div>
-                      {/* Autocomplete rubrica - INLINE (non absolute per non essere tagliato dal modal overflow) */}
-                      {newCM.cliente.length >= 2 && (() => {
-                        const q = newCM.cliente.toLowerCase();
-                        const matches = contatti.filter(ct => ct.nome?.toLowerCase().includes(q) || (ct.cognome || "").toLowerCase().includes(q) || (ct.azienda || "").toLowerCase().includes(q)).slice(0, 5);
-                        const cmMatches = cantieri.filter(cm => cm.cliente?.toLowerCase().includes(q) || (cm.cognome || "").toLowerCase().includes(q)).slice(0, 3);
+                      {/* Bottone rubrica SEMPRE visibile */}
+                      {!newCM.cliente && (
+                        <div onClick={() => setNewCM(c => ({...c, cliente: " "}))} style={{ margin:"6px 0 8px", padding:"10px 14px", borderRadius:10, border:"1.5px dashed "+T.acc+"60", background:T.acc+"06", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                          <span style={{ fontSize:16 }}>📒</span>
+                          <span style={{ fontSize:12, fontWeight:700, color:T.acc }}>Scegli dalla rubrica ({contatti.filter(c=>c.tipo==="cliente").length} clienti)</span>
+                        </div>
+                      )}
+                      {/* Autocomplete rubrica - INLINE */}
+                      {newCM.cliente.length >= 1 && (() => {
+                        const q = newCM.cliente.trim().toLowerCase();
+                        const matches = q.length > 0 
+                          ? contatti.filter(ct => ct.nome?.toLowerCase().includes(q) || (ct.cognome || "").toLowerCase().includes(q) || (ct.azienda || "").toLowerCase().includes(q)).slice(0, 8)
+                          : contatti.filter(ct => ct.tipo === "cliente").slice(0, 10);
+                        const cmMatches = q.length > 0
+                          ? cantieri.filter(cm => cm.cliente?.toLowerCase().includes(q) || (cm.cognome || "").toLowerCase().includes(q)).slice(0, 3)
+                          : [];
                         const allSugg = [
                           ...matches.map(ct => ({ tipo: "rubrica", nome: ct.nome, cognome: ct.cognome || "", tel: ct.telefono || "", email: ct.email || "", indirizzo: ct.indirizzo || "", ico: "📒" })),
                           ...cmMatches.map(cm => ({ tipo: "commessa", nome: cm.cliente, cognome: cm.cognome || "", tel: cm.telefono || "", email: cm.email || "", indirizzo: cm.indirizzo || "", ico: "📁" }))
@@ -12389,8 +12419,11 @@ Fabio Cozza - Walter Cozza Serramenti` },
                         const seen = new Set();
                         const unique = allSugg.filter(s => { const k = (s.nome+s.cognome).toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
                         if (unique.length === 0) return null;
-                        return <div style={{ background:"#fff", border:"1.5px solid " + T.acc + "40", borderRadius:10, marginBottom:8, overflow:"hidden" }}>
-                          <div style={{ padding:"6px 10px", fontSize:9, fontWeight:700, color:T.acc, background:T.acc+"08", borderBottom:"1px solid " + T.acc + "20" }}>📒 Seleziona dalla rubrica ({unique.length})</div>
+                        return <div style={{ background:"#fff", border:"1.5px solid " + T.acc + "40", borderRadius:10, marginTop:6, marginBottom:8, overflow:"hidden", maxHeight:220, overflowY:"auto" }}>
+                          <div style={{ padding:"6px 10px", fontSize:9, fontWeight:700, color:T.acc, background:T.acc+"08", borderBottom:"1px solid " + T.acc + "20", display:"flex", justifyContent:"space-between", position:"sticky", top:0 }}>
+                            <span>📒 Seleziona dalla rubrica ({unique.length})</span>
+                            <span onClick={(e) => { e.stopPropagation(); setNewCM(c => ({...c, cliente: ""})); }} style={{ cursor:"pointer", color:T.sub }}>✕</span>
+                          </div>
                           {unique.map((s, i) => (
                             <div key={i} onClick={() => setNewCM(c => ({...c, cliente: s.nome, cognome: s.cognome, telefono: s.tel, email: s.email, indirizzo: s.indirizzo || c.indirizzo }))}
                               style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px", cursor:"pointer", borderBottom: i < unique.length -1 ? "1px solid " + T.bdr + "40" : "none" }}>
