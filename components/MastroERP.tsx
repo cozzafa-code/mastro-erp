@@ -12804,7 +12804,12 @@ body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#1a1a1c;font-size:1
 @media print{.pb{display:none!important}.pg{padding:0;margin:0}}
 </style></head><body>
 <div class="pg">
-<button class="pb" onclick="window.print()">\ud83d\udda8\ufe0f Stampa / Salva PDF</button>
+<button class="pb" onclick="window.print()">🖨️ Stampa / Salva PDF</button>
+<div class="no-print" style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #0066cc;padding:10px 16px;display:flex;gap:8px;z-index:999;box-shadow:0 -4px 20px rgba(0,0,0,0.15)">
+  <button onclick="window.print()" style="flex:1;padding:10px;background:#0066cc;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Stampa PDF</button>
+  <button onclick="if(navigator.share){navigator.share({title:'Preventivo ${c.code}',text:'Preventivo per ${c.cliente}',url:window.location.href}).catch(()=>{})}else{navigator.clipboard.writeText(document.title);alert('Link copiato!')}" style="flex:1;padding:10px;background:#34c759;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 Condividi</button>
+  <button onclick="window.close()" style="padding:10px 16px;background:#ff3b30;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+</div>
 
 <div class="hd">
   <div>
@@ -13038,7 +13043,12 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       Documento generato da MASTRO ERP — ${new Date().toLocaleDateString("it-IT")} ${new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
       <br><b style="color:#333">⚠ DOCUMENTO PER USO INTERNO / PRODUZIONE — NON VALIDO COME PREVENTIVO</b>
     </div>
-    <button class="no-print" onclick="window.print()" style="position:fixed;bottom:20px;right:20px;padding:12px 24px;background:#5856d6;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(88,86,214,0.3)">🖨️ Stampa / Salva PDF</button>
+    <div class="no-print" style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #5856d6;padding:10px 16px;display:flex;gap:8px;z-index:999;box-shadow:0 -4px 20px rgba(0,0,0,0.15)">
+      <button onclick="window.print()" style="flex:1;padding:10px;background:#5856d6;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Stampa PDF</button>
+      <button onclick="if(navigator.share){navigator.share({title:document.title,text:'Report misure',url:window.location.href}).catch(()=>{})}else{alert('Usa Stampa → Salva come PDF')}" style="flex:1;padding:10px;background:#34c759;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 Condividi</button>
+      <button onclick="window.close()" style="padding:10px 16px;background:#ff3b30;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+    </div>
+    <button class="no-print" onclick="window.print()" style="position:fixed;bottom:70px;right:20px;padding:12px 24px;background:#5856d6;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(88,86,214,0.3)">🖨️ Stampa / Salva PDF</button>
     </body></html>`;
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
@@ -13155,7 +13165,12 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       ${fat.note ? `<b>Note:</b> ${fat.note}` : ""}
     </div>
     <div style="margin-top:20px;text-align:center;font-size:9px;color:#999">Documento generato da MASTRO ERP</div>
-    <button class="no-print" onclick="window.print()" style="position:fixed;bottom:20px;right:20px;padding:12px 24px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Stampa / Salva PDF</button>
+    <div class="no-print" style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #007aff;padding:10px 16px;display:flex;gap:8px;z-index:999;box-shadow:0 -4px 20px rgba(0,0,0,0.15)">
+      <button onclick="window.print()" style="flex:1;padding:10px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Stampa PDF</button>
+      <button onclick="if(navigator.share){navigator.share({title:document.title,text:'Ordine fornitore',url:window.location.href}).catch(()=>{})}else{alert('Usa Stampa → Salva come PDF')}" style="flex:1;padding:10px;background:#34c759;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 Condividi</button>
+      <button onclick="window.close()" style="padding:10px 16px;background:#ff3b30;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+    </div>
+    <button class="no-print" onclick="window.print()" style="position:fixed;bottom:70px;right:20px;padding:12px 24px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Stampa / Salva PDF</button>
     </body></html>`;
     const blob = new Blob([html], { type: "text/html" });
     window.open(URL.createObjectURL(blob), "_blank");
