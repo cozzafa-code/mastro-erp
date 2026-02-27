@@ -1,4 +1,4 @@
-﻿// =======================================================
+// =======================================================
 // MASTRO ERP v2 — PARTE 1/5
 // Righe 1-1280: Costanti, Dati Demo (incluse visite/vaniList/euro/scadenza),
 //               MOTIVI_BLOCCO, AFASE, useDragOrder hook, Home, Helpers, Stili
@@ -8,7 +8,57 @@
 // MASTRO ERP — adattato per Next.js + Supabase
 "use client";
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { getAziendaId, loadAllData, saveCantiere, saveEvent, deleteEvent as deleteEventDB, saveContatto, saveTeamMember, saveTask, saveAzienda, saveVano, deleteVano, saveMateriali, savePipeline } from "@/lib/supabase-sync";
+// Supabase sync — stubs (enable import when Supabase is configured)
+// import { getAziendaId, loadAllData, saveCantiere, saveEvent, deleteEvent as deleteEventDB, saveContatto, saveTeamMember, saveTask, saveAzienda, saveVano, deleteVano, saveMateriali, savePipeline } from "@/lib/supabase-sync";
+import { supabase } from "@/lib/supabase";
+
+// === CLOUD SYNC HELPERS ===
+const SYNC_KEYS = ["cantieri","events","contatti","tasks","problemi","team","azienda","pipeline","sistemi","vetri","colori","coprifili","lamiere","libreria","fatture","squadre","montaggi","ordiniForn"];
+let _syncQueue: Record<string, any> = {};
+let _syncTimer: any = null;
+
+const cloudSave = (userId: string, key: string, data: any) => {
+  if (!userId) return;
+  _syncQueue[key] = data;
+  if (_syncTimer) clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(async () => {
+    const batch = { ..._syncQueue };
+    _syncQueue = {};
+    for (const [k, v] of Object.entries(batch)) {
+      try {
+        await supabase.from("user_data").upsert(
+          { user_id: userId, azienda_id: userId, key: k, data: v, updated_at: new Date().toISOString() },
+          { onConflict: "user_id,azienda_id,key" }
+        );
+      } catch (e) { console.warn("Cloud save error:", k, e); }
+    }
+  }, 1500); // debounce 1.5s
+};
+
+const cloudLoadAll = async (userId: string): Promise<Record<string, any>> => {
+  try {
+    const { data, error } = await supabase
+      .from("user_data")
+      .select("key, data, updated_at")
+      .eq("user_id", userId);
+    if (error) throw error;
+    const result: Record<string, any> = {};
+    (data || []).forEach(row => { result[row.key] = row.data; });
+    return result;
+  } catch (e) { console.warn("Cloud load error:", e); return {}; }
+};
+const getAziendaId = async () => null;
+const loadAllData = async () => ({ cantieri: [], events: [], contatti: [], team: [], tasks: [], msgs: [], sistemi: null, colori: null, vetri: null, coprifili: null, lamiere: null, libreria: null, pipeline: null, azienda: null });
+const saveCantiere = async (...a: any[]) => {};
+const saveEvent = async (...a: any[]) => {};
+const deleteEventDB = async (...a: any[]) => {};
+const saveContatto = async (...a: any[]) => {};
+const saveTeamMember = async (...a: any[]) => {};
+const saveTask = async (...a: any[]) => {};
+const saveAzienda = async (...a: any[]) => {};
+const saveVanoDB = async (...a: any[]) => {};
+const saveMateriali = async (...a: any[]) => {};
+const savePipeline = async (...a: any[]) => {};
 
 /* =======================================================
    MASTRO MISURE — v15 COMPLETE REBUILD
@@ -18,6 +68,15 @@ import { getAziendaId, loadAllData, saveCantiere, saveEvent, deleteEvent as dele
 const FONT = "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;600&display=swap";
 const FF = "'Plus Jakarta Sans',sans-serif";
 const FM = "'JetBrains Mono',monospace";
+
+// Map tipologia code to minimo mq category
+const tipoToMinCat = (tipo: string): string => {
+  if (tipo.includes("SC") || tipo === "ALZSC") return "scorrevole";
+  if (tipo === "FIS" || tipo === "FISTONDO") return "fisso";
+  if (tipo.includes("3A") || tipo.includes("4A")) return "3ante";
+  if (tipo.includes("2A")) return "2ante";
+  return "1anta";
+};
 
 /* == TEMI == */
 const THEMES = {
@@ -68,6 +127,14 @@ const THEMES = {
   }
 };
 
+/* == PIANI ABBONAMENTO == */
+const PLANS = {
+  trial: { nome: "Trial Gratuito", prezzo: 0, maxCommesse: 999, maxVani: 999, maxUtenti: 1, maxCataloghi: 1, sync: true, pdf: true, admin: false, api: false, durata: 14, badge: "🎁", desc: "14 giorni con tutte le funzioni PRO" },
+  free: { nome: "Free", prezzo: 0, maxCommesse: 5, maxVani: 15, maxUtenti: 1, maxCataloghi: 1, sync: false, pdf: false, admin: false, api: false, durata: null, badge: "🆓", desc: "Per provare MASTRO — 5 commesse, 1 utente" },
+  pro: { nome: "Pro", prezzo: 49, maxCommesse: 9999, maxVani: 9999, maxUtenti: 2, maxCataloghi: 5, sync: true, pdf: true, admin: false, api: false, durata: null, badge: "⭐", desc: "Serramentista / Artigiano — commesse illimitate" },
+  business: { nome: "Business", prezzo: 149, maxCommesse: 9999, maxVani: 9999, maxUtenti: 10, maxCataloghi: 99, sync: true, pdf: true, admin: true, api: true, durata: null, badge: "💎", desc: "Showroom / Multi-sede — team fino a 10 persone" },
+};
+
 /* == PIPELINE 7+1 FASI == */
 const PIPELINE_DEFAULT = [
   { id: "sopralluogo", nome: "Sopralluogo", ico: "🔍", color: "#007aff", attiva: true },
@@ -103,9 +170,459 @@ const AFASE = {
 };
 
 /* == DATI DEMO == */
-const CANTIERI_INIT = [];
+// ═══ DEMO DATA — 4 clienti reali a stadi diversi del flusso ═══
+const CANTIERI_INIT = [
+  // CM-001: SOPRALLUOGO — appena creato, nessun rilievo → Centro Comando mostra Passo 1
+  {
+    id: 1001, code: "S-0001", cliente: "Giuseppe", cognome: "Verdi", indirizzo: "Via Garibaldi 12, Rende (CS)",
+    telefono: "347 555 1234", email: "giuseppe.verdi@email.it", fase: "sopralluogo",
+    sistema: "Aluplast Ideal 4000", tipo: "nuova", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "2°",
+    note: "Appartamento secondo piano, 5 finestre da sostituire. Cliente vuole preventivo entro venerdì.",
+    rilievi: [], allegati: [],
+    creato: "25 feb", aggiornato: "25 feb",
+    cf: "VRDGPP80A01D086Z", piva: "", sdi: "", pec: "",
+    log: [{ chi: "Fabio", cosa: "creato la commessa", quando: "2 giorni fa", color: "#86868b" }],
+  },
+  // CM-002: MISURE — ha rilievo + vani CON misure e sistema → Centro Comando mostra Passo 2 (prezzi calcolati) o Passo 3 (firma)
+  {
+    id: 1002, code: "S-0002", cliente: "Anna", cognome: "Bianchi", indirizzo: "Corso Mazzini 88, Cosenza (CS)",
+    telefono: "339 888 5678", email: "anna.bianchi@gmail.com", fase: "preventivo",
+    sistema: "Aluplast Ideal 4000", tipo: "nuova", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "1°",
+    note: "Ristrutturazione completa. IVA agevolata 10%. Vuole colore RAL 7016 esterno, bianco interno.",
+    prezzoMq: 180,
+    rilievi: [{
+      id: 2001, n: 1, data: "2026-02-20", ora: "09:30", rilevatore: "Fabio", tipo: "rilievo",
+      motivoModifica: "", note: "Tutti i vani accessibili. Muri in buono stato.", stato: "completato",
+      vani: [
+        {
+          id: 3001, nome: "Finestra 2A Soggiorno", tipo: "F2A", stanza: "Soggiorno", piano: "1°",
+          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1210, lCentro: 1200, lBasso: 1195, hSx: 1410, hCentro: 1400, hDx: 1405, d1: 1852, d2: 1849 },
+          foto: {}, note: "Esposta a sud", cassonetto: false,
+          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: true, l: 1200, h: 1400 } },
+        },
+        {
+          id: 3002, nome: "Portafinestra Camera", tipo: "PF2A", stanza: "Camera", piano: "1°",
+          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1405, lCentro: 1400, lBasso: 1398, hSx: 2210, hCentro: 2200, hDx: 2205, d1: 2610, d2: 2607 },
+          foto: {}, note: "Accesso balcone", cassonetto: false,
+          accessori: { tapparella: { attivo: true, l: 1400, h: 2200 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+        {
+          id: 3003, nome: "Vasistas Bagno", tipo: "VAS", stanza: "Bagno", piano: "1°",
+          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 605, lCentro: 600, lBasso: 598, hSx: 605, hCentro: 600, hDx: 602, d1: 850, d2: 848 },
+          foto: {}, note: "Vetro opaco", cassonetto: false,
+          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+        {
+          id: 3004, nome: "Scorrevole Salone", tipo: "SC2A", stanza: "Salone", piano: "1°",
+          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1810, lCentro: 1800, lBasso: 1795, hSx: 2210, hCentro: 2200, hDx: 2205, d1: 2843, d2: 2840 },
+          foto: {}, note: "Accesso terrazzo grande", cassonetto: false,
+          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: true, l: 1800, h: 2200 } },
+        },
+      ],
+    }],
+    allegati: [],
+    creato: "20 feb", aggiornato: "22 feb",
+    cf: "BNCNNA85C41D086Y", piva: "", sdi: "0000000", pec: "anna.bianchi@pec.it",
+    ivaPerc: 10,
+    log: [
+      { chi: "Fabio", cosa: "completato rilievo misure — 4 vani", quando: "5 giorni fa", color: "#5856d6" },
+      { chi: "Fabio", cosa: "creato la commessa", quando: "7 giorni fa", color: "#86868b" },
+    ],
+  },
+  // CM-003: ORDINI — firmato + fatturato, deve ordinare al fornitore → Centro Comando mostra Passo 5
+  {
+    id: 1003, code: "S-0003", cliente: "Mario", cognome: "Rossi", indirizzo: "Via Roma 42, Cosenza (CS)",
+    telefono: "338 123 4567", email: "mario.rossi@libero.it", fase: "ordini",
+    sistema: "Aluplast Ideal 4000", tipo: "nuova", difficoltaSalita: "Media", mezzoSalita: "Scale interne", foroScale: "", pianoEdificio: "3°",
+    note: "8 finestre totali. Ristrutturazione integrale. Bonus 50% confermato.",
+    prezzoMq: 180,
+    firmaCliente: true, dataFirma: "2026-02-15",
+    firmaDocumento: { id: 9901, tipo: "firma", nome: "Preventivo_S-0003_firmato.pdf", data: "15/02/2026" },
+    allegati: [
+      { id: 9901, tipo: "firma", nome: "Preventivo_S-0003_firmato.pdf", data: "15/02/2026" },
+      { id: 9902, tipo: "fattura", nome: "Fattura_001_2026_acconto.pdf", data: "15/02/2026" },
+    ],
+    rilievi: [{
+      id: 2002, n: 1, data: "2026-02-10", ora: "10:00", rilevatore: "Fabio", tipo: "rilievo",
+      motivoModifica: "", note: "Rilievo completo. Muri regolari.", stato: "completato",
+      vani: [
+        {
+          id: 3010, nome: "Finestra 2A Soggiorno", tipo: "F2A", stanza: "Soggiorno", piano: "3°",
+          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1205, lCentro: 1200, lBasso: 1198, hSx: 1410, hCentro: 1400, hDx: 1405, d1: 1852, d2: 1849 },
+          foto: {}, note: "", cassonetto: false,
+          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+        {
+          id: 3011, nome: "Finestra 2A Camera 1", tipo: "F2A", stanza: "Camera", piano: "3°",
+          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1005, lCentro: 1000, lBasso: 998, hSx: 1210, hCentro: 1200, hDx: 1205, d1: 1564, d2: 1561 },
+          foto: {}, note: "", cassonetto: false,
+          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+        {
+          id: 3012, nome: "Portafinestra Salone", tipo: "PF2A", stanza: "Salone", piano: "3°",
+          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1405, lCentro: 1400, lBasso: 1398, hSx: 2210, hCentro: 2200, hDx: 2205, d1: 2610, d2: 2607 },
+          foto: {}, note: "", cassonetto: false,
+          accessori: { tapparella: { attivo: true, l: 1400, h: 2200 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+        {
+          id: 3013, nome: "Vasistas Bagno", tipo: "VAS", stanza: "Bagno", piano: "3°",
+          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 605, lCentro: 600, lBasso: 600, hSx: 605, hCentro: 600, hDx: 600, d1: 849, d2: 849 },
+          foto: {}, note: "Vetro opaco", cassonetto: false,
+          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+      ],
+    }],
+    allegati: [],
+    creato: "10 feb", aggiornato: "15 feb",
+    cf: "RSSMRA75D15D086X", piva: "", sdi: "", pec: "",
+    ivaPerc: 10,
+    log: [
+      { chi: "Fabio", cosa: "fattura acconto emessa", quando: "12 giorni fa", color: "#5856d6" },
+      { chi: "Fabio", cosa: "cliente ha firmato", quando: "12 giorni fa", color: "#34c759" },
+      { chi: "Fabio", cosa: "preventivo inviato", quando: "14 giorni fa", color: "#ff9500" },
+      { chi: "Fabio", cosa: "completato rilievo — 4 vani", quando: "17 giorni fa", color: "#5856d6" },
+      { chi: "Fabio", cosa: "creato la commessa", quando: "17 giorni fa", color: "#86868b" },
+    ],
+  },
+  // CM-004: PRODUZIONE — tutto fatto fino a conferma AI, deve pianificare montaggio → Centro Comando Passo 7
+  {
+    id: 1004, code: "S-0004", cliente: "Laura", cognome: "Esposito", indirizzo: "Viale Trieste 5, Rende (CS)",
+    telefono: "340 999 8765", email: "laura.esposito@outlook.it", fase: "produzione",
+    sistema: "Aluplast Ideal 4000", tipo: "nuova", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "PT",
+    note: "Piano terra villa. 6 finestre + 1 portafinestra. Colore noce esterno.",
+    prezzoMq: 180,
+    firmaCliente: true, dataFirma: "2026-01-20",
+    firmaDocumento: { id: 9903, tipo: "firma", nome: "Preventivo_S-0004_firmato.pdf", data: "20/01/2026" },
+    rilievi: [{
+      id: 2003, n: 1, data: "2026-01-15", ora: "14:00", rilevatore: "Fabio", tipo: "rilievo",
+      motivoModifica: "", note: "", stato: "completato",
+      vani: [
+        {
+          id: 3020, nome: "Finestra 2A Cucina", tipo: "F2A", stanza: "Cucina", piano: "PT",
+          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "Noce", bicolore: true,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1205, lCentro: 1200, lBasso: 1198, hSx: 1410, hCentro: 1400, hDx: 1405, d1: 1852, d2: 1849 },
+          foto: {}, note: "", cassonetto: false,
+          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+        {
+          id: 3021, nome: "Portafinestra Soggiorno", tipo: "PF2A", stanza: "Soggiorno", piano: "PT",
+          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "Noce", bicolore: true,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1405, lCentro: 1400, lBasso: 1398, hSx: 2210, hCentro: 2200, hDx: 2205, d1: 2610, d2: 2607 },
+          foto: {}, note: "", cassonetto: false,
+          accessori: { tapparella: { attivo: true, l: 1400, h: 2200 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+        {
+          id: 3022, nome: "Finestra 1A Camera", tipo: "F1A", stanza: "Camera", piano: "PT",
+          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "Noce", bicolore: true,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 805, lCentro: 800, lBasso: 798, hSx: 1210, hCentro: 1200, hDx: 1205, d1: 1443, d2: 1441 },
+          foto: {}, note: "", cassonetto: false,
+          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+      ],
+    }],
+    allegati: [],
+    creato: "15 gen", aggiornato: "10 feb",
+    cf: "SPSLRA82E45D086W", piva: "", sdi: "", pec: "",
+    ivaPerc: 10,
+    log: [
+      { chi: "Fabio", cosa: "conferma fornitore approvata — AI ha estratto dati", quando: "17 giorni fa", color: "#af52de" },
+      { chi: "Fabio", cosa: "ordine inviato a Aluplast", quando: "25 giorni fa", color: "#ff2d55" },
+      { chi: "Fabio", cosa: "fattura acconto emessa", quando: "35 giorni fa", color: "#5856d6" },
+      { chi: "Fabio", cosa: "cliente ha firmato", quando: "38 giorni fa", color: "#34c759" },
+      { chi: "Fabio", cosa: "creato la commessa", quando: "43 giorni fa", color: "#86868b" },
+    ],
+  },
+  // CM-005: COMPLETATO — ciclo intero chiuso, montaggio fatto, saldo incassato
+  {
+    id: 1005, code: "S-0005", cliente: "Salvatore", cognome: "De Luca", indirizzo: "Corso Italia 22, Cosenza (CS)",
+    telefono: "329 456 7890", email: "s.deluca@gmail.com", fase: "chiusura",
+    sistema: "Schüco CT70", tipo: "ristrutturazione", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "1°",
+    note: "Lavoro completato. Cliente soddisfatto, ha chiesto biglietto per passaparola.",
+    prezzoMq: 280,
+    firmaCliente: true, dataFirma: "2025-12-10",
+    firmaDocumento: { id: 9910, tipo: "firma", nome: "Preventivo_S-0005_firmato.pdf", data: "10/12/2025" },
+    allegati: [
+      { id: 9910, tipo: "firma", nome: "Preventivo_S-0005_firmato.pdf", data: "10/12/2025" },
+      { id: 9911, tipo: "fattura", nome: "Fattura_003_2025_acconto.pdf", data: "12/12/2025" },
+      { id: 9912, tipo: "ordine", nome: "Ordine_Schuco_S-0005.pdf", data: "13/12/2025" },
+      { id: 9913, tipo: "conferma", nome: "Conferma_Schuco_12345.pdf", data: "16/12/2025" },
+      { id: 9914, tipo: "fattura", nome: "Fattura_005_2026_saldo.pdf", data: "20/02/2026" },
+      { id: 9915, tipo: "verbale", nome: "Verbale_consegna_S-0005.pdf", data: "18/02/2026" },
+    ],
+    rilievi: [{
+      id: 2005, n: 1, data: "2025-12-05", ora: "09:00", rilevatore: "Fabio", tipo: "rilievo",
+      motivoModifica: "", note: "Appartamento ristrutturato, muri perfetti.", stato: "completato",
+      vani: [
+        { id: 3050, nome: "Finestra 2A Soggiorno", tipo: "F2A", stanza: "Soggiorno", piano: "1°",
+          sistema: "Schüco CT70", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1410, lCentro: 1400, lBasso: 1398, hSx: 1610, hCentro: 1600, hDx: 1605, d1: 2125, d2: 2122 },
+          foto: {}, note: "", cassonetto: false,
+          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: true, l: 1400, h: 1600 } },
+        },
+        { id: 3051, nome: "Portafinestra Terrazzo", tipo: "PF2A", stanza: "Terrazzo", piano: "1°",
+          sistema: "Schüco CT70", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1605, lCentro: 1600, lBasso: 1598, hSx: 2410, hCentro: 2400, hDx: 2405, d1: 2884, d2: 2881 },
+          foto: {}, note: "Uscita terrazzo principale", cassonetto: false,
+          accessori: { tapparella: { attivo: true, l: 1600, h: 2400 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+        { id: 3052, nome: "Finestra 1A Bagno", tipo: "VAS", stanza: "Bagno", piano: "1°",
+          sistema: "Schüco CT70", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 605, lCentro: 600, lBasso: 598, hSx: 805, hCentro: 800, hDx: 802, d1: 1000, d2: 998 },
+          foto: {}, note: "Vetro opaco satinato", cassonetto: false,
+          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+      ],
+    }],
+    creato: "5 dic", aggiornato: "20 feb",
+    cf: "DLCSVT70M15D086V", piva: "", sdi: "", pec: "",
+    ivaPerc: 10,
+    ck_vano_ok: true, ck_pulizia_ok: true, ck_cliente_ok: true, ck_foto_ok: true,
+    log: [
+      { chi: "Fabio", cosa: "saldo incassato — commessa chiusa ✅", quando: "7 giorni fa", color: "#34c759" },
+      { chi: "Fabio", cosa: "montaggio completato — 2 giorni", quando: "9 giorni fa", color: "#5856d6" },
+      { chi: "Fabio", cosa: "materiale consegnato dal fornitore", quando: "20 giorni fa", color: "#af52de" },
+      { chi: "Fabio", cosa: "ordine confermato da Schüco", quando: "60 giorni fa", color: "#af52de" },
+      { chi: "Fabio", cosa: "ordine inviato a Schüco", quando: "65 giorni fa", color: "#ff2d55" },
+      { chi: "Fabio", cosa: "fattura acconto emessa", quando: "75 giorni fa", color: "#5856d6" },
+      { chi: "Fabio", cosa: "cliente ha firmato", quando: "78 giorni fa", color: "#34c759" },
+      { chi: "Fabio", cosa: "creato la commessa", quando: "84 giorni fa", color: "#86868b" },
+    ],
+  },
+  // CM-006: FATTURA — firmato ieri, deve fare fattura acconto
+  {
+    id: 1006, code: "S-0006", cliente: "Chiara", cognome: "Moretti", indirizzo: "Via Popilia 156, Cosenza (CS)",
+    telefono: "333 222 1111", email: "chiara.moretti@live.it", fase: "conferma",
+    sistema: "Rehau S80", tipo: "nuova", difficoltaSalita: "Facile", mezzoSalita: "", foroScale: "", pianoEdificio: "2°",
+    note: "Nuova costruzione, 7 finestre + 2 portefinestre. Consegna entro aprile.",
+    prezzoMq: 220,
+    firmaCliente: true, dataFirma: "2026-02-26",
+    firmaDocumento: { id: 9920, tipo: "firma", nome: "Preventivo_S-0006_firmato.pdf", data: "26/02/2026" },
+    allegati: [
+      { id: 9920, tipo: "firma", nome: "Preventivo_S-0006_firmato.pdf", data: "26/02/2026" },
+      { id: 9921, tipo: "fattura", nome: "Fattura_004_2026_acconto.pdf", data: "26/02/2026" },
+    ],
+    rilievi: [{
+      id: 2006, n: 1, data: "2026-02-22", ora: "11:00", rilevatore: "Fabio", tipo: "rilievo",
+      motivoModifica: "", note: "Nuova costruzione, fori regolarissimi.", stato: "completato",
+      vani: [
+        { id: 3060, nome: "Finestra 2A Soggiorno", tipo: "F2A", stanza: "Soggiorno", piano: "2°",
+          sistema: "Rehau S80", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1205, lCentro: 1200, lBasso: 1200, hSx: 1405, hCentro: 1400, hDx: 1400, d1: 1844, d2: 1844 },
+          foto: {}, note: "", cassonetto: false,
+          accessori: { tapparella: { attivo: true, l: 1200, h: 1400 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+        { id: 3061, nome: "Finestra 2A Camera 1", tipo: "F2A", stanza: "Camera 1", piano: "2°",
+          sistema: "Rehau S80", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1005, lCentro: 1000, lBasso: 1000, hSx: 1205, hCentro: 1200, hDx: 1200, d1: 1563, d2: 1563 },
+          foto: {}, note: "", cassonetto: false,
+          accessori: { tapparella: { attivo: true, l: 1000, h: 1200 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+        { id: 3062, nome: "Portafinestra Balcone", tipo: "PF2A", stanza: "Salone", piano: "2°",
+          sistema: "Rehau S80", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1405, lCentro: 1400, lBasso: 1400, hSx: 2305, hCentro: 2300, hDx: 2300, d1: 2694, d2: 2694 },
+          foto: {}, note: "", cassonetto: false,
+          accessori: { tapparella: { attivo: true, l: 1400, h: 2300 }, persiana: { attivo: false }, zanzariera: { attivo: true, l: 1400, h: 2300 } },
+        },
+        { id: 3063, nome: "Vasistas Bagno", tipo: "VAS", stanza: "Bagno", piano: "2°",
+          sistema: "Rehau S80", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 605, lCentro: 600, lBasso: 600, hSx: 605, hCentro: 600, hDx: 600, d1: 849, d2: 849 },
+          foto: {}, note: "Vetro opaco", cassonetto: false,
+          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+        { id: 3064, nome: "Finestra 2A Camera 2", tipo: "F2A", stanza: "Camera 2", piano: "2°",
+          sistema: "Rehau S80", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
+          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+          misure: { lAlto: 1005, lCentro: 1000, lBasso: 1000, hSx: 1205, hCentro: 1200, hDx: 1200, d1: 1563, d2: 1563 },
+          foto: {}, note: "", cassonetto: false,
+          accessori: { tapparella: { attivo: true, l: 1000, h: 1200 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+        },
+      ],
+    }],
+    creato: "22 feb", aggiornato: "26 feb",
+    cf: "MRTCHR90B50D086U", piva: "", sdi: "0000000", pec: "chiara.moretti@pec.it",
+    ivaPerc: 22,
+    log: [
+      { chi: "Fabio", cosa: "fattura acconto 50% emessa", quando: "1 giorno fa", color: "#5856d6" },
+      { chi: "Fabio", cosa: "cliente ha firmato il preventivo", quando: "1 giorno fa", color: "#34c759" },
+      { chi: "Fabio", cosa: "preventivo inviato via WhatsApp", quando: "3 giorni fa", color: "#ff9500" },
+      { chi: "Fabio", cosa: "completato rilievo — 5 vani", quando: "5 giorni fa", color: "#5856d6" },
+      { chi: "Fabio", cosa: "creato la commessa", quando: "5 giorni fa", color: "#86868b" },
+    ],
+  },
+];
 
-const TASKS_INIT = [];
+// Demo fatture
+const FATTURE_INIT = [
+  {
+    id: "fat_demo1", numero: 1, anno: 2026, data: "15/02/2026", dataISO: "2026-02-15", tipo: "acconto",
+    cmId: 1003, cmCode: "S-0003", cliente: "Mario", cognome: "Rossi",
+    indirizzo: "Via Roma 42, Cosenza", cf: "RSSMRA75D15D086X", piva: "", sdi: "", pec: "",
+    importo: 593, imponibile: 539, iva: 10, ivaAmt: 54, pagata: true, dataPagamento: "2026-02-18",
+    metodoPagamento: "Bonifico", scadenza: "2026-03-17", note: "Acconto 50% su ordine",
+  },
+  {
+    id: "fat_demo2", numero: 2, anno: 2026, data: "20/01/2026", dataISO: "2026-01-20", tipo: "acconto",
+    cmId: 1004, cmCode: "S-0004", cliente: "Laura", cognome: "Esposito",
+    indirizzo: "Viale Trieste 5, Rende", cf: "SPSLRA82E45D086W", piva: "", sdi: "", pec: "",
+    importo: 474, imponibile: 431, iva: 10, ivaAmt: 43, pagata: true, dataPagamento: "2026-01-25",
+    metodoPagamento: "Bonifico", scadenza: "2026-02-19", note: "Acconto 50% su ordine",
+  },
+  // CM-005 De Luca — acconto + saldo (tutto pagato)
+  {
+    id: "fat_demo3", numero: 3, anno: 2025, data: "12/12/2025", dataISO: "2025-12-12", tipo: "acconto",
+    cmId: 1005, cmCode: "S-0005", cliente: "Salvatore", cognome: "De Luca",
+    indirizzo: "Corso Italia 22, Cosenza", cf: "DLCSVT70M15D086V", piva: "", sdi: "", pec: "",
+    importo: 693, imponibile: 630, iva: 10, ivaAmt: 63, pagata: true, dataPagamento: "2025-12-15",
+    metodoPagamento: "Bonifico", scadenza: "2026-01-11", note: "Acconto 50%",
+  },
+  {
+    id: "fat_demo4", numero: 5, anno: 2026, data: "20/02/2026", dataISO: "2026-02-20", tipo: "saldo",
+    cmId: 1005, cmCode: "S-0005", cliente: "Salvatore", cognome: "De Luca",
+    indirizzo: "Corso Italia 22, Cosenza", cf: "DLCSVT70M15D086V", piva: "", sdi: "", pec: "",
+    importo: 693, imponibile: 630, iva: 10, ivaAmt: 63, pagata: true, dataPagamento: "2026-02-22",
+    metodoPagamento: "Bonifico", scadenza: "2026-03-22", note: "Saldo finale",
+  },
+  // CM-006 Moretti — acconto emesso ieri
+  {
+    id: "fat_demo5", numero: 4, anno: 2026, data: "26/02/2026", dataISO: "2026-02-26", tipo: "acconto",
+    cmId: 1006, cmCode: "S-0006", cliente: "Chiara", cognome: "Moretti",
+    indirizzo: "Via Popilia 156, Cosenza", cf: "MRTCHR90B50D086U", piva: "", sdi: "0000000", pec: "chiara.moretti@pec.it",
+    importo: 805, imponibile: 660, iva: 22, ivaAmt: 145, pagata: false, dataPagamento: "",
+    metodoPagamento: "", scadenza: "2026-03-28", note: "Acconto 50% — in attesa bonifico",
+  },
+];
+
+// Demo ordini fornitore
+const ORDINI_INIT = [
+  // Ordine CM-003 — INVIATO, in attesa conferma → appare nell'inbox
+  {
+    id: "ord_demo_rossi", cmId: 1003, cmCode: "S-0003", cliente: "Mario Rossi",
+    numero: 2, anno: 2026, dataOrdine: "2026-02-18",
+    fornitore: { nome: "Aluplast Italia", email: "ordini@aluplast.it", tel: "0444 123456", piva: "IT01234560789", referente: "Marco Ferro" },
+    righe: [
+      { id: "r_r1", desc: "Finestra 2A — Soggiorno", misure: "1200×1400", qta: 1, prezzoUnit: 195, totale: 195, note: "" },
+      { id: "r_r2", desc: "Finestra 2A — Camera 1", misure: "1000×1200", qta: 1, prezzoUnit: 170, totale: 170, note: "" },
+      { id: "r_r3", desc: "Portafinestra 2A — Salone", misure: "1400×2200", qta: 1, prezzoUnit: 310, totale: 310, note: "+tapparella" },
+      { id: "r_r4", desc: "Vasistas — Bagno", misure: "600×600", qta: 1, prezzoUnit: 120, totale: 120, note: "Vetro opaco" },
+    ],
+    totale: 795, iva: 22, totaleIva: 970, sconto: 0,
+    stato: "inviato",
+    conferma: { ricevuta: false, dataRicezione: "", verificata: false, differenze: "", firmata: false, dataFirma: "", reinviata: false, dataReinvio: "" },
+    consegna: { prevista: "", settimane: 0, effettiva: "" },
+    pagamento: { termini: "", stato: "da_pagare" },
+  },
+  // Ordine CM-004 — CONFERMATO con dati AI estratti
+  {
+    id: "ord_demo1", cmId: 1004, cmCode: "S-0004", cliente: "Laura Esposito",
+    numero: 1, anno: 2026, dataOrdine: "2026-01-25",
+    fornitore: { nome: "Aluplast Italia", email: "ordini@aluplast.it", tel: "0444 123456", piva: "IT01234560789", referente: "Marco Ferro" },
+    righe: [
+      { id: "r_d1", desc: "Finestra 2A — Cucina", misure: "1200×1400", qta: 1, prezzoUnit: 210, totale: 210, note: "Noce est." },
+      { id: "r_d2", desc: "Portafinestra 2A — Soggiorno", misure: "1400×2200", qta: 1, prezzoUnit: 320, totale: 320, note: "Noce est. + tapparella" },
+      { id: "r_d3", desc: "Finestra 1A — Camera", misure: "800×1200", qta: 1, prezzoUnit: 140, totale: 140, note: "Noce est." },
+    ],
+    totale: 670, iva: 22, totaleIva: 817, sconto: 0,
+    stato: "confermato",
+    conferma: {
+      ricevuta: true, dataRicezione: "2026-02-01", verificata: true, differenze: "",
+      firmata: true, dataFirma: "2026-02-01", reinviata: false, dataReinvio: "",
+      nomeFile: "conferma_aluplast_S0004.pdf",
+      datiEstratti: { totale: 817, settimane: 6, dataConsegna: "2026-03-15", pagamento: "30gg_fm", fornitoreNome: "Aluplast Italia" },
+    },
+    consegna: { prevista: "2026-03-15", settimane: 6, effettiva: "" },
+    pagamento: { termini: "30gg_fm", stato: "da_pagare" },
+  },
+  // Ordine CM-005 De Luca — COMPLETATO e consegnato
+  {
+    id: "ord_demo_deluca", cmId: 1005, cmCode: "S-0005", cliente: "Salvatore De Luca",
+    numero: 3, anno: 2025, dataOrdine: "2025-12-13",
+    fornitore: { nome: "Schüco Italia", email: "ordini@schuco.it", tel: "02 98765432", piva: "IT09876540321", referente: "Sara Belli" },
+    righe: [
+      { id: "r_dl1", desc: "Finestra 2A — Soggiorno", misure: "1400×1600", qta: 1, prezzoUnit: 420, totale: 420, note: "RAL 7016 est." },
+      { id: "r_dl2", desc: "Portafinestra 2A — Terrazzo", misure: "1600×2400", qta: 1, prezzoUnit: 580, totale: 580, note: "RAL 7016 est. + tapparella" },
+      { id: "r_dl3", desc: "Vasistas — Bagno", misure: "600×800", qta: 1, prezzoUnit: 180, totale: 180, note: "Vetro satinato" },
+    ],
+    totale: 1180, iva: 10, totaleIva: 1298, sconto: 0,
+    stato: "consegnato",
+    conferma: {
+      ricevuta: true, dataRicezione: "2025-12-16", verificata: true, differenze: "",
+      firmata: true, dataFirma: "2025-12-16", reinviata: false, dataReinvio: "",
+      nomeFile: "conferma_schuco_S0005.pdf",
+      datiEstratti: { totale: 1298, settimane: 7, dataConsegna: "2026-02-10", pagamento: "30gg_fm", fornitoreNome: "Schüco Italia" },
+    },
+    consegna: { prevista: "2026-02-10", settimane: 7, effettiva: "2026-02-08" },
+    pagamento: { termini: "30gg_fm", stato: "pagato" },
+  },
+];
+
+// Demo montaggi
+const MONTAGGI_INIT = [
+  {
+    id: "m_demo1", cmId: 1004, cmCode: "S-0004", cliente: "Laura Esposito",
+    vani: 3, data: "2026-03-16", orario: "08:00", durata: "2g", giorni: 2,
+    squadraId: "sq1", stato: "programmato", note: "PT villa — accesso dal giardino. Materiale arriva il 15.",
+  },
+  // Demo montaggi per riempire il calendario
+  {
+    id: "m_demo2", cmId: 9901, cmCode: "S-0010", cliente: "Francesco Greco",
+    vani: 6, data: "2026-03-03", orario: "07:30", durata: "3g", giorni: 3,
+    squadraId: "sq1", stato: "programmato", note: "3° piano, 6 finestre + 2 portefinestre. Usa argano.",
+  },
+  {
+    id: "m_demo3", cmId: 9902, cmCode: "S-0011", cliente: "Lucia Ferraro",
+    vani: 2, data: "2026-03-06", orario: "08:00", durata: "0.5g", giorni: 0.5,
+    squadraId: "sq2", stato: "programmato", note: "Solo 2 vasistas bagno. Mezza giornata.",
+  },
+  {
+    id: "m_demo4", cmId: 9903, cmCode: "S-0012", cliente: "Roberto Mancini",
+    vani: 8, data: "2026-03-10", orario: "07:00", durata: "4g", giorni: 4,
+    squadraId: "sq1", stato: "programmato", note: "Villa 2 piani, 8 infissi + 2 portoni. Squadra rinforzata.",
+  },
+  {
+    id: "m_demo5", cmId: 1003, cmCode: "S-0003", cliente: "Mario Rossi",
+    vani: 4, data: "2026-03-20", orario: "08:00", durata: "2g", giorni: 2,
+    squadraId: "sq1", stato: "programmato", note: "3° piano, accesso scale. Serve argano.",
+  },
+  // CM-005 De Luca — COMPLETATO
+  {
+    id: "m_demo6", cmId: 1005, cmCode: "S-0005", cliente: "Salvatore De Luca",
+    vani: 3, data: "2026-02-17", orario: "08:00", durata: "2g", giorni: 2,
+    squadraId: "sq1", stato: "completato", note: "Completato senza problemi. Cliente soddisfatto.",
+  },
+];
+
+const TASKS_INIT = [
+  { id: "t1", text: "Inviare preventivo Bianchi", done: false, priority: "alta", meta: "S-0002 · Scade venerdì", cmCode: "S-0002" },
+  { id: "t2", text: "Controllare misure Verdi prima del sopralluogo", done: false, priority: "media", meta: "S-0001 · Sopralluogo giovedì", cmCode: "S-0001" },
+  { id: "t3", text: "Chiamare Aluplast per conferma ordine Rossi", done: false, priority: "alta", meta: "S-0003 · Ordine inviato 18/02", cmCode: "S-0003" },
+  { id: "t4", text: "Verificare data consegna Esposito", done: true, priority: "media", meta: "S-0004 · Consegna 15 marzo", cmCode: "S-0004" },
+];
 
 
 // === AI INBOX — email in arrivo con classificazione AI ===
@@ -129,10 +646,22 @@ const COLORI_INIT = [
 ];
 
 const SISTEMI_INIT = [
-  { id: 1, marca: "Aluplast", sistema: "Ideal 4000", euroMq: 180, prezzoMq: 180, sovRAL: 12, sovLegno: 22, colori: ["RAL 9010", "RAL 7016", "RAL 9005", "Noce"], sottosistemi: ["Classicline", "Roundline"] },
-  { id: 2, marca: "Schüco", sistema: "CT70", euroMq: 280, prezzoMq: 280, sovRAL: 15, sovLegno: 25, colori: ["RAL 9010", "RAL 7016", "RAL 9005"], sottosistemi: ["Classic", "Rondo"] },
-  { id: 3, marca: "Rehau", sistema: "S80", euroMq: 220, prezzoMq: 220, sovRAL: 12, sovLegno: 20, colori: ["RAL 9010", "RAL 7016", "Noce"], sottosistemi: ["Geneo", "Synego"] },
-  { id: 4, marca: "Finstral", sistema: "FIN-Project", euroMq: 350, prezzoMq: 350, sovRAL: 18, sovLegno: 30, colori: ["RAL 9010", "RAL 7016", "RAL 9005", "Rovere"], sottosistemi: ["Nova-line", "Step-line"] },
+  { id: 1, marca: "Aluplast", sistema: "Ideal 4000", euroMq: 180, prezzoMq: 180, sovRAL: 12, sovLegno: 22, minimiMq: { "1anta": 1.5, "2ante": 2.0, "3ante": 2.8, "scorrevole": 3.5, "fisso": 1.0 }, colori: ["RAL 9010", "RAL 7016", "RAL 9005", "Noce"], sottosistemi: ["Classicline", "Roundline"], griglia: [
+    { l: 600, h: 600, prezzo: 120 }, { l: 600, h: 800, prezzo: 145 }, { l: 600, h: 1000, prezzo: 170 }, { l: 600, h: 1200, prezzo: 195 },
+    { l: 800, h: 800, prezzo: 175 }, { l: 800, h: 1000, prezzo: 205 }, { l: 800, h: 1200, prezzo: 240 }, { l: 800, h: 1400, prezzo: 270 },
+    { l: 1000, h: 1000, prezzo: 250 }, { l: 1000, h: 1200, prezzo: 290 }, { l: 1000, h: 1400, prezzo: 330 }, { l: 1000, h: 1600, prezzo: 370 },
+    { l: 1200, h: 1200, prezzo: 340 }, { l: 1200, h: 1400, prezzo: 385 }, { l: 1200, h: 1600, prezzo: 430 }, { l: 1200, h: 1800, prezzo: 480 },
+    { l: 1400, h: 1400, prezzo: 430 }, { l: 1400, h: 1600, prezzo: 485 }, { l: 1400, h: 2200, prezzo: 580 },
+  ] },
+  { id: 2, marca: "Schüco", sistema: "CT70", euroMq: 280, prezzoMq: 280, sovRAL: 15, sovLegno: 25, minimiMq: { "1anta": 1.5, "2ante": 2.0, "scorrevole": 3.5 }, colori: ["RAL 9010", "RAL 7016", "RAL 9005"], sottosistemi: ["Classic", "Rondo"], griglia: [
+    { l: 600, h: 800, prezzo: 195 }, { l: 600, h: 1200, prezzo: 260 },
+    { l: 800, h: 1000, prezzo: 275 }, { l: 800, h: 1400, prezzo: 365 },
+    { l: 1000, h: 1200, prezzo: 380 }, { l: 1000, h: 1400, prezzo: 440 },
+    { l: 1200, h: 1400, prezzo: 520 }, { l: 1200, h: 1600, prezzo: 580 },
+    { l: 1400, h: 2200, prezzo: 780 },
+  ] },
+  { id: 3, marca: "Rehau", sistema: "S80", euroMq: 220, prezzoMq: 220, sovRAL: 12, sovLegno: 20, minimiMq: { "1anta": 1.5, "2ante": 2.0 }, colori: ["RAL 9010", "RAL 7016", "Noce"], sottosistemi: ["Geneo", "Synego"], griglia: [] },
+  { id: 4, marca: "Finstral", sistema: "FIN-Project", euroMq: 350, prezzoMq: 350, sovRAL: 18, sovLegno: 30, minimiMq: { "1anta": 1.5, "2ante": 2.2, "scorrevole": 4.0 }, colori: ["RAL 9010", "RAL 7016", "RAL 9005", "Rovere"], sottosistemi: ["Nova-line", "Step-line"], griglia: [] },
 ];
 
 const VETRI_INIT = [
@@ -146,40 +675,100 @@ const VETRI_INIT = [
 
 const TIPOLOGIE_RAPIDE = [
   // Finestre
-  { code: "F1A",    label: "Finestra 1 anta",           icon: "🪟", cat: "Finestre" },
-  { code: "F2A",    label: "Finestra 2 ante",            icon: "🪟", cat: "Finestre" },
-  { code: "F3A",    label: "Finestra 3 ante",            icon: "🪟", cat: "Finestre" },
-  { code: "F4A",    label: "Finestra 4 ante",            icon: "🪟", cat: "Finestre" },
-  { code: "F2AFISDX", label: "Finestra 2A + Fisso DX",  icon: "🪟", cat: "Finestre" },
-  { code: "F2AFISSX", label: "Finestra 2A + Fisso SX",  icon: "🪟", cat: "Finestre" },
-  { code: "FISDX",  label: "Fisso DX",                  icon: "▮",  cat: "Finestre" },
-  { code: "FISSX",  label: "Fisso SX",                  icon: "▮",  cat: "Finestre" },
-  { code: "VAS",    label: "Vasistas",                  icon: "⬇",  cat: "Finestre" },
-  { code: "RIBALTA",label: "Ribalta",                   icon: "⬆",  cat: "Finestre" },
+  { code: "F1A",    label: "Finestra 1 anta",           icon: "🪟", cat: "Finestre", settore: "serramenti" },
+  { code: "F2A",    label: "Finestra 2 ante",            icon: "🪟", cat: "Finestre", settore: "serramenti" },
+  { code: "F3A",    label: "Finestra 3 ante",            icon: "🪟", cat: "Finestre", settore: "serramenti" },
+  { code: "F4A",    label: "Finestra 4 ante",            icon: "🪟", cat: "Finestre", settore: "serramenti" },
+  { code: "F2AFISDX", label: "Finestra 2A + Fisso DX",  icon: "🪟", cat: "Finestre", settore: "serramenti" },
+  { code: "F2AFISSX", label: "Finestra 2A + Fisso SX",  icon: "🪟", cat: "Finestre", settore: "serramenti" },
+  { code: "FISDX",  label: "Fisso DX",                  icon: "▮",  cat: "Finestre", settore: "serramenti" },
+  { code: "FISSX",  label: "Fisso SX",                  icon: "▮",  cat: "Finestre", settore: "serramenti" },
+  { code: "VAS",    label: "Vasistas",                  icon: "⬇",  cat: "Finestre", settore: "serramenti" },
+  { code: "RIBALTA",label: "Ribalta",                   icon: "⬆",  cat: "Finestre", settore: "serramenti" },
   // Balconi / Portafinestre
-  { code: "PF1A",   label: "Balcone 1 anta",            icon: "🚪", cat: "Balconi" },
-  { code: "PF2A",   label: "Balcone 2 ante",            icon: "🚪", cat: "Balconi" },
-  { code: "PF3A",   label: "Balcone 3 ante",            icon: "🚪", cat: "Balconi" },
-  { code: "PF4A",   label: "Balcone 4 ante",            icon: "🚪", cat: "Balconi" },
-  { code: "PF2AFISDX", label: "Balcone 2A + Fisso DX", icon: "🚪", cat: "Balconi" },
-  { code: "PF2AFISSX", label: "Balcone 2A + Fisso SX", icon: "🚪", cat: "Balconi" },
+  { code: "PF1A",   label: "Balcone 1 anta",            icon: "🚪", cat: "Balconi", settore: "serramenti" },
+  { code: "PF2A",   label: "Balcone 2 ante",            icon: "🚪", cat: "Balconi", settore: "serramenti" },
+  { code: "PF3A",   label: "Balcone 3 ante",            icon: "🚪", cat: "Balconi", settore: "serramenti" },
+  { code: "PF4A",   label: "Balcone 4 ante",            icon: "🚪", cat: "Balconi", settore: "serramenti" },
+  { code: "PF2AFISDX", label: "Balcone 2A + Fisso DX", icon: "🚪", cat: "Balconi", settore: "serramenti" },
+  { code: "PF2AFISSX", label: "Balcone 2A + Fisso SX", icon: "🚪", cat: "Balconi", settore: "serramenti" },
   // Scorrevoli / Alzanti
-  { code: "SC2A",   label: "Scorrevole 2 ante",         icon: "↔️", cat: "Scorrevoli" },
-  { code: "SC4A",   label: "Scorrevole 4 ante",         icon: "↔️", cat: "Scorrevoli" },
-  { code: "SCRDX",  label: "Scorrevole DX",             icon: "▶",  cat: "Scorrevoli" },
-  { code: "SCRSX",  label: "Scorrevole SX",             icon: "◀",  cat: "Scorrevoli" },
-  { code: "ALZDX",  label: "Alzante DX",                icon: "⬆",  cat: "Scorrevoli" },
-  { code: "ALZSX",  label: "Alzante SX",                icon: "⬆",  cat: "Scorrevoli" },
-  // Persiane
-  { code: "PERS1A", label: "Persiana 1 anta",           icon: "🌂", cat: "Persiane" },
-  { code: "PERS2A", label: "Persiana 2 ante",           icon: "🌂", cat: "Persiane" },
-  { code: "TAPP",   label: "Tapparella",                icon: "⬇",  cat: "Persiane" },
-  { code: "ZANZ",   label: "Zanzariera",                icon: "🕸",  cat: "Persiane" },
+  { code: "SC2A",   label: "Scorrevole 2 ante",         icon: "↔️", cat: "Scorrevoli", settore: "serramenti" },
+  { code: "SC4A",   label: "Scorrevole 4 ante",         icon: "↔️", cat: "Scorrevoli", settore: "serramenti" },
+  { code: "SCRDX",  label: "Scorrevole DX",             icon: "▶",  cat: "Scorrevoli", settore: "serramenti" },
+  { code: "SCRSX",  label: "Scorrevole SX",             icon: "◀",  cat: "Scorrevoli", settore: "serramenti" },
+  { code: "ALZDX",  label: "Alzante DX",                icon: "⬆",  cat: "Scorrevoli", settore: "serramenti" },
+  { code: "ALZSX",  label: "Alzante SX",                icon: "⬆",  cat: "Scorrevoli", settore: "serramenti" },
+  // Persiane / Oscuramenti
+  { code: "PERS1A", label: "Persiana 1 anta",           icon: "🌂", cat: "Persiane", settore: "persiane" },
+  { code: "PERS2A", label: "Persiana 2 ante",           icon: "🌂", cat: "Persiane", settore: "persiane" },
+  { code: "PERS3A", label: "Persiana 3 ante",           icon: "🌂", cat: "Persiane", settore: "persiane" },
+  { code: "PERSOR", label: "Persiana orientabile",      icon: "🔄", cat: "Persiane", settore: "persiane" },
+  { code: "SCURO1", label: "Scuro 1 anta",              icon: "🚪", cat: "Persiane", settore: "persiane" },
+  { code: "SCURO2", label: "Scuro 2 ante",              icon: "🚪", cat: "Persiane", settore: "persiane" },
+  // Tapparelle / Avvolgibili
+  { code: "TAPP",   label: "Tapparella",                icon: "⬇",  cat: "Tapparelle", settore: "tapparelle" },
+  { code: "TAPPAL", label: "Tapparella alluminio",      icon: "⬇",  cat: "Tapparelle", settore: "tapparelle" },
+  { code: "TAPPPVC",label: "Tapparella PVC",            icon: "⬇",  cat: "Tapparelle", settore: "tapparelle" },
+  { code: "TAPPBL", label: "Tapparella blindata",       icon: "🛡", cat: "Tapparelle", settore: "tapparelle" },
+  { code: "TAPPMOT",label: "Tapparella motorizzata",    icon: "⚡", cat: "Tapparelle", settore: "tapparelle" },
+  { code: "ORIENTA",label: "Avvolgibile orientabile",   icon: "🔄", cat: "Tapparelle", settore: "tapparelle" },
+  { code: "CASS",   label: "Cassonetto",                icon: "🧊", cat: "Tapparelle", settore: "tapparelle" },
+  // Zanzariere
+  { code: "ZANZLAT",label: "Zanzariera laterale",       icon: "🕸", cat: "Zanzariere", settore: "zanzariere" },
+  { code: "ZANZVER",label: "Zanzariera verticale",      icon: "🕸", cat: "Zanzariere", settore: "zanzariere" },
+  { code: "ZANZPLI",label: "Zanzariera plissé",         icon: "🕸", cat: "Zanzariere", settore: "zanzariere" },
+  { code: "ZANZBAT",label: "Zanzariera battente",       icon: "🕸", cat: "Zanzariere", settore: "zanzariere" },
+  { code: "ZANZFIX",label: "Zanzariera fissa",          icon: "🕸", cat: "Zanzariere", settore: "zanzariere" },
+  { code: "ZANZMAG",label: "Zanzariera magnetica",      icon: "🧲", cat: "Zanzariere", settore: "zanzariere" },
+  { code: "ZANZ2A", label: "Zanzariera 2 ante plissé",  icon: "🕸", cat: "Zanzariere", settore: "zanzariere" },
+  // Tende da sole
+  { code: "TDBR",   label: "Tenda a bracci",            icon: "☀️", cat: "Tende da sole", settore: "tende" },
+  { code: "TDCAD",  label: "Tenda a caduta",            icon: "☀️", cat: "Tende da sole", settore: "tende" },
+  { code: "TDCAP",  label: "Cappottina",                icon: "☀️", cat: "Tende da sole", settore: "tende" },
+  { code: "TDVER",  label: "Tenda verticale",           icon: "☀️", cat: "Tende da sole", settore: "tende" },
+  { code: "TDRUL",  label: "Tenda a rullo",             icon: "☀️", cat: "Tende da sole", settore: "tende" },
+  { code: "TDPERG", label: "Pergola bioclimatica",      icon: "🏗", cat: "Tende da sole", settore: "tende" },
+  { code: "TDZIP",  label: "Tenda ZIP / Screen",        icon: "☀️", cat: "Tende da sole", settore: "tende" },
+  { code: "TDVELA", label: "Vela ombreggiante",         icon: "⛵", cat: "Tende da sole", settore: "tende" },
+  { code: "VENEZIA",label: "Veneziana",                 icon: "▤",  cat: "Tende da sole", settore: "tende" },
+  // Box doccia
+  { code: "BXNIC",  label: "Box doccia nicchia",        icon: "🚿", cat: "Box doccia", settore: "boxdoccia" },
+  { code: "BXANG",  label: "Box doccia angolare",       icon: "🚿", cat: "Box doccia", settore: "boxdoccia" },
+  { code: "BXWALK", label: "Walk-in",                   icon: "🚿", cat: "Box doccia", settore: "boxdoccia" },
+  { code: "BXVAS",  label: "Parete vasca",              icon: "🛁", cat: "Box doccia", settore: "boxdoccia" },
+  { code: "BXSEM",  label: "Box semicircolare",         icon: "🚿", cat: "Box doccia", settore: "boxdoccia" },
+  { code: "BXPENT", label: "Box pentagonale",           icon: "🚿", cat: "Box doccia", settore: "boxdoccia" },
+  { code: "PIATTO", label: "Piatto doccia",             icon: "⬜", cat: "Box doccia", settore: "boxdoccia" },
+  // Porte
+  { code: "PTINT1", label: "Porta interna battente",    icon: "🚪", cat: "Porte", settore: "porte" },
+  { code: "PTINT2", label: "Porta interna 2 ante",      icon: "🚪", cat: "Porte", settore: "porte" },
+  { code: "PTSCO",  label: "Porta scorrevole",          icon: "↔️", cat: "Porte", settore: "porte" },
+  { code: "PTSCC",  label: "Porta scorrevole a scomparsa", icon: "↔️", cat: "Porte", settore: "porte" },
+  { code: "PTFIL",  label: "Porta filomuro",            icon: "▯",  cat: "Porte", settore: "porte" },
+  { code: "PTSOF",  label: "Porta a soffietto",         icon: "🪗", cat: "Porte", settore: "porte" },
+  { code: "BLI",    label: "Porta blindata",            icon: "🛡", cat: "Porte", settore: "porte" },
+  { code: "PTSEZ",  label: "Portone sezionale",         icon: "🏠", cat: "Porte", settore: "porte" },
   // Altro
-  { code: "SOPR",   label: "Sopraluce",                 icon: "△",  cat: "Altro" },
-  { code: "MONO",   label: "Monoblocco",                icon: "⬜",  cat: "Altro" },
-  { code: "BLI",    label: "Porta blindata",            icon: "🛡",  cat: "Altro" },
+  { code: "SOPR",   label: "Sopraluce",                 icon: "△",  cat: "Altro", settore: "serramenti" },
+  { code: "MONO",   label: "Monoblocco",                icon: "⬜",  cat: "Altro", settore: "serramenti" },
+  { code: "GRATA",  label: "Grata di sicurezza",        icon: "🔒", cat: "Altro", settore: "serramenti" },
+  { code: "CANC",   label: "Cancello",                  icon: "🚧", cat: "Altro", settore: "serramenti" },
+  { code: "VERANDA",label: "Veranda / Vetrata",         icon: "🏠", cat: "Altro", settore: "serramenti" },
 ];
+
+// === SETTORI / CATEGORIE ATTIVABILI ===
+const SETTORI = [
+  { id: "serramenti", label: "Finestre e Serramenti", icon: "🪟", desc: "Finestre, balconi, scorrevoli, alzanti, fissi" },
+  { id: "porte", label: "Porte", icon: "🚪", desc: "Porte interne, blindate, scorrevoli, sezionali" },
+  { id: "persiane", label: "Persiane e Scuri", icon: "🌂", desc: "Persiane in alluminio, legno, PVC, scuri" },
+  { id: "tapparelle", label: "Tapparelle e Avvolgibili", icon: "⬇", desc: "Tapparelle, cassonetti, motorizzazioni" },
+  { id: "zanzariere", label: "Zanzariere", icon: "🕸", desc: "Laterali, verticali, plissé, battenti, magnetiche" },
+  { id: "tende", label: "Tende da Sole", icon: "☀️", desc: "Bracci, caduta, cappottine, pergole, ZIP, veneziane" },
+  { id: "boxdoccia", label: "Box Doccia", icon: "🚿", desc: "Nicchia, angolari, walk-in, pareti vasca" },
+];
+
+const SETTORI_DEFAULT = ["serramenti", "persiane", "tapparelle", "zanzariere"]; // serramentista classico
 
 const COPRIFILI_INIT = [
   { id: 1, nome: "Coprifilo piatto 40mm", cod: "CP40", prezzoMl: 4.5 },
@@ -217,6 +806,7 @@ const ICO = {
   pen: <><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></>,
   trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>,
   user: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+  users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
   star: <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></>,
   alert: <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>,
   search: <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
@@ -256,12 +846,46 @@ function useDragOrder(init) {
   return { order, setOrder, dragging, over, start, onOver, drop, end };
 }
 
+// === TIPI EVENTO (module-level) ===
+const TIPI_EVENTO = [
+  { id: "sopralluogo", l: "📐 Sopralluogo", c: "#007aff" },
+  { id: "misure", l: "📏 Misure", c: "#5856d6" },
+  { id: "preventivo", l: "📋 Preventivo", c: "#af52de" },
+  { id: "posa", l: "🔧 Posa", c: "#34c759" },
+  { id: "consegna", l: "📦 Consegna", c: "#ff9500" },
+  { id: "riparazione", l: "🛠 Riparazione", c: "#FF3B30" },
+  { id: "collaudo", l: "✔️ Collaudo", c: "#30b0c7" },
+  { id: "telefonata", l: "📞 Telefonata", c: "#007aff" },
+  { id: "riunione", l: "🤝 Riunione", c: "#8E8E93" },
+  { id: "manutenzione", l: "🔩 Manutenzione", c: "#FF6B00" },
+  { id: "altro", l: "📅 Altro", c: "#D08008" },
+];
+const tipoEvColor = (tipo) => {
+  const t = TIPI_EVENTO.find(x => x.id === tipo);
+  return t ? t.c : "#D08008";
+};
+
 export default function MastroMisure({ user, azienda: aziendaInit }: { user?: any, azienda?: any }) {
   const [theme, setTheme] = useState("chiaro");
   const T = THEMES[theme];
+  const syncReady = useRef(false);
+  const userId = user?.id || null;
   
   const [tab, setTab] = useState("home");
-  const WIDGET_IDS = ["contatori", "io", "attenzione", "programma", "settimana", "commesse", "azioni"];
+  // === SUBSCRIPTION ===
+  const [subPlan, setSubPlan] = useState<string>("trial");
+  const [trialStart] = useState(() => { if (typeof window === "undefined") return new Date(); const s = localStorage.getItem("mastro_trial_start"); if (s) return new Date(s); const d = new Date(); localStorage.setItem("mastro_trial_start", d.toISOString()); return d; });
+  const trialDaysLeft = subPlan === "trial" ? Math.max(0, 14 - Math.floor((Date.now() - trialStart.getTime()) / 86400000)) : 0;
+  const activePlan = subPlan === "trial" && trialDaysLeft <= 0 ? "free" : subPlan;
+  const plan = PLANS[activePlan] || PLANS.free;
+  const [showPaywall, setShowPaywall] = useState<string | null>(null);
+  const canDo = (action: string) => {
+    if (action === "commessa" && cantieri.length >= plan.maxCommesse) { setShowPaywall("Hai raggiunto il limite di " + plan.maxCommesse + " commesse. Passa a un piano superiore per continuare."); return false; }
+    if (action === "pdf" && !plan.pdf) { setShowPaywall("La generazione PDF è disponibile dal piano Pro."); return false; }
+    if (action === "sync" && !plan.sync) { setShowPaywall("La sync real-time è disponibile dal piano Pro."); return false; }
+    return true;
+  };
+  const WIDGET_IDS = ["contatori", "io", "attenzione", "programma", "settimana", "commesse", "azioni", "dashboard"];
   const drag = useDragOrder(WIDGET_IDS);
   const [homeEditMode, setHomeEditMode] = useState(false);
   const [dayOffset, setDayOffset] = useState(0);
@@ -285,12 +909,28 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [msgs, setMsgs] = useState(MSGS_INIT);
   const [selectedMsg, setSelectedMsg] = useState(null);
   const [replyText, setReplyText] = useState("");
+  // === MODULO PROBLEMI ===
+  const [problemi, setProblemi] = useState<any[]>(() => { try { const s = localStorage.getItem("mastro:problemi"); return s ? JSON.parse(s) : []; } catch { return []; } });
+  const [showProblemaModal, setShowProblemaModal] = useState(false);
+  const [selectedProblema, setSelectedProblema] = useState<any>(null);
+  const [problemaForm, setProblemaForm] = useState({ titolo: "", descrizione: "", tipo: "materiale", priorita: "media", assegnato: "" });
+  const [showProblemiView, setShowProblemiView] = useState(false);
+  // Save problemi to localStorage
+  useEffect(() => { try { localStorage.setItem("mastro:problemi", JSON.stringify(problemi)); } catch {} if(syncReady.current&&userId)cloudSave(userId,"problemi",problemi); }, [problemi]);
   const [team, setTeam] = useState(TEAM_INIT);
   const [coloriDB, setColoriDB] = useState(COLORI_INIT);
   const [sistemiDB, setSistemiDB] = useState(SISTEMI_INIT);
   const [vetriDB, setVetriDB] = useState(VETRI_INIT);
   const [coprifiliDB, setCoprifiliDB] = useState(COPRIFILI_INIT);
   const [lamiereDB, setLamiereDB] = useState(LAMIERE_INIT);
+  const [libreriaDB, setLibreriaDB] = useState<any[]>([
+    { id: 1, nome: "Controtelaio monoblocco", categoria: "Controtelaio", prezzo: 85, unita: "pz" },
+    { id: 2, nome: "Davanzale marmo", categoria: "Davanzale", prezzo: 45, unita: "ml" },
+    { id: 3, nome: "Soglia alluminio", categoria: "Soglia", prezzo: 25, unita: "ml" },
+    { id: 4, nome: "Opere murarie", categoria: "Opere", prezzo: 120, unita: "forfait" },
+    { id: 5, nome: "Cassonetto coibentato", categoria: "Cassonetto", prezzo: 95, unita: "ml" },
+    { id: 6, nome: "Zoccolino raccordo", categoria: "Accessorio", prezzo: 12, unita: "ml" },
+  ]);
   const [telaiPersianaDB, setTelaiPersianaDB] = useState([
     { id: "tp1", code: "L" }, { id: "tp2", code: "Z 22" }, { id: "tp3", code: "Z 27" }, { id: "tp4", code: "Z 40" }, { id: "tp5", code: "Z 50" }
   ]);
@@ -328,6 +968,43 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [showPreventivoModal, setShowPreventivoModal] = useState(false);
   const [favTipologie, setFavTipologie] = useState(["F1A", "F2A", "PF2A", "SC2A", "FISDX", "VAS"]);
   
+  // Fatturazione
+  const [fattureDB, setFattureDB] = useState<any[]>(FATTURE_INIT);
+  const [ordiniFornDB, setOrdiniFornDB] = useState<any[]>(ORDINI_INIT);
+  const [showFatturaModal, setShowFatturaModal] = useState(false);
+  const [fatturaEdit, setFatturaEdit] = useState<any>(null);
+  
+  // Squadre montaggio
+  const [squadreDB, setSquadreDB] = useState<any[]>([
+    { id: "sq1", nome: "Squadra A", membri: ["Mario", "Giuseppe"], colore: "#007aff" },
+    { id: "sq2", nome: "Squadra B", membri: ["Paolo", "Andrea"], colore: "#34c759" },
+  ]);
+  const [montaggiDB, setMontaggiDB] = useState<any[]>(MONTAGGI_INIT);
+  
+  // Settori attivi + Onboarding
+  const [settoriAttivi, setSettoriAttivi] = useState<string[]>(SETTORI_DEFAULT);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [pianoAttivo, setPianoAttivo] = useState<"free"|"pro"|"business">("pro"); // default pro for dev
+  
+  // Tipologie filtrate per settori attivi
+  const tipologieFiltrate = TIPOLOGIE_RAPIDE.filter(t => settoriAttivi.includes(t.settore));
+  
+  // Stato calendario montaggi
+  const [calMontaggiWeek, setCalMontaggiWeek] = useState(0);
+  const [showCalMontaggi, setShowCalMontaggi] = useState(false);
+  const [calMontaggiTarget, setCalMontaggiTarget] = useState<string | null>(null);
+  const [montFormOpen, setMontFormOpen] = useState(false);
+  const [montFormData, setMontFormData] = useState({ data: "", orario: "08:00", durata: "giornata", squadraId: "", note: "" });
+  const [ccConfirm, setCcConfirm] = useState<string | null>(null);
+  const [ccDone, setCcDone] = useState<string | null>(null);
+  const [firmaStep, setFirmaStep] = useState(0);
+  const [firmaFileUrl, setFirmaFileUrl] = useState<string | null>(null);
+  const [firmaFileName, setFirmaFileName] = useState("");
+  const [fattPerc, setFattPerc] = useState(50);
+  const [montGiorni, setMontGiorni] = useState(1);
+  const [docViewer, setDocViewer] = useState<{ docs: any[], title: string } | null>(null);
+  const [confSett, setConfSett] = useState(""); // settimane consegna input
+  
   // Navigation
   const [selectedCM, setSelectedCM] = useState(null);
   const [selectedRilievo, setSelectedRilievo] = useState(null); // rilievo aperto
@@ -360,6 +1037,12 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     iban: "",
     cciaa: "",
     logo: null,
+    pec: "",
+    condFornitura: "",
+    condPagamento: "",
+    condConsegna: "",
+    condContratto: "",
+    condDettagli: "",
   });
   const logoInputRef = useRef(null);
   const [aiChat, setAiChat] = useState(false);
@@ -388,12 +1071,18 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [selectedTask, setSelectedTask] = useState(null);
   const [showMailModal, setShowMailModal] = useState<{ev: any, cm: any} | null>(null);
   const [mailBody, setMailBody] = useState("");
-  const [newEvent, setNewEvent] = useState({ text: "", time: "", tipo: "appuntamento", cm: "", persona: "", date: "", reminder: "", addr: "" });
+  const [newEvent, setNewEvent] = useState({ text: "", time: "", tipo: "sopralluogo", cm: "", persona: "", date: "", reminder: "", addr: "" });
   const [events, setEvents] = useState(() => {
     const t = new Date(); const td = t.toISOString().split("T")[0];
     const tm = new Date(t); tm.setDate(tm.getDate() + 1); const tmStr = tm.toISOString().split("T")[0];
     const t2 = new Date(t); t2.setDate(t2.getDate() + 2); const t2Str = t2.toISOString().split("T")[0];
-    return [];
+    const t3 = new Date(t); t3.setDate(t3.getDate() + 3); const t3Str = t3.toISOString().split("T")[0];
+    return [
+      { id: "ev1", date: td, time: "09:00", text: "Sopralluogo Verdi", persona: "Giuseppe Verdi", addr: "Via Garibaldi 12, Rende", cm: "S-0001", color: "#007aff", durata: 60 },
+      { id: "ev2", date: td, time: "15:00", text: "Telefonata Bianchi — preventivo", persona: "Anna Bianchi", addr: "", cm: "S-0002", color: "#ff9500", durata: 30 },
+      { id: "ev3", date: tmStr, time: "10:00", text: "Firma contratto Rossi", persona: "Mario Rossi", addr: "Via Roma 42, Cosenza", cm: "S-0003", color: "#34c759", durata: 45 },
+      { id: "ev4", date: t3Str, time: "08:30", text: "Consegna materiale Esposito", persona: "Laura Esposito", addr: "Viale Trieste 5, Rende", cm: "S-0004", color: "#af52de", durata: 120 },
+    ];
   });
   
     // Advance fase notification
@@ -403,6 +1092,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [showAIPhoto, setShowAIPhoto] = useState(false);
   const [aiPhotoStep, setAiPhotoStep] = useState(0); // 0=ready, 1=analyzing, 2=done
   const [settingsModal, setSettingsModal] = useState(null); // {type, item?}
+  const [importStatus, setImportStatus] = useState(null); // {step, msg, detail, ok}
+  const [importLog, setImportLog] = useState([]);
   const [settingsForm, setSettingsForm] = useState({});
   const [showAllegatiModal, setShowAllegatiModal] = useState(null); // "nota" | "vocale" | "video" | null
 
@@ -507,79 +1198,160 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   }, []);
 
   // == Persistence ==
+  // DEMO VERSION — FORCE RESET on every new deploy
+  const DEMO_VER = "v46-saldo-fix-feb27";
   useEffect(()=>{
-      try{const _v=localStorage.getItem("mastro:cantieri");if(_v)setCantieri(JSON.parse(_v));}catch(e){}
-      try{const _v=localStorage.getItem("mastro:tasks");if(_v)setTasks(JSON.parse(_v));}catch(e){}
-      try{const _v=localStorage.getItem("mastro:events");if(_v)setEvents(JSON.parse(_v));}catch(e){}
+      const savedVer = localStorage.getItem("mastro:demoVer");
+      if (savedVer !== DEMO_VER) {
+        // FORCE RESET — version changed or first load
+        console.log("🔄 MASTRO: Reset demo →", DEMO_VER);
+        Object.keys(localStorage).filter(k => k.startsWith("mastro:")).forEach(k => {
+          try { localStorage.removeItem(k); } catch(e) {}
+        });
+        localStorage.setItem("mastro:demoVer", DEMO_VER);
+        // Demo data already loaded from useState defaults — skip localStorage loading
+        return;
+      }
+      try{const _v=localStorage.getItem("mastro:cantieri");if(_v){const p=JSON.parse(_v);if(p.length>0)setCantieri(p);}}catch(e){}
+      try{const _v=localStorage.getItem("mastro:tasks");if(_v){const p=JSON.parse(_v);if(p.length>0)setTasks(p);}}catch(e){}
+      try{const _v=localStorage.getItem("mastro:events");if(_v){const p=JSON.parse(_v);if(p.length>0)setEvents(p);}}catch(e){}
       try{const _v=localStorage.getItem("mastro:colori");if(_v)setColoriDB(JSON.parse(_v));}catch(e){}
-      try{const _v=localStorage.getItem("mastro:sistemi");if(_v)setSistemiDB(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:sistemi");if(_v){
+        let parsed=JSON.parse(_v);
+        // Migration: add griglia + minimiMq if missing
+        const DEMO_GRIGLIE: Record<string, any[]> = {
+          "Ideal 4000": [
+            {l:600,h:600,prezzo:120},{l:600,h:800,prezzo:145},{l:600,h:1000,prezzo:170},{l:600,h:1200,prezzo:195},
+            {l:800,h:800,prezzo:175},{l:800,h:1000,prezzo:205},{l:800,h:1200,prezzo:240},{l:800,h:1400,prezzo:270},
+            {l:1000,h:1000,prezzo:250},{l:1000,h:1200,prezzo:290},{l:1000,h:1400,prezzo:330},{l:1000,h:1600,prezzo:370},
+            {l:1200,h:1200,prezzo:340},{l:1200,h:1400,prezzo:385},{l:1200,h:1600,prezzo:430},{l:1200,h:1800,prezzo:480},
+            {l:1400,h:1400,prezzo:430},{l:1400,h:1600,prezzo:485},{l:1400,h:2200,prezzo:580},
+          ],
+          "CT70": [
+            {l:600,h:800,prezzo:195},{l:600,h:1200,prezzo:260},
+            {l:800,h:1000,prezzo:275},{l:800,h:1400,prezzo:365},
+            {l:1000,h:1200,prezzo:380},{l:1000,h:1400,prezzo:440},
+            {l:1200,h:1400,prezzo:520},{l:1200,h:1600,prezzo:580},
+            {l:1400,h:2200,prezzo:780},
+          ],
+        };
+        const DEMO_MINIMI_MQ: Record<string, any> = { "Ideal 4000": { "1anta": 1.5, "2ante": 2.0, "3ante": 2.8, "scorrevole": 3.5, "fisso": 1.0 }, "CT70": { "1anta": 1.5, "2ante": 2.0, "scorrevole": 3.5 }, "S80": { "1anta": 1.5, "2ante": 2.0 }, "FIN-Project": { "1anta": 1.5, "2ante": 2.2, "scorrevole": 4.0 } };
+        parsed = parsed.map(s => ({
+          ...s,
+          griglia: s.griglia || DEMO_GRIGLIE[s.sistema] || [],
+          minimiMq: s.minimiMq || {},
+        }));
+        setSistemiDB(parsed);
+      }}catch(e){}
       try{const _v=localStorage.getItem("mastro:vetri");if(_v)setVetriDB(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:coprifili");if(_v)setCoprifiliDB(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:lamiere");if(_v)setLamiereDB(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:libreria");if(_v)setLibreriaDB(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:fatture");if(_v){const p=JSON.parse(_v);if(p.length>0)setFattureDB(p);}}catch(e){}
+      try{const _v=localStorage.getItem("mastro:ordiniForn");if(_v){const p=JSON.parse(_v);if(p.length>0)setOrdiniFornDB(p);}}catch(e){}
+      try{const _v=localStorage.getItem("mastro:squadre");if(_v)setSquadreDB(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:montaggi");if(_v){const p=JSON.parse(_v);if(p.length>0)setMontaggiDB(p);}}catch(e){}
+      try{const _v=localStorage.getItem("mastro:settori");if(_v)setSettoriAttivi(JSON.parse(_v));else setShowOnboarding(true);}catch(e){setShowOnboarding(true);}
+      try{const _v=localStorage.getItem("mastro:piano");if(_v)setPianoAttivo(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:team");if(_v)setTeam(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:contatti");if(_v)setContatti(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:pipeline");if(_v)setPipelineDB(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:azienda");if(_v)setAziendaInfo(JSON.parse(_v));}catch(e){}
 },[]);
-  useEffect(()=>{try{localStorage.setItem("mastro:cantieri",JSON.stringify(cantieri));}catch(e){}},[cantieri]);
-  useEffect(()=>{try{localStorage.setItem("mastro:tasks",JSON.stringify(tasks));}catch(e){}},[tasks]);
-  useEffect(()=>{try{localStorage.setItem("mastro:events",JSON.stringify(events));}catch(e){}},[events]);
-  useEffect(()=>{try{localStorage.setItem("mastro:colori",JSON.stringify(coloriDB));}catch(e){}},[coloriDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:sistemi",JSON.stringify(sistemiDB));}catch(e){}},[sistemiDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:vetri",JSON.stringify(vetriDB));}catch(e){}},[vetriDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:coprifili",JSON.stringify(coprifiliDB));}catch(e){}},[coprifiliDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:lamiere",JSON.stringify(lamiereDB));}catch(e){}},[lamiereDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:team",JSON.stringify(team));}catch(e){}},[team]);
-  useEffect(()=>{try{localStorage.setItem("mastro:contatti",JSON.stringify(contatti));}catch(e){}},[contatti]);
-  useEffect(()=>{try{localStorage.setItem("mastro:pipeline",JSON.stringify(pipelineDB));}catch(e){}},[pipelineDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:azienda",JSON.stringify(aziendaInfo));}catch(e){}},[aziendaInfo]);
+  useEffect(()=>{try{localStorage.setItem("mastro:cantieri",JSON.stringify(cantieri));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"cantieri",cantieri);},[cantieri]);
+  useEffect(()=>{try{localStorage.setItem("mastro:tasks",JSON.stringify(tasks));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"tasks",tasks);},[tasks]);
+  useEffect(()=>{try{localStorage.setItem("mastro:events",JSON.stringify(events));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"events",events);},[events]);
+  useEffect(()=>{try{localStorage.setItem("mastro:colori",JSON.stringify(coloriDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"colori",coloriDB);},[coloriDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:sistemi",JSON.stringify(sistemiDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"sistemi",sistemiDB);},[sistemiDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:vetri",JSON.stringify(vetriDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"vetri",vetriDB);},[vetriDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:coprifili",JSON.stringify(coprifiliDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"coprifili",coprifiliDB);},[coprifiliDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:lamiere",JSON.stringify(lamiereDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"lamiere",lamiereDB);},[lamiereDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:libreria",JSON.stringify(libreriaDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"libreria",libreriaDB);},[libreriaDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:fatture",JSON.stringify(fattureDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"fatture",fattureDB);},[fattureDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:ordiniForn",JSON.stringify(ordiniFornDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"ordiniForn",ordiniFornDB);},[ordiniFornDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:squadre",JSON.stringify(squadreDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"squadre",squadreDB);},[squadreDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:montaggi",JSON.stringify(montaggiDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"montaggi",montaggiDB);},[montaggiDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:settori",JSON.stringify(settoriAttivi));}catch(e){}},[settoriAttivi]);
+  useEffect(()=>{try{localStorage.setItem("mastro:piano",JSON.stringify(pianoAttivo));}catch(e){}},[pianoAttivo]);
+  useEffect(()=>{try{localStorage.setItem("mastro:team",JSON.stringify(team));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"team",team);},[team]);
+  useEffect(()=>{try{localStorage.setItem("mastro:contatti",JSON.stringify(contatti));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"contatti",contatti);},[contatti]);
+  useEffect(()=>{try{localStorage.setItem("mastro:pipeline",JSON.stringify(pipelineDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"pipeline",pipelineDB);},[pipelineDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:azienda",JSON.stringify(aziendaInfo));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"azienda",aziendaInfo);},[aziendaInfo]);
   useEffect(() => { if (selectedCM?.id) setLastOpenedCMId(selectedCM.id); }, [selectedCM]);
 
-  // === SUPABASE DATA LAYER ===
-  const [azId, setAzId] = useState<string | null>(null);
-  const [dbLoading, setDbLoading] = useState(true);
+  // === CLOUD SYNC (user_data key-value) ===
 
+  // Reusable cloud load function
+  const applyCloud = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const cloud = await cloudLoadAll(userId);
+      if (Object.keys(cloud).length === 0) return;
+      // Safety: filter out null/invalid entries from arrays
+      const safeArr = (arr: any) => Array.isArray(arr) ? arr.filter(x => x && typeof x === "object") : null;
+      const sa = (k: string) => safeArr(cloud[k]);
+      // Ensure cantieri always have .fase
+      const safeCantieri = sa("cantieri")?.map(c => ({ fase: "sopralluogo", ...c })) || null;
+      if (safeCantieri) { setCantieri(safeCantieri); localStorage.setItem("mastro:cantieri", JSON.stringify(safeCantieri)); }
+      if (sa("events")) { setEvents(sa("events")!); localStorage.setItem("mastro:events", JSON.stringify(sa("events"))); }
+      if (sa("contatti")) { setContatti(sa("contatti")!); localStorage.setItem("mastro:contatti", JSON.stringify(sa("contatti"))); }
+      if (sa("tasks")) { setTasks(sa("tasks")!); localStorage.setItem("mastro:tasks", JSON.stringify(sa("tasks"))); }
+      if (sa("problemi")) { setProblemi(sa("problemi")!); localStorage.setItem("mastro:problemi", JSON.stringify(sa("problemi"))); }
+      if (sa("team")) { setTeam(sa("team")!); localStorage.setItem("mastro:team", JSON.stringify(sa("team"))); }
+      if (cloud.azienda) { setAziendaInfo(cloud.azienda); localStorage.setItem("mastro:azienda", JSON.stringify(cloud.azienda)); }
+      if (sa("pipeline")) { setPipelineDB(sa("pipeline")!); localStorage.setItem("mastro:pipeline", JSON.stringify(sa("pipeline"))); }
+      if (sa("sistemi")) {
+        const DEMO_GRIGLIE: Record<string, any[]> = {
+          "Ideal 4000": [{l:600,h:600,prezzo:120},{l:600,h:800,prezzo:145},{l:600,h:1000,prezzo:170},{l:600,h:1200,prezzo:195},{l:800,h:800,prezzo:175},{l:800,h:1000,prezzo:205},{l:800,h:1200,prezzo:240},{l:800,h:1400,prezzo:270},{l:1000,h:1000,prezzo:250},{l:1000,h:1200,prezzo:290},{l:1000,h:1400,prezzo:330},{l:1000,h:1600,prezzo:370},{l:1200,h:1200,prezzo:340},{l:1200,h:1400,prezzo:385},{l:1200,h:1600,prezzo:430},{l:1200,h:1800,prezzo:480},{l:1400,h:1400,prezzo:430},{l:1400,h:1600,prezzo:485},{l:1400,h:2200,prezzo:580}],
+          "CT70": [{l:600,h:800,prezzo:195},{l:600,h:1200,prezzo:260},{l:800,h:1000,prezzo:275},{l:800,h:1400,prezzo:365},{l:1000,h:1200,prezzo:380},{l:1000,h:1400,prezzo:440},{l:1200,h:1400,prezzo:520},{l:1200,h:1600,prezzo:580},{l:1400,h:2200,prezzo:780}],
+        };
+        const DEMO_MINIMI_MQ: Record<string, any> = { "Ideal 4000": { "1anta": 1.5, "2ante": 2.0, "3ante": 2.8, "scorrevole": 3.5, "fisso": 1.0 }, "CT70": { "1anta": 1.5, "2ante": 2.0, "scorrevole": 3.5 }, "S80": { "1anta": 1.5, "2ante": 2.0 }, "FIN-Project": { "1anta": 1.5, "2ante": 2.2, "scorrevole": 4.0 } };
+        const migrated = sa("sistemi")!.map(s => ({ ...s, griglia: s.griglia || DEMO_GRIGLIE[s.sistema] || [], minimiMq: s.minimiMq || {} }));
+        setSistemiDB(migrated); localStorage.setItem("mastro:sistemi", JSON.stringify(migrated));
+      }
+      if (sa("vetri")) { setVetriDB(sa("vetri")!); localStorage.setItem("mastro:vetri", JSON.stringify(sa("vetri"))); }
+      if (sa("colori")) { setColoriDB(sa("colori")!); localStorage.setItem("mastro:colori", JSON.stringify(sa("colori"))); }
+      if (sa("coprifili")) { setCoprifiliDB(sa("coprifili")!); localStorage.setItem("mastro:coprifili", JSON.stringify(sa("coprifili"))); }
+      if (sa("lamiere")) { setLamiereDB(sa("lamiere")!); localStorage.setItem("mastro:lamiere", JSON.stringify(sa("lamiere"))); }
+      if (sa("libreria")) { setLibreriaDB(sa("libreria")!); localStorage.setItem("mastro:libreria", JSON.stringify(sa("libreria"))); }
+      if (sa("fatture")) { setFattureDB(sa("fatture")!); localStorage.setItem("mastro:fatture", JSON.stringify(sa("fatture"))); }
+      if (sa("ordiniForn")) { setOrdiniFornDB(sa("ordiniForn")!); localStorage.setItem("mastro:ordiniForn", JSON.stringify(sa("ordiniForn"))); }
+      if (sa("squadre")) { setSquadreDB(sa("squadre")!); localStorage.setItem("mastro:squadre", JSON.stringify(sa("squadre"))); }
+      if (sa("montaggi")) { setMontaggiDB(sa("montaggi")!); localStorage.setItem("mastro:montaggi", JSON.stringify(sa("montaggi"))); }
+    } catch (e) { console.warn("Cloud sync error:", e); }
+  }, [userId]);
+
+  // Load from cloud on mount (after localStorage)
   useEffect(() => {
+    if (!userId) { syncReady.current = true; return; }
     let mounted = true;
     (async () => {
-      try {
-        const id = await getAziendaId();
-        if (!mounted || !id) { setDbLoading(false); return; }
-        setAzId(id);
-        const data = await loadAllData(id);
-        if (!mounted) return;
-        if (data.cantieri.length > 0) setCantieri(data.cantieri);
-        if (data.events.length > 0) setEvents(data.events);
-        if (data.contatti.length > 0) setContatti(data.contatti);
-        if (data.team.length > 0) setTeam(data.team);
-        if (data.tasks.length > 0) setTasks(data.tasks);
-        if (data.msgs.length > 0) setMsgs(data.msgs);
-        if (data.sistemi) setSistemiDB(data.sistemi);
-        if (data.colori) setColoriDB(data.colori);
-        if (data.vetri) setVetriDB(data.vetri);
-        if (data.coprifili) setCoprifiliDB(data.coprifili);
-        if (data.lamiere) setLamiereDB(data.lamiere);
-        if (data.pipeline) setPipelineDB(data.pipeline);
-        if (data.azienda) setAziendaInfo(prev => ({
-          ...prev,
-          ragione: data.azienda.ragione || prev.ragione,
-          piva: data.azienda.piva || prev.piva,
-          indirizzo: data.azienda.indirizzo || prev.indirizzo,
-          telefono: data.azienda.telefono || prev.telefono,
-          email: data.azienda.email || prev.email,
-        }));
-      } catch (e) { console.error('Supabase load error:', e); }
-      if (mounted) setDbLoading(false);
+      await applyCloud();
+      setTimeout(() => { if (mounted) syncReady.current = true; }, 2000);
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [userId]);
 
-  useEffect(() => { if (!azId || dbLoading) return; cantieri.forEach(ct => saveCantiere(azId, ct)); }, [cantieri, azId, dbLoading]);
-  useEffect(() => { if (!azId || dbLoading) return; events.forEach(ev => saveEvent(azId, ev)); }, [events, azId, dbLoading]);
-  useEffect(() => { if (!azId || dbLoading) return; contatti.forEach(ct => saveContatto(azId, ct)); }, [contatti, azId, dbLoading]);
-  useEffect(() => { if (!azId || dbLoading) return; team.forEach(t => saveTeamMember(azId, t)); }, [team, azId, dbLoading]);
-  useEffect(() => { if (!azId || dbLoading) return; saveAzienda(azId, aziendaInfo); }, [aziendaInfo, azId, dbLoading]);
-  useEffect(() => { if (!azId || dbLoading) return; savePipeline(azId, pipelineDB); }, [pipelineDB, azId, dbLoading]);
+  // Auto-refresh when tab becomes visible (no manual refresh needed!)
+  useEffect(() => {
+    if (!userId) return;
+    const onVisible = () => {
+      if (!document.hidden && syncReady.current) {
+        syncReady.current = false;
+        applyCloud().then(() => { syncReady.current = true; });
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    // Polling: ogni 10 secondi controlla aggiornamenti dal cloud
+    const poll = setInterval(() => {
+      if (!document.hidden && syncReady.current) {
+        applyCloud();
+      }
+    }, 10000);
+
+    return () => { document.removeEventListener("visibilitychange", onVisible); clearInterval(poll); };
+  }, [userId, applyCloud]);
 
 
   const PIPELINE = pipelineDB.filter(p => p.attiva !== false);
@@ -605,7 +1377,18 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     if (showRiepilogo) { setShowRiepilogo(false); return; }
     if (selectedVano) { setSelectedVano(null); setVanoStep(0); return; }
     if (showNuovoRilievo) { setShowNuovoRilievo(false); return; }
-    if (selectedRilievo) { setSelectedRilievo(null); return; }
+    if (selectedRilievo) {
+      setSelectedRilievo(null);
+      // SYNC: rileggi selectedCM da cantieri per evitare dati stale (bug misure che spariscono)
+      if (selectedCM) {
+        setCantieri(cs => {
+          const fresh = cs.find(c => c.id === selectedCM.id);
+          if (fresh) setTimeout(() => setSelectedCM(fresh), 0);
+          return cs;
+        });
+      }
+      return;
+    }
     if (selectedCM) { setSelectedCM(null); return; }
   };
 
@@ -618,12 +1401,63 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   };
   const getVaniAttivi = (c) => {
     if (!c?.rilievi || c.rilievi.length === 0) return [];
-    // Per stats generali: tutti i vani dell'ultimo rilievo
     return c.rilievi[c.rilievi.length - 1]?.vani || [];
   };
+
+  // === CALCOLO PREZZO VANO — usato da Centro Comando, creaFattura, PDF ===
+  const calcolaVanoPrezzo = (v, c) => {
+    const m = v.misure || {};
+    const lc = (m.lCentro || 0) / 1000, hc = (m.hCentro || 0) / 1000;
+    const lmm = m.lCentro || 0, hmm = m.hCentro || 0;
+    const mq = lc * hc, perim = 2 * (lc + hc);
+    if (mq <= 0) return 0; // niente misure = niente prezzo
+    const sysRec = sistemiDB.find(s => (s.marca + " " + s.sistema) === v.sistema || s.sistema === v.sistema);
+    // Minimo mq
+    const minCat = tipoToMinCat ? tipoToMinCat(v.tipo || "F1A") : "";
+    const minimoMq = sysRec?.minimiMq?.[minCat] || 0;
+    const mqCalc = (minimoMq > 0 && mq > 0 && mq < minimoMq) ? minimoMq : mq;
+    // Grid or €/mq
+    let tot = 0;
+    const gridPrice = sysRec?.griglia ? (() => {
+      const g = sysRec.griglia;
+      const exact = g.find(p => p.l >= lmm && p.h >= hmm);
+      return exact ? exact.prezzo : (g.length > 0 ? g[g.length - 1].prezzo : null);
+    })() : null;
+    tot = gridPrice !== null ? gridPrice : mqCalc * parseFloat(sysRec?.prezzoMq || sysRec?.euroMq || c?.prezzoMq || 350);
+    // Vetro
+    const vetroRec = vetriDB.find(g => g.code === v.vetro || g.nome === v.vetro);
+    if (vetroRec?.prezzoMq) tot += mq * parseFloat(vetroRec.prezzoMq);
+    // Coprifilo
+    const copRec = coprifiliDB.find(cp => cp.cod === v.coprifilo);
+    if (copRec?.prezzoMl) tot += perim * parseFloat(copRec.prezzoMl);
+    // Lamiera
+    const lamRec = lamiereDB.find(l => l.cod === v.lamiera);
+    if (lamRec?.prezzoMl) tot += lc * parseFloat(lamRec.prezzoMl);
+    // Accessori
+    const tapp = v.accessori?.tapparella; if (tapp?.attivo && c?.prezzoTapparella) { const tmq = ((tapp.l || lmm) / 1000) * ((tapp.h || hmm) / 1000); tot += tmq * parseFloat(c.prezzoTapparella); }
+    const pers = v.accessori?.persiana; if (pers?.attivo && c?.prezzoPersiana) { const pmq = ((pers.l || lmm) / 1000) * ((pers.h || hmm) / 1000); tot += pmq * parseFloat(c.prezzoPersiana); }
+    const zanz = v.accessori?.zanzariera; if (zanz?.attivo && c?.prezzoZanzariera) { const zmq = ((zanz.l || lmm) / 1000) * ((zanz.h || hmm) / 1000); tot += zmq * parseFloat(c.prezzoZanzariera); }
+    // Voci libere del vano
+    if (v.vociLibere?.length > 0) v.vociLibere.forEach(vl => { tot += (vl.prezzo || 0) * (vl.qta || 1); });
+    return Math.round(tot * 100) / 100;
+  };
+
+  // Totale commessa calcolato = somma vani + voci libere della commessa
+  const calcolaTotaleCommessa = (c) => {
+    const vani = getVaniAttivi(c);
+    const totVani = vani.reduce((s, v) => s + calcolaVanoPrezzo(v, c), 0);
+    const totVoci = (c.vociLibere || []).reduce((s, vl) => s + ((vl.importo || 0) * (vl.qta || 1)), 0);
+    return totVani + totVoci;
+  };
   const countVani = () => cantieri.reduce((s, c) => s + getVaniAttivi(c).length, 0);
-  const urgentCount = () => cantieri.filter(c => c.alert).length;
-  const readyCount = () => cantieri.filter(c => c.fase === "posa" || c.fase === "chiusura").length;
+  // Safety: ensure every cantiere has required fields
+  const cantieriSafe = cantieri.filter(c => c && c.id && c.fase);
+  if (cantieriSafe.length !== cantieri.length && cantieri.length > 0) {
+    // Auto-fix: remove invalid entries
+    setTimeout(() => setCantieri(cantieriSafe), 0);
+  }
+  const urgentCount = () => cantieriSafe.filter(c => c.alert).length;
+  const readyCount = () => cantieriSafe.filter(c => c.fase === "posa" || c.fase === "chiusura").length;
   const faseIndex = (fase) => PIPELINE.findIndex(p => p.id === fase);
   const priColor = (p) => p === "alta" ? T.red : p === "media" ? T.orange : T.sub2;
 
@@ -639,6 +1473,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
   const addCommessa = () => {
     if (!newCM.cliente.trim()) return;
+    if (!canDo("commessa")) return;
     const code = "S-" + String(cantieri.length + 1).padStart(4, "0");
     const nc = { id: Date.now(), code, cliente: newCM.cliente, cognome: newCM.cognome||"", indirizzo: newCM.indirizzo, telefono: newCM.telefono, email: newCM.email||"", fase: "sopralluogo", rilievi: [], sistema: newCM.sistema, tipo: newCM.tipo, difficoltaSalita: newCM.difficoltaSalita, mezzoSalita: newCM.mezzoSalita, foroScale: newCM.foroScale, pianoEdificio: newCM.pianoEdificio, note: newCM.note, allegati: [], creato: new Date().toLocaleDateString("it-IT",{day:"numeric",month:"short"}), aggiornato: new Date().toLocaleDateString("it-IT",{day:"numeric",month:"short"}), log: [{ chi: "Fabio", cosa: "creato la commessa", quando: "Adesso", color: T.sub }] };
     setCantieri(cs => [nc, ...cs]);
@@ -665,13 +1500,39 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
   const updateMisura = (vanoId, key, value) => {
     const numVal = parseInt(value) || 0;
-    if (selectedRilievo) {
-      const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.map(v => v.id === vanoId ? { ...v, misure: { ...v.misure, [key]: numVal } } : v) };
-      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
-      setSelectedRilievo(updRil);
-      setSelectedCM(prev => prev ? ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) }) : prev);
-    }
+    // Capture IDs NOW to prevent stale closures
+    const cmId = selectedCM?.id;
+    const rilId = selectedRilievo?.id;
+    if (!cmId || !rilId) return;
+    const updateVani = (vani) => vani.map(v => v.id === vanoId ? { ...v, misure: { ...v.misure, [key]: numVal } } : v);
+    setCantieri(cs => cs.map(c => c.id === cmId ? {
+      ...c, rilievi: c.rilievi.map(r => r.id === rilId ? { ...r, vani: updateVani(r.vani) } : r)
+    } : c));
+    setSelectedRilievo(prev => prev ? ({ ...prev, vani: updateVani(prev.vani) }) : prev);
+    setSelectedCM(prev => prev ? ({
+      ...prev, rilievi: prev.rilievi.map(r => r.id === rilId ? { ...r, vani: updateVani(r.vani) } : r)
+    }) : prev);
     if (selectedVano?.id === vanoId) setSelectedVano(prev => ({ ...prev, misure: { ...prev.misure, [key]: numVal } }));
+  };
+
+  // Batch update: set multiple misure keys at once (no race conditions)
+  const updateMisureBatch = (vanoId, updates: Record<string, number>) => {
+    if (selectedRilievo) {
+      setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? {
+        ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? {
+          ...r, vani: r.vani.map(v => v.id === vanoId ? { ...v, misure: { ...v.misure, ...updates } } : v)
+        } : r)
+      } : c));
+      setSelectedRilievo(prev => prev ? ({
+        ...prev, vani: prev.vani.map(v => v.id === vanoId ? { ...v, misure: { ...v.misure, ...updates } } : v)
+      }) : prev);
+      setSelectedCM(prev => prev ? ({
+        ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo.id ? {
+          ...r, vani: r.vani.map(v => v.id === vanoId ? { ...v, misure: { ...v.misure, ...updates } } : v)
+        } : r)
+      }) : prev);
+    }
+    if (selectedVano?.id === vanoId) setSelectedVano(prev => ({ ...prev, misure: { ...prev.misure, ...updates } }));
   };
 
   const toggleAccessorio = (vanoId, acc) => {
@@ -818,6 +1679,21 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   };
 
   // CAMERA MODAL — for taking photos and recording videos in vano
+  // Image compression utility — max 1200px wide, 0.7 JPEG quality
+  const compressImage = (dataUrl: string, maxW = 1200, quality = 0.7): Promise<string> => {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = Math.min(maxW / img.width, maxW / img.height, 1);
+        const w = Math.round(img.width * ratio), h = Math.round(img.height * ratio);
+        const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+        cv.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        resolve(cv.toDataURL("image/jpeg", quality));
+      };
+      img.src = dataUrl;
+    });
+  };
+
   const openCamera = async (mode: "foto" | "video", cat?: string) => {
     if (cat !== undefined) setPendingFotoCat(cat);
     setCameraMode(mode);
@@ -837,7 +1713,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     }
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     const video = cameraPreviewRef.current;
     if (!video) return;
     const canvas = document.createElement("canvas");
@@ -845,10 +1721,12 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     canvas.height = video.videoHeight || 720;
     const ctx = canvas.getContext("2d");
     if (ctx) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+    // Compress to max 1200px
+    const compressed = await compressImage(dataUrl);
     const cat = pendingFotoCat;
     const key = "foto_" + Date.now();
-    const fotoObj = { dataUrl, nome: "Foto " + new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }), tipo: "foto", categoria: cat || null };
+    const fotoObj = { dataUrl: compressed, nome: "Foto " + new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }), tipo: "foto", categoria: cat || null };
     if (selectedVano && selectedCM && selectedRilievo) {
       const v = selectedVano;
       setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: { ...(vn.foto||{}), [key]: fotoObj } } : vn) } : r2) } : c));
@@ -899,11 +1777,134 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     setPendingFotoCat(null);
   };
 
+  // IMPORT EXCEL CATALOG
+  const importExcelCatalog = async (file) => {
+    setImportStatus({ step: "loading", msg: "Caricamento file...", ok: false });
+    setImportLog([]);
+    const log = [];
+    try {
+      const XLSX = require("xlsx");
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      log.push("✅ File letto: " + wb.SheetNames.length + " fogli trovati");
+      setImportLog([...log]);
+
+      const parseSheet = (name, requiredCols) => {
+        const ws = wb.Sheets[name];
+        if (!ws) { log.push("⚠️ Foglio '" + name + "' non trovato — saltato"); return []; }
+        const raw = XLSX.utils.sheet_to_json(ws, { defval: "" });
+        // Skip hint/example rows (first rows might be hints or green examples)
+        const rows = raw.filter(r => {
+          const vals = Object.values(r).map(v => String(v).trim()).filter(Boolean);
+          return vals.length >= 2; // at least 2 non-empty values
+        });
+        log.push("📋 " + name + ": " + rows.length + " righe");
+        return rows;
+      };
+
+      // SISTEMI
+      setImportStatus({ step: "sistemi", msg: "Importazione sistemi...", ok: false });
+      const sistRows = parseSheet("SISTEMI");
+      if (sistRows.length > 0) {
+        const newSist = sistRows.map((r, i) => ({
+          id: 10000 + i,
+          marca: r["Nome Sistema"] ? String(r["Marca"] || "").trim() : String(r["Marca"] || r["marca"] || "").trim(),
+          sistema: String(r["Nome Sistema"] || r["sistema"] || "").trim(),
+          euroMq: parseFloat(r["Uf (W/m²K)"] || 0) || 0, // Will be set from TIPOLOGIE prices
+          prezzoMq: 0,
+          sovRAL: 15,
+          sovLegno: 25,
+          colori: [],
+          sottosistemi: []
+        })).filter(s => s.marca && s.sistema);
+        if (newSist.length > 0) { setSistemiDB(newSist); log.push("✅ " + newSist.length + " sistemi importati (catalogo sostituito)"); }
+      }
+      setImportLog([...log]);
+
+      // COLORI
+      setImportStatus({ step: "colori", msg: "Importazione colori...", ok: false });
+      const colRows = parseSheet("COLORI");
+      if (colRows.length > 0) {
+        const newCol = colRows.map((r, i) => ({
+          id: 20000 + i,
+          nome: String(r["Nome"] || r["nome"] || "").trim(),
+          code: String(r["RAL/Codice"] || r["Codice"] || r["code"] || "").trim() || String(r["Nome"] || "").trim(),
+          hex: "#888888",
+          tipo: String(r["Tipo"] || r["tipo"] || "RAL").trim()
+        })).filter(c => c.nome);
+        if (newCol.length > 0) { setColoriDB(newCol); log.push("✅ " + newCol.length + " colori importati (catalogo sostituito)"); }
+      }
+      setImportLog([...log]);
+
+      // VETRI
+      setImportStatus({ step: "vetri", msg: "Importazione vetri...", ok: false });
+      const vetRows = parseSheet("VETRI");
+      if (vetRows.length > 0) {
+        const newVet = vetRows.map((r, i) => ({
+          id: 30000 + i,
+          nome: String(r["Descrizione"] || r["nome"] || "").trim(),
+          code: String(r["Composizione"] || r["Codice"] || r["code"] || "").trim(),
+          ug: parseFloat(r["Ug (W/m²K)"] || r["ug"] || 0) || 0,
+          prezzoMq: parseFloat(r["Prezzo €/mq"] || r["prezzoMq"] || 0) || 0,
+        })).filter(v => v.nome || v.code);
+        if (newVet.length > 0) { setVetriDB(newVet); log.push("✅ " + newVet.length + " vetri importati (catalogo sostituito)"); }
+      }
+      setImportLog([...log]);
+
+      // COPRIFILI
+      setImportStatus({ step: "coprifili", msg: "Importazione coprifili...", ok: false });
+      const copRows = parseSheet("COPRIFILI");
+      if (copRows.length > 0) {
+        const newCop = copRows.map((r, i) => ({
+          id: 40000 + i,
+          nome: String(r["Descrizione"] || r["nome"] || "").trim(),
+          cod: String(r["Codice"] || r["cod"] || "").trim(),
+          prezzoMl: parseFloat(r["Prezzo €/ml"] || r["prezzoMl"] || 0) || 0,
+        })).filter(c => c.nome || c.cod);
+        if (newCop.length > 0) { setCoprifiliDB(newCop); log.push("✅ " + newCop.length + " coprifili importati (catalogo sostituito)"); }
+      }
+      setImportLog([...log]);
+
+      // LAMIERE
+      setImportStatus({ step: "lamiere", msg: "Importazione lamiere...", ok: false });
+      const lamRows = parseSheet("LAMIERE");
+      if (lamRows.length > 0) {
+        const newLam = lamRows.map((r, i) => ({
+          id: 50000 + i,
+          nome: String(r["Descrizione"] || r["nome"] || "").trim(),
+          cod: String(r["Codice"] || r["cod"] || "").trim(),
+          prezzoMl: parseFloat(r["Prezzo €/ml"] || r["prezzoMl"] || 0) || 0,
+        })).filter(l => l.nome || l.cod);
+        if (newLam.length > 0) { setLamiereDB(newLam); log.push("✅ " + newLam.length + " lamiere importate (catalogo sostituito)"); }
+      }
+      setImportLog([...log]);
+
+      // ACCESSORI, TIPOLOGIE, CONTROTELAI, TAPPARELLE, ZANZARIERE, PERSIANE, SERVIZI, SAGOME
+      const otherSheets = ["ACCESSORI", "TIPOLOGIE", "CONTROTELAI", "TAPPARELLE", "ZANZARIERE", "PERSIANE", "SERVIZI", "SAGOME_TELAIO", "PROFILI"];
+      for (const sn of otherSheets) {
+        const rows = parseSheet(sn);
+        if (rows.length > 0) log.push("📦 " + sn + ": " + rows.length + " righe pronte (saranno usate nei prossimi aggiornamenti)");
+      }
+      setImportLog([...log]);
+
+      log.push("");
+      log.push("🎉 IMPORTAZIONE COMPLETATA!");
+      log.push("I dati sono stati aggiunti al tuo catalogo.");
+      log.push("Vai nelle singole sezioni per verificare.");
+      setImportLog([...log]);
+      setImportStatus({ step: "done", msg: "Importazione completata!", ok: true });
+    } catch (err) {
+      log.push("❌ ERRORE: " + err.message);
+      setImportLog([...log]);
+      setImportStatus({ step: "error", msg: "Errore durante l'importazione", ok: false, detail: err.message });
+    }
+  };
+
   // SETTINGS CRUD
   const addSettingsItem = () => {
     const f = settingsForm;
     if (settingsModal === "sistema" && f.marca && f.sistema) {
-      setSistemiDB(s => [...s, { id: Date.now(), marca: f.marca, sistema: f.sistema, euroMq: parseInt(f.euroMq)||0, prezzoMq: parseFloat(f.prezzoMq||f.euroMq)||0, sovRAL: parseInt(f.sovRAL)||0, sovLegno: parseInt(f.sovLegno)||0, colori: [], sottosistemi: f.sottosistemi ? f.sottosistemi.split(",").map(s => s.trim()) : [] }]);
+      setSistemiDB(s => [...s, { id: Date.now(), marca: f.marca, sistema: f.sistema, euroMq: parseInt(f.euroMq)||0, prezzoMq: parseFloat(f.prezzoMq||f.euroMq)||0, sovRAL: parseInt(f.sovRAL)||0, sovLegno: parseInt(f.sovLegno)||0, minimiMq: {}, colori: [], sottosistemi: f.sottosistemi ? f.sottosistemi.split(",").map(s => s.trim()) : [], griglia: [] }]);
     } else if (settingsModal === "colore" && f.nome && f.code) {
       setColoriDB(c => [...c, { id: Date.now(), nome: f.nome, code: f.code, hex: f.hex || "#888888", tipo: f.tipo || "RAL" }]);
     } else if (settingsModal === "vetro" && f.nome && f.code) {
@@ -952,6 +1953,29 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     }
   };
 
+  // === AUTO-ADVANCE: sincronizza fase pipeline con azioni reali ===
+  const setFaseTo = (cmId: string, targetFase: string) => {
+    const targetIdx = faseIndex(targetFase);
+    setCantieri(cs => cs.map(c => {
+      if (c.id !== cmId) return c;
+      const curIdx = faseIndex(c.fase);
+      if (targetIdx > curIdx) {
+        return { ...c, fase: targetFase, log: [{ chi: "MASTRO", cosa: `auto → ${PIPELINE.find(p=>p.id===targetFase)?.nome}`, quando: "Adesso", color: PIPELINE.find(p=>p.id===targetFase)?.color || "#007aff" }, ...(c.log||[])] };
+      }
+      return c;
+    }));
+    if (selectedCM?.id === cmId) {
+      const curIdx = faseIndex(selectedCM.fase);
+      if (targetIdx > curIdx) {
+        const next = PIPELINE.find(p => p.id === targetFase);
+        setSelectedCM(prev => ({ ...prev, fase: targetFase, log: [{ chi: "MASTRO", cosa: `auto → ${next?.nome}`, quando: "Adesso", color: next?.color || "#007aff" }, ...(prev?.log||[])] }));
+        setFaseNotif({ fase: next?.nome || targetFase, addetto: "Auto", color: next?.color || "#007aff" });
+        setTimeout(() => setFaseNotif(null), 3000);
+      }
+    }
+  };
+
+
   const addEvent = () => {
     const _evTitle = newEvent.text.trim() || (newEvent.persona ? "Appuntamento " + newEvent.persona : "");
     if (!_evTitle) return;
@@ -960,7 +1984,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     if (newEvent.tipo === "task") {
       const taskDate = newEvent.date || selDate.toISOString().split("T")[0];
       setTasks(ts => [...ts, { id: Date.now(), text: newEvent.text, meta: (newEvent as any)._taskMeta || "", time: newEvent.time, priority: (newEvent as any)._taskPriority || "media", cm: newEvent.cm, date: taskDate, persona: newEvent.persona, done: false, allegati: [] }]);
-      setNewEvent({ text: "", time: "", tipo: "appuntamento", cm: "", persona: "", date: "", reminder: "", addr: "" });
+      setNewEvent({ text: "", time: "", tipo: "sopralluogo", cm: "", persona: "", date: "", reminder: "", addr: "" });
       setShowNewEvent(false);
       return;
     }
@@ -970,8 +1994,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       newEvent.persona = nc.nome + (nc.cognome ? " " + nc.cognome : "");
     }
     if (!newEvent.time) newEvent.time = "09:00";
-    setEvents(ev => [...ev, { id: Date.now(), ...newEvent, date: newEvent.date || selDate.toISOString().split("T")[0], addr: newEvent.addr || "", color: newEvent.tipo === "appuntamento" ? "#007aff" : newEvent.tipo === "sopr_riparazione" ? "#FF6B00" : newEvent.tipo === "riparazione" ? "#FF3B30" : newEvent.tipo === "collaudo" ? "#5856D6" : newEvent.tipo === "garanzia" ? "#8E8E93" : "#ff9500" }]);
-    setNewEvent({ text: "", time: "", tipo: "appuntamento", cm: "", persona: "", date: "", reminder: "", addr: "" });
+    setEvents(ev => [...ev, { id: Date.now(), ...newEvent, date: newEvent.date || selDate.toISOString().split("T")[0], addr: newEvent.addr || "", color: tipoEvColor(newEvent.tipo) }]);
+    setNewEvent({ text: "", time: "", tipo: "sopralluogo", cm: "", persona: "", date: "", reminder: "", addr: "" });
     setShowNewEvent(false);
   };
 
@@ -1005,7 +2029,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     const cm = selectedCM;
     let html = `<html><head><title>MASTRO MISURE — ${cm.code}</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px}h1{color:#0066cc;border-bottom:3px solid #0066cc;padding-bottom:10px}h2{color:#333;margin-top:30px}.vano{border:1px solid #ddd;border-radius:8px;padding:15px;margin:10px 0;page-break-inside:avoid}.misure-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.m-item{background:#f5f5f7;padding:6px 10px;border-radius:4px;font-size:13px}.m-label{color:#666;font-size:11px}.m-val{font-weight:700;color:#1d1d1f}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.info{color:#666;font-size:13px}@media print{body{padding:0}}</style></head><body>`;
     html += `<div class="header"><div><h1>MASTRO MISURE</h1><p class="info">Report Misure — ${cm.code}</p></div><div style="text-align:right"><p><strong>${cm.cliente}</strong></p><p class="info">${cm.indirizzo}</p><p class="info">Sistema: ${cm.sistema || "N/D"} | Tipo: ${cm.tipo === "riparazione" ? "Riparazione" : "Nuova"}</p></div></div>`;
-    cm.vani.forEach((v, i) => {
+    const vaniExport = getVaniAttivi(cm);
+    vaniExport.forEach((v, i) => {
       const m = v.misure || {};
       html += `<div class="vano"><h3>${i + 1}. ${v.nome} — ${v.tipo} (${v.stanza}, ${v.piano})</h3><div class="misure-grid">`;
       [["L alto", m.lAlto], ["L centro", m.lCentro], ["L basso", m.lBasso], ["H sinistra", m.hSx], ["H centro", m.hCentro], ["H destra", m.hDx], ["Diag. 1", m.d1], ["Diag. 2", m.d2], ["Spall. SX", m.spSx], ["Spall. DX", m.spDx], ["Architrave", m.arch], ["Dav. int.", m.davInt], ["Dav. est.", m.davEst]].forEach(([l, val]) => {
@@ -1167,6 +2192,182 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     </div>
   );
 
+  // === 🎯 CARICA DEMO COMPLETO — forza TUTTI i dati per vedere il ciclo ===
+  const caricaDemoCompleto = () => {
+    const oggi = new Date().toISOString().split("T")[0];
+    const ieri = (() => { const d = new Date(); d.setDate(d.getDate()-1); return d.toISOString().split("T")[0]; })();
+    const domani = (() => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().split("T")[0]; })();
+    const fra3 = (() => { const d = new Date(); d.setDate(d.getDate()+3); return d.toISOString().split("T")[0]; })();
+    const fra7 = (() => { const d = new Date(); d.setDate(d.getDate()+7); return d.toISOString().split("T")[0]; })();
+    const fra14 = (() => { const d = new Date(); d.setDate(d.getDate()+14); return d.toISOString().split("T")[0]; })();
+
+    // Vano factory
+    const mkVano = (id, nome, tipo, stanza, piano, l, h, sys = "Aluplast Ideal 4000", colEst = "RAL 7016") => ({
+      id, nome, tipo, stanza, piano, sistema: sys, pezzi: 1,
+      coloreInt: "RAL 9010", coloreEst: colEst, bicolore: colEst !== "RAL 9010",
+      coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
+      misure: { lAlto: l+3, lCentro: l, lBasso: l-2, hSx: h, hCentro: h, hDx: h-3, d1: Math.round(Math.sqrt(l*l+h*h)), d2: Math.round(Math.sqrt(l*l+h*h))-2 },
+      foto: {}, note: "", cassonetto: false,
+      accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
+    });
+
+    // 4 COMMESSE a stadi diversi
+    const cm1 = {
+      id: 9001, code: "S-0001", cliente: "Giuseppe", cognome: "Verdi",
+      indirizzo: "Via Garibaldi 12, Rende (CS)", telefono: "347 555 1234", email: "giuseppe.verdi@email.it",
+      fase: "sopralluogo", sistema: "Aluplast Ideal 4000", tipo: "nuova",
+      note: "Appartamento 2° piano. 5 finestre da sostituire.", prezzoMq: 180,
+      rilievi: [], allegati: [], cf: "VRDGPP80A01D086Z", ivaPerc: 10,
+      creato: "25 feb", aggiornato: oggi,
+      log: [{ chi: "Fabio", cosa: "creato la commessa", quando: "2 giorni fa", color: "#86868b" }],
+    };
+
+    const vaniAnna = [
+      mkVano(9101, "Finestra Soggiorno", "F2A", "Soggiorno", "1°", 1200, 1400),
+      mkVano(9102, "Portafinestra Camera", "PF2A", "Camera", "1°", 1400, 2200),
+      mkVano(9103, "Vasistas Bagno", "VAS", "Bagno", "1°", 600, 600),
+      mkVano(9104, "Scorrevole Salone", "SC2A", "Salone", "1°", 1800, 2200),
+    ];
+    const cm2 = {
+      id: 9002, code: "S-0002", cliente: "Anna", cognome: "Bianchi",
+      indirizzo: "Corso Mazzini 88, Cosenza (CS)", telefono: "339 888 5678", email: "anna.bianchi@gmail.com",
+      fase: "preventivo", sistema: "Aluplast Ideal 4000", tipo: "nuova", prezzoMq: 180,
+      note: "Ristrutturazione. IVA 10%. RAL 7016 esterno.",
+      rilievi: [{ id: 9201, n: 1, data: "2026-02-20", ora: "09:30", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", motivoModifica: "", note: "", vani: vaniAnna }],
+      allegati: [], cf: "BNCNNA85C41D086Y", ivaPerc: 10,
+      creato: "20 feb", aggiornato: "22 feb",
+      log: [
+        { chi: "Fabio", cosa: "completato rilievo — 4 vani", quando: "5 giorni fa", color: "#5856d6" },
+        { chi: "Fabio", cosa: "creato la commessa", quando: "7 giorni fa", color: "#86868b" },
+      ],
+    };
+
+    const vaniMario = [
+      mkVano(9111, "Finestra Soggiorno", "F2A", "Soggiorno", "3°", 1200, 1400, "Aluplast Ideal 4000", "RAL 9010"),
+      mkVano(9112, "Finestra Camera 1", "F2A", "Camera", "3°", 1000, 1200, "Aluplast Ideal 4000", "RAL 9010"),
+      mkVano(9113, "Portafinestra Salone", "PF2A", "Salone", "3°", 1400, 2200, "Aluplast Ideal 4000", "RAL 9010"),
+      mkVano(9114, "Vasistas Bagno", "VAS", "Bagno", "3°", 600, 600, "Aluplast Ideal 4000", "RAL 9010"),
+    ];
+    const cm3 = {
+      id: 9003, code: "S-0003", cliente: "Mario", cognome: "Rossi",
+      indirizzo: "Via Roma 42, Cosenza (CS)", telefono: "338 123 4567", email: "mario.rossi@libero.it",
+      fase: "ordini", sistema: "Aluplast Ideal 4000", tipo: "nuova", prezzoMq: 180,
+      note: "4 vani. Bonus 50%.",
+      firmaCliente: true, dataFirma: "2026-02-15", confermato: true,
+      rilievi: [{ id: 9202, n: 1, data: "2026-02-10", ora: "10:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", motivoModifica: "", note: "", vani: vaniMario }],
+      allegati: [], cf: "RSSMRA75D15D086X", ivaPerc: 10,
+      creato: "10 feb", aggiornato: "15 feb",
+      log: [
+        { chi: "Fabio", cosa: "fattura acconto emessa", quando: "12 giorni fa", color: "#5856d6" },
+        { chi: "Fabio", cosa: "cliente ha firmato", quando: "12 giorni fa", color: "#34c759" },
+        { chi: "Fabio", cosa: "creato la commessa", quando: "17 giorni fa", color: "#86868b" },
+      ],
+    };
+
+    const vaniLaura = [
+      mkVano(9121, "Finestra Cucina", "F2A", "Cucina", "PT", 1200, 1400, "Aluplast Ideal 4000", "Noce"),
+      mkVano(9122, "Portafinestra Soggiorno", "PF2A", "Soggiorno", "PT", 1400, 2200, "Aluplast Ideal 4000", "Noce"),
+      mkVano(9123, "Finestra Camera", "F1A", "Camera", "PT", 800, 1200, "Aluplast Ideal 4000", "Noce"),
+    ];
+    const cm4 = {
+      id: 9004, code: "S-0004", cliente: "Laura", cognome: "Esposito",
+      indirizzo: "Viale Trieste 5, Rende (CS)", telefono: "340 999 8765", email: "laura.esposito@outlook.it",
+      fase: "posa", sistema: "Aluplast Ideal 4000", tipo: "nuova", prezzoMq: 180,
+      note: "PT villa. Colore noce.",
+      firmaCliente: true, dataFirma: "2026-01-20", confermato: true,
+      rilievi: [{ id: 9203, n: 1, data: "2026-01-15", ora: "14:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", motivoModifica: "", note: "", vani: vaniLaura }],
+      allegati: [], cf: "SPSLRA82E45D086W", ivaPerc: 10,
+      creato: "15 gen", aggiornato: "10 feb",
+      log: [
+        { chi: "Fabio", cosa: "montaggio pianificato", quando: "3 giorni fa", color: "#34c759" },
+        { chi: "Fabio", cosa: "conferma fornitore approvata", quando: "17 giorni fa", color: "#af52de" },
+        { chi: "Fabio", cosa: "ordine inviato", quando: "25 giorni fa", color: "#ff2d55" },
+        { chi: "Fabio", cosa: "creato la commessa", quando: "43 giorni fa", color: "#86868b" },
+      ],
+    };
+
+    setCantieri([cm1, cm2, cm3, cm4]);
+
+    // FATTURE
+    setFattureDB([
+      {
+        id: "fat_d1", numero: 1, anno: 2026, data: "15/02/2026", dataISO: "2026-02-15", tipo: "acconto",
+        cmId: 9003, cmCode: "S-0003", cliente: "Mario", cognome: "Rossi",
+        indirizzo: "Via Roma 42, Cosenza", cf: "RSSMRA75D15D086X",
+        importo: 593, imponibile: 539, iva: 10, ivaAmt: 54,
+        pagata: true, dataPagamento: "2026-02-18", scadenza: "2026-03-17", note: "Acconto 50%",
+      },
+      {
+        id: "fat_d2", numero: 2, anno: 2026, data: "20/01/2026", dataISO: "2026-01-20", tipo: "acconto",
+        cmId: 9004, cmCode: "S-0004", cliente: "Laura", cognome: "Esposito",
+        indirizzo: "Viale Trieste 5, Rende", cf: "SPSLRA82E45D086W",
+        importo: 474, imponibile: 431, iva: 10, ivaAmt: 43,
+        pagata: true, dataPagamento: "2026-01-25", scadenza: "2026-02-19", note: "Acconto 50%",
+      },
+    ]);
+
+    // ORDINI
+    setOrdiniFornDB([
+      {
+        id: "ord_d1", cmId: 9003, cmCode: "S-0003", cliente: "Mario Rossi",
+        numero: 1, anno: 2026, dataOrdine: "2026-02-18",
+        fornitore: { nome: "Aluplast Italia", email: "ordini@aluplast.it", tel: "0444 123456", referente: "Marco Ferro" },
+        righe: vaniMario.map((v, i) => ({
+          id: "r" + i, desc: `${v.nome}`, misure: `${v.misure.lCentro}×${v.misure.hCentro}`,
+          qta: 1, prezzoUnit: 0, totale: 0, note: v.coloreEst,
+        })),
+        totale: 795, iva: 22, totaleIva: 970, sconto: 0,
+        stato: "inviato",
+        conferma: { ricevuta: false, dataRicezione: "", verificata: false, differenze: "", firmata: false, dataFirma: "" },
+        consegna: { prevista: "", settimane: 0 }, pagamento: { termini: "", stato: "da_pagare" },
+      },
+      {
+        id: "ord_d2", cmId: 9004, cmCode: "S-0004", cliente: "Laura Esposito",
+        numero: 2, anno: 2026, dataOrdine: "2026-01-25",
+        fornitore: { nome: "Aluplast Italia", email: "ordini@aluplast.it", tel: "0444 123456", referente: "Marco Ferro" },
+        righe: vaniLaura.map((v, i) => ({
+          id: "r" + i, desc: `${v.nome}`, misure: `${v.misure.lCentro}×${v.misure.hCentro}`,
+          qta: 1, prezzoUnit: [210, 320, 140][i] || 0, totale: [210, 320, 140][i] || 0, note: v.coloreEst,
+        })),
+        totale: 670, iva: 22, totaleIva: 817, sconto: 0,
+        stato: "confermato",
+        conferma: { ricevuta: true, dataRicezione: "2026-02-01", verificata: true, firmata: true, dataFirma: "2026-02-01", nomeFile: "conferma_aluplast.pdf",
+          datiEstratti: { totale: 817, settimane: 6, dataConsegna: "2026-03-15", pagamento: "30gg_fm" } },
+        consegna: { prevista: "2026-03-15", settimane: 6 }, pagamento: { termini: "30gg_fm", stato: "da_pagare" },
+      },
+    ]);
+
+    // MONTAGGI
+    setMontaggiDB([{
+      id: "m_d1", cmId: 9004, cmCode: "S-0004", cliente: "Laura Esposito",
+      vani: 3, data: fra7, orario: "08:00", durata: "giornata",
+      squadraId: "sq1", stato: "programmato", note: "3 vani PT villa — portare scala e silicone",
+    }]);
+
+    // EVENTI calendario
+    setEvents([
+      { id: "ev1", date: oggi, time: "09:00", text: "Sopralluogo Verdi", persona: "Giuseppe Verdi", addr: "Via Garibaldi 12, Rende", cm: "S-0001", color: "#007aff", durata: 60 },
+      { id: "ev2", date: oggi, time: "15:00", text: "Telefonata Bianchi — preventivo", persona: "Anna Bianchi", addr: "", cm: "S-0002", color: "#ff9500", durata: 30 },
+      { id: "ev3", date: domani, time: "10:00", text: "Incontro Rossi — firma ordine", persona: "Mario Rossi", addr: "Via Roma 42, Cosenza", cm: "S-0003", color: "#34c759", durata: 45 },
+      { id: "ev4", date: fra3, time: "08:30", text: "Consegna materiale Esposito", persona: "Laura Esposito", addr: "Viale Trieste 5, Rende", cm: "S-0004", color: "#af52de", durata: 120 },
+      { id: "ev5", date: fra7, time: "08:00", text: "🔧 MONTAGGIO Esposito — 3 vani", persona: "Squadra A", addr: "Viale Trieste 5, Rende", cm: "S-0004", color: "#ff6b00", durata: 480 },
+      { id: "ev6", date: fra14, time: "09:00", text: "Sopralluogo nuovo cliente", persona: "Sig.ra Ferraro", addr: "Via De Seta 15, Cosenza", color: "#007aff", durata: 60 },
+    ]);
+
+    // TASKS
+    setTasks([
+      { id: "t1", text: "Inviare preventivo Bianchi", done: false, priority: "alta", meta: "S-0002 · Scade venerdì" },
+      { id: "t2", text: "Preparare sopralluogo Verdi", done: false, priority: "media", meta: "S-0001 · Oggi ore 9" },
+      { id: "t3", text: "Chiamare Aluplast per conferma Rossi", done: false, priority: "alta", meta: "S-0003 · Ordine 18/02" },
+      { id: "t4", text: "Verificare consegna Esposito", done: true, priority: "media", meta: "S-0004 · 15 marzo" },
+    ]);
+
+    setSelectedCM(null);
+    setSelectedRilievo(null);
+    setSelectedVano(null);
+    setTab("home");
+  };
+
   const renderHome = () => {
     const todayISO = today.toISOString().split("T")[0];
     const h = today.getHours();
@@ -1222,7 +2423,12 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 { id: "ferme", icon: "⚠️", label: "Ferme", count: ferme.length, color: T.red, sub: ferme.length > 0 ? `da ${ferme[0] ? giorniFermaCM(ferme[0]) : 0}gg` : "Tutto ok" },
                 { id: "oggi", icon: "📅", label: "Oggi", count: todayEvents.length, color: "#007aff", sub: todayEvents[0] ? `Prossimo: ${todayEvents[0].time || "—"}` : "Nessun evento" },
               ].map(c => (
-                <div key={c.id} style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, boxShadow: T.cardSh, padding: "10px 12px", cursor: "pointer", position: "relative", overflow: "hidden" }}>
+                <div key={c.id} onClick={() => {
+                  if (c.id === "misure") { setFilterFase("misure"); setTab("commesse"); }
+                  else if (c.id === "prev") { setFilterFase("preventivo"); setTab("commesse"); }
+                  else if (c.id === "ferme") { setFilterFase("tutte"); setTab("commesse"); }
+                  else if (c.id === "oggi") { setTab("agenda"); }
+                }} style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, boxShadow: T.cardSh, padding: "10px 12px", cursor: "pointer", position: "relative", overflow: "hidden" }}>
                   <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(135deg, ${c.color}, ${c.color}80)` }} />
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div>
@@ -1287,7 +2493,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       })(),
 
       // ═══ ATTENZIONE ═══
-      attenzione: ferme.length > 0 ? (
+      attenzione: (ferme.length > 0 || problemi.filter(p => p.stato !== "risolto").length > 0) ? (
         <div key="attenzione">
           <div style={{ margin: "0 16px 8px" }}>
             <div onClick={() => toggleCollapse("attenzione")} style={{
@@ -1297,11 +2503,34 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 9, fontWeight: 800, color: T.red, textTransform: "uppercase" as const, letterSpacing: "0.1em", fontFamily: FM }}>⚠️ ATTENZIONE</span>
-                <span style={{ ...S.badge(T.red, "#fff") }}>{ferme.length}</span>
+                <span style={{ ...S.badge(T.red, "#fff") }}>{ferme.length + problemi.filter(p => p.stato !== "risolto").length}</span>
               </div>
               <span style={{ fontSize: 9, color: T.sub, display: "inline-block", transform: collapsed["attenzione"] ? "rotate(-90deg)" : "none", transition: "transform 0.15s" }}>▼</span>
             </div>
-            {!collapsed["attenzione"] && ferme.map((c, i) => (
+            {!collapsed["attenzione"] && (<>
+            {/* Problemi aperti */}
+            {problemi.filter(p => p.stato !== "risolto").map((p, i) => (
+              <div key={p.id} onClick={() => { const cm = cantieri.find(c => c.id === p.commessaId); if (cm) { setSelectedCM(cm); setTab("commesse"); setTimeout(() => setShowProblemiView(true), 200); } }}
+                style={{
+                  padding: "10px 14px", background: T.card,
+                  borderLeft: `3px solid #FF3B30`, borderRight: `1px solid ${T.red}18`,
+                  borderBottom: `1px solid ${T.red}18`,
+                  borderRadius: i === 0 && ferme.length === 0 ? 0 : 0,
+                  cursor: "pointer", display: "flex", alignItems: "center", gap: 10
+                }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                    <span style={{ ...S.badge("#FF3B3015", "#FF3B30"), fontSize: 9, fontWeight: 800, fontFamily: FM }}>🚨 {p.stato === "in_corso" ? "IN CORSO" : "APERTO"}</span>
+                    <span style={{ fontSize: 10, color: T.sub, fontFamily: FM }}>{p.commessaCode}</span>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{p.titolo}</div>
+                  <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{p.cliente}{p.assegnatoA ? ` · 👤 ${p.assegnatoA}` : ""}</div>
+                </div>
+                <span style={{ color: T.sub, fontSize: 16 }}>›</span>
+              </div>
+            ))}
+            {/* Commesse ferme */}
+            {ferme.map((c, i) => (
               <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); }}
                 style={{
                   padding: "10px 14px", background: T.card,
@@ -1321,6 +2550,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                 <span style={{ color: T.sub, fontSize: 16 }}>›</span>
               </div>
             ))}
+            </>)}
           </div>
         </div>
       ) : null,
@@ -1520,11 +2750,11 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               <div style={{ padding: "0 16px", marginBottom: 16 }}>
                 <div style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, boxShadow: T.cardSh, overflow: "hidden" }}>
                   {/* Pipeline flow */}
-                  <div style={{ display: "flex", alignItems: "center", padding: "10px 12px 6px", gap: 2, overflowX: "auto" as const }}>
+                  <div style={{ display: "flex", alignItems: "center", padding: "10px 12px 6px", gap: 2, overflowX: "auto" as const, WebkitOverflowScrolling: "touch" as any, scrollbarWidth: "none" as any }}>
                     {faseData.map((f, i) => (
-                      <div key={f.id} style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0 }}>
-                        <div onClick={() => { setCmFaseIdx(PIPELINE.findIndex(p => p.id === f.id) + 1); }}
-                          style={{ flex: 1, textAlign: "center" as const, cursor: "pointer", padding: "4px 2px", borderRadius: 6, background: f.count > 0 ? f.color + "10" : "transparent", transition: "background 0.15s" }}>
+                      <div key={f.id} style={{ display: "flex", alignItems: "center", flexShrink: 0, minWidth: 56 }}>
+                        <div onClick={() => { setFilterFase(f.id); setTab("commesse"); }}
+                          style={{ width: 56, textAlign: "center" as const, cursor: "pointer", padding: "4px 2px", borderRadius: 6, background: f.count > 0 ? f.color + "10" : "transparent", transition: "background 0.15s" }}>
                           <div style={{ fontSize: 16 }}>{f.ico}</div>
                           <div style={{ fontSize: 16, fontWeight: 800, color: f.count > 0 ? f.color : T.sub + "60", fontFamily: FM, lineHeight: 1 }}>{f.count}</div>
                           <div style={{ fontSize: 7, fontWeight: 700, color: f.count > 0 ? f.color : T.sub, textTransform: "uppercase" as const, letterSpacing: 0.3, marginTop: 1, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" }}>{f.nome}</div>
@@ -1534,9 +2764,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     ))}
                   </div>
                   {/* Bar chart */}
-                  <div style={{ display: "flex", gap: 3, padding: "4px 12px 10px", alignItems: "flex-end", height: 32 }}>
+                  <div style={{ display: "flex", gap: 3, padding: "4px 12px 10px", alignItems: "flex-end", height: 32, overflowX: "auto" as const, scrollbarWidth: "none" as any }}>
                     {faseData.map(f => (
-                      <div key={f.id} style={{ flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 0 }}>
+                      <div key={f.id} style={{ flexShrink: 0, minWidth: 56, display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 0 }}>
                         <div style={{
                           width: "100%", borderRadius: "3px 3px 0 0",
                           height: f.count > 0 ? Math.max(4, (f.count / maxCount) * 28) : 2,
@@ -1556,6 +2786,145 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+          </div>
+        );
+      })(),
+
+      // ═══ DASHBOARD ECONOMICA ═══
+      dashboard: (() => {
+        const cmConf = cantieri.filter(c => c.confermato);
+        const cmChiuse = cantieri.filter(c => c.fase === "chiusura");
+        const fattMese = cantieri.filter(c => {
+          if (!c.euro) return false;
+          const d = c.dataConferma || "";
+          const now = new Date();
+          return d.includes("/" + (now.getMonth() + 1).toString().padStart(2,"0") + "/" + now.getFullYear()) || c.fase === "chiusura";
+        }).reduce((s, c) => s + (parseFloat(c.euro) || 0), 0);
+        const totPrev = cantieri.filter(c => c.euro && c.fase !== "chiusura").reduce((s, c) => s + (parseFloat(c.euro) || 0), 0);
+        const totConf = cmConf.reduce((s, c) => s + (parseFloat(c.euro) || 0), 0);
+        const totChiuse = cmChiuse.reduce((s, c) => s + (parseFloat(c.euro) || 0), 0);
+        const convRate = cantieri.length > 0 ? Math.round(cmConf.length / cantieri.length * 100) : 0;
+        return (
+          <div key="dashboard">
+            <SectionHead id="dashboard" icon="📊" title="Dashboard" />
+            {!collapsed["dashboard"] && (
+              <div style={{ padding: "0 16px", marginBottom: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  <div style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 8, color: T.sub, textTransform: "uppercase", fontWeight: 700 }}>Preventivi aperti</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: T.text }}>€{totPrev.toLocaleString("it-IT")}</div>
+                    <div style={{ fontSize: 9, color: T.sub }}>{cantieri.filter(c => c.euro && c.fase !== "chiusura").length} commesse</div>
+                  </div>
+                  <div style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 8, color: T.sub, textTransform: "uppercase", fontWeight: 700 }}>Confermati</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "#34c759" }}>€{totConf.toLocaleString("it-IT")}</div>
+                    <div style={{ fontSize: 9, color: T.sub }}>{cmConf.length} commesse · {convRate}% conv.</div>
+                  </div>
+                  <div style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 8, color: T.sub, textTransform: "uppercase", fontWeight: 700 }}>Chiusi/Fatturati</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "#007aff" }}>€{totChiuse.toLocaleString("it-IT")}</div>
+                    <div style={{ fontSize: 9, color: T.sub }}>{cmChiuse.length} commesse</div>
+                  </div>
+                  <div style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 8, color: T.sub, textTransform: "uppercase", fontWeight: 700 }}>In produzione</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "#5856d6" }}>{cantieri.filter(c => c.trackingStato && !["montato"].includes(c.trackingStato)).length}</div>
+                    <div style={{ fontSize: 9, color: T.sub }}>{cantieri.filter(c => c.trackingStato === "pronto").length} pronti da consegnare</div>
+                  </div>
+                </div>
+                {/* Scadenzario rapido */}
+                {cantieri.filter(c => c.confermato && c.euro && c.fase !== "chiusura").length > 0 && (
+                  <div style={{ marginTop: 8, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>💰 Da incassare</div>
+                    {cantieri.filter(c => c.confermato && c.euro && c.fase !== "chiusura").slice(0, 5).map(c => (
+                      <div key={c.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${T.bdr}`, fontSize: 11 }}>
+                        <span style={{ color: T.text }}>{c.cliente} <span style={{ color: T.sub, fontSize: 9 }}>{c.code}</span></span>
+                        <span style={{ fontWeight: 700, color: "#34c759" }}>€{parseFloat(c.euro).toLocaleString("it-IT")}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Ordini fornitore in arrivo */}
+                {ordiniFornDB.filter(o => o.stato !== "consegnato").length > 0 && (
+                  <div style={{ marginTop: 8, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>📦 Ordini fornitore</div>
+                    {ordiniFornDB.filter(o => o.stato !== "consegnato").sort((a, b) => (a.consegna?.prevista || "z").localeCompare(b.consegna?.prevista || "z")).slice(0, 5).map(o => {
+                      const st = ORDINE_STATI.find(s => s.id === o.stato) || ORDINE_STATI[0];
+                      const isLate = o.consegna?.prevista && new Date(o.consegna.prevista) < new Date();
+                      return (
+                        <div key={o.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${T.bdr}`, fontSize: 11 }}>
+                          <div>
+                            <span style={{ marginRight: 4 }}>{st.icon}</span>
+                            <b>{o.fornitore?.nome || "—"}</b>
+                            <span style={{ color: T.sub, marginLeft: 4 }}>{o.cmCode}</span>
+                          </div>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            {o.consegna?.prevista && <span style={{ fontSize: 9, color: isLate ? "#ff3b30" : T.sub, fontWeight: isLate ? 700 : 400 }}>{isLate ? "⚠️ " : ""}{new Date(o.consegna.prevista).toLocaleDateString("it-IT", { day: "numeric", month: "short" })}</span>}
+                            <span style={{ padding: "2px 6px", borderRadius: 4, fontSize: 8, fontWeight: 700, background: st.color + "20", color: st.color }}>{st.label}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {ordiniFornDB.filter(o => o.stato !== "consegnato" && !o.conferma?.firmata && o.conferma?.ricevuta).length > 0 && (
+                      <div style={{ marginTop: 6, fontSize: 9, color: "#ff9500", fontWeight: 700 }}>⚠️ {ordiniFornDB.filter(o => !o.conferma?.firmata && o.conferma?.ricevuta).length} conferme da firmare</div>
+                    )}
+                  </div>
+                )}
+
+                {/* Montaggi prossimi */}
+                {montaggiDB.filter(m => m.stato !== "completato").length > 0 && (
+                  <div style={{ marginTop: 8, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>🔧 Prossimi montaggi</div>
+                    {montaggiDB.filter(m => m.stato !== "completato").sort((a, b) => (a.data || "z").localeCompare(b.data || "z")).slice(0, 5).map(m => {
+                      const sq = squadreDB.find(s => s.id === m.squadraId);
+                      return (
+                        <div key={m.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${T.bdr}`, fontSize: 11 }}>
+                          <span style={{ color: T.text }}>
+                            {m.data ? new Date(m.data).toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" }) : "—"}{" "}
+                            <span style={{ color: sq?.colore || T.sub, fontWeight: 600 }}>{sq?.nome || "—"}</span>
+                          </span>
+                          <span style={{ color: T.text, fontWeight: 600 }}>{m.cliente} <span style={{ color: T.sub, fontSize: 9 }}>{m.vaniCount}v</span></span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* Consegne fornitore in arrivo */}
+                {ordiniFornDB.filter(o => o.dataConsegnaPrev && o.stato !== "consegnato").length > 0 && (
+                  <div style={{ marginTop: 8, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>🚛 Consegne in arrivo</div>
+                    {ordiniFornDB.filter(o => o.dataConsegnaPrev && o.stato !== "consegnato").sort((a, b) => (a.dataConsegnaPrev || "z").localeCompare(b.dataConsegnaPrev || "z")).slice(0, 5).map(o => {
+                      const isLate = o.dataConsegnaPrev < new Date().toISOString().split("T")[0];
+                      const cm = cantieri.find(cc => cc.id === o.cmId);
+                      return (
+                        <div key={o.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${T.bdr}`, fontSize: 11 }}>
+                          <span style={{ color: isLate ? "#ff3b30" : T.text }}>
+                            {isLate ? "⚠️ " : ""}
+                            {new Date(o.dataConsegnaPrev).toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" })}{" "}
+                            <span style={{ color: "#ff9500", fontWeight: 600 }}>{o.fornitore}</span>
+                          </span>
+                          <span style={{ color: T.text, fontWeight: 600 }}>{cm?.cliente || "—"}{o.costo > 0 && <span style={{ color: T.sub, fontSize: 9 }}> €{o.costo.toLocaleString("it-IT")}</span>}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* Scadenzario fatture */}
+                {fattureDB.filter(f => !f.pagata).length > 0 && (
+                  <div style={{ marginTop: 8, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>⏳ Fatture da incassare</div>
+                    {fattureDB.filter(f => !f.pagata).sort((a, b) => (a.scadenza || "z").localeCompare(b.scadenza || "z")).map(f => {
+                      const scaduta = f.scadenza < new Date().toISOString().split("T")[0];
+                      return (
+                        <div key={f.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${T.bdr}`, fontSize: 11 }}>
+                          <span style={{ color: scaduta ? "#ff3b30" : T.text }}>{scaduta ? "⚠️ " : ""}{f.cliente} <span style={{ color: T.sub, fontSize: 9 }}>N.{f.numero}</span></span>
+                          <span style={{ fontWeight: 700, color: scaduta ? "#ff3b30" : T.text }}>€{f.importo.toLocaleString("it-IT")}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1597,6 +2966,34 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           </div>
         </div>
 
+        {/* Trial banner */}
+        {activePlan === "trial" && (
+          <div onClick={() => { setSettingsTab("piano"); setTab("settings"); }}
+            style={{ margin: "0 16px 8px", padding: "8px 14px", borderRadius: 10, background: `linear-gradient(135deg, ${T.acc}20, ${T.acc}08)`, border: `1px solid ${T.acc}30`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 14 }}>💎</span>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.acc }}>Trial gratuito · {trialDaysLeft} giorni rimasti</div>
+                <div style={{ fontSize: 9, color: T.sub }}>Tutte le funzionalità sbloccate</div>
+              </div>
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 700, color: T.acc }}>Vedi piani ›</span>
+          </div>
+        )}
+        {activePlan === "free" && (
+          <div onClick={() => { setSettingsTab("piano"); setTab("settings"); }}
+            style={{ margin: "0 16px 8px", padding: "8px 14px", borderRadius: 10, background: T.red + "10", border: `1px solid ${T.red}30`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 14 }}>⚠️</span>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.red }}>Trial scaduto</div>
+                <div style={{ fontSize: 9, color: T.sub }}>Funzionalità limitate · {cantieri.length}/5 commesse</div>
+              </div>
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 700, color: T.acc }}>Attiva piano ›</span>
+          </div>
+        )}
+
         {/* Search */}
         <div style={{ padding: "0 16px", marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
@@ -1630,6 +3027,35 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             );
           })()}
         </div>
+
+        {/* 📥 INBOX RAPIDO — ordini in attesa di conferma */}
+        {(() => {
+          const ordiniInAttesa = ordiniFornDB.filter(o => o.stato && o.stato !== "bozza" && !o.conferma?.ricevuta);
+          if (ordiniInAttesa.length === 0) return null;
+          return (
+            <div style={{ margin: "0 16px 10px" }}>
+              <div onClick={() => apriInboxDocumento()} style={{
+                padding: "14px 16px", borderRadius: 14, cursor: "pointer",
+                background: "linear-gradient(135deg, #af52de15, #af52de08)",
+                border: "2px solid #af52de30", display: "flex", alignItems: "center", gap: 12,
+              }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#af52de", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, position: "relative" }}>
+                  📥
+                  <div style={{ position: "absolute", top: -4, right: -4, width: 18, height: 18, borderRadius: "50%", background: T.red, color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{ordiniInAttesa.length}</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#af52de" }}>
+                    {ordiniInAttesa.length} conferma{ordiniInAttesa.length > 1 ? "e" : ""} in attesa
+                  </div>
+                  <div style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>
+                    Carica PDF/foto da email, WhatsApp o portale → AI legge tutto
+                  </div>
+                </div>
+                <div style={{ fontSize: 16, color: "#af52de" }}>→</div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Composable sections */}
         {drag.order.map(id => {
@@ -1936,9 +3362,908 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           {c.sistema && <span style={S.badge(T.blueLt, T.blue)}>{c.sistema}</span>}
           {c.tipo === "nuova" && <span style={S.badge(T.grnLt, T.grn)}>🆕 Nuova</span>}
           {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>🔧 Riparazione</span>}
-          {c.telefono && <span onClick={() => window.open(`tel:${c.telefono}`)} style={{ ...S.badge(T.grnLt, T.grn), cursor: "pointer" }}>📞 {c.telefono}</span>}
+          {c.telefono && <span onClick={() => window.location.href=`tel:${c.telefono}`} style={{ ...S.badge(T.grnLt, T.grn), cursor: "pointer" }}>📞 {c.telefono}</span>}
           {c.euro > 0 && <span style={S.badge(T.accLt, T.acc)}>€{c.euro.toLocaleString("it-IT")}</span>}
         </div>
+
+
+        {/* ═══════════════════════════════════════════════════ */}
+        {/* ═══ CENTRO COMANDO v4 — TIMELINE COMPLETA ═══════ */}
+        {/* ═══════════════════════════════════════════════════ */}
+        {(() => {
+          const vani = getVaniAttivi(c);
+          const rilievi = c.rilievi || [];
+          const hasRilievi = rilievi.length > 0;
+          const hasVani = vani.length > 0;
+          const vaniConMisure = vani.filter(v => Object.keys(v.misure || {}).length >= 4);
+          const vaniConPrezzo = vani.filter(v => calcolaVanoPrezzo(v, c) > 0);
+          const totVani = vani.reduce((s, v) => s + calcolaVanoPrezzo(v, c), 0);
+          const totVoci = (c.vociLibere || []).reduce((s, vl) => s + ((vl.importo || 0) * (vl.qta || 1)), 0);
+          const totPreventivo = totVani + totVoci;
+          const ivaPerc = c.ivaPerc || 10;
+          const totIva = totPreventivo * (1 + ivaPerc / 100);
+          const hasFirma = !!c.firmaCliente;
+          const fattureCommessa = fattureDB.filter(f => f.cmId === c.id);
+          const hasAcconto = fattureCommessa.some(f => f.tipo === "acconto");
+          const hasUnica = fattureCommessa.some(f => f.tipo === "unica");
+          const hasFattura = hasAcconto || hasUnica;
+          const incassato = fattureCommessa.filter(f => f.pagata).reduce((s, f) => s + (f.importo || 0), 0);
+          const ordiniCommessa = ordiniFornDB.filter(o => o.cmId === c.id);
+          const hasOrdine = ordiniCommessa.length > 0;
+          const ordineConfermato = ordiniCommessa.some(o => o.conferma?.ricevuta);
+          const confermaFirmata = ordiniCommessa.some(o => o.conferma?.firmata);
+          const montaggiCommessa = montaggiDB.filter(m => m.cmId === c.id);
+          const hasMontaggio = montaggiCommessa.length > 0;
+          const hasSaldo = fattureCommessa.some(f => f.tipo === "saldo");
+          const saldoPagato = fattureCommessa.find(f => f.tipo === "saldo")?.pagata;
+          const unicaPagata = fattureCommessa.find(f => f.tipo === "unica")?.pagata;
+          const tuttoChiuso = (hasSaldo && saldoPagato) || (hasUnica && unicaPagata) || (c.fase === "chiusura" && incassato >= totIva) || (incassato >= totIva && fattureCommessa.length > 0 && fattureCommessa.every(f => f.pagata));
+
+          const fmt = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2 }) : "0,00";
+
+          const steps = [
+            { id: "rilievo", icon: "📐", label: "Rilievo", done: hasRilievi,
+              detail: hasRilievi ? `${rilievi.length} rilievo · ${vani.length} vani · ${rilievi[0]?.data || ""}` : null },
+            { id: "misure", icon: "📏", label: "Misure e Preventivo", done: hasVani && vaniConPrezzo.length > 0,
+              detail: vaniConPrezzo.length > 0 ? `${vaniConPrezzo.length}/${vani.length} vani prezzati · Totale €${fmt(totPreventivo)}` : hasVani ? `${vaniConMisure.length}/${vani.length} vani misurati` : null },
+            { id: "firma", icon: "✍️", label: "Firma Cliente", done: hasFirma,
+              detail: hasFirma ? `Firmato il ${c.dataFirma || "—"} · €${fmt(totIva)} IVA incl.` : null },
+            { id: "fattura", icon: "💰", label: "Fattura Acconto", done: hasFattura,
+              detail: hasFattura ? fattureCommessa.map(f => `${f.tipo} €${fmt(f.importo)} ${f.pagata ? "✅ pagata" : "⏳ in attesa"}`).join(" · ") : null },
+            { id: "ordine", icon: "📦", label: "Ordine Fornitore", done: hasOrdine,
+              detail: hasOrdine ? `${ordiniCommessa[0]?.fornitore?.nome || "Fornitore da inserire"} · €${fmt(ordiniCommessa[0]?.totaleIva || 0)} · ${ordiniCommessa[0]?.stato || "bozza"}` : null },
+            { id: "conferma", icon: "📄", label: "Conferma Fornitore", done: confermaFirmata,
+              detail: ordineConfermato ? `Ricevuta · ${ordiniCommessa[0]?.consegna?.settimane || "?"} sett. · consegna ${ordiniCommessa[0]?.consegna?.prevista ? new Date(ordiniCommessa[0].consegna.prevista).toLocaleDateString("it-IT") : "da definire"}` : null },
+            { id: "montaggio", icon: "🔧", label: "Montaggio", done: hasMontaggio,
+              detail: hasMontaggio ? `${montaggiCommessa[0]?.data ? new Date(montaggiCommessa[0].data).toLocaleDateString("it-IT") : "Da pianificare"} · Squadra ${squadreDB.find(s => s.id === montaggiCommessa[0]?.squadraId)?.nome || "—"}` : null },
+            { id: "saldo", icon: "💶", label: "Chiusura", done: tuttoChiuso,
+              detail: tuttoChiuso ? `Incassato €${fmt(incassato)} · ✅ Completata` : null },
+          ];
+
+          const doneCount = steps.filter(s => s.done).length;
+          const currentIdx = steps.findIndex(s => !s.done);
+          const current = currentIdx >= 0 ? steps[currentIdx] : null;
+          const progress = Math.round((doneCount / steps.length) * 100);
+
+          return (
+            <div style={{ margin: "0 16px 12px" }}>
+              {/* Header with progress */}
+              <div style={{ background: T.card, borderRadius: "16px 16px 0 0", border: `1px solid ${T.bdr}`, borderBottom: "none", padding: "14px 16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>🎯 Centro Comando</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.acc, fontFamily: FM }}>{doneCount}/{steps.length} · {progress}%</div>
+                </div>
+                <div style={{ height: 6, background: T.bg, borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ height: "100%", background: `linear-gradient(90deg, #34c759, ${T.acc})`, width: `${progress}%`, borderRadius: 3, transition: "width 0.5s" }} />
+                </div>
+                {/* Success flash */}
+                {ccDone && (
+                  <div style={{ marginTop: 6, padding: "10px 12px", borderRadius: 8, background: "#34c75918", border: "1px solid #34c75940", fontSize: 13, fontWeight: 700, color: "#34c759", textAlign: "center", animation: "fadeIn 0.3s" }}>
+                    {ccDone}
+                  </div>
+                )}
+                {/* Step dots */}
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, padding: "0 2px" }}>
+                  {steps.map((s, i) => (
+                    <div key={s.id} style={{
+                      width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12,
+                      background: s.done ? "#34c759" : i === currentIdx ? T.acc : T.bg,
+                      color: s.done || i === currentIdx ? "#fff" : T.sub, fontWeight: 700,
+                      boxShadow: i === currentIdx ? `0 0 0 3px ${T.acc}40` : "none",
+                    }}>{s.done ? "✓" : s.icon}</div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Timeline — ALL steps visible */}
+              <div style={{ background: T.card, border: `1px solid ${T.bdr}`, borderTop: "none", borderRadius: "0 0 16px 16px", overflow: "hidden" }}>
+                {steps.map((step, idx) => {
+                  const isCurrent = idx === currentIdx;
+                  const isFuture = !step.done && !isCurrent;
+                  const borderColor = step.done ? "#34c759" : isCurrent ? T.acc : T.bg;
+
+                  return (
+                    <div key={step.id} style={{
+                      padding: isCurrent ? "14px 14px 16px" : "10px 14px",
+                      borderLeft: `4px solid ${borderColor}`,
+                      borderBottom: idx < steps.length - 1 ? `1px solid ${T.bg}` : "none",
+                      background: isCurrent ? `${T.acc}06` : "transparent",
+                      opacity: isFuture ? 0.4 : 1,
+                    }}>
+                      {/* Step header */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: isCurrent ? 18 : 14 }}>{step.icon}</span>
+                        <span style={{ fontSize: isCurrent ? 14 : 12, fontWeight: 700, color: T.text, flex: 1 }}>{step.label}</span>
+                        {step.done && (() => {
+                          // Collect documents for this step
+                          const stepDocs: any[] = [];
+                          if (step.id === "rilievo") {
+                            rilievi.forEach(r => stepDocs.push({ nome: `Rilievo #${r.n} — ${r.data}`, tipo: "rilievo", data: r.data, detail: `${(r.vani || []).length} vani · ${r.rilevatore || "Fabio"}` }));
+                          } else if (step.id === "misure") {
+                            stepDocs.push({ nome: `Preventivo ${c.code}`, tipo: "preventivo", data: c.dataFirma || "—", detail: `${vaniConPrezzo.length} vani · €${fmt(totPreventivo)}` });
+                          } else if (step.id === "firma") {
+                            if (c.firmaDocumento) stepDocs.push({ ...c.firmaDocumento, detail: `Firmato il ${c.dataFirma || "—"} · €${fmt(totIva)}` });
+                            else stepDocs.push({ nome: "Firma cliente", tipo: "firma", data: c.dataFirma || "—", detail: `€${fmt(totIva)} IVA incl.` });
+                          } else if (step.id === "fattura") {
+                            fattureCommessa.forEach(f => stepDocs.push({ nome: `Fattura ${f.numero}/${f.anno} — ${f.tipo}`, tipo: "fattura", data: f.data, detail: `€${fmt(f.importo)} · ${f.pagata ? "✅ Pagata " + (f.dataPagamento || "") : "⏳ In attesa"}` }));
+                          } else if (step.id === "ordine") {
+                            ordiniCommessa.forEach(o => stepDocs.push({ nome: `Ordine ${o.numero}/${o.anno} — ${o.fornitore?.nome || ""}`, tipo: "ordine", data: o.dataOrdine, detail: `${o.righe?.length || 0} righe · €${fmt(o.totaleIva || 0)} · ${o.stato}` }));
+                          } else if (step.id === "conferma") {
+                            ordiniCommessa.filter(o => o.conferma?.ricevuta).forEach(o => stepDocs.push({ nome: o.conferma?.nomeFile || `Conferma ${o.fornitore?.nome}`, tipo: "conferma", data: o.conferma?.dataRicezione, detail: `${o.consegna?.settimane || "?"} sett. · consegna ${o.consegna?.prevista ? new Date(o.consegna.prevista).toLocaleDateString("it-IT") : "—"}` }));
+                          } else if (step.id === "montaggio") {
+                            montaggiCommessa.forEach(m => stepDocs.push({ nome: `Montaggio ${m.data ? new Date(m.data).toLocaleDateString("it-IT") : "—"}`, tipo: "montaggio", data: m.data, detail: `${m.giorni || 1}g · ${squadreDB.find(s => s.id === m.squadraId)?.nome || "—"} · ${m.stato}` }));
+                          } else if (step.id === "saldo") {
+                            fattureCommessa.filter(f => f.tipo === "saldo").forEach(f => stepDocs.push({ nome: `Fattura saldo ${f.numero}/${f.anno}`, tipo: "fattura", data: f.data, detail: `€${fmt(f.importo)} · ${f.pagata ? "✅ Pagata" : "⏳"}` }));
+                          }
+                          // Also add generic allegati matching this step type
+                          (c.allegati || []).filter(a => a.tipo === step.id).forEach(a => {
+                            if (!stepDocs.find(d => d.nome === a.nome)) stepDocs.push({ ...a, detail: a.data || "" });
+                          });
+                          return (
+                            <span onClick={(e) => { e.stopPropagation(); if (stepDocs.length > 0) setDocViewer({ docs: stepDocs, title: `${step.label} — ${c.cliente} ${c.cognome || ""}` }); }} style={{ fontSize: 10, fontWeight: 700, color: "#34c759", background: "#34c75912", padding: "2px 8px", borderRadius: 6, cursor: stepDocs.length > 0 ? "pointer" : "default" }}>
+                              ✅ Fatto {stepDocs.length > 0 && <span style={{ fontSize: 8 }}>📎{stepDocs.length}</span>}
+                            </span>
+                          );
+                        })()}
+                        {isCurrent && <span style={{ fontSize: 10, fontWeight: 700, color: T.acc, background: `${T.acc}15`, padding: "2px 8px", borderRadius: 6 }}>👉 DA FARE</span>}
+                      </div>
+
+                      {/* Done detail */}
+                      {step.done && step.detail && (
+                        <div style={{ fontSize: 10, color: T.sub, marginTop: 3, marginLeft: 26 }}>{step.detail}</div>
+                      )}
+
+                      {/* ========== CURRENT STEP ACTIONS ========== */}
+                      {isCurrent && step.id === "rilievo" && (
+                        <div style={{ marginTop: 10, marginLeft: 26 }}>
+                          <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Crea il primo rilievo con i vani da misurare</div>
+                          <button onClick={() => setShowNuovoRilievo(true)} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                            📐 CREA RILIEVO →
+                          </button>
+                        </div>
+                      )}
+
+                      {isCurrent && step.id === "misure" && (
+                        <div style={{ marginTop: 10, marginLeft: 26 }}>
+                          <div style={{ fontSize: 11, color: T.sub, marginBottom: 6 }}>
+                            {!hasVani ? "Aggiungi i vani e inserisci le misure" :
+                             vaniConMisure.length < vani.length ? `${vaniConMisure.length}/${vani.length} vani misurati — completa le misure` :
+                             vaniConPrezzo.length === 0 ? "Misure OK — imposta il prezzo €/mq nelle impostazioni o nella griglia" :
+                             `${vaniConPrezzo.length} vani prezzati · Totale: €${fmt(totPreventivo)}`}
+                          </div>
+                          {hasRilievi && (
+                            <button onClick={() => {
+                              const ril = rilievi[rilievi.length - 1];
+                              setSelectedRilievo(ril);
+                              if (ril.vani?.length > 0) { setSelectedVano(ril.vani[0]); }
+                            }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                              📏 {!hasVani ? "AGGIUNGI VANI →" : vaniConMisure.length < vani.length ? "COMPLETA MISURE →" : "APRI RILIEVO →"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {isCurrent && step.id === "firma" && (
+                        <div style={{ marginTop: 10, marginLeft: 26 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 8 }}>
+                            Preventivo: €{fmt(totPreventivo)} + IVA {ivaPerc}% = <b>€{fmt(totIva)}</b>
+                          </div>
+                          {/* Sub-step 1: Invia preventivo */}
+                          {firmaStep === 0 && (
+                            <div>
+                              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                                <button onClick={() => generaPreventivoPDF(c)} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${T.acc}`, background: `${T.acc}08`, color: T.acc, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                                  📄 Scarica PDF
+                                </button>
+                                <button onClick={() => setShowPreventivoModal(true)} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, color: T.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                                  👁 Anteprima
+                                </button>
+                              </div>
+                              <button onClick={() => {
+                                const tel = (c.telefono || "").replace(/\D/g, "");
+                                window.open(`https://wa.me/${tel.startsWith("39") ? tel : "39" + tel}?text=${encodeURIComponent(`Gentile ${c.cliente}, in allegato il preventivo per la commessa ${c.code}.\nTotale: €${fmt(totIva)} IVA inclusa.\nPrego firmare e rinviare. Grazie!`)}`, "_blank");
+                                setFirmaStep(1);
+                              }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#25d366", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                                📤 INVIA PREVENTIVO AL CLIENTE →
+                              </button>
+                              <div style={{ textAlign: "center", marginTop: 6 }}>
+                                <span onClick={() => setFirmaStep(1)} style={{ fontSize: 11, color: T.sub, cursor: "pointer", textDecoration: "underline" }}>Già inviato? Vai al caricamento firma</span>
+                              </div>
+                            </div>
+                          )}
+                          {/* Sub-step 2: Carica documento firmato */}
+                          {firmaStep === 1 && (
+                            <div>
+                              <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>✅ Preventivo inviato. Ora carica il documento firmato dal cliente.</div>
+                              {!firmaFileUrl ? (
+                                <div>
+                                  <button onClick={() => {
+                                    const inp = document.createElement("input");
+                                    inp.type = "file"; inp.accept = "application/pdf,image/*,.jpg,.jpeg,.png";
+                                    inp.onchange = (ev: any) => {
+                                      const file = ev.target.files?.[0];
+                                      if (!file) return;
+                                      setFirmaFileName(file.name);
+                                      const reader = new FileReader();
+                                      reader.onload = (e) => setFirmaFileUrl(e.target?.result as string);
+                                      reader.readAsDataURL(file);
+                                    };
+                                    inp.click();
+                                  }} style={{ width: "100%", padding: 14, borderRadius: 10, border: `2px dashed ${T.acc}`, background: `${T.acc}08`, color: T.acc, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                                    📥 CARICA DOCUMENTO FIRMATO
+                                  </button>
+                                  <div style={{ fontSize: 10, color: T.sub, textAlign: "center", marginTop: 4 }}>PDF, foto o scansione del preventivo firmato</div>
+                                </div>
+                              ) : (
+                                <div>
+                                  <div style={{ padding: 10, borderRadius: 8, background: "#34c75912", border: "1px solid #34c75930", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ fontSize: 20 }}>📎</span>
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ fontSize: 12, fontWeight: 700, color: "#34c759" }}>✅ Documento caricato</div>
+                                      <div style={{ fontSize: 11, color: T.sub }}>{firmaFileName}</div>
+                                    </div>
+                                    <span onClick={() => { setFirmaFileUrl(null); setFirmaFileName(""); }} style={{ fontSize: 18, cursor: "pointer", color: T.sub }}>✕</span>
+                                  </div>
+                                  <button onClick={() => {
+                                    const allegato = { id: Date.now(), tipo: "firma", nome: firmaFileName, data: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }), dataUrl: firmaFileUrl };
+                                    setCantieri(cs => cs.map(cm => cm.id === c.id ? { ...cm, firmaCliente: true, dataFirma: new Date().toISOString().split("T")[0], firmaDocumento: allegato, allegati: [...(cm.allegati || []), allegato], log: [{ chi: "Fabio", cosa: "documento firmato caricato", quando: "Adesso", color: "#34c759" }, ...(cm.log || [])] } : cm));
+                                    setSelectedCM(prev => ({ ...prev, firmaCliente: true, dataFirma: new Date().toISOString().split("T")[0] }));
+                                    setFirmaStep(0); setFirmaFileUrl(null); setFirmaFileName("");
+                                    setCcDone("✅ Firma registrata con documento!"); setTimeout(() => setCcDone(null), 3000);
+                                  }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                                    ✅ CONFERMA FIRMA →
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {isCurrent && step.id === "fattura" && (
+                        <div style={{ marginTop: 10, marginLeft: 26 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 4 }}>Totale commessa: <b style={{ color: T.acc }}>€{fmt(totIva)}</b></div>
+                          <div style={{ fontSize: 11, color: T.sub, marginBottom: 10 }}>Scegli la modalità di fatturazione:</div>
+                          {/* Percentage chips */}
+                          <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" as any }}>
+                            {[30, 40, 50, 60, 100].map(p => (
+                              <div key={p} onClick={() => setFattPerc(p)} style={{
+                                padding: "10px 16px", borderRadius: 10, cursor: "pointer", fontSize: 13, fontWeight: 800,
+                                background: fattPerc === p ? T.acc : T.card,
+                                color: fattPerc === p ? "#fff" : T.text,
+                                border: `2px solid ${fattPerc === p ? T.acc : T.bdr}`,
+                                transition: "all 0.15s",
+                              }}>
+                                {p === 100 ? "Unica 100%" : `Acconto ${p}%`}
+                              </div>
+                            ))}
+                          </div>
+                          {/* Amount preview */}
+                          <div style={{ background: T.bg, borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                              <span style={{ fontSize: 12, color: T.sub }}>{fattPerc === 100 ? "Fattura unica" : `Acconto ${fattPerc}%`}</span>
+                              <span style={{ fontSize: 16, fontWeight: 900, color: T.acc }}>€{fmt(Math.round(totIva * fattPerc / 100))}</span>
+                            </div>
+                            {fattPerc < 100 && (
+                              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ fontSize: 11, color: T.sub }}>Saldo restante ({100 - fattPerc}%)</span>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: T.sub }}>€{fmt(totIva - Math.round(totIva * fattPerc / 100))}</span>
+                              </div>
+                            )}
+                          </div>
+                          <button onClick={() => {
+                            creaFattura(c, fattPerc === 100 ? "unica" : "acconto");
+                            setCcDone(`✅ Fattura ${fattPerc === 100 ? "unica" : "acconto " + fattPerc + "%"} creata! €${fmt(Math.round(totIva * fattPerc / 100))}`);
+                            setTimeout(() => setCcDone(null), 3000);
+                          }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                            💰 CREA FATTURA €{fmt(Math.round(totIva * fattPerc / 100))} →
+                          </button>
+                        </div>
+                      )}
+
+                      {isCurrent && step.id === "ordine" && (
+                        <div style={{ marginTop: 10, marginLeft: 26 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 4 }}>
+                            Fornitore: <b style={{ color: T.acc }}>{c.sistema?.split(" ")[0] || "—"}</b> · Sistema: {c.sistema || "—"}
+                          </div>
+                          {/* Order lines preview */}
+                          <div style={{ background: T.bg, borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6 }}>📋 RIGHE ORDINE ({vani.length} vani)</div>
+                            {vani.map((v, vi) => {
+                              const larg = v.larghezza || v.l || 0;
+                              const alt = v.altezza || v.h || 0;
+                              const mq = ((larg * alt) / 1000000).toFixed(2);
+                              return (
+                                <div key={vi} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: vi < vani.length - 1 ? `1px solid ${T.bdr}` : "none" }}>
+                                  <div>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{v.nome || v.tipo || `Vano ${vi + 1}`}</div>
+                                    <div style={{ fontSize: 10, color: T.sub }}>{larg}×{alt}mm · {mq}m² · {v.apertura || "—"}</div>
+                                  </div>
+                                  <div style={{ fontSize: 12, fontWeight: 800, color: T.acc }}>€{fmt(calcolaVanoPrezzo(v, c))}</div>
+                                </div>
+                              );
+                            })}
+                            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, paddingTop: 6, borderTop: `2px solid ${T.bdr}` }}>
+                              <span style={{ fontSize: 13, fontWeight: 800, color: T.text }}>Totale ordine</span>
+                              <span style={{ fontSize: 15, fontWeight: 900, color: T.acc }}>€{fmt(totPreventivo)}</span>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 10, color: T.sub, marginBottom: 8, textAlign: "center" }}>Controlla le righe sopra. Se tutto OK, conferma l'ordine.</div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={() => setCcConfirm(null)} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, color: T.sub, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                              ✏️ Modifica vani
+                            </button>
+                            <button onClick={() => {
+                              const ord = creaOrdineFornitore(c, c.sistema?.split(" ")[0] || "");
+                              if (ord) setSelectedCM(prev => ({ ...prev }));
+                              setCcDone("✅ Ordine fornitore creato!"); setTimeout(() => setCcDone(null), 3000);
+                            }} style={{ flex: 2, padding: 14, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                              📦 CONFERMA ORDINE →
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {isCurrent && step.id === "conferma" && (() => {
+                        const ord = ordiniCommessa[0];
+                        const hasSett = ord?.consegna?.settimane && ord.consegna.settimane > 0;
+                        const hasData = ord?.consegna?.prevista;
+                        const infoComplete = hasSett || hasData;
+                        return (
+                        <div style={{ marginTop: 10, marginLeft: 26 }}>
+                          <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>
+                            Ordine: {ord?.fornitore?.nome || "—"} · €{fmt(ord?.totaleIva || 0)}
+                          </div>
+                          {!ordineConfermato ? (
+                            <div>
+                              <button onClick={() => apriInboxDocumento()} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#af52de", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                                📥 CARICA CONFERMA (PDF/Foto) →
+                              </button>
+                              <div style={{ fontSize: 10, color: T.sub, marginTop: 4, textAlign: "center" }}>Da email, WhatsApp o portale fornitore</div>
+                            </div>
+                          ) : ccConfirm !== "conferma_ok" ? (
+                            <div>
+                              <div style={{ padding: 10, borderRadius: 8, background: infoComplete ? "#34c75912" : "#ff950012", marginBottom: 6, fontSize: 11, color: infoComplete ? "#34c759" : "#ff9500", fontWeight: 700 }}>
+                                {infoComplete ? `✅ Conferma ricevuta — ${ord?.consegna?.settimane || "?"} settimane · consegna ${hasData ? new Date(ord.consegna.prevista).toLocaleDateString("it-IT") : "da calcolare"}` : "⚠️ Conferma ricevuta ma MANCA la data di consegna"}
+                              </div>
+                              <button onClick={() => { setCcConfirm("conferma_ok"); setConfSett(ord?.consegna?.settimane?.toString() || ""); }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                                ✅ APPROVA E CONFERMA →
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ background: "#34c75912", borderRadius: 10, padding: 12, border: "1px solid #34c75930" }}>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: "#34c759", marginBottom: 8 }}>✅ Conferma approvazione</div>
+                              <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>Fornitore: <b>{ord?.fornitore?.nome || "—"}</b></div>
+                              <div style={{ fontSize: 12, color: T.text, marginBottom: 8 }}>Importo: <b>€{fmt(ord?.totaleIva || 0)}</b></div>
+                              
+                              {/* Settimane / data consegna — ALWAYS show, editable */}
+                              <div style={{ background: !infoComplete ? "#ff950015" : T.bg, borderRadius: 10, padding: 10, marginBottom: 10, border: !infoComplete ? "2px solid #ff9500" : `1px solid ${T.bdr}` }}>
+                                {!infoComplete && (
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: "#ff9500", marginBottom: 6 }}>
+                                    ⚠️ Devi inserire i tempi di consegna prima di approvare
+                                  </div>
+                                )}
+                                <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 3 }}>📅 SETTIMANE</div>
+                                    <input type="number" min="1" max="52" placeholder="es. 6" value={confSett} onChange={e => setConfSett(e.target.value)} style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${!confSett ? "#ff9500" : T.bdr}`, fontSize: 14, fontWeight: 800, fontFamily: "inherit", boxSizing: "border-box", textAlign: "center" }} />
+                                  </div>
+                                  <div style={{ flex: 2 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 3 }}>📆 DATA PREVISTA</div>
+                                    <div style={{ padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 13, fontWeight: 700, color: T.text, textAlign: "center" }}>
+                                      {confSett ? (() => { const d = new Date(); d.setDate(d.getDate() + parseInt(confSett) * 7); return d.toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "long", year: "numeric" }); })() : "Inserisci settimane →"}
+                                    </div>
+                                  </div>
+                                </div>
+                                {confSett && (
+                                  <div style={{ fontSize: 11, color: "#34c759", fontWeight: 700, textAlign: "center" }}>
+                                    ✅ Materiale previsto per {(() => { const d = new Date(); d.setDate(d.getDate() + parseInt(confSett) * 7); return d.toLocaleDateString("it-IT"); })()}
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <button onClick={() => setCcConfirm(null)} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, color: T.sub, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Annulla</button>
+                                <button onClick={() => {
+                                  if (!confSett || parseInt(confSett) < 1) { alert("Inserisci le settimane di consegna"); return; }
+                                  const settNum = parseInt(confSett);
+                                  const dataPrev = new Date(); dataPrev.setDate(dataPrev.getDate() + settNum * 7);
+                                  setOrdiniFornDB(prev => prev.map(o => o.cmId === c.id ? { ...o, conferma: { ...o.conferma, firmata: true, dataFirma: new Date().toISOString().split("T")[0] }, consegna: { ...o.consegna, settimane: settNum, prevista: dataPrev.toISOString().split("T")[0] } } : o));
+                                  setCcConfirm(null); setConfSett("");
+                                  setCcDone(`✅ Conferma approvata! Consegna prevista: ${dataPrev.toLocaleDateString("it-IT")}`);
+                                  setTimeout(() => setCcDone(null), 3000);
+                                }} style={{ flex: 2, padding: 12, borderRadius: 10, border: "none", background: confSett ? "#34c759" : "#ccc", color: "#fff", fontSize: 14, fontWeight: 800, cursor: confSett ? "pointer" : "not-allowed", fontFamily: "inherit" }}>✅ APPROVO</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        );
+                      })()}
+
+                      {isCurrent && step.id === "montaggio" && (() => {
+                        // Contesto: montaggi pianificati questa settimana e prossima
+                        const oggi = new Date();
+                        const giorniSettimana = Array.from({ length: 28 }, (_, i) => {
+                          const d = new Date(oggi); d.setDate(d.getDate() + i);
+                          return d.toISOString().split("T")[0];
+                        });
+                        const montaggiAll = montaggiDB;
+                        const giorniOccupatiMap = new Map(); // date → [{ cliente, giorni }]
+                        montaggiAll.forEach(m => {
+                          const gg = m.giorni || 1;
+                          for (let d = 0; d < Math.ceil(gg); d++) {
+                            const dt = new Date(m.data); dt.setDate(dt.getDate() + d);
+                            const ds = dt.toISOString().split("T")[0];
+                            if (!giorniOccupatiMap.has(ds)) giorniOccupatiMap.set(ds, []);
+                            giorniOccupatiMap.get(ds).push({ cliente: m.cliente, gg, squadra: m.squadraId });
+                          }
+                        });
+                        // Selected block
+                        const selBlock = new Set<string>();
+                        if (montFormData.data && montGiorni > 0) {
+                          for (let d = 0; d < Math.ceil(montGiorni); d++) {
+                            const dt = new Date(montFormData.data); dt.setDate(dt.getDate() + d);
+                            selBlock.add(dt.toISOString().split("T")[0]);
+                          }
+                        }
+                        const nomiGiorni = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+                        
+                        return (
+                        <div style={{ marginTop: 10, marginLeft: 26 }}>
+                          {/* Context: this job info */}
+                          <div style={{ background: T.bg, borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 4 }}>🔧 {c.cliente} — {c.indirizzo || "—"}</div>
+                            <div style={{ fontSize: 11, color: T.sub }}>{vani.length} vani · {c.sistema || "—"} · {ordiniCommessa[0]?.consegna?.prevista ? `Materiale previsto: ${new Date(ordiniCommessa[0].consegna.prevista).toLocaleDateString("it-IT")}` : "Consegna da confermare"}</div>
+                          </div>
+
+                          {!montFormOpen ? (
+                            <button onClick={() => { setMontFormOpen(true); setMontGiorni(1); setMontFormData({ data: "", orario: "08:00", durata: "giornata", squadraId: squadreDB[0]?.id || "", note: "" }); }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                              🔧 PIANIFICA MONTAGGIO →
+                            </button>
+                          ) : (
+                            <div style={{ background: T.bg, borderRadius: 10, padding: 12, border: `1px solid ${T.bdr}` }}>
+                              {/* Mini calendar 2 weeks */}
+                              <div style={{ marginBottom: 10 }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6 }}>📅 SCEGLI DATA (prossime 4 settimane)</div>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
+                                  {giorniSettimana.map(g => {
+                                    const dt = new Date(g);
+                                    const isSel = selBlock.has(g);
+                                    const isStart = montFormData.data === g;
+                                    const isBusy = giorniOccupatiMap.has(g);
+                                    const isWeekend = dt.getDay() === 0 || dt.getDay() === 6;
+                                    const busyMont = giorniOccupatiMap.get(g) || [];
+                                    return (
+                                      <div key={g} onClick={() => !isWeekend && setMontFormData(p => ({ ...p, data: g }))} title={busyMont.map(m => m.cliente + " (" + m.gg + "g)").join(", ")} style={{
+                                        padding: "6px 2px", borderRadius: 8, textAlign: "center", cursor: isWeekend ? "not-allowed" : "pointer",
+                                        background: isStart ? T.acc : isSel ? `${T.acc}30` : isBusy ? "#ff950020" : T.card,
+                                        color: isStart ? "#fff" : isSel ? T.acc : isWeekend ? T.bdr : isBusy ? "#ff9500" : T.text,
+                                        border: `2px solid ${isStart ? T.acc : isSel ? `${T.acc}60` : "transparent"}`,
+                                        opacity: isWeekend ? 0.4 : 1,
+                                      }}>
+                                        <div style={{ fontSize: 8, fontWeight: 700 }}>{nomiGiorni[dt.getDay()]}</div>
+                                        <div style={{ fontSize: 14, fontWeight: 800 }}>{dt.getDate()}</div>
+                                        {isBusy && !isSel && <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#ff9500", margin: "2px auto 0" }} />}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {/* Legend */}
+                                {montaggiAll.length > 0 && (
+                                  <div style={{ marginTop: 6 }}>
+                                    <div style={{ fontSize: 10, color: T.sub, marginBottom: 4 }}>🟠 Montaggi pianificati:</div>
+                                    {montaggiAll.filter(m => m.data >= oggi.toISOString().split("T")[0]).slice(0, 6).map((m, mi) => {
+                                      const d = new Date(m.data);
+                                      const sq = squadreDB.find(s => s.id === m.squadraId);
+                                      return (
+                                        <div key={mi} style={{ fontSize: 10, color: m.stato === "completato" ? "#34c759" : "#ff9500", padding: "2px 0", display: "flex", gap: 4 }}>
+                                          <span style={{ fontWeight: 800, minWidth: 44 }}>{d.getDate()}/{d.getMonth() + 1}</span>
+                                          <span style={{ flex: 1 }}>{m.cliente} · {m.giorni || 1}g · {sq?.nome || "—"}</span>
+                                          {m.stato === "completato" && <span>✅</span>}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Ora + Durata */}
+                              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 3 }}>⏰ ORARIO</div>
+                                  <select value={montFormData.orario} onChange={e => setMontFormData(p => ({ ...p, orario: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, fontSize: 13, fontFamily: "inherit" }}>
+                                    {["06:00","06:30","07:00","07:30","08:00","08:30","09:00","09:30","10:00","14:00","15:00"].map(h => <option key={h} value={h}>{h}</option>)}
+                                  </select>
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 3 }}>⏱ GIORNI</div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                                    <button onClick={() => setMontGiorni(Math.max(0.5, montGiorni - 0.5))} style={{ width: 36, height: 40, borderRadius: "8px 0 0 8px", border: `1px solid ${T.bdr}`, background: T.card, fontSize: 18, cursor: "pointer", fontFamily: "inherit" }}>−</button>
+                                    <div style={{ flex: 1, height: 40, display: "flex", alignItems: "center", justifyContent: "center", borderTop: `1px solid ${T.bdr}`, borderBottom: `1px solid ${T.bdr}`, fontSize: 15, fontWeight: 800, background: "#fff" }}>
+                                      {montGiorni === 0.5 ? "½" : montGiorni}
+                                    </div>
+                                    <button onClick={() => setMontGiorni(montGiorni + 0.5)} style={{ width: 36, height: 40, borderRadius: "0 8px 8px 0", border: `1px solid ${T.bdr}`, background: T.card, fontSize: 18, cursor: "pointer", fontFamily: "inherit" }}>+</button>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Squadra */}
+                              <div style={{ marginBottom: 8 }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 3 }}>👷 SQUADRA</div>
+                                {squadreDB.length > 0 ? (
+                                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as any }}>
+                                    {squadreDB.map(sq => (
+                                      <div key={sq.id} onClick={() => setMontFormData(p => ({ ...p, squadraId: sq.id }))} style={{
+                                        padding: "8px 14px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700,
+                                        background: montFormData.squadraId === sq.id ? T.acc : T.card,
+                                        color: montFormData.squadraId === sq.id ? "#fff" : T.text,
+                                        border: `1px solid ${montFormData.squadraId === sq.id ? T.acc : T.bdr}`,
+                                      }}>{sq.nome || sq.id}</div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <input placeholder="Nome squadra" value={montFormData.note} onChange={e => setMontFormData(p => ({ ...p, note: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box" }} />
+                                )}
+                              </div>
+
+                              {/* Note */}
+                              <div style={{ marginBottom: 10 }}>
+                                <input placeholder="Note (opzionale)" value={montFormData.note} onChange={e => setMontFormData(p => ({ ...p, note: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, fontSize: 12, fontFamily: "inherit", boxSizing: "border-box" }} />
+                              </div>
+
+                              {/* Summary */}
+                              {montFormData.data && (
+                                <div style={{ background: T.card, borderRadius: 8, padding: 8, marginBottom: 8, fontSize: 12, color: T.text }}>
+                                  📅 <b>{new Date(montFormData.data).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</b> ore {montFormData.orario} · {montGiorni === 0.5 ? "mezza giornata" : montGiorni + (montGiorni === 1 ? " giorno" : " giorni")} · {squadreDB.find(s => s.id === montFormData.squadraId)?.nome || "—"}
+                                </div>
+                              )}
+
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <button onClick={() => setMontFormOpen(false)} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, color: T.sub, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Annulla</button>
+                                <button onClick={() => {
+                                  if (!montFormData.data) { alert("Scegli una data dal calendario"); return; }
+                                  const durataStr = montGiorni === 0.5 ? "mezza" : montGiorni === 1 ? "giornata" : montGiorni + "giorni";
+                                  const nuovoM = {
+                                    id: "m_" + Date.now(), cmId: c.id, cmCode: c.code, cliente: c.cliente,
+                                    indirizzo: c.indirizzo || "", vani: vani.length,
+                                    data: montFormData.data, orario: montFormData.orario, durata: durataStr, giorni: montGiorni,
+                                    squadraId: montFormData.squadraId, stato: "programmato", note: montFormData.note,
+                                  };
+                                  setMontaggiDB(prev => [...prev, nuovoM]);
+                                  setMontFormOpen(false);
+                                  const evMont = {
+                                    id: "ev_mont_" + Date.now(), date: montFormData.data, time: montFormData.orario,
+                                    text: `🔧 Montaggio ${c.cliente} (${montGiorni === 0.5 ? "½g" : montGiorni + "g"})`, tipo: "montaggio", persona: c.cliente,
+                                    cm: c.code, addr: c.indirizzo || "", done: false,
+                                  };
+                                  setEvents(prev => [...prev, evMont]);
+                                  setCcDone(`✅ Montaggio pianificato per il ${new Date(montFormData.data).toLocaleDateString("it-IT")}`);
+                                  setTimeout(() => setCcDone(null), 3000);
+                                }} style={{ flex: 2, padding: 12, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                                  ✅ CONFERMA MONTAGGIO
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        );
+                      })()}
+
+                      {isCurrent && step.id === "saldo" && (() => {
+                        const saldoFat = fattureCommessa.find(f => f.tipo === "saldo");
+                        const unicaFat = fattureCommessa.find(f => f.tipo === "unica");
+                        const fatNonPagata = fattureCommessa.find(f => !f.pagata);
+                        const restoSaldo = totIva - incassato;
+                        const hasFatSaldo = !!saldoFat || !!unicaFat;
+                        const isPagata = saldoFat?.pagata || unicaFat?.pagata;
+                        
+                        return (
+                        <div style={{ marginTop: 10, marginLeft: 26 }}>
+                          {/* Context box */}
+                          <div style={{ background: T.bg, borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 4 }}>💶 Riepilogo pagamenti</div>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}>
+                              <span style={{ color: T.sub }}>Totale commessa</span>
+                              <b>€{fmt(totIva)}</b>
+                            </div>
+                            {incassato > 0 && (
+                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}>
+                                <span style={{ color: "#34c759" }}>✅ Già incassato</span>
+                                <b style={{ color: "#34c759" }}>€{fmt(incassato)}</b>
+                              </div>
+                            )}
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 900, padding: "4px 0", borderTop: `1px solid ${T.bdr}`, marginTop: 4 }}>
+                              <span style={{ color: restoSaldo > 0 ? "#ff9500" : "#34c759" }}>{restoSaldo > 0 ? "⏳ Resta da incassare" : "✅ Tutto incassato"}</span>
+                              <b style={{ color: restoSaldo > 0 ? "#ff9500" : "#34c759" }}>€{fmt(restoSaldo)}</b>
+                            </div>
+                            {fattureCommessa.length > 0 && (
+                              <div style={{ marginTop: 6, fontSize: 10, color: T.sub }}>
+                                {fattureCommessa.map(f => `Fat.${f.numero} ${f.tipo} €${fmt(f.importo)} ${f.pagata ? "✅" : "⏳"}`).join(" · ")}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* PHASE 1: No saldo fattura yet → Create it */}
+                          {!hasFatSaldo && restoSaldo > 0 && (
+                            ccConfirm !== "saldo" ? (
+                              <button onClick={() => setCcConfirm("saldo")} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                                💶 CREA FATTURA SALDO €{fmt(restoSaldo)} →
+                              </button>
+                            ) : (
+                              <div style={{ background: T.acc + "10", borderRadius: 10, padding: 12, border: `1px solid ${T.acc}30` }}>
+                                <div style={{ fontSize: 13, fontWeight: 800, color: T.acc, marginBottom: 6 }}>💶 Conferma fattura saldo</div>
+                                <div style={{ fontSize: 20, fontWeight: 900, color: T.acc, marginBottom: 3, textAlign: "center" }}>€{fmt(restoSaldo)}</div>
+                                <div style={{ fontSize: 11, color: T.sub, marginBottom: 10, textAlign: "center" }}>{c.cliente} {c.cognome || ""} · {c.code}</div>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                  <button onClick={() => setCcConfirm(null)} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, color: T.sub, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Annulla</button>
+                                  <button onClick={() => {
+                                    creaFattura(c, restoSaldo === totIva ? "unica" : "saldo");
+                                    setCcConfirm(null); setCcDone("✅ Fattura saldo creata! €" + fmt(restoSaldo));
+                                    setTimeout(() => setCcDone(null), 3000);
+                                  }} style={{ flex: 2, padding: 12, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✅ CREA FATTURA SALDO</button>
+                                </div>
+                              </div>
+                            )
+                          )}
+
+                          {/* PHASE 2: Saldo created but not paid → Mark as paid */}
+                          {hasFatSaldo && !isPagata && (
+                            ccConfirm !== "pagata" ? (
+                              <div>
+                                <div style={{ padding: 10, borderRadius: 8, background: "#ff950012", marginBottom: 8, fontSize: 12, color: "#ff9500", fontWeight: 700 }}>
+                                  ⏳ Fattura saldo emessa — in attesa di pagamento
+                                </div>
+                                <button onClick={() => setCcConfirm("pagata")} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                                  ✅ IL CLIENTE HA PAGATO — SEGNA COME INCASSATA →
+                                </button>
+                                <div style={{ fontSize: 10, color: T.sub, marginTop: 4, textAlign: "center" }}>Oppure carica la ricevuta dal 📥 inbox</div>
+                              </div>
+                            ) : (
+                              <div style={{ background: "#34c75912", borderRadius: 10, padding: 12, border: "1px solid #34c75930" }}>
+                                <div style={{ fontSize: 13, fontWeight: 800, color: "#34c759", marginBottom: 6 }}>✅ Conferma pagamento ricevuto</div>
+                                <div style={{ fontSize: 20, fontWeight: 900, color: "#34c759", marginBottom: 3, textAlign: "center" }}>€{fmt(restoSaldo)}</div>
+                                <div style={{ fontSize: 11, color: T.sub, marginBottom: 6, textAlign: "center" }}>Metodo di pagamento:</div>
+                                <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 10, flexWrap: "wrap" as any }}>
+                                  {["Bonifico", "Assegno", "Contanti", "Carta"].map(m => (
+                                    <span key={m} onClick={() => setCcConfirm("pagata_" + m)} style={{
+                                      padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                                      background: ccConfirm === "pagata_" + m ? "#34c759" : T.card,
+                                      color: ccConfirm === "pagata_" + m ? "#fff" : T.text,
+                                      border: `1px solid ${ccConfirm === "pagata_" + m ? "#34c759" : T.bdr}`,
+                                    }}>{m}</span>
+                                  ))}
+                                </div>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                  <button onClick={() => setCcConfirm(null)} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, color: T.sub, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Annulla</button>
+                                  <button onClick={() => {
+                                    const metodo = (ccConfirm || "").replace("pagata_", "") || "Bonifico";
+                                    const fat = fattureCommessa.find(f => (f.tipo === "saldo" || f.tipo === "unica") && !f.pagata);
+                                    if (fat) {
+                                      setFattureDB(prev => prev.map(f => f.id === fat.id ? { ...f, pagata: true, dataPagamento: new Date().toISOString().split("T")[0], metodoPagamento: metodo } : f));
+                                    }
+                                    // Also mark any other unpaid fatture
+                                    setFattureDB(prev => prev.map(f => f.cmId === c.id && !f.pagata ? { ...f, pagata: true, dataPagamento: new Date().toISOString().split("T")[0], metodoPagamento: metodo } : f));
+                                    setFaseTo(c.id, "chiusura");
+                                    setCcConfirm(null); setCcDone("🎉 Pagamento registrato! Commessa completata.");
+                                    setTimeout(() => setCcDone(null), 3000);
+                                  }} style={{ flex: 2, padding: 12, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✅ CONFERMO INCASSO</button>
+                                </div>
+                              </div>
+                            )
+                          )}
+
+                          {/* PHASE 3: Everything paid but fatture missing → allow closing directly */}
+                          {!hasFatSaldo && restoSaldo <= 0 && (
+                            <div>
+                              <div style={{ padding: 10, borderRadius: 8, background: "#34c75912", marginBottom: 8, fontSize: 12, color: "#34c759", fontWeight: 700 }}>
+                                ✅ Tutto incassato — €{fmt(incassato)}
+                              </div>
+                              <button onClick={() => {
+                                setFaseTo(c.id, "chiusura");
+                                setCcDone("🎉 Commessa chiusa!");
+                                setTimeout(() => setCcDone(null), 3000);
+                              }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                                🎉 CHIUDI COMMESSA →
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        );
+                      })()}
+
+                      {/* Completed: all done — DOSSIER COMMESSA */}
+                      {!current && idx === steps.length - 1 && tuttoChiuso && (
+                        <div style={{ marginTop: 10, marginLeft: 26 }}>
+                          <div style={{ textAlign: "center", marginBottom: 12 }}>
+                            <div style={{ fontSize: 20, fontWeight: 900, color: "#34c759" }}>🎉 Commessa Completata!</div>
+                            <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>Incassato €{fmt(incassato)} · Margine €{fmt(incassato - ordiniCommessa.reduce((s, o) => s + (o.totaleIva || 0), 0))}</div>
+                          </div>
+                          {/* DOSSIER */}
+                          <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 14 }}>
+                            <div style={{ fontSize: 12, fontWeight: 800, color: T.text, marginBottom: 10 }}>📁 Dossier Commessa</div>
+                            {[
+                              { ico: "📐", l: "Rilievo", v: `${rilievi.length} rilievo · ${vani.length} vani`, d: rilievi[0]?.data || "" },
+                              { ico: "📏", l: "Misure", v: `${vaniConMisure.length}/${vani.length} vani completi`, d: "" },
+                              { ico: "📋", l: "Preventivo", v: `€${fmt(totPreventivo)} + IVA = €${fmt(totIva)}`, d: "" },
+                              { ico: "✍️", l: "Firma cliente", v: c.dataFirma || "—", d: "" },
+                              ...fattureCommessa.map(f => ({ ico: f.pagata ? "✅" : "⏳", l: `Fattura ${f.tipo} #${f.numero}`, v: `€${fmt(f.importo)} ${f.pagata ? "pagata" : "in attesa"}`, d: f.data || "" })),
+                              ...ordiniCommessa.map(o => ({ ico: "📦", l: `Ordine ${o.fornitore?.nome || ""}`, v: `€${fmt(o.totaleIva || 0)} · ${o.stato || ""}`, d: "" })),
+                              ...(ordiniCommessa[0]?.conferma?.ricevuta ? [{ ico: "📄", l: "Conferma fornitore", v: `Ricevuta · ${ordiniCommessa[0]?.consegna?.settimane || "?"} sett.`, d: "" }] : []),
+                              ...montaggiCommessa.map(m => ({ ico: "🔧", l: "Montaggio", v: `${m.data ? new Date(m.data).toLocaleDateString("it-IT") : "—"} · ${squadreDB.find(s => s.id === m.squadraId)?.nome || ""}`, d: "" })),
+                              ...(c.praticaFiscale ? [{ ico: "🏛️", l: "Pratica fiscale", v: c.praticaFiscale === "iva10" ? "IVA agevolata 10%" : c.praticaFiscale === "detrazione50" ? "Detrazione 50%" : c.praticaFiscale === "ecobonus65" ? "Ecobonus 65%" : c.praticaFiscale, d: "" }] : []),
+                            ].map((row, ri) => (
+                              <div key={ri} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: `1px solid ${T.bdr}20` }}>
+                                <span style={{ fontSize: 14, width: 22, textAlign: "center" }}>{row.ico}</span>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: T.text, flex: 1 }}>{row.l}</span>
+                                <span style={{ fontSize: 11, color: T.sub, textAlign: "right" }}>{row.v}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 💰 RIEPILOGO ECONOMICO — sempre visibile */}
+              {totPreventivo > 0 && (
+                <div style={{ marginTop: 8, background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: T.sub, textTransform: "uppercase", marginBottom: 8 }}>💰 Riepilogo Economico</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px" }}>
+                    <div style={{ fontSize: 11, color: T.sub }}>Preventivo</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, textAlign: "right" }}>€{fmt(totPreventivo)}</div>
+                    <div style={{ fontSize: 11, color: T.sub }}>IVA {ivaPerc}%</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, textAlign: "right" }}>€{fmt(totPreventivo * ivaPerc / 100)}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: T.text, borderTop: `1px solid ${T.bdr}`, paddingTop: 4 }}>TOTALE</div>
+                    <div style={{ fontSize: 14, fontWeight: 900, color: T.acc, textAlign: "right", borderTop: `1px solid ${T.bdr}`, paddingTop: 4 }}>€{fmt(totIva)}</div>
+                    {incassato > 0 && <>
+                      <div style={{ fontSize: 11, color: "#34c759" }}>✅ Incassato</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#34c759", textAlign: "right" }}>€{fmt(incassato)}</div>
+                    </>}
+                    {incassato > 0 && incassato < totIva && <>
+                      <div style={{ fontSize: 11, color: T.orange }}>⏳ Resta</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: T.orange, textAlign: "right" }}>€{fmt(totIva - incassato)}</div>
+                    </>}
+                    {hasOrdine && <>
+                      <div style={{ fontSize: 11, color: T.sub, borderTop: `1px solid ${T.bdr}`, paddingTop: 4 }}>📦 Costo fornitore</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, textAlign: "right", borderTop: `1px solid ${T.bdr}`, paddingTop: 4 }}>€{fmt(ordiniCommessa.reduce((s, o) => s + (o.totaleIva || 0), 0))}</div>
+                      <div style={{ fontSize: 11, color: "#34c759" }}>📊 Margine</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#34c759", textAlign: "right" }}>€{fmt(totIva - ordiniCommessa.reduce((s, o) => s + (o.totaleIva || 0), 0))} ({Math.round((1 - ordiniCommessa.reduce((s, o) => s + (o.totaleIva || 0), 0) / (totIva || 1)) * 100)}%)</div>
+                    </>}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+
+        {/* 🏛️ PRATICA FISCALE */}
+        {(() => {
+          const c = selectedCM;
+          if (!c) return null;
+          const vaniPF = getVaniAttivi(c);
+          const totPF = vaniPF.reduce((s, v) => s + calcolaVanoPrezzo(v, c), 0) + (c.vociLibere || []).reduce((s, vl) => s + ((vl.importo || 0) * (vl.qta || 1)), 0);
+          const ivaPF = c.ivaPerc || 10;
+          const totIvaPF = totPF * (1 + ivaPF / 100);
+          const fmtPF = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2 }) : "0,00";
+          return (
+            <div style={{ margin: "8px 16px 0", background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: T.sub, textTransform: "uppercase" }}>🏛️ Pratica Fiscale</div>
+                {c.praticaFiscale && <span style={{ fontSize: 10, fontWeight: 700, color: "#34c759", background: "#34c75912", padding: "2px 8px", borderRadius: 6 }}>✅ Attiva</span>}
+              </div>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as any, marginBottom: c.praticaFiscale ? 8 : 0 }}>
+                {[
+                  { id: "", l: "Nessuna", color: T.sub },
+                  { id: "iva10", l: "IVA 10%", color: "#ff9500" },
+                  { id: "detrazione50", l: "Detraz. 50%", color: "#007aff" },
+                  { id: "ecobonus65", l: "Ecobonus 65%", color: "#34c759" },
+                  { id: "superbonus", l: "Superbonus", color: "#af52de" },
+                ].map(opt => (
+                  <div key={opt.id} onClick={() => {
+                    const newIva = opt.id ? 10 : 22;
+                    setCantieri(cs => cs.map(cm => cm.id === c.id ? { ...cm, praticaFiscale: opt.id || undefined, ivaPerc: newIva } : cm));
+                    setSelectedCM(prev => ({ ...prev, praticaFiscale: opt.id || undefined, ivaPerc: newIva }));
+                  }} style={{
+                    padding: "6px 10px", borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: "pointer",
+                    background: (c.praticaFiscale || "") === opt.id ? opt.color + "18" : T.bg,
+                    color: (c.praticaFiscale || "") === opt.id ? opt.color : T.sub,
+                    border: `1.5px solid ${(c.praticaFiscale || "") === opt.id ? opt.color : T.bdr}`,
+                  }}>{opt.l}</div>
+                ))}
+              </div>
+              {c.praticaFiscale && (
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6 }}>Documenti necessari:</div>
+                  {[
+                    ...(c.praticaFiscale === "iva10" ? [
+                      { l: "Dichiarazione IVA agevolata 10%", desc: "Autocertificazione cliente per ristrutturazione", key: "dich_iva10" },
+                      { l: "Titolo abilitativo (CILA/SCIA)", desc: "Numero protocollo e data", key: "titolo_abit" },
+                    ] : []),
+                    ...(c.praticaFiscale === "detrazione50" ? [
+                      { l: "Dichiarazione IVA agevolata 10%", desc: "Autocertificazione", key: "dich_iva10" },
+                      { l: "Titolo abilitativo (CILA/SCIA)", desc: "Protocollo e data", key: "titolo_abit" },
+                      { l: "Dati Bonifico Parlante", desc: "CF beneficiario, P.IVA ditta, causale", key: "bonifico" },
+                      { l: "Comunicazione ENEA", desc: "Entro 90gg da fine lavori", key: "enea" },
+                    ] : []),
+                    ...(c.praticaFiscale === "ecobonus65" ? [
+                      { l: "Dichiarazione IVA agevolata 10%", desc: "Autocertificazione", key: "dich_iva10" },
+                      { l: "Titolo abilitativo (CILA/SCIA)", desc: "Protocollo e data", key: "titolo_abit" },
+                      { l: "Dati Bonifico Parlante", desc: "CF, P.IVA, causale", key: "bonifico" },
+                      { l: "Comunicazione ENEA (obbligatoria)", desc: "Entro 90gg", key: "enea" },
+                      { l: "Asseverazione tecnico", desc: "Prestazione energetica", key: "asseverazione" },
+                      { l: "APE ante e post intervento", desc: "Attestato energetico", key: "ape" },
+                    ] : []),
+                    ...(c.praticaFiscale === "superbonus" ? [
+                      { l: "Dichiarazione IVA agevolata", key: "dich_iva10", desc: "Autocertificazione" },
+                      { l: "CILAS (Superbonus)", key: "titolo_abit", desc: "Titolo specifico" },
+                      { l: "Bonifico Parlante", key: "bonifico", desc: "CF, P.IVA, causale" },
+                      { l: "ENEA", key: "enea", desc: "Obbligatoria" },
+                      { l: "Asseverazione tecnico", key: "asseverazione", desc: "Congruità spese" },
+                      { l: "Visto di conformità", key: "visto", desc: "Commercialista/CAF" },
+                      { l: "APE ante e post", key: "ape", desc: "Salto 2 classi" },
+                    ] : []),
+                  ].map((doc, di) => {
+                    const done = (c.docFiscali || []).includes(doc.key);
+                    return (
+                      <div key={di} onClick={() => {
+                        const docs = c.docFiscali || [];
+                        const newDocs = done ? docs.filter(d => d !== doc.key) : [...docs, doc.key];
+                        setCantieri(cs => cs.map(cm => cm.id === c.id ? { ...cm, docFiscali: newDocs } : cm));
+                        setSelectedCM(prev => ({ ...prev, docFiscali: newDocs }));
+                      }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: `1px solid ${T.bdr}15`, cursor: "pointer" }}>
+                        <div style={{ width: 20, height: 20, borderRadius: 5, border: `1.5px solid ${done ? "#34c759" : T.bdr}`, background: done ? "#34c75918" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#34c759", fontWeight: 800, flexShrink: 0 }}>
+                          {done && "✓"}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: done ? "#34c759" : T.text }}>{doc.l}</div>
+                          <div style={{ fontSize: 9, color: T.sub }}>{doc.desc}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <button onClick={() => {
+                    const tipoL = c.praticaFiscale === "iva10" ? "IVA Agevolata 10%" : c.praticaFiscale === "detrazione50" ? "Detrazione 50%" : c.praticaFiscale === "ecobonus65" ? "Ecobonus 65%" : "Superbonus";
+                    const txt = [
+                      `DICHIARAZIONE PER ${tipoL.toUpperCase()}`, `(ai sensi del DPR 445/2000)`, ``,
+                      `Il/La sottoscritto/a: ${c.cliente} ${c.cognome || ""}`,
+                      `C.F.: ${c.cf || "________________"}`,
+                      `Residente in: ${c.indirizzo || "________________"}`, ``,
+                      `DICHIARA`, ``,
+                      `che i lavori di sostituzione infissi presso:`,
+                      `${c.indirizzo || "________________"}`, ``,
+                      `rientrano in intervento di manutenzione straordinaria/ristrutturazione`,
+                      `ai sensi dell'art. 3 c.1 lett. b) DPR 380/2001`, ``,
+                      `Titolo abilitativo: CILA/SCIA n. ________ del ________`,
+                      `Comune di: ________`, ``,
+                      ...(c.praticaFiscale === "iva10" ? [`CHIEDE l'applicazione dell'IVA agevolata al 10%`, `(art. 7 c.1 lett. b L. 488/99)`, ``] : []),
+                      ...(c.praticaFiscale !== "iva10" ? [
+                        `DATI PER BONIFICO PARLANTE:`,
+                        `Beneficiario: ${c.cliente} ${c.cognome || ""} - CF: ${c.cf || "________"}`,
+                        `Ditta: Walter Cozza Serramenti SRL - P.IVA: ________`,
+                        `Causale: ${c.praticaFiscale === "detrazione50" ? "Art.16-bis TUIR - Detrazione 50%" : c.praticaFiscale === "ecobonus65" ? "L.296/2006 - Ecobonus 65%" : "DL 34/2020 - Superbonus"} - Fat. n. ___`, ``,
+                        `NOTA: Comunicazione ENEA entro 90gg da fine lavori`, ``,
+                      ] : []),
+                      `Data: ________     Firma: ________________________`, ``,
+                      `--- Commessa ${c.code} ---`,
+                      `Importo: €${fmtPF(totPF)} · IVA ${ivaPF}% · Totale: €${fmtPF(totIvaPF)}`,
+                    ].join("\n");
+                    const blob = new Blob([txt], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a"); a.href = url;
+                    a.download = `Pratica_${c.code}_${c.cliente}.txt`;
+                    a.click(); URL.revokeObjectURL(url);
+                  }} style={{ width: "100%", marginTop: 8, padding: 11, borderRadius: 10, border: "none", background: "#007aff", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                    📄 SCARICA MODULI PRESTAMPATI
+                  </button>
+                  <div style={{ fontSize: 9, color: T.sub, marginTop: 3, textAlign: "center" }}>Genera dichiarazione da far compilare e firmare al cliente</div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Tab: Rilievi | Report */}
         <div style={{ display: "flex", borderBottom: `1px solid ${T.bdr}`, margin: "0 0 4px 0" }}>
@@ -2049,6 +4374,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           </div>
           <div style={{ display:"flex", gap:8, marginTop:3, alignItems:"center", flexWrap:"wrap" }}>
             <span style={{ ...S.badge(fase?.color+"18"||T.accLt, fase?.color||T.acc), fontSize:10 }}>{fase?.ico} {fase?.nome}</span>
+            {c.trackingStato && <span style={{ fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:4, background: c.trackingStato==="montato"?"#34c75920":c.trackingStato==="pronto"?"#34c75920":"#5856d620", color: c.trackingStato==="montato"?"#34c759":c.trackingStato==="pronto"?"#34c759":"#5856d6" }}>{{ordinato:"📦",produzione:"🏭",pronto:"✅",consegnato:"🚛",montato:"🔧"}[c.trackingStato]} {c.trackingStato}</span>}
+            {c.confermato && <span style={{ fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:4, background:"#34c75920", color:"#34c759" }}>✍️ Confermato</span>}
             {c.euro && <span style={{ fontSize:11, color:T.grn, fontWeight:700 }}>€{c.euro.toLocaleString("it-IT")}</span>}
             {c.scadenza && <span style={{ fontSize:10, color: isScad ? T.red : T.sub }}>📅 {c.scadenza}</span>}
           </div>
@@ -2094,6 +4421,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               <div onClick={() => setCmView("list")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="list"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Lista compatta">☰</div>
               <div onClick={() => setCmView("card")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="card"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Card grandi">▦</div>
             </div>
+            <div onClick={() => apriInboxDocumento()} style={{ width:36, height:36, borderRadius:10, background:"#af52de", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:18 }} title="Carica documento fornitore">📥</div>
             <div onClick={() => setShowModal("commessa")} style={{ width:36, height:36, borderRadius:10, background:T.acc, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:20, fontWeight:300 }}>+</div>
           </div>
         </div>
@@ -2434,27 +4762,269 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           {c.mezzoSalita && <span style={S.badge(T.purpleLt, T.purple)}>🪜 {c.mezzoSalita}</span>}
           {c.pianoEdificio && <span style={S.badge(T.blueLt, T.blue)}>Piano: {c.pianoEdificio}</span>}
           {c.foroScale && <span style={S.badge(T.redLt, T.red)}>Foro: {c.foroScale}</span>}
-          {c.telefono && <span onClick={() => window.open(`tel:${c.telefono}`)} style={{ ...S.badge(T.grnLt, T.grn), cursor: "pointer" }}>📞 {c.telefono}</span>}
+          {c.telefono && <span onClick={() => window.location.href=`tel:${c.telefono}`} style={{ ...S.badge(T.grnLt, T.grn), cursor: "pointer" }}>📞 {c.telefono}</span>}
         </div>
         {c.note && <div style={{ padding: "0 16px", marginBottom: 6 }}><div style={{ padding: "8px 12px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, fontSize: 12, color: T.sub, lineHeight: 1.4 }}>📝 {c.note}</div></div>}
 
-        {/* Pipeline */}
-        <div style={{ padding: "4px 16px 0" }}>
-          <PipelineBar fase={c.fase} />
-        </div>
-        <div style={{ marginTop: 8 }}>{renderFasePanel(c)}</div>
-        {faseIndex(c.fase) < PIPELINE.length - 1 && (
-          <div style={{ padding: "0 16px", marginTop: 4, marginBottom: 4 }}>
-            <button onClick={() => advanceFase(c.id)} style={{ ...S.btn, background: fase?.color, fontSize: 13, padding: 10, width: "100%" }}>
-              ✓ Avanza a {PIPELINE[faseIndex(c.fase) + 1]?.nome} →
-            </button>
-          </div>
-        )}
+        {/* Centro Comando inline — replaces old phase panels */}
+        {(() => {
+          const vaniCC = getVaniAttivi(c);
+          const rilieviCC = c.rilievi || [];
+          const vaniConPrezzoCC = vaniCC.filter(v => calcolaVanoPrezzo(v, c) > 0);
+          const totVaniCC = vaniCC.reduce((s, v) => s + calcolaVanoPrezzo(v, c), 0);
+          const totVociCC = (c.vociLibere || []).reduce((s, vl) => s + ((vl.importo || 0) * (vl.qta || 1)), 0);
+          const totPrevCC = totVaniCC + totVociCC;
+          const ivaPercCC = c.ivaPerc || 10;
+          const totIvaCC = totPrevCC * (1 + ivaPercCC / 100);
+          const hasFirmaCC = !!c.firmaCliente;
+          const fattCC = fattureDB.filter(f => f.cmId === c.id);
+          const hasFattCC = fattCC.some(f => f.tipo === "acconto" || f.tipo === "unica");
+          const ordCC = ordiniFornDB.filter(o => o.cmId === c.id);
+          const hasOrdCC = ordCC.length > 0;
+          const ordConfCC = ordCC.some(o => o.conferma?.ricevuta);
+          const confFirmCC = ordCC.some(o => o.conferma?.firmata);
+          const montCC = montaggiDB.filter(m => m.cmId === c.id);
+          const hasMontCC = montCC.length > 0;
+          const hasSaldoCC = fattCC.some(f => f.tipo === "saldo");
+          const saldoPagCC = fattCC.find(f => f.tipo === "saldo")?.pagata;
+          const unicaPagCC = fattCC.find(f => f.tipo === "unica")?.pagata;
+          const tuttoCC = (hasSaldoCC && saldoPagCC) || (fattCC.some(f => f.tipo === "unica") && unicaPagCC) || (cm.fase === "chiusura" && incassatoCC >= totIvaCC) || (incassatoCC >= totIvaCC && fattCC.length > 0 && fattCC.every(f => f.pagata));
+          const incassatoCC = fattCC.filter(f => f.pagata).reduce((s, f) => s + (f.importo || 0), 0);
+          const fmtCC = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2 }) : "0,00";
+
+          const stepsCC = [
+            { id: "rilievo", icon: "📐", l: "Rilievo", done: rilieviCC.length > 0 },
+            { id: "misure", icon: "📏", l: "Preventivo", done: vaniCC.length > 0 && vaniConPrezzoCC.length > 0 },
+            { id: "firma", icon: "✍️", l: "Firma", done: hasFirmaCC },
+            { id: "fattura", icon: "💰", l: "Fattura", done: hasFattCC },
+            { id: "ordine", icon: "📦", l: "Ordine", done: hasOrdCC },
+            { id: "conferma", icon: "📄", l: "Conferma", done: confFirmCC },
+            { id: "montaggio", icon: "🔧", l: "Montaggio", done: hasMontCC },
+            { id: "saldo", icon: "💶", l: "Chiusura", done: tuttoCC },
+          ];
+          const doneCC = stepsCC.filter(s => s.done).length;
+          const curIdxCC = stepsCC.findIndex(s => !s.done);
+          const curCC = curIdxCC >= 0 ? stepsCC[curIdxCC] : null;
+          const progCC = Math.round((doneCC / stepsCC.length) * 100);
+
+          return (
+            <div style={{ margin: "8px 16px 4px" }}>
+              {/* Progress dots */}
+              <div style={{ display: "flex", gap: 3, marginBottom: 6, justifyContent: "center" }}>
+                {stepsCC.map((s, i) => (
+                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                    <div style={{
+                      width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10,
+                      background: s.done ? "#34c759" : i === curIdxCC ? T.acc : T.bg,
+                      color: s.done || i === curIdxCC ? "#fff" : T.sub, fontWeight: 700,
+                    }}>{s.done ? "✓" : s.icon}</div>
+                    {i < stepsCC.length - 1 && <div style={{ width: 8, height: 2, background: s.done ? "#34c759" : T.bdr }} />}
+                  </div>
+                ))}
+              </div>
+              {/* Current action */}
+              {curCC && (
+                <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: "12px 14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 18 }}>{curCC.icon}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: T.text, flex: 1 }}>{curCC.l}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: T.acc }}>{doneCC}/{stepsCC.length}</span>
+                  </div>
+                  {/* Success flash */}
+                  {ccDone && <div style={{ marginBottom: 8, padding: "8px 10px", borderRadius: 8, background: "#34c75918", border: "1px solid #34c75940", fontSize: 12, fontWeight: 700, color: "#34c759", textAlign: "center" }}>{ccDone}</div>}
+                  {/* FIRMA */}
+                  {curCC.id === "firma" && (
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 8 }}>€{fmtCC(totPrevCC)} + IVA = €{fmtCC(totIvaCC)}</div>
+                      {firmaStep === 0 ? (
+                        <div>
+                          <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                            <button onClick={() => generaPreventivoPDF(c)} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${T.acc}`, background: `${T.acc}08`, color: T.acc, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>📄 PDF</button>
+                            <button onClick={() => setShowPreventivoModal(true)} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, color: T.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>👁 Anteprima</button>
+                          </div>
+                          <button onClick={() => {
+                            const tel = (c.telefono || "").replace(/\D/g, "");
+                            window.open(`https://wa.me/${tel.startsWith("39") ? tel : "39" + tel}?text=${encodeURIComponent(`Gentile ${c.cliente}, in allegato il preventivo. Totale: €${fmtCC(totIvaCC)} IVA inclusa. Prego firmare e rinviare.`)}`, "_blank");
+                            setFirmaStep(1);
+                          }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#25d366", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>📤 INVIA AL CLIENTE →</button>
+                          <div style={{ textAlign: "center", marginTop: 4 }}><span onClick={() => setFirmaStep(1)} style={{ fontSize: 10, color: T.sub, cursor: "pointer", textDecoration: "underline" }}>Già inviato?</span></div>
+                        </div>
+                      ) : !firmaFileUrl ? (
+                        <div>
+                          <div style={{ fontSize: 11, color: T.sub, marginBottom: 6 }}>Carica il documento firmato</div>
+                          <button onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "application/pdf,image/*"; inp.onchange = (ev: any) => { const f = ev.target.files?.[0]; if (!f) return; setFirmaFileName(f.name); const r = new FileReader(); r.onload = (e) => setFirmaFileUrl(e.target?.result as string); r.readAsDataURL(f); }; inp.click(); }} style={{ width: "100%", padding: 14, borderRadius: 10, border: `2px dashed ${T.acc}`, background: `${T.acc}08`, color: T.acc, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>📥 CARICA FIRMATO</button>
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ padding: 8, borderRadius: 8, background: "#34c75912", marginBottom: 6, fontSize: 11, color: "#34c759", fontWeight: 700 }}>📎 {firmaFileName} <span onClick={() => { setFirmaFileUrl(null); setFirmaFileName(""); }} style={{ cursor: "pointer", marginLeft: 6 }}>✕</span></div>
+                          <button onClick={() => {
+                            const all = { id: Date.now(), tipo: "firma", nome: firmaFileName, dataUrl: firmaFileUrl };
+                            setCantieri(cs => cs.map(cm => cm.id === c.id ? { ...cm, firmaCliente: true, dataFirma: new Date().toISOString().split("T")[0], firmaDocumento: all, allegati: [...(cm.allegati || []), all] } : cm));
+                            setSelectedCM(prev => ({ ...prev, firmaCliente: true, dataFirma: new Date().toISOString().split("T")[0] }));
+                            setFirmaStep(0); setFirmaFileUrl(null); setFirmaFileName("");
+                            setCcDone("✅ Firma registrata!"); setTimeout(() => setCcDone(null), 3000);
+                          }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✅ CONFERMA FIRMA →</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* FATTURA */}
+                  {curCC.id === "fattura" && (
+                    <div>
+                      <div style={{ fontSize: 11, color: T.sub, marginBottom: 6 }}>Totale: €{fmtCC(totIvaCC)}</div>
+                      <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" as any }}>
+                        {[30, 40, 50, 60, 100].map(p => (
+                          <div key={p} onClick={() => setFattPerc(p)} style={{ padding: "8px 12px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 800, background: fattPerc === p ? T.acc : T.card, color: fattPerc === p ? "#fff" : T.text, border: `2px solid ${fattPerc === p ? T.acc : T.bdr}` }}>
+                            {p === 100 ? "100%" : p + "%"}
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: T.acc, textAlign: "center", marginBottom: 8 }}>€{fmtCC(Math.round(totIvaCC * fattPerc / 100))}</div>
+                      <button onClick={() => { creaFattura(c, fattPerc === 100 ? "unica" : "acconto"); setCcDone("✅ Fattura creata!"); setTimeout(() => setCcDone(null), 3000); }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>💰 CREA FATTURA →</button>
+                    </div>
+                  )}
+                  {/* ORDINE */}
+                  {curCC.id === "ordine" && (
+                    <div>
+                      <div style={{ fontSize: 11, color: T.sub, marginBottom: 6 }}>{vaniCC.length} vani · {c.sistema || "—"}</div>
+                      <div style={{ background: T.bg, borderRadius: 8, padding: 8, marginBottom: 8, maxHeight: 120, overflow: "auto" }}>
+                        {vaniCC.map((v, vi) => (
+                          <div key={vi} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "3px 0", borderBottom: vi < vaniCC.length - 1 ? `1px solid ${T.bdr}` : "none" }}>
+                            <span style={{ color: T.text, fontWeight: 600 }}>{v.nome || v.tipo || `Vano ${vi + 1}`}</span>
+                            <span style={{ color: T.acc, fontWeight: 700 }}>{(v.larghezza || v.l || 0)}×{(v.altezza || v.h || 0)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={() => { creaOrdineFornitore(c, c.sistema?.split(" ")[0] || ""); setSelectedCM(prev => ({ ...prev })); setCcDone("✅ Ordine creato!"); setTimeout(() => setCcDone(null), 3000); }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>📦 CONFERMA ORDINE →</button>
+                    </div>
+                  )}
+                  {/* CONFERMA */}
+                  {curCC.id === "conferma" && (
+                    <div>
+                      {!ordConfCC ? (
+                        <button onClick={() => apriInboxDocumento()} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#af52de", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>📥 CARICA CONFERMA →</button>
+                      ) : ccConfirm !== "conferma_ok" ? (
+                        <button onClick={() => setCcConfirm("conferma_ok")} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✅ APPROVA CONFERMA →</button>
+                      ) : (
+                        <div style={{ background: "#34c75912", borderRadius: 10, padding: 12, border: "1px solid #34c75930" }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: "#34c759", marginBottom: 4 }}>Approvi la conferma?</div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={() => setCcConfirm(null)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, color: T.sub, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Annulla</button>
+                            <button onClick={() => { setOrdiniFornDB(prev => prev.map(o => o.cmId === c.id ? { ...o, conferma: { ...o.conferma, firmata: true } } : o)); setCcConfirm(null); setCcDone("✅ Confermato!"); setTimeout(() => setCcDone(null), 3000); }} style={{ flex: 2, padding: 11, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✅ APPROVO</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* MONTAGGIO */}
+                  {curCC.id === "montaggio" && (
+                    <div>
+                      {!montFormOpen ? (
+                        <div>
+                          <div style={{ fontSize: 11, color: T.sub, marginBottom: 6 }}>{vaniCC.length} vani · {c.indirizzo || "—"}</div>
+                          <button onClick={() => { setMontFormOpen(true); setMontGiorni(1); setMontFormData({ data: "", orario: "08:00", durata: "giornata", squadraId: squadreDB[0]?.id || "", note: "" }); }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>🔧 PIANIFICA MONTAGGIO →</button>
+                        </div>
+                      ) : (
+                        <div style={{ background: T.bg, borderRadius: 10, padding: 10, border: `1px solid ${T.bdr}` }}>
+                          <input type="date" value={montFormData.data} onChange={e => setMontFormData(p => ({ ...p, data: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" as any, marginBottom: 6 }} />
+                          <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                            <select value={montFormData.orario} onChange={e => setMontFormData(p => ({ ...p, orario: e.target.value }))} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, fontSize: 12, fontFamily: "inherit" }}>
+                              {["06:00","07:00","07:30","08:00","08:30","09:00","10:00","14:00"].map(h => <option key={h} value={h}>{h}</option>)}
+                            </select>
+                            <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+                              <button onClick={() => setMontGiorni(Math.max(0.5, montGiorni - 0.5))} style={{ width: 32, height: 38, border: `1px solid ${T.bdr}`, borderRadius: "8px 0 0 8px", background: T.card, fontSize: 16, cursor: "pointer" }}>−</button>
+                              <div style={{ flex: 1, height: 38, display: "flex", alignItems: "center", justifyContent: "center", borderTop: `1px solid ${T.bdr}`, borderBottom: `1px solid ${T.bdr}`, fontSize: 14, fontWeight: 800 }}>{montGiorni === 0.5 ? "½" : montGiorni}g</div>
+                              <button onClick={() => setMontGiorni(montGiorni + 0.5)} style={{ width: 32, height: 38, border: `1px solid ${T.bdr}`, borderRadius: "0 8px 8px 0", background: T.card, fontSize: 16, cursor: "pointer" }}>+</button>
+                            </div>
+                          </div>
+                          {squadreDB.length > 0 && <div style={{ display: "flex", gap: 4, marginBottom: 6, flexWrap: "wrap" as any }}>{squadreDB.map(sq => (
+                            <div key={sq.id} onClick={() => setMontFormData(p => ({ ...p, squadraId: sq.id }))} style={{ padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 700, background: montFormData.squadraId === sq.id ? T.acc : T.card, color: montFormData.squadraId === sq.id ? "#fff" : T.text, border: `1px solid ${montFormData.squadraId === sq.id ? T.acc : T.bdr}` }}>{sq.nome || sq.id}</div>
+                          ))}</div>}
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={() => setMontFormOpen(false)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, color: T.sub, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Annulla</button>
+                            <button onClick={() => {
+                              if (!montFormData.data) { alert("Scegli una data"); return; }
+                              const nuovoM = { id: "m_" + Date.now(), cmId: c.id, cmCode: c.code, cliente: c.cliente, indirizzo: c.indirizzo || "", vani: vaniCC.length, data: montFormData.data, orario: montFormData.orario, durata: montGiorni + "g", giorni: montGiorni, squadraId: montFormData.squadraId, stato: "programmato", note: montFormData.note };
+                              setMontaggiDB(prev => [...prev, nuovoM]);
+                              setEvents(prev => [...prev, { id: "ev_m_" + Date.now(), date: montFormData.data, time: montFormData.orario, text: `🔧 Montaggio ${c.cliente} (${montGiorni}g)`, tipo: "montaggio", persona: c.cliente, cm: c.code, addr: c.indirizzo || "", done: false }]);
+                              setMontFormOpen(false);
+                              setCcDone("✅ Montaggio pianificato!"); setTimeout(() => setCcDone(null), 3000);
+                            }} style={{ flex: 2, padding: 11, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✅ CONFERMA</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* SALDO */}
+                  {curCC.id === "saldo" && (() => {
+                    const saldoFatCC = fattCC.find(f => f.tipo === "saldo" || f.tipo === "unica");
+                    const saldoPagatoCC = saldoFatCC?.pagata;
+                    const restoCC = totIvaCC - incassatoCC;
+                    return (
+                    <div>
+                      <div style={{ fontSize: 11, color: T.sub, marginBottom: 6 }}>
+                        Incassato €{fmtCC(incassatoCC)} su €{fmtCC(totIvaCC)} {restoCC > 0 ? `· Resta €${fmtCC(restoCC)}` : "· ✅ Tutto incassato"}
+                      </div>
+                      {/* Phase 1: Create saldo fattura */}
+                      {!saldoFatCC && restoCC > 0 && (
+                        ccConfirm !== "saldo" ? (
+                          <button onClick={() => setCcConfirm("saldo")} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>💶 FATTURA SALDO €{fmtCC(restoCC)} →</button>
+                        ) : (
+                          <div style={{ background: T.acc + "10", borderRadius: 10, padding: 12, border: `1px solid ${T.acc}30` }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: T.acc, marginBottom: 4 }}>Fattura saldo €{fmtCC(restoCC)}</div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button onClick={() => setCcConfirm(null)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, color: T.sub, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Annulla</button>
+                              <button onClick={() => { creaFattura(c, restoCC === totIvaCC ? "unica" : "saldo"); setCcConfirm(null); setCcDone("✅ Fattura saldo creata!"); setTimeout(() => setCcDone(null), 3000); }} style={{ flex: 2, padding: 11, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✅ CREA FATTURA</button>
+                            </div>
+                          </div>
+                        )
+                      )}
+                      {/* Phase 2: Mark as paid */}
+                      {saldoFatCC && !saldoPagatoCC && (
+                        ccConfirm !== "pagata" ? (
+                          <button onClick={() => setCcConfirm("pagata")} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✅ SEGNA PAGATA €{fmtCC(restoCC)} →</button>
+                        ) : (
+                          <div style={{ background: "#34c75912", borderRadius: 10, padding: 12, border: "1px solid #34c75930" }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: "#34c759", marginBottom: 4 }}>Conferma pagamento €{fmtCC(restoCC)}</div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button onClick={() => setCcConfirm(null)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, color: T.sub, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Annulla</button>
+                              <button onClick={() => {
+                                setFattureDB(prev => prev.map(f => f.cmId === cm.id && !f.pagata ? { ...f, pagata: true, dataPagamento: new Date().toISOString().split("T")[0], metodoPagamento: "Bonifico" } : f));
+                                setFaseTo(cm.id, "chiusura");
+                                setCcConfirm(null); setCcDone("🎉 Commessa chiusa!"); setTimeout(() => setCcDone(null), 3000);
+                              }} style={{ flex: 2, padding: 11, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✅ CONFERMO INCASSO</button>
+                            </div>
+                          </div>
+                        )
+                      )}
+                      {/* Phase 3: All paid, just close */}
+                      {!saldoFatCC && restoCC <= 0 && (
+                        <button onClick={() => { setFaseTo(cm.id, "chiusura"); setCcDone("🎉 Commessa chiusa!"); setTimeout(() => setCcDone(null), 3000); }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>🎉 CHIUDI COMMESSA →</button>
+                      )}
+                    </div>
+                    );
+                  })()}
+                  {/* MISURE — solo se è il passo corrente */}
+                  {curCC.id === "misure" && vaniConPrezzoCC.length > 0 && (
+                    <div style={{ fontSize: 12, color: T.acc, fontWeight: 700, textAlign: "center" }}>✅ Prezzi OK · Totale €{fmtCC(totPrevCC)} — Pronto per la firma</div>
+                  )}
+                </div>
+              )}
+              {/* Totale */}
+              {totPrevCC > 0 && (
+                <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", padding: "8px 12px", background: T.card, borderRadius: 8, border: `1px solid ${T.bdr}` }}>
+                  <span style={{ fontSize: 12, fontWeight: 700 }}>Totale IVA incl.</span>
+                  <span style={{ fontSize: 14, fontWeight: 900, color: T.acc }}>€{fmtCC(totIvaCC)}</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Contact actions */}
         <div style={{ display: "flex", gap: 8, padding: "12px 16px" }}>
           {[
-            { ico: ICO.phone, label: "Chiama",   col: T.grn,  act: () => window.open(`tel:${c.telefono || ""}`) },
+            { ico: ICO.phone, label: "Chiama",   col: T.grn,  act: () => window.location.href=`tel:${c.telefono || ""}` },
             { ico: ICO.map,   label: "Naviga",   col: T.blue, act: () => window.open(`https://maps.google.com/?q=${encodeURIComponent(c.indirizzo || "")}`) },
             { ico: ICO.send,  label: "WhatsApp", col: "#25d366", act: () => window.open(`https://wa.me/?text=${encodeURIComponent(`Commessa ${c.code} - ${c.cliente}`)}`) },
           ].map((a, i) => (
@@ -2624,17 +5194,22 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           </div>
         )}
 
-        {/* PREVENTIVO + INVIA */}
-        <div style={{ padding: "0 16px", marginBottom: 8, display:"flex", gap:8 }}>
-          <input ref={fileInputRef} type="file" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const a={id:Date.now(),tipo:"file",nome:f.name,data:new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}),dataUrl:ev.target.result};setCantieri(cs=>cs.map(x=>x.id===selectedCM.id?{...x,allegati:[...(x.allegati||[]),a]}:x));setSelectedCM(p=>({...p,allegati:[...(p.allegati||[]),a]}));};r.readAsDataURL(f);e.target.value="";}}/>
-          <input ref={fotoInputRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const a={id:Date.now(),tipo:"foto",nome:f.name,data:new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}),dataUrl:ev.target.result};setCantieri(cs=>cs.map(x=>x.id===selectedCM.id?{...x,allegati:[...(x.allegati||[]),a]}:x));setSelectedCM(p=>({...p,allegati:[...(p.allegati||[]),a]}));};r.readAsDataURL(f);e.target.value="";}}/>
-          <button onClick={() => setShowPreventivoModal(true)} style={{ flex:1, padding: "12px", borderRadius: 10, border: "1.5px solid #ff9500", background: c.firmaCliente ? "#fff8ec" : "#fff", color: "#ff9500", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FF, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, position:"relative" }}>
-            📄 {c.firmaCliente ? "Preventivo ✅" : "Crea Preventivo"}
-            {(vaniList||[]).some(v=>!v.sistema) && !c.firmaCliente && <span style={{position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",background:"#ff3b30",color:"#fff",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>!</span>}
+        {/* Hidden file inputs */}
+        <input ref={fileInputRef} type="file" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const a={id:Date.now(),tipo:"file",nome:f.name,data:new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}),dataUrl:ev.target.result};setCantieri(cs=>cs.map(x=>x.id===selectedCM.id?{...x,allegati:[...(x.allegati||[]),a]}:x));setSelectedCM(p=>({...p,allegati:[...(p.allegati||[]),a]}));};r.readAsDataURL(f);e.target.value="";}}/> 
+        <input ref={fotoInputRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const a={id:Date.now(),tipo:"foto",nome:f.name,data:new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}),dataUrl:ev.target.result};setCantieri(cs=>cs.map(x=>x.id===selectedCM.id?{...x,allegati:[...(x.allegati||[]),a]}:x));setSelectedCM(p=>({...p,allegati:[...(p.allegati||[]),a]}));};r.readAsDataURL(f);e.target.value="";}}/> 
+
+
+        {/* SEGNALA PROBLEMA */}
+        <div style={{ padding: "0 16px", marginBottom: 8, display: "flex", gap: 8 }}>
+          <button onClick={() => { setProblemaForm({ titolo: "", descrizione: "", tipo: "materiale", priorita: "media", assegnato: "" }); setShowProblemaModal(true); }} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1.5px solid #FF3B30", background: "#FF3B3008", color: "#FF3B30", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FF, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, position: "relative" }}>
+            🚨 Segnala problema
+            {problemi.filter(p => p.commessaId === c.id && p.stato !== "risolto").length > 0 && <span style={{ position: "absolute", top: -4, right: -4, minWidth: 18, height: 18, borderRadius: "50%", background: "#FF3B30", color: "#fff", fontSize: 10, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{problemi.filter(p => p.commessaId === c.id && p.stato !== "risolto").length}</span>}
           </button>
-          <button onClick={() => setShowSendModal(true)} style={{ flex:1, padding: "12px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #007aff, #0055cc)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FF, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: "0 2px 8px rgba(0,122,255,0.3)" }}>
-            <Ico d={ICO.send} s={14} c="#fff" sw={2} /> Invia
-          </button>
+          {problemi.filter(p => p.commessaId === c.id).length > 0 && (
+            <button onClick={() => { setShowProblemiView(true); }} style={{ padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${T.bdr}`, background: T.card, color: T.text, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FF, display: "flex", alignItems: "center", gap: 6 }}>
+              📋 {problemi.filter(p => p.commessaId === c.id).length}
+            </button>
+          )}
         </div>
 
         {/* Allegati / Note / Vocali / Video */}
@@ -2771,6 +5346,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     {v.cassonetto && <span style={S.badge(T.orangeLt, T.orange)}>Cassonetto</span>}
                     {v.accessori?.tapparella?.attivo && <span style={S.badge(T.grnLt, T.grn)}>Tapparella</span>}
                     {v.accessori?.zanzariera?.attivo && <span style={S.badge(T.purpleLt, T.purple)}>Zanzariera</span>}
+                    {v.vociLibere?.length > 0 && <span style={S.badge("#fff3e0", "#ff9500")}>📦 {v.vociLibere.length} voci</span>}
                     {v.note && <span style={S.badge(T.cyanLt, T.cyan)}>Note</span>}
                   </div>
                   {/* Progress bar */}
@@ -2850,12 +5426,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       </div>
     );
 
-    // Campo input riusabile
+    // Campo input riusabile — defaultValue+onBlur per evitare focus loss
     const Field = ({ label, field, placeholder, type="text" }) => (
       <div style={{marginBottom:8}}>
         <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3,textTransform:"uppercase",letterSpacing:"0.05em"}}>{label}</div>
-        <input type={type} placeholder={placeholder||""} value={c[field]||""}
-          onChange={e => updateCM(field, e.target.value)}
+        <input type={type} placeholder={placeholder||""} defaultValue={c[field]||""}
+          key={`${c.id}-${field}`}
+          onBlur={e => { const v = e.target.value; if (v !== (c[field]||"")) updateCM(field, v); }}
           style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${T.bdr}`,
             background:T.card,fontSize:13,color:T.text,fontFamily:FF,boxSizing:"border-box"}}/>
       </div>
@@ -2931,14 +5508,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
     // === PREVENTIVO ===
     if (c.fase === "preventivo") {
-      const vaniCalc = getVaniAttivi(c); const totale = vaniCalc.reduce((sum, v) => {
-        const m = v.misure||{};
-        const lc = (m.lCentro||0)/1000;
-        const hc = (m.hCentro||0)/1000;
-        const mq = lc * hc;
-        const pxmq = parseFloat(c.prezzoMq||350);
-        return sum + mq * pxmq;
-      }, 0);
+      const vaniCalc = getVaniAttivi(c); const totale = vaniCalc.reduce((sum, v) => sum + calcolaVanoPrezzo(v, c), 0);
       const iva = totale * 0.1;
       return (
         <div style={panelStyle}>
@@ -3170,48 +5740,115 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     const today = new Date().toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
     const vaniR = getVaniAttivi(c); const vaniFilled = vaniR.filter(v=>Object.values(v.misure||{}).filter(x=>(x as number)>0).length>=6).length;
     const fuoriSqN = vaniR.filter(v=>{const d=(v.misure?.d1 as number)>0&&(v.misure?.d2 as number)>0?Math.abs(v.misure.d1-v.misure.d2):null;return (d as number)>5;}).length;
+    const totPezzi = vaniR.reduce((s,v) => s + (v.pezzi||1), 0);
+    const probAperti = problemi.filter(p => p.commessaId === c.id && p.stato !== "risolto");
+
+    // Info rilievo attivo
+    const rilAttivo = c.rilievi?.find(r => r.vani?.length > 0);
 
     const SEP = "━━━━━━━━━━━━━━━━━━━━━";
     const waMsg = [
-      "📋 *SOPRALLUOGO "+c.code+"*",
-      "👤 "+c.cliente+" "+(c.cognome||"")+(c.telefono?" · "+c.telefono:""),
+      "📋 *RIEPILOGO COMMESSA "+c.code+"*",
+      "📅 "+today+" · Fase: *"+(PIPELINE.find(p=>p.id===c.fase)?.nome||c.fase).toUpperCase()+"*",
+      SEP,
+      "",
+      "👤 *CLIENTE*",
+      c.cliente+" "+(c.cognome||""),
+      c.telefono?"📞 "+c.telefono:"",
+      c.email?"📧 "+c.email:"",
       "📍 "+c.indirizzo,
-      [c.pianoEdificio, c.mezzoSalita, c.foroScale].filter(Boolean).map((x,i)=>i===0?"🏢 "+x:x).join(" · "),
-      c.sistema?"⚙️ "+c.sistema+" · "+(c.tipo==="nuova"?"Nuova costruzione":"Ristrutturazione"):"",
+      [c.pianoEdificio?"🏢 "+c.pianoEdificio:"", c.mezzoSalita?"Salita: "+c.mezzoSalita:"", c.foroScale?"Foro scale: "+c.foroScale:"", c.difficoltaSalita?"Difficoltà: "+c.difficoltaSalita:""].filter(Boolean).join(" · "),
+      "",
+      "⚙️ *CONFIGURAZIONE*",
+      c.sistema?"Sistema: *"+c.sistema+"*":"",
+      "Tipo: "+(c.tipo==="riparazione"?"Riparazione":"Nuova installazione"),
+      "",
+      rilAttivo?"📐 *RILIEVO*":"",
+      rilAttivo?("Data: "+(rilAttivo.data||rilAttivo.dataRilievo||"—")+" · Rilevatore: "+(rilAttivo.rilevatore||"—")):"",
+      rilAttivo&&rilAttivo.note?"Note rilievo: "+rilAttivo.note:"",
+      "",
+      "📊 *RIEPILOGO: "+vaniR.length+" vani · "+totPezzi+" pezzi totali*",
+      vaniFilled < vaniR.length ? "⚠️ "+(vaniR.length - vaniFilled)+" vani incompleti" : "✅ Tutti i vani completi",
+      fuoriSqN > 0 ? "⚠️ "+fuoriSqN+" vani fuorisquadra" : "",
+      SEP,
       "",
       ...vaniR.map((v,i)=>{
         const m=v.misure||{};
         const tl=TIPOLOGIE_RAPIDE.find(tp=>tp.code===v.tipo)?.label||v.tipo||"—";
         const diff=m.d1>0&&m.d2>0?Math.abs(m.d1-m.d2):null;
         const fuori=diff!==null&&(diff as number)>5;
-        const ok=!fuori;
+        const ct = v.controtelaio || {};
         const lines=[
           SEP,
-          "*"+(i+1)+". "+v.nome.toUpperCase()+"* — "+v.tipo+" · "+v.piano+" "+(fuori?"⚠️":"✅"),
+          "*"+(i+1)+". "+v.nome.toUpperCase()+"*"+(v.pezzi>1?" × *"+v.pezzi+" PZ*":""),
+          tl+" · "+v.tipo+" · "+(v.stanza||"—")+" · "+(v.piano||"—")+" "+(fuori?"⚠️":"✅"),
           SEP,
-          "📏 L: "+(m.lAlto||"—")+" / *"+(m.lCentro||"—")+"* / "+(m.lBasso||"—"),
-          "📐 H: "+(m.hSx||"—")+" / *"+(m.hCentro||"—")+"* / "+(m.hDx||"—"),
+          "",
+          "📏 *MISURE VANO*",
+          "L: "+(m.lAlto||"—")+" / *"+(m.lCentro||"—")+"* / "+(m.lBasso||"—")+" mm",
+          "H: "+(m.hSx||"—")+" / *"+(m.hCentro||"—")+"* / "+(m.hDx||"—")+" mm",
+          "",
+          (m.d1>0||m.d2>0)?"↗ *DIAGONALI*":"",
           (m.d1>0&&m.d2>0)
-            ?(fuori?"⚠️ D: "+m.d1+" / "+m.d2+" — *FUORI SQUADRA +"+diff+"mm*":"↗ D: "+m.d1+" / "+m.d2+" ✅")
-            :"",
-          (m.spSx>0||m.spDx>0)?"⬛ Sp: "+(m.spSx?"Sx "+m.spSx:"")+(m.spDx?" · Dx "+m.spDx:"")+(m.spSopra?" · Sop "+m.spSopra:""):"",
+            ?(fuori?"⚠️ D1: "+m.d1+" / D2: "+m.d2+" — *FUORI SQUADRA Δ"+diff+"mm*":"D1: "+m.d1+" / D2: "+m.d2+" ✅ OK")
+            :(m.d1>0?"D1: "+m.d1+" (D2 mancante)":""),
           "",
-          v.sistema?"🔧 "+v.sistema+(v.vetro?" · "+v.vetro:""):"",
-          v.coloreInt?"🎨 "+(v.bicolore?"INT: "+v.coloreInt+" / EST: "+v.coloreEst:v.coloreInt):"",
-          v.telaio?"📐 Tel "+v.telaio+(v.telaioAlaZ?" "+v.telaioAlaZ+"mm":"")+(v.rifilato&&(v.rifilSx||v.rifilDx)?" · Rif Sx:"+v.rifilSx+" Dx:"+v.rifilDx+(v.rifilSopra?" Sop:"+v.rifilSopra:""):""):"",
-          (v.coprifilo||v.lamiera)?"🔩 "+(v.coprifilo||"")+(v.lamiera?" / "+v.lamiera:""):"",
+          (m.spSx>0||m.spDx>0||m.spSopra>0||m.spSotto>0)?"⬛ *SPALLETTE*":"",
+          (m.spSx>0||m.spDx>0||m.spSopra>0||m.spSotto>0)?[
+            m.spSx?"Sx: "+m.spSx:"",
+            m.spDx?"Dx: "+m.spDx:"",
+            m.spSopra?"Sopra: "+m.spSopra:"",
+            m.spSotto?"Sotto: "+m.spSotto:"",
+          ].filter(Boolean).join(" · ")+" mm":"",
+          m.davanzale?"🪨 Davanzale: "+m.davanzale+" mm":"",
+          m.soglia?"🚪 Soglia: "+m.soglia+" mm":"",
           "",
-          v.cassonetto?"📦 Cass "+(v.misure?.casL||"")+"×"+(v.misure?.casH||"")+"×"+(v.misure?.casP||""):"",
-          v.accessori?.tapparella?.attivo?"⬇ Tap "+v.accessori.tapparella.colore+" · "+v.accessori.tapparella.l+"×"+v.accessori.tapparella.h:"",
-          v.accessori?.persiana?.attivo?"🪟 Pers "+v.accessori.persiana.colore:"",
-          v.accessori?.zanzariera?.attivo?"🕸 Zan "+v.accessori.zanzariera.l+"×"+v.accessori.zanzariera.h:"",
-          v.note?"📝 "+v.note:"",
-          fuori?"⚠️ Verificare con muratore prima dell'ordine":"",
+          "🔧 *PRODOTTO*",
+          v.sistema?"Sistema: *"+v.sistema+"*":"⚠️ Sistema NON specificato",
+          v.vetro?"Vetro: "+v.vetro:"",
+          v.coloreInt?"🎨 Colore: "+(v.bicolore?"INT: *"+v.coloreInt+"* / EST: *"+(v.coloreEst||"—")+"*":"*"+v.coloreInt+"*"):"⚠️ Colore NON specificato",
+          v.coloreAcc?"Colore accessori: "+v.coloreAcc:"",
+          "",
+          (v.telaio||v.rifilato)?"📐 *TELAIO*":"",
+          v.telaio?"Tipo: "+v.telaio+(v.telaioAlaZ?" · Ala Z: "+v.telaioAlaZ+"mm":""):"",
+          v.rifilato?("Rifilatura: "+(v.rifilSx?"Sx:"+v.rifilSx:"")+(v.rifilDx?" Dx:"+v.rifilDx:"")+(v.rifilSopra?" Sop:"+v.rifilSopra:"")+(v.rifilSotto?" Sot:"+v.rifilSotto:"")+" mm"):"",
+          "",
+          (v.coprifilo||v.lamiera)?"🔩 *FINITURA*":"",
+          v.coprifilo?"Coprifilo: "+v.coprifilo:"",
+          v.lamiera?"Lamiera: "+v.lamiera:"",
+          "",
+          ct.tipo?"🔲 *CONTROTELAIO*":"",
+          ct.tipo?("Tipo: "+(ct.tipo==="singolo"?"Singolo":ct.tipo==="doppio"?"Doppio":"Con cassonetto")):"",
+          ct.tipo?(ct.l&&ct.h?"Dimensioni CT: "+ct.l+"×"+ct.h+" mm"+(ct.prof?" · Prof: "+ct.prof+" mm":""):""):"",
+          ct.tipo&&ct.offset?"Offset: "+ct.offset+" mm/lato":"",
+          ct.tipo&&ct.infissoL?"→ Infisso calcolato: "+ct.infissoL+"×"+ct.infissoH+" mm":"",
+          ct.tipo==="cassonetto"&&ct.casH?"Cassonetto: H "+ct.casH+"×P "+(ct.casP||"—")+" mm":"",
+          ct.tipo==="cassonetto"&&ct.cielino?"Cielino: "+ct.cielino:"",
+          "",
+          v.cassonetto?"📦 *CASSONETTO ESTERNO*":"",
+          v.cassonetto?((m.casL||"")+"×"+(m.casH||"")+"×"+(m.casP||"")+" mm"+(v.casTipo?" · "+v.casTipo:"")):"",
+          "",
+          "📎 *ACCESSORI*",
+          v.accessori?.tapparella?.attivo?("⬇ Tapparella: "+(v.accessori.tapparella.colore||"—")+" · "+(v.accessori.tapparella.l||"—")+"×"+(v.accessori.tapparella.h||"—")+" mm"+(v.accessori.tapparella.motorizzata?" · MOTORIZZATA":"")):"⬇ Tapparella: NO",
+          v.accessori?.persiana?.attivo?("🪟 Persiana: "+(v.accessori.persiana.colore||"—")+(v.accessori.persiana.tipo?" · "+v.accessori.persiana.tipo:"")):"🪟 Persiana: NO",
+          v.accessori?.zanzariera?.attivo?("🕸 Zanzariera: "+(v.accessori.zanzariera.l||"—")+"×"+(v.accessori.zanzariera.h||"—")+" mm"+(v.accessori.zanzariera.tipo?" · "+v.accessori.zanzariera.tipo:"")):"🕸 Zanzariera: NO",
+          "",
+          v.note?"📝 *NOTE VANO:* "+v.note:"",
+          fuori?"⚠️ *ATTENZIONE: FUORISQUADRA — Verificare con muratore prima dell'ordine*":"",
         ].filter(x=>x!==undefined&&x!==null&&x!=="");
         return lines.join("\n");
       }),
       SEP,
+      "",
+      probAperti.length > 0 ? "🚨 *PROBLEMI APERTI ("+probAperti.length+")*" : "",
+      ...probAperti.map(p => "• "+p.titolo+" ("+(p.tipo||"")+" · "+(p.priorita==="alta"?"🔴 ALTA":p.priorita==="media"?"🟠 MEDIA":"⚪ BASSA")+")"+(p.descrizione?" — "+p.descrizione:"")),
+      probAperti.length > 0 ? "" : "",
       c.note?"📝 *NOTE GENERALI*\n"+c.note+"\n"+SEP:"",
+      c.tecnicoMisure?"👤 Tecnico: "+c.tecnicoMisure:"",
+      c.dataRilievo?"📅 Data rilievo: "+c.dataRilievo:"",
+      "",
+      SEP,
+      "📊 Totale: *"+vaniR.length+"* vani · *"+totPezzi+"* pezzi"+(fuoriSqN>0?" · ⚠️ *"+fuoriSqN+"* fuorisquadra":""),
       "",
       "_Generato con MASTRO · "+today+"_",
     ].filter(Boolean).join("\n");
@@ -3477,7 +6114,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       const hasSoglia = isPorta || t==="SC2A"||t==="SC4A"||t==="ALZDX"||t==="ALZSX";
 
       return (
-        <svg viewBox={"0 0 "+W+" "+H} width="100%" style={{display:"block",background:"white",border:"1px solid #ddd",borderRadius:3}}>
+        <svg viewBox={"-18 -2 "+(W+22)+" "+(H+4)} width="100%" style={{display:"block",background:"white",border:"1px solid #ddd",borderRadius:3}}>
           {/* cassonetto */}
           {v.cassonetto&&<rect x={0} y={-14} width={W} height={14} fill="#fffde7" stroke="#ca8a04" strokeWidth={0.8}/>}
           {v.cassonetto&&<text x={cx} y={-4} textAnchor="middle" fontSize={6} fill="#92400e" fontFamily={F} fontWeight="700">{"CASS. "+(v.misure?.casL||"")+"×"+(v.misure?.casH||"")+"×"+(v.misure?.casP||"")}</text>}
@@ -3493,10 +6130,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           {!fuori&&diff!==null&&<rect x={cx-18} y={cy-7} width={36} height={14} rx={3} fill="#15803d"/>}
           {!fuori&&diff!==null&&<text x={cx} y={cy+4} textAnchor="middle" fontSize={8} fill="white" fontFamily={F} fontWeight="700">{"✓ sq."}</text>}
           {/* quote */}
-          {hasM&&<rect x={cx-26} y={1} width={52} height={14} rx={2} fill="#1d4ed8"/>}
+          {hasM&&<rect x={cx-30} y={-1} width={60} height={16} rx={2} fill="#1d4ed8"/>}
           {hasM&&<text x={cx} y={12} textAnchor="middle" fontSize={10} fill="white" fontFamily={F} fontWeight="700">{lc}</text>}
-          {hasM&&<rect x={1} y={cy-8} width={14} height={16} rx={2} fill="#15803d"/>}
-          {hasM&&<text x={8} y={cy+4} textAnchor="middle" fontSize={10} fill="white" fontFamily={F} fontWeight="700" transform={"rotate(-90,8,"+cy+")"}>{hc}</text>}
+          {hasM&&<rect x={-16} y={cy-20} width={18} height={40} rx={3} fill="#15803d"/>}
+          {hasM&&<text x={-7} y={cy+4} textAnchor="middle" fontSize={9} fill="white" fontFamily={F} fontWeight="700" transform={"rotate(-90,-7,"+cy+")"}>{hc}</text>}
           {/* badge telaio/accessori */}
           {v.telaio&&<text x={GX+2} y={GY+9} fontSize={6} fill="#6d28d9" fontFamily={F} fontWeight="700">{"Tel."+v.telaio+(v.telaio==="Z"&&v.telaioAlaZ?" "+v.telaioAlaZ:"")}</text>}
           {v.accessori?.tapparella?.attivo&&<text x={GX+GW-2} y={GY+9} textAnchor="end" fontSize={6} fill="#d97706" fontFamily={F} fontWeight="700">TAP</text>}
@@ -3551,6 +6188,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     <span style={{fontSize:10,color:fuori?"#b91c1c":"#64748b",marginLeft:6}}>{tipLabel} · {v.stanza} · {v.piano}</span>
                   </div>
                   <div style={{display:"flex",gap:3}}>
+                    {(v.pezzi||1)>1&&<span style={{padding:"2px 6px",borderRadius:3,background:"#7c3aed",color:"white",fontSize:8,fontWeight:800}}>×{v.pezzi} PZ</span>}
                     {fuori&&<span style={{padding:"2px 6px",borderRadius:3,background:ROS,color:"white",fontSize:8,fontWeight:800}}>⚠ +{diff}mm</span>}
                     <span style={{padding:"2px 6px",borderRadius:3,background:misN>=6?"#16a34a":"#d97706",color:"white",fontSize:8,fontWeight:700}}>{misN}mis</span>
                   </div>
@@ -3645,16 +6283,18 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           {/* Anteprima messaggio WA */}
           <div style={{background:"#dcf8c6",border:"1.5px solid #16a34a",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
             <div style={{fontSize:9,fontWeight:800,color:"#166534",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>📱 Anteprima messaggio</div>
-            <pre style={{fontFamily:"'DM Mono',monospace",fontSize:9.5,color:"#14532d",whiteSpace:"pre-wrap",lineHeight:1.65,margin:0,maxHeight:220,overflow:"auto"}}>{waMsg}</pre>
+            <pre style={{fontFamily:"'DM Mono',monospace",fontSize:9.5,color:"#14532d",whiteSpace:"pre-wrap",lineHeight:1.65,margin:0,maxHeight:400,overflow:"auto"}}>{waMsg}</pre>
           </div>
 
         {/* Barra invio */}
         <div style={{position:"fixed",bottom:0,left:0,right:0,background:"white",borderTop:"2px solid #e2e8f0",padding:"10px 12px 22px",boxShadow:"0 -6px 20px rgba(0,0,0,0.08)"}}>
           <div style={{fontSize:9,fontWeight:700,color:GRY,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:7,textAlign:"center"}}>Invia riepilogo</div>
           <div style={{display:"flex",gap:8}}>
+            <div onClick={()=>{navigator.clipboard?.writeText(waMsg.replace(/\*/g,""));}} 
+              style={{padding:"13px 14px",borderRadius:11,background:"#f1f5f9",color:"#475569",cursor:"pointer",fontWeight:800,fontSize:13}}>📋</div>
             <div onClick={()=>window.open("https://wa.me/?text="+encodeURIComponent(waMsg))}
               style={{flex:1,padding:"13px 8px",borderRadius:11,background:"#16a34a",color:"white",textAlign:"center",cursor:"pointer",fontWeight:800,fontSize:13}}>💬 WhatsApp</div>
-            <div onClick={()=>window.open("mailto:?subject="+encodeURIComponent("Sopralluogo "+c.code)+"&body="+encodeURIComponent(waMsg.replace(/\*/g,"")))}
+            <div onClick={()=>window.open("mailto:?subject="+encodeURIComponent("Riepilogo Commessa "+c.code+" — "+c.cliente)+"&body="+encodeURIComponent(waMsg.replace(/\*/g,"")))}
               style={{flex:1,padding:"13px 8px",borderRadius:11,background:BLU,color:"white",textAlign:"center",cursor:"pointer",fontWeight:800,fontSize:13}}>📧 Email</div>
             <div onClick={()=>window.print()}
               style={{padding:"13px 14px",borderRadius:11,background:"#f1f5f9",color:"#475569",cursor:"pointer",fontWeight:800,fontSize:15}}>🖨</div>
@@ -3757,7 +6397,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             setSelectedCM(prev => prev ? ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo?.id ? (updRil || r) : r) }) : prev);
             setSelectedVano(prev => ({ ...prev, [field]: val }));
           };
-          const cats = ["Finestre","Balconi","Scorrevoli","Persiane","Altro"];
+          const cats = [...new Set(tipologieFiltrate.map(t => t.cat))];
           const pianiList = ["S2","S1","PT","P1","P2","P3","P4","P5","P6","P7","P8","P9","P10","P11","P12","P13","P14","P15","P16","P17","P18","P19","P20","M"];
           const coloriRAL = ["RAL 9010","RAL 9016","RAL 9001","RAL 7016","RAL 7021","RAL 8014","RAL 8016","RAL 1013","Altro"];
 
@@ -3793,7 +6433,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   ))}
                 </div>
                 <div style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:4,WebkitOverflowScrolling:"touch"}}>
-                  {TIPOLOGIE_RAPIDE.filter(t=>t.cat===tipCat).map(t=>(
+                  {tipologieFiltrate.filter(t=>t.cat===tipCat).map(t=>(
                     <div key={t.code} onClick={()=>updateV("tipo",t.code)}
                       style={{padding:"7px 10px",borderRadius:10,border:`1.5px solid ${v.tipo===t.code?T.acc:T.bdr}`,background:v.tipo===t.code?T.accLt:T.card,fontSize:11,fontWeight:700,color:v.tipo===t.code?T.acc:T.text,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>
                       {t.icon} {t.code}
@@ -3963,8 +6603,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                       const off = ctOffset;
                       const cl = v.controtelaio.l - off*2;
                       const ch = v.controtelaio.h - off*2;
-                      updateMisura(v.id,"lAlto",cl); updateMisura(v.id,"lCentro",cl); updateMisura(v.id,"lBasso",cl);
-                      updateMisura(v.id,"hSx",ch); updateMisura(v.id,"hCentro",ch); updateMisura(v.id,"hDx",ch);
+                      updateMisureBatch(v.id, { lAlto: cl, lCentro: cl, lBasso: cl });
+                      updateMisureBatch(v.id, { hSx: ch, hCentro: ch, hDx: ch });
                     }} style={{padding:"10px",borderRadius:10,background:"#2563eb15",border:"1.5px solid #2563eb40",textAlign:"center",cursor:"pointer"}}>
                       <div style={{fontSize:12,fontWeight:700,color:"#2563eb"}}>⚡ Calcola infisso (offset −{ctOffset}mm/lato)</div>
                       <div style={{fontSize:10,color:"#2563eb80",marginTop:2}}>{v.controtelaio.l-ctOffset*2} × {v.controtelaio.h-ctOffset*2} mm</div>
@@ -3995,8 +6635,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                       const off = ctOffset;
                       const cl = v.controtelaio.l - off*2;
                       const ch = v.controtelaio.h - off*2;
-                      updateMisura(v.id,"lAlto",cl); updateMisura(v.id,"lCentro",cl); updateMisura(v.id,"lBasso",cl);
-                      updateMisura(v.id,"hSx",ch); updateMisura(v.id,"hCentro",ch); updateMisura(v.id,"hDx",ch);
+                      updateMisureBatch(v.id, { lAlto: cl, lCentro: cl, lBasso: cl });
+                      updateMisureBatch(v.id, { hSx: ch, hCentro: ch, hDx: ch });
                     }} style={{padding:"10px",borderRadius:10,background:"#7c3aed15",border:"1.5px solid #7c3aed40",textAlign:"center",cursor:"pointer"}}>
                       <div style={{fontSize:12,fontWeight:700,color:"#7c3aed"}}>⚡ Calcola infisso (offset −{ctOffset}mm/lato)</div>
                       <div style={{fontSize:10,color:"#7c3aed80",marginTop:2}}>{v.controtelaio.l-ctOffset*2} × {v.controtelaio.h-ctOffset*2} mm</div>
@@ -4036,7 +6676,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                       const off = ctOffset;
                       const cl = v.controtelaio.l - off*2;
                       const hInf = v.controtelaio.h - (v.controtelaio.hCass||0) - off*2;
-                      updateMisura(v.id,"lAlto",cl); updateMisura(v.id,"lCentro",cl); updateMisura(v.id,"lBasso",cl);
+                      updateMisureBatch(v.id, { lAlto: cl, lCentro: cl, lBasso: cl });
                       updateMisura(v.id,"hSx",hInf); updateMisura(v.id,"hCentro",hInf); updateMisura(v.id,"hDx",hInf);
                     }} style={{padding:"10px",borderRadius:10,background:"#b4530915",border:"1.5px solid #b4530940",textAlign:"center",cursor:"pointer"}}>
                       <div style={{fontSize:12,fontWeight:700,color:"#b45309"}}>⚡ Calcola infisso (offset −{ctOffset}mm/lato)</div>
@@ -4385,6 +7025,126 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               })}
                 </div>
               )}
+              {/* Voci Libere */}
+              <div onClick={() => setDetailOpen(d => ({...d, vociLibere: !d.vociLibere}))} style={{ padding: "12px 16px", borderRadius: 12, border: `1px solid ${detailOpen.vociLibere ? "#ff9500" : T.bdr}`, background: detailOpen.vociLibere ? "#ff950008" : T.card, marginBottom: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>📦</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: detailOpen.vociLibere ? "#ff9500" : T.text }}>Voci libere</span>
+                  {v.vociLibere?.length > 0 && <span style={{ fontSize: 10, color: "#ff9500", fontWeight: 700, background: "#ff950015", padding: "2px 8px", borderRadius: 6 }}>{v.vociLibere.length} voc{v.vociLibere.length === 1 ? "e" : "i"}</span>}
+                </div>
+                <span style={{ fontSize: 13, color: T.sub, transform: detailOpen.vociLibere ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s" }}>▾</span>
+              </div>
+              {detailOpen.vociLibere && (
+                <div style={{ marginBottom: 12, padding: "0 4px" }}>
+                  {(v.vociLibere || []).map((voce, vi) => (
+                    <div key={voce.id || vi} style={{ padding: 10, borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, marginBottom: 8 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#ff9500" }}>Voce {vi + 1}</span>
+                        <div onClick={() => {
+                          const newVoci = (v.vociLibere || []).filter((_, i) => i !== vi);
+                          updateVanoField(v.id, "vociLibere", newVoci);
+                        }} style={{ fontSize: 10, color: T.red, cursor: "pointer", fontWeight: 600 }}>✕ Rimuovi</div>
+                      </div>
+                      {/* Foto */}
+                      <div style={{ marginBottom: 6 }}>
+                        {voce.foto ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <img src={voce.foto} style={{ height: 50, maxWidth: 80, objectFit: "cover", borderRadius: 6, border: `1px solid ${T.bdr}` }} alt="" />
+                            <div onClick={() => {
+                              const newVoci = [...(v.vociLibere || [])]; newVoci[vi] = { ...newVoci[vi], foto: undefined };
+                              updateVanoField(v.id, "vociLibere", newVoci);
+                            }} style={{ fontSize: 9, color: T.red, cursor: "pointer" }}>✕</div>
+                          </div>
+                        ) : (
+                          <label style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 6, background: "#ff950012", color: "#ff9500", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
+                            📷 Foto
+                            <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                              const file = e.target.files?.[0]; if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = ev => {
+                                const newVoci = [...(v.vociLibere || [])]; newVoci[vi] = { ...newVoci[vi], foto: ev.target?.result as string };
+                                updateVanoField(v.id, "vociLibere", newVoci);
+                              };
+                              reader.readAsDataURL(file);
+                            }} />
+                          </label>
+                        )}
+                      </div>
+                      {/* Descrizione */}
+                      <input style={{ ...S.input, marginBottom: 6, fontSize: 12 }} placeholder="Descrizione (es. Controtelaio, Davanzale, Soglia...)" defaultValue={voce.descrizione || ""} onBlur={e => {
+                        const newVoci = [...(v.vociLibere || [])]; newVoci[vi] = { ...newVoci[vi], descrizione: e.target.value };
+                        updateVanoField(v.id, "vociLibere", newVoci);
+                      }} />
+                      {/* Prezzo + Unità + Quantità */}
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: 9, color: T.sub, fontWeight: 700 }}>Prezzo €</label>
+                          <input style={{ ...S.input, fontSize: 12, fontFamily: FM }} type="number" step="0.01" placeholder="0.00" defaultValue={voce.prezzo || ""} onBlur={e => {
+                            const newVoci = [...(v.vociLibere || [])]; newVoci[vi] = { ...newVoci[vi], prezzo: parseFloat(e.target.value) || 0 };
+                            updateVanoField(v.id, "vociLibere", newVoci);
+                          }} />
+                        </div>
+                        <div style={{ width: 80 }}>
+                          <label style={{ fontSize: 9, color: T.sub, fontWeight: 700 }}>Unità</label>
+                          <select style={{ ...S.select, fontSize: 11 }} value={voce.unita || "pz"} onChange={e => {
+                            const newVoci = [...(v.vociLibere || [])]; newVoci[vi] = { ...newVoci[vi], unita: e.target.value };
+                            updateVanoField(v.id, "vociLibere", newVoci);
+                          }}>
+                            <option value="pz">Pezzo</option>
+                            <option value="mq">mq</option>
+                            <option value="ml">ml</option>
+                            <option value="kg">kg</option>
+                            <option value="forfait">Forfait</option>
+                          </select>
+                        </div>
+                        <div style={{ width: 60 }}>
+                          <label style={{ fontSize: 9, color: T.sub, fontWeight: 700 }}>Qtà</label>
+                          <input style={{ ...S.input, fontSize: 12, fontFamily: FM, textAlign: "center" }} type="number" step="0.1" defaultValue={voce.qta || 1} onBlur={e => {
+                            const newVoci = [...(v.vociLibere || [])]; newVoci[vi] = { ...newVoci[vi], qta: parseFloat(e.target.value) || 1 };
+                            updateVanoField(v.id, "vociLibere", newVoci);
+                          }} />
+                        </div>
+                      </div>
+                      {voce.prezzo > 0 && <div style={{ textAlign: "right", fontSize: 11, fontWeight: 700, color: T.grn, fontFamily: FM, marginTop: 4 }}>= €{((voce.prezzo || 0) * (voce.qta || 1)).toFixed(2)}</div>}
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <div onClick={() => {
+                      const newVoci = [...(v.vociLibere || []), { id: Date.now(), descrizione: "", prezzo: 0, unita: "pz", qta: 1 }];
+                      updateVanoField(v.id, "vociLibere", newVoci);
+                    }} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px dashed #ff9500`, textAlign: "center", cursor: "pointer", color: "#ff9500", fontSize: 12, fontWeight: 600 }}>+ Voce vuota</div>
+                    <div onClick={() => {
+                      setDetailOpen(d => ({ ...d, showLibreria: !d.showLibreria }));
+                    }} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600 }}>📦 Da libreria</div>
+                  </div>
+                  {detailOpen.showLibreria && libreriaDB.length > 0 && (
+                    <div style={{ marginTop: 8, padding: 8, borderRadius: 10, border: `1px solid ${T.acc}30`, background: T.acc + "06" }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.acc, marginBottom: 6, textTransform: "uppercase" }}>Scegli dalla libreria</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        {libreriaDB.map(item => (
+                          <div key={item.id} onClick={() => {
+                            const newVoce = { id: Date.now(), descrizione: item.nome, prezzo: item.prezzo || 0, unita: item.unita || "pz", qta: 1, foto: item.foto || undefined, libreriaId: item.id };
+                            const newVoci = [...(v.vociLibere || []), newVoce];
+                            updateVanoField(v.id, "vociLibere", newVoci);
+                            setDetailOpen(d => ({ ...d, showLibreria: false }));
+                          }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, cursor: "pointer" }}>
+                            {item.foto ? (
+                              <img src={item.foto} style={{ width: 32, height: 32, objectFit: "cover", borderRadius: 4, flexShrink: 0 }} alt="" />
+                            ) : (
+                              <div style={{ width: 32, height: 32, borderRadius: 4, background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>📦</div>
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.nome}</div>
+                              <div style={{ fontSize: 9, color: T.sub }}>{item.categoria}</div>
+                            </div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: T.grn, fontFamily: FM, flexShrink: 0 }}>€{item.prezzo}/{item.unita || "pz"}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Foto + Note */}
               <div onClick={() => setDetailOpen(d => ({...d, disegno: !d.disegno}))} style={{ padding: "12px 16px", borderRadius: 12, border: `1px solid ${detailOpen.disegno ? "#ff6b6b" : T.bdr}`, background: detailOpen.disegno ? "#ff6b6b08" : T.card, marginBottom: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -4512,9 +7272,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     const cat = pendingFotoCat;
                     Array.from(e.target.files || []).forEach(file => {
                       const r = new FileReader();
-                      r.onload = ev => {
+                      r.onload = async ev => {
+                        const compressed = await compressImage(ev.target.result as string);
                         const key = "foto_" + Date.now() + "_" + file.name;
-                        const fotoObj = { dataUrl: ev.target.result, nome: file.name, tipo: "foto", categoria: cat || null };
+                        const fotoObj = { dataUrl: compressed, nome: file.name, tipo: "foto", categoria: cat || null };
                         setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: { ...(vn.foto||{}), [key]: fotoObj } } : vn) } : r2) } : c));
                         setSelectedVano(prev => ({ ...prev, foto: { ...(prev.foto||{}), [key]: fotoObj } }));
                       };
@@ -4702,11 +7463,24 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     {v.accessori?.zanzariera?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>🦟 Zanzariera</div>}
                   </div>
                 )}
+                {/* Foto gallery */}
+                {Object.values(v.foto || {}).filter(f => f.tipo === "foto" && f.dataUrl).length > 0 && (
+                  <div style={{ borderRadius: 10, border: `1px solid #007aff25`, overflow: "hidden", marginBottom: 8 }}>
+                    <div style={{ padding: "6px 12px", background: "#007aff10", fontSize: 11, fontWeight: 700, color: "#007aff" }}>📷 FOTO ({Object.values(v.foto || {}).filter(f => f.tipo === "foto").length})</div>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", padding: 8 }}>
+                      {Object.entries(v.foto || {}).filter(([, f]) => f.tipo === "foto" && f.dataUrl).map(([k, f]) => (
+                        <div key={k} style={{ position: "relative", width: 64, height: 48, borderRadius: 6, overflow: "hidden" }}>
+                          <img src={f.dataUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+                          {f.categoria && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 6, textAlign: "center", padding: "1px" }}>{f.categoria}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
 
-          {/* === NAV BUTTONS === */}
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             {vanoStep > 0 && (
               <button onClick={() => setVanoStep(s => s - 1)} style={{ flex: 1, padding: "14px", borderRadius: 12, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: FF, color: T.text }}>← Indietro</button>
@@ -4739,12 +7513,405 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             </div>
           </div>
 
+          {/* === FAB QUICK EDIT PANEL === */}
+          {detailOpen.fabOpen && <div onClick={() => setDetailOpen(d => ({ ...d, fabOpen: false }))} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 998 }} />}
+          {detailOpen.fabOpen && (
+            <div style={{ position: "fixed", bottom: 80, left: 12, right: 12, zIndex: 999, background: "#fff", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.25)", padding: "14px 16px", maxHeight: "75vh", overflowY: "auto" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: T.text }}>⚡ Accesso rapido</span>
+                <div onClick={() => setDetailOpen(d => ({ ...d, fabOpen: false }))} style={{ padding: "4px 10px", borderRadius: 6, background: T.bg, fontSize: 11, color: T.sub, cursor: "pointer", fontWeight: 600 }}>✕ Chiudi</div>
+              </div>
+
+              {/* TIPOLOGIA — chips scroll */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 4 }}>🪟 Tipologia</div>
+                <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch" }}>
+                  {tipologieFiltrate.map(tp => (
+                    <div key={tp.code} onClick={() => updateVanoField(v.id, "tipo", tp.code)} style={{
+                      padding: "6px 10px", borderRadius: 8, flexShrink: 0, cursor: "pointer",
+                      border: `1.5px solid ${v.tipo === tp.code ? "#ff9500" : T.bdr}`,
+                      background: v.tipo === tp.code ? "#ff950015" : T.card,
+                    }}>
+                      <div style={{ fontSize: 14, textAlign: "center" }}>{tp.icon}</div>
+                      <div style={{ fontSize: 8, fontWeight: 700, color: v.tipo === tp.code ? "#ff9500" : T.sub, textAlign: "center", whiteSpace: "nowrap" }}>{tp.code}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* SISTEMA + VETRO */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 3 }}>⚙️ Sistema</div>
+                  <select style={{ ...S.select, fontSize: 12, padding: "8px" }} value={v.sistema || ""} onChange={e => updateVanoField(v.id, "sistema", e.target.value)}>
+                    <option value="">— Sistema —</option>
+                    {sistemiDB.map(s => <option key={s.id} value={`${s.marca} ${s.sistema}`}>{s.marca} {s.sistema}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 3 }}>🪟 Vetro</div>
+                  <select style={{ ...S.select, fontSize: 12, padding: "8px" }} value={v.vetro || ""} onChange={e => updateVanoField(v.id, "vetro", e.target.value)}>
+                    <option value="">— Vetro —</option>
+                    {vetriDB.map(g => <option key={g.id} value={g.code}>{g.code}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* COLORI */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase" }}>🎨 Colore</div>
+                  <div onClick={() => updateVanoField(v.id, "bicolore", !v.bicolore)} style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: v.bicolore ? T.accLt : T.bg, border: `1px solid ${v.bicolore ? T.acc : T.bdr}`, color: v.bicolore ? T.acc : T.sub, cursor: "pointer", fontWeight: 600 }}>
+                    Bicolore {v.bicolore ? "✓" : ""}
+                  </div>
+                </div>
+                {!v.bicolore ? (
+                  <select style={{ ...S.select, fontSize: 12, padding: "8px" }} value={v.coloreInt || ""} onChange={e => updateVanoField(v.id, "coloreInt", e.target.value)}>
+                    <option value="">— Colore —</option>
+                    {coloriDB.map(c => <option key={c.id} value={c.code}>{c.code} — {c.nome}</option>)}
+                  </select>
+                ) : (
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 8, color: T.sub, marginBottom: 2 }}>INT</div>
+                      <select style={{ ...S.select, fontSize: 11, padding: "7px" }} value={v.coloreInt || ""} onChange={e => updateVanoField(v.id, "coloreInt", e.target.value)}>
+                        <option value="">—</option>
+                        {coloriDB.map(c => <option key={c.id} value={c.code}>{c.code}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 8, color: T.sub, marginBottom: 2 }}>EST</div>
+                      <select style={{ ...S.select, fontSize: 11, padding: "7px" }} value={v.coloreEst || ""} onChange={e => updateVanoField(v.id, "coloreEst", e.target.value)}>
+                        <option value="">—</option>
+                        {coloriDB.map(c => <option key={c.id} value={c.code}>{c.code}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* COLORE ACCESSORI */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 3 }}>🔩 Colore accessori</div>
+                <select style={{ ...S.select, fontSize: 12, padding: "8px" }} value={v.coloreAcc || ""} onChange={e => updateVanoField(v.id, "coloreAcc", e.target.value)}>
+                  <option value="">— Come profili —</option>
+                  {coloriDB.map(c => <option key={c.id} value={c.code}>{c.code} — {c.nome}</option>)}
+                </select>
+              </div>
+
+              {/* MISURE RAPIDE — L (tutte e 3) × H (tutte e 3) */}
+              <div style={{ marginBottom: 6 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 4 }}>📏 Misure (mm) — compila L e H, inserisce Alto/Centro/Basso e Sx/Centro/Dx</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 8, color: "#507aff", marginBottom: 2, fontWeight: 700 }}>LARGHEZZA</div>
+                    <input type="number" inputMode="numeric" style={{ ...S.input, fontSize: 16, fontFamily: FM, fontWeight: 700, textAlign: "center", padding: "10px", borderColor: "#507aff50" }} value={m.lCentro || ""} placeholder="L" onChange={e => { const val = parseInt(e.target.value) || 0; updateMisureBatch(v.id, { lAlto: val, lCentro: val, lBasso: val }); }} />
+                    <div style={{ fontSize: 8, color: T.sub, marginTop: 2, textAlign: "center" }}>→ Alto · Centro · Basso</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", paddingTop: 8, fontSize: 18, color: T.sub, fontWeight: 300 }}>×</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 8, color: "#507aff", marginBottom: 2, fontWeight: 700 }}>ALTEZZA</div>
+                    <input type="number" inputMode="numeric" style={{ ...S.input, fontSize: 16, fontFamily: FM, fontWeight: 700, textAlign: "center", padding: "10px", borderColor: "#507aff50" }} value={m.hCentro || ""} placeholder="H" onChange={e => { const val = parseInt(e.target.value) || 0; updateMisureBatch(v.id, { hSx: val, hCentro: val, hDx: val }); }} />
+                    <div style={{ fontSize: 8, color: T.sub, marginTop: 2, textAlign: "center" }}>→ Sx · Centro · Dx</div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 8 }}>
+                    {m.lCentro > 0 && m.hCentro > 0 && (
+                      <div style={{ fontSize: 13, color: T.grn, fontWeight: 800, fontFamily: FM }}>{((m.lCentro/1000)*(m.hCentro/1000)).toFixed(2)}</div>
+                    )}
+                    {m.lCentro > 0 && m.hCentro > 0 && (
+                      <div style={{ fontSize: 8, color: T.grn, fontWeight: 600 }}>mq</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Pezzi — chips 1-5 + input libero */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 0" }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase" }}>Pezzi:</span>
+                <div style={{ display: "flex", gap: 3 }}>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <div key={n} onClick={() => updateVanoField(v.id, "pezzi", n)} style={{
+                      width: 28, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 12, fontWeight: 700, fontFamily: FM, cursor: "pointer",
+                      background: (v.pezzi || 1) === n ? T.acc : T.bg,
+                      color: (v.pezzi || 1) === n ? "#fff" : T.sub,
+                      border: `1px solid ${(v.pezzi || 1) === n ? T.acc : T.bdr}`
+                    }}>{n}</div>
+                  ))}
+                </div>
+                <input type="number" inputMode="numeric" min="1" style={{
+                  width: 48, padding: "4px 6px", fontSize: 13, fontFamily: FM, fontWeight: 700, textAlign: "center",
+                  border: `1.5px solid ${(v.pezzi || 1) > 5 ? T.acc : T.bdr}`, borderRadius: 6,
+                  color: (v.pezzi || 1) > 5 ? T.acc : T.text,
+                  background: (v.pezzi || 1) > 5 ? T.accLt : T.bg
+                }} value={v.pezzi || 1} onChange={e => updateVanoField(v.id, "pezzi", parseInt(e.target.value) || 1)} />
+              </div>
+            </div>
+          )}
+          <div onClick={() => setDetailOpen(d => ({ ...d, fabOpen: !d.fabOpen }))} style={{
+            position: "fixed", bottom: 260, right: 20, zIndex: 999,
+            width: 52, height: 52, borderRadius: "50%",
+            background: detailOpen.fabOpen ? T.red : "linear-gradient(135deg, #34c759, #28a745)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 4px 18px rgba(52,199,89,0.45)", cursor: "pointer",
+            transition: "transform 0.2s, background 0.2s",
+            transform: detailOpen.fabOpen ? "rotate(45deg)" : "none"
+          }}>
+            <span style={{ fontSize: 20, color: "#fff" }}>⚡</span>
+          </div>
+
         </div>
       </div>
     );
   };
 
   /* == AGENDA TAB — Giorno / Settimana / Mese == */
+  /* == CLIENTI TAB == */
+  const [clientiSearch, setClientiSearch] = useState("");
+  const [clientiFilter, setClientiFilter] = useState("tutti");
+  const [showNewCliente, setShowNewCliente] = useState(false);
+  const [newCliente, setNewCliente] = useState({ nome: "", cognome: "", tipo: "cliente", telefono: "", email: "", indirizzo: "", piva: "", note: "" });
+  const [selectedCliente, setSelectedCliente] = useState<any>(null);
+
+  const renderClienti = () => {
+    const filters = [
+      { id: "tutti", l: "Tutti", c: T.acc },
+      { id: "cliente", l: "Clienti", c: "#007aff" },
+      { id: "fornitore", l: "Fornitori", c: "#34c759" },
+      { id: "professionista", l: "Professionisti", c: "#af52de" },
+    ];
+    const filtered = contatti
+      .filter(c => clientiFilter === "tutti" || c.tipo === clientiFilter)
+      .filter(c => {
+        if (!clientiSearch) return true;
+        const s = clientiSearch.toLowerCase();
+        return (c.nome||"").toLowerCase().includes(s) || (c.cognome||"").toLowerCase().includes(s) || (c.telefono||"").includes(s) || (c.email||"").toLowerCase().includes(s) || (c.indirizzo||"").toLowerCase().includes(s);
+      })
+      .sort((a, b) => (a.nome||"").localeCompare(b.nome||""));
+
+    // Count commesse per cliente
+    const cmCountFor = (c) => cantieri.filter(cm => cm.cliente === c.nome || (c.cognome && cm.cognome === c.cognome)).length;
+
+    // Dettaglio cliente selezionato
+    if (selectedCliente) {
+      const c = selectedCliente;
+      const cmList = cantieri.filter(cm => cm.cliente === c.nome || (c.cognome && cm.cognome === c.cognome));
+      const evList = events.filter(ev => ev.persona === c.nome || ev.persona === (c.nome + " " + (c.cognome||"")).trim());
+      return (
+        <div style={{ padding: "0 0 100px" }}>
+          <div style={{ ...S.header, display: "flex", alignItems: "center", gap: 10 }}>
+            <div onClick={() => setSelectedCliente(null)} style={{ cursor: "pointer", padding: 4 }}>
+              <Ico d={ICO.back} s={22} c={T.text} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 17, fontWeight: 800 }}>{c.nome} {c.cognome || ""}</div>
+              <div style={{ fontSize: 11, color: T.sub }}>{c.tipo === "cliente" ? "👤 Cliente" : c.tipo === "fornitore" ? "🏭 Fornitore" : "👷 Professionista"}</div>
+            </div>
+            <div onClick={() => { const idx = contatti.findIndex(x => x.id === c.id); if (idx >= 0) { const updated = { ...c, preferito: !c.preferito }; setContatti(prev => prev.map(x => x.id === c.id ? updated : x)); setSelectedCliente(updated); } }} style={{ fontSize: 22, cursor: "pointer" }}>
+              {c.preferito ? "⭐" : "☆"}
+            </div>
+          </div>
+
+          {/* Info card */}
+          <div style={{ margin: "0 16px 12px", background: T.card, borderRadius: 14, padding: "16px", border: `1px solid ${T.bdr}` }}>
+            {c.telefono && <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <div style={{ fontSize: 14 }}>📞</div>
+              <div style={{ flex: 1, fontSize: 13, color: T.text }}>{c.telefono}</div>
+              <div onClick={() => { window.location.href="tel:" + c.telefono; }} style={{ padding: "6px 12px", borderRadius: 8, background: T.grnLt, color: T.grn, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Chiama</div>
+              <div onClick={() => window.open("https://wa.me/" + c.telefono.replace(/\s/g, ""))} style={{ padding: "6px 12px", borderRadius: 8, background: "#dcf8c6", color: "#128c7e", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>WA</div>
+            </div>}
+            {c.email && <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <div style={{ fontSize: 14 }}>📧</div>
+              <div style={{ flex: 1, fontSize: 13, color: T.text }}>{c.email}</div>
+              <div onClick={() => window.open("mailto:" + c.email)} style={{ padding: "6px 12px", borderRadius: 8, background: T.blueLt, color: T.blue, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Email</div>
+            </div>}
+            {c.indirizzo && <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <div style={{ fontSize: 14 }}>📍</div>
+              <div style={{ flex: 1, fontSize: 13, color: T.text }}>{c.indirizzo}</div>
+              <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(c.indirizzo))} style={{ padding: "6px 12px", borderRadius: 8, background: T.bg, color: T.sub, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Mappa</div>
+            </div>}
+            {c.piva && <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <div style={{ fontSize: 14 }}>🏢</div>
+              <div style={{ fontSize: 13, color: T.sub, fontFamily: "'JetBrains Mono',monospace" }}>{c.piva}</div>
+            </div>}
+            {c.note && <div style={{ marginTop: 8, padding: "8px 10px", background: T.bg, borderRadius: 8, fontSize: 12, color: T.sub, fontStyle: "italic" }}>📝 {c.note}</div>}
+          </div>
+
+          {/* Commesse collegate */}
+          <div style={{ margin: "0 16px 12px" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>📁 Commesse ({cmList.length})</span>
+              <div onClick={() => { setNewCM(prev => ({ ...prev, cliente: c.nome, telefono: c.telefono || "", indirizzo: c.indirizzo || "" } as any)); setTab("commesse"); }} style={{ fontSize: 11, fontWeight: 700, color: T.acc, cursor: "pointer" }}>+ Nuova commessa</div>
+            </div>
+            {cmList.length === 0 && <div style={{ padding: "16px", background: T.card, borderRadius: 10, textAlign: "center", fontSize: 12, color: T.sub }}>Nessuna commessa</div>}
+            {cmList.map(cm => (
+              <div key={cm.id} onClick={() => { setSelectedCM(cm); setTab("commesse"); }} style={{ padding: "10px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}`, marginBottom: 6, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: (PIPELINE.find(p => p.id === cm.fase)?.color || T.acc) + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+                  {PIPELINE.find(p => p.id === cm.fase)?.icon || "📁"}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{cm.code}</div>
+                  <div style={{ fontSize: 11, color: T.sub }}>{PIPELINE.find(p => p.id === cm.fase)?.nome || cm.fase} · {cm.indirizzo || "—"}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Appuntamenti */}
+          <div style={{ margin: "0 16px 12px" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 8 }}>📅 Appuntamenti ({evList.length})</div>
+            {evList.length === 0 && <div style={{ padding: "16px", background: T.card, borderRadius: 10, textAlign: "center", fontSize: 12, color: T.sub }}>Nessun appuntamento</div>}
+            {evList.slice(0, 5).map(ev => (
+              <div key={ev.id} style={{ padding: "8px 12px", background: T.card, borderRadius: 8, border: `1px solid ${T.bdr}`, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 4, height: 28, borderRadius: 2, background: tipoEvColor(ev.tipo) }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{ev.text}</div>
+                  <div style={{ fontSize: 10, color: T.sub }}>{ev.date} {ev.time && "· " + ev.time}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Azioni rapide */}
+          <div style={{ margin: "0 16px", display: "flex", gap: 8 }}>
+            <div onClick={() => { setContatti(prev => prev.filter(x => x.id !== c.id)); setSelectedCliente(null); }} style={{ flex: 1, padding: "12px", borderRadius: 10, background: T.redLt, color: T.red, textAlign: "center", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑 Elimina</div>
+          </div>
+        </div>
+      );
+    }
+
+    // Nuovo cliente modal
+    if (showNewCliente) {
+      return (
+        <div style={{ padding: "0 0 100px" }}>
+          <div style={{ ...S.header, display: "flex", alignItems: "center", gap: 10 }}>
+            <div onClick={() => setShowNewCliente(false)} style={{ cursor: "pointer", padding: 4 }}>
+              <Ico d={ICO.back} s={22} c={T.text} />
+            </div>
+            <div style={{ flex: 1, fontSize: 17, fontWeight: 800 }}>Nuovo contatto</div>
+          </div>
+
+          <div style={{ padding: "0 16px" }}>
+            {/* Tipo */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+              {[{id:"cliente",l:"👤 Cliente"},{id:"fornitore",l:"🏭 Fornitore"},{id:"professionista",l:"👷 Professionista"}].map(t => (
+                <div key={t.id} onClick={() => setNewCliente(prev => ({...prev, tipo: t.id}))} style={{ flex: 1, padding: "10px 6px", borderRadius: 10, border: `1.5px solid ${newCliente.tipo === t.id ? T.acc : T.bdr}`, background: newCliente.tipo === t.id ? T.accLt : T.card, textAlign: "center", fontSize: 11, fontWeight: 700, cursor: "pointer", color: newCliente.tipo === t.id ? T.acc : T.sub }}>{t.l}</div>
+              ))}
+            </div>
+
+            {[
+              { l: "Nome *", k: "nome", ph: "Mario" },
+              { l: "Cognome", k: "cognome", ph: "Rossi" },
+              { l: "Telefono", k: "telefono", ph: "+39 333 1234567" },
+              { l: "Email", k: "email", ph: "mario@email.it" },
+              { l: "Indirizzo", k: "indirizzo", ph: "Via Roma 1, Cosenza" },
+              { l: "P.IVA / C.F.", k: "piva", ph: "IT01234567890" },
+            ].map(f => (
+              <div key={f.k} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>{f.l}</div>
+                <input value={newCliente[f.k]} onChange={e => setNewCliente(prev => ({...prev, [f.k]: e.target.value}))}
+                  placeholder={f.ph} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 13, color: T.text, fontFamily: "inherit", boxSizing: "border-box" }} />
+              </div>
+            ))}
+
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>Note</div>
+              <textarea value={newCliente.note} onChange={e => setNewCliente(prev => ({...prev, note: e.target.value}))}
+                placeholder="Note aggiuntive..." rows={3} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 13, color: T.text, fontFamily: "inherit", boxSizing: "border-box", resize: "vertical" }} />
+            </div>
+
+            <button onClick={() => {
+              if (!newCliente.nome.trim()) return;
+              setContatti(prev => [...prev, { id: "CT-" + Date.now(), ...newCliente, preferito: false }]);
+              setNewCliente({ nome: "", cognome: "", tipo: "cliente", telefono: "", email: "", indirizzo: "", piva: "", note: "" });
+              setShowNewCliente(false);
+            }} style={{ width: "100%", padding: "14px", borderRadius: 12, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              ✅ Salva contatto
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Lista principale
+    return (
+      <div style={{ padding: "0 0 100px" }}>
+        <div style={{ ...S.header, flexDirection: "column", alignItems: "stretch" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ fontSize: 20, fontWeight: 900 }}>Clienti</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 11, color: T.sub, fontWeight: 600 }}>{contatti.length}</span>
+              <div onClick={() => setShowNewCliente(true)} style={{ width: 32, height: 32, borderRadius: 8, background: T.acc, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <Ico d={ICO.plus} s={16} c="#fff" />
+              </div>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, marginBottom: 8 }}>
+            <Ico d={ICO.search} s={14} c={T.sub} />
+            <input value={clientiSearch} onChange={e => setClientiSearch(e.target.value)}
+              placeholder="Cerca..."
+              style={{ flex: 1, border: "none", background: "transparent", fontSize: 13, color: T.text, outline: "none", fontFamily: "inherit" }} />
+            {clientiSearch && <div onClick={() => setClientiSearch("")} style={{ cursor: "pointer", fontSize: 12, color: T.sub }}>✕</div>}
+          </div>
+
+          {/* Filters */}
+          <div style={{ display: "flex", gap: 4, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
+            {filters.map(f => (
+              <div key={f.id} onClick={() => setClientiFilter(f.id)} style={{ padding: "5px 10px", borderRadius: 16, border: `1px solid ${clientiFilter === f.id ? f.c : T.bdr}`, background: clientiFilter === f.id ? f.c + "15" : T.card, fontSize: 10, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", color: clientiFilter === f.id ? f.c : T.sub }}>
+                {f.l}{f.id !== "tutti" ? ` ${contatti.filter(c => c.tipo === f.id).length}` : ""}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Lista */}
+        <div style={{ padding: "0 16px" }}>
+          {filtered.length === 0 && (
+            <div style={{ padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>👤</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4 }}>Nessun contatto</div>
+              <div style={{ fontSize: 12, color: T.sub }}>Aggiungi il tuo primo cliente</div>
+            </div>
+          )}
+          {filtered.map(c => {
+            const cmCount = cmCountFor(c);
+            const tipoColor = c.tipo === "cliente" ? "#007aff" : c.tipo === "fornitore" ? "#34c759" : "#af52de";
+            const initials = ((c.nome||"")[0] || "") + ((c.cognome||"")[0] || "");
+            return (
+              <div key={c.id} onClick={() => setSelectedCliente(c)} style={{ padding: "12px 14px", background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, marginBottom: 6, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
+                {/* Avatar */}
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: tipoColor + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, color: tipoColor, flexShrink: 0 }}>
+                  {initials.toUpperCase() || "?"}
+                </div>
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.text, display: "flex", alignItems: "center", gap: 4 }}>
+                    {c.nome} {c.cognome || ""}
+                    {c.preferito && <span style={{ fontSize: 12 }}>⭐</span>}
+                  </div>
+                  <div style={{ fontSize: 11, color: T.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {c.telefono || c.email || c.indirizzo || "Nessun dettaglio"}
+                  </div>
+                  <div style={{ display: "flex", gap: 4, marginTop: 3 }}>
+                    <span style={{ ...S.badge(tipoColor + "15", tipoColor), fontSize: 9 }}>{c.tipo === "cliente" ? "Cliente" : c.tipo === "fornitore" ? "Fornitore" : "Professionista"}</span>
+                    {cmCount > 0 && <span style={{ ...S.badge(T.accLt, T.acc), fontSize: 9 }}>📁 {cmCount}</span>}
+                  </div>
+                </div>
+                {/* Quick actions */}
+                <div style={{ display: "flex", gap: 4 }}>
+                  {c.telefono && <div onClick={(e) => { e.stopPropagation(); window.location.href="tel:" + c.telefono; }} style={{ width: 32, height: 32, borderRadius: "50%", background: T.grnLt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>📞</div>}
+                  {c.telefono && <div onClick={(e) => { e.stopPropagation(); window.open("https://wa.me/" + (c.telefono||"").replace(/\s/g, "")); }} style={{ width: 32, height: 32, borderRadius: "50%", background: "#dcf8c6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>💬</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   const renderAgenda = () => {
     const dateStr = (d) => d.toISOString().split("T")[0];
     // Merge events + tasks with dates
@@ -4758,15 +7925,6 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     const isSameDay = (a, b) => dateStr(a) === dateStr(b);
     const isToday2 = (d) => isSameDay(d, new Date());
     const eventsOn = (d) => allItems.filter(e => e.date === dateStr(d));
-  // Helper: colore per tipo evento
-  const tipoEvColor = (tipo) => {
-    if (tipo === "appuntamento") return "#007aff";
-    if (tipo === "sopr_riparazione") return "#FF6B00";
-    if (tipo === "riparazione") return "#FF3B30";
-    if (tipo === "collaudo") return "#5856D6";
-    if (tipo === "garanzia") return "#8E8E93";
-    return "#ff9500"; // sopralluogo default
-  };
 
 
     const navDate = (dir) => {
@@ -4821,7 +7979,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
               {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>{ev.persona}</span>}
               {ev._isTask && <span style={S.badge(ev.priority === "alta" ? "#FF3B3018" : ev.priority === "media" ? "#FF950018" : "#8E8E9318", ev.priority === "alta" ? "#FF3B30" : ev.priority === "media" ? "#FF9500" : "#8E8E93")}>task · {ev.priority}</span>}
               {!ev._isTask && ev.reminder && <span style={S.badge(ev.reminderSent ? T.grnLt : "#FF950015", ev.reminderSent ? T.grn : "#FF9500")}>{ev.reminderSent ? "✓ Reminder inviato" : `⏰ ${ev.reminder}`}</span>}
-              {!ev._isTask && <span style={S.badge(ev.tipo==="appuntamento"?T.blueLt:ev.tipo==="sopr_riparazione"?"#FF6B0018":ev.tipo==="riparazione"?"#FF3B3018":ev.tipo==="collaudo"?"#5856D618":"#8E8E9318", ev.tipo==="appuntamento"?T.blue:ev.tipo==="sopr_riparazione"?"#FF6B00":ev.tipo==="riparazione"?"#FF3B30":ev.tipo==="collaudo"?"#5856D6":ev.tipo==="garanzia"?"#8E8E93":T.orange)}>{ev.tipo}</span>}
+              {!ev._isTask && <span style={S.badge(tipoEvColor(ev.tipo) + "18", tipoEvColor(ev.tipo))}>{(TIPI_EVENTO.find(t=>t.id===ev.tipo)||{l:ev.tipo}).l}</span>}
             </div>
           </div>
           <div style={{ alignSelf: "center", transition: "transform 0.2s", transform: selectedEvent?.id === ev.id ? "rotate(90deg)" : "rotate(0deg)" }}>
@@ -4857,7 +8015,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             )}
             <div style={{ display: "flex", gap: 6 }}>
               <div onClick={(e) => { e.stopPropagation(); if (ev.addr) window.open("https://maps.google.com/?q=" + encodeURIComponent(ev.addr)); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.blue }}>🗝º Mappa</div>
-              <div onClick={(e) => { e.stopPropagation(); if (ev.persona) window.open("tel:"); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.grn }}>📞 Chiama</div>
+              <div onClick={(e) => { e.stopPropagation(); const tel = contatti.find(ct => ct.nome === ev.persona)?.telefono; if (tel) window.location.href="tel:" + tel; }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.grn }}>📞 Chiama</div>
               <div onClick={(e) => {
                 e.stopPropagation();
                 const cmObj = cantieri.find(c => c.code === ev.cm) || null;
@@ -5525,7 +8683,7 @@ Grazie per il suo messaggio.
       {/* Settings sub-tabs — scrollable */}
       <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "8px 16px 12px", borderRadius: 8, border: `1px solid ${T.bdr}` }}>
         <div style={{ display: "flex", minWidth: "max-content" }}>
-          {[{ id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "team", l: "👥 Team" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "controtelaio", l: "🔲 Controtelaio" }, { id: "tapparella", l: "⬇ Tapparella" }, { id: "persiana", l: "🏠 Persiana" }, { id: "zanzariera", l: "🦟 Zanzariera" }, { id: "cassonetto", l: "🧊 Cassonetto" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "guida", l: "📖 Guida" }].map(t => (
+          {[{ id: "settore", l: "🎯 Settore" }, { id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "piano", l: "💎 Piano" }, { id: "team", l: "👥 Team" }, { id: "squadre", l: "🔧 Squadre" }, { id: "fatture", l: "💰 Fatture" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "controtelaio", l: "🔲 Controtelaio" }, { id: "tapparella", l: "⬇ Tapparella" }, { id: "persiana", l: "🏠 Persiana" }, { id: "zanzariera", l: "🦟 Zanzariera" }, { id: "cassonetto", l: "🧊 Cassonetto" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "libreria", l: "📦 Libreria" }, { id: "importa", l: "📥 Importa" }, { id: "guida", l: "📖 Guida" }].map(t => (
             <div key={t.id} onClick={() => setSettingsTab(t.id)} style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 600, background: settingsTab === t.id ? T.acc : T.card, color: settingsTab === t.id ? "#fff" : T.sub, cursor: "pointer", whiteSpace: "nowrap" }}>
               {t.l}
             </div>
@@ -5536,6 +8694,49 @@ Grazie per il suo messaggio.
       <div style={{ padding: "0 16px" }}>
 
         {/* === AZIENDA === */}
+        {/* === SETTORE === */}
+        {settingsTab === "settore" && (
+          <>
+            <div style={{ fontSize: 12, color: T.sub, padding: "0 4px 10px", lineHeight: 1.5 }}>Seleziona i settori in cui operi. MASTRO mostrerà solo le tipologie e funzioni rilevanti per il tuo lavoro.</div>
+            {SETTORI.map(s => {
+              const isOn = settoriAttivi.includes(s.id);
+              const count = TIPOLOGIE_RAPIDE.filter(t => t.settore === s.id).length;
+              return (
+                <div key={s.id} onClick={() => {
+                  setSettoriAttivi(prev => isOn ? prev.filter(x => x !== s.id) : [...prev, s.id]);
+                }} style={{
+                  padding: "14px 16px", borderRadius: 14, cursor: "pointer", marginBottom: 8,
+                  border: `2px solid ${isOn ? "#007aff" : T.bdr}`,
+                  background: isOn ? "#007aff08" : T.card,
+                  display: "flex", alignItems: "center", gap: 12,
+                }}>
+                  <div style={{ fontSize: 28, width: 36, textAlign: "center" }}>{s.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: isOn ? "#007aff" : T.text }}>{s.label}</div>
+                    <div style={{ fontSize: 10, color: T.sub }}>{s.desc}</div>
+                    <div style={{ fontSize: 9, color: T.sub, marginTop: 2 }}>{count} tipologie disponibili</div>
+                  </div>
+                  <div style={{
+                    width: 48, height: 28, borderRadius: 14, padding: 2,
+                    background: isOn ? "#007aff" : T.bdr,
+                    display: "flex", alignItems: "center", transition: "all .2s",
+                  }}>
+                    <div style={{
+                      width: 24, height: 24, borderRadius: 12, background: "#fff",
+                      transform: isOn ? "translateX(20px)" : "translateX(0px)",
+                      transition: "all .2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                    }} />
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ marginTop: 12, padding: 12, background: T.bg, borderRadius: 10, border: `1px solid ${T.bdr}`, fontSize: 11, color: T.sub, lineHeight: 1.5 }}>
+              <b>Settori attivi:</b> {settoriAttivi.length} · <b>Tipologie disponibili:</b> {tipologieFiltrate.length}<br />
+              Le commesse esistenti con tipologie di settori disattivati resteranno visibili.
+            </div>
+          </>
+        )}
+
         {settingsTab === "azienda" && (
           <div style={{background:"#fff",borderRadius:12,overflow:"hidden",border:`1px solid ${T.bdr}`}}>
             <div style={{padding:"12px 14px",background:T.acc,color:"#fff"}}>
@@ -5581,6 +8782,7 @@ Grazie per il suo messaggio.
               {label:"Sito web",field:"website",placeholder:"Es. www.azienda.it"},
               {label:"IBAN",field:"iban",placeholder:"Es. IT60 X054 2811 1010 0000 0123 456"},
               {label:"CCIAA / REA",field:"cciaa",placeholder:"Es. CS-123456"},
+              {label:"PEC",field:"pec",placeholder:"Es. azienda@pec.it"},
             ].map(({label,field,placeholder})=>(
               <div key={field} style={{padding:"10px 14px",borderBottom:`1px solid ${T.bdr}`}}>
                 <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.04em"}}>{label}</div>
@@ -5592,6 +8794,35 @@ Grazie per il suo messaggio.
                 />
               </div>
             ))}
+
+            {/* CONDIZIONI PREVENTIVO */}
+            <div style={{padding:"14px",borderTop:`2px solid ${T.acc}`,marginTop:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                <span style={{fontSize:16}}>📋</span>
+                <div>
+                  <div style={{fontSize:13,fontWeight:800,color:T.text}}>Condizioni Preventivo</div>
+                  <div style={{fontSize:10,color:T.sub}}>Testi personalizzati stampati nel PDF. Lascia vuoto per usare i testi predefiniti.</div>
+                </div>
+              </div>
+              {[
+                {label:"Condizioni di fornitura",field:"condFornitura",placeholder:"Es. L'azienda, nell'esecuzione della produzione è garante dell'osservanza scrupolosa della regola d'arte e delle norme vigenti.",rows:3},
+                {label:"Condizioni di pagamento",field:"condPagamento",placeholder:"Es. 50% acconto alla firma del contratto...\n50% a saldo, a comunicazione merce pronta...",rows:4},
+                {label:"Tempi di consegna",field:"condConsegna",placeholder:"Es. PVC Battente Standard 30 gg.\nPVC Porte 35 gg.\nAlluminio 45/50 gg lavorativi.",rows:5},
+                {label:"Condizioni di contratto",field:"condContratto",placeholder:"Es. Clausole contrattuali personalizzate, garanzia, trattamento dati...",rows:5},
+                {label:"Dettagli tecnici / Chiusura",field:"condDettagli",placeholder:"Es. Documenti alla consegna: Dichiarazione di Prestazione, Dichiarazione energetica, Etichetta CE, Manuale d'uso e manutenzione.",rows:3},
+              ].map(({label,field,placeholder,rows})=>(
+                <div key={field} style={{marginBottom:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.04em"}}>{label}</div>
+                  <textarea
+                    value={aziendaInfo[field]||""}
+                    onChange={e=>setAziendaInfo(a=>({...a,[field]:e.target.value}))}
+                    placeholder={placeholder}
+                    rows={rows}
+                    style={{width:"100%",border:`1px solid ${T.bdr}`,borderRadius:8,fontSize:11,color:T.text,background:T.card,fontFamily:FF,padding:"8px 10px",boxSizing:"border-box",resize:"vertical",lineHeight:1.5}}
+                  />
+                </div>
+              ))}
+            </div>
             <div style={{padding:"12px 14px",background:"#f0fdf4",display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:14}}>✅</span>
               <span style={{fontSize:11,color:"#1a9e40",fontWeight:600}}>Salvato automaticamente in ogni preventivo PDF</span>
@@ -5649,6 +8880,78 @@ Grazie per il suo messaggio.
           </>
         )}
 
+        {/* === PIANO === */}
+        {settingsTab === "piano" && (
+          <>
+            {/* Current plan banner */}
+            <div style={{ ...S.card, marginBottom: 12 }}>
+              <div style={{ padding: 16, background: `linear-gradient(135deg, ${T.acc}15, ${T.acc}05)`, borderRadius: T.r }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: T.acc, textTransform: "uppercase" as const, letterSpacing: 1 }}>Piano attuale</div>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: T.text, marginTop: 2 }}>
+                      {plan.nome} {activePlan === "trial" && <span style={{ fontSize: 12, fontWeight: 600, color: trialDaysLeft <= 3 ? T.red : T.acc }}>({trialDaysLeft}gg rimasti)</span>}
+                    </div>
+                  </div>
+                  {plan.prezzo > 0 && <div style={{ textAlign: "right" as const }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: T.acc, fontFamily: FM }}>€{plan.prezzo}</div>
+                    <div style={{ fontSize: 10, color: T.sub }}>/mese</div>
+                  </div>}
+                </div>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" as const }}>
+                  <span style={{ fontSize: 10, color: T.sub }}>📁 {cantieri.length}/{plan.maxCommesse === 9999 ? "∞" : plan.maxCommesse} commesse</span>
+                  <span style={{ fontSize: 10, color: T.sub }}>👥 {plan.maxUtenti} utent{plan.maxUtenti > 1 ? "i" : "e"}</span>
+                  <span style={{ fontSize: 10, color: T.sub }}>{plan.sync ? "✅" : "❌"} Sync</span>
+                  <span style={{ fontSize: 10, color: T.sub }}>{plan.pdf ? "✅" : "❌"} PDF</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Plan comparison */}
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.text, padding: "0 16px", marginBottom: 8 }}>Confronta piani</div>
+            {(Object.entries(PLANS) as [string, any][]).filter(([k]) => k !== "trial" && k !== "free").map(([key, pl]) => (
+              <div key={key} onClick={() => { if (key !== activePlan) setSubPlan(key); }}
+                style={{ ...S.card, marginBottom: 8, border: key === activePlan ? `2px solid ${T.acc}` : `1px solid ${T.bdr}`, cursor: "pointer", position: "relative" as const, overflow: "hidden" }}>
+                {key === "pro" && <div style={{ position: "absolute" as const, top: 0, right: 0, background: T.acc, color: "#fff", fontSize: 8, fontWeight: 800, padding: "3px 10px", borderBottomLeftRadius: 8, textTransform: "uppercase" as const, letterSpacing: 1 }}>Consigliato</div>}
+                <div style={{ padding: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: key === "pro" ? T.acc : T.text }}>{pl.nome}</div>
+                    </div>
+                    <div style={{ textAlign: "right" as const }}>
+                      <span style={{ fontSize: 26, fontWeight: 800, color: key === "pro" ? T.acc : T.text, fontFamily: FM }}>€{pl.prezzo}</span>
+                      <span style={{ fontSize: 11, color: T.sub }}>/mese</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px" }}>
+                    <div style={{ fontSize: 11, color: T.text }}>📁 {pl.maxCommesse === 9999 ? "Illimitate" : pl.maxCommesse} commesse</div>
+                    <div style={{ fontSize: 11, color: T.text }}>👥 {pl.maxUtenti} utent{pl.maxUtenti > 1 ? "i" : "e"}</div>
+                    <div style={{ fontSize: 11, color: pl.sync ? T.grn : T.sub }}>{pl.sync ? "✅" : "❌"} Sync real-time</div>
+                    <div style={{ fontSize: 11, color: pl.pdf ? T.grn : T.sub }}>{pl.pdf ? "✅" : "❌"} PDF rilievo</div>
+                    <div style={{ fontSize: 11, color: pl.admin ? T.grn : T.sub }}>{pl.admin ? "✅" : "❌"} Pannello admin</div>
+                    <div style={{ fontSize: 11, color: pl.api ? T.grn : T.sub }}>{pl.api ? "✅" : "❌"} API</div>
+                    <div style={{ fontSize: 11, color: T.text }}>📂 {pl.maxCataloghi === 99 ? "Illimitati" : pl.maxCataloghi} catalog{pl.maxCataloghi > 1 ? "hi" : "o"}</div>
+                  </div>
+                  {key === activePlan ? (
+                    <div style={{ marginTop: 10, padding: "8px 0", textAlign: "center" as const, borderRadius: 8, background: T.acc + "15", fontSize: 12, fontWeight: 700, color: T.acc }}>✓ Piano attivo</div>
+                  ) : (
+                    <div style={{ marginTop: 10, padding: "8px 0", textAlign: "center" as const, borderRadius: 8, background: T.acc, fontSize: 12, fontWeight: 700, color: "#fff" }}>
+                      {pl.prezzo > (plan.prezzo || 0) ? `Passa a ${pl.nome} — €${pl.prezzo}/mese` : `Passa a ${pl.nome}`}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {/* Free plan note */}
+            <div style={{ padding: "8px 16px", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: T.sub, textAlign: "center" as const }}>
+                Il piano Free include 5 commesse e funzionalità base. I pagamenti saranno attivati al lancio ufficiale.
+              </div>
+            </div>
+          </>
+        )}
+
         {/* === TEAM === */}
         {settingsTab === "team" && (
           <>
@@ -5678,8 +8981,142 @@ Grazie per il suo messaggio.
                     <div style={{ fontSize: 12, fontWeight: 600 }}>{s.sistema}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: T.grn, fontFamily: FM }}>€{s.euroMq}/mq</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end", marginBottom: 3 }}>
+                      <span style={{ fontSize: 9, color: T.sub }}>€/mq</span>
+                      <input type="number" defaultValue={s.euroMq || ""} onBlur={e => setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, euroMq: parseFloat(e.target.value)||0, prezzoMq: parseFloat(e.target.value)||0 } : x))} style={{ width: 60, padding: "3px 6px", borderRadius: 4, border: `1px solid ${T.bdr}`, fontSize: 13, fontWeight: 700, color: T.grn, textAlign: "right", fontFamily: FM }} />
+                    </div>
                     <div style={{ fontSize: 9, color: T.sub }}>+{s.sovRAL}% RAL · +{s.sovLegno}% Legno</div>
+                    {s.griglia?.length > 0 && <div style={{ fontSize: 9, color: T.acc, fontWeight: 600, marginTop: 2 }}>📊 Griglia {s.griglia.length} prezzi</div>}
+                  </div>
+                </div>
+                {/* Profile image upload */}
+                <div style={{ marginBottom: 8, padding: 8, borderRadius: 8, background: T.bg, border: `1px dashed ${T.bdr}` }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 4 }}>Sezione profilo (per preventivo PDF)</div>
+                  {s.immagineProfilo ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <img src={s.immagineProfilo} style={{ height: 48, maxWidth: 120, objectFit: "contain", borderRadius: 4, background: "#fff", border: `1px solid ${T.bdr}` }} alt="profilo" />
+                      <div onClick={() => setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, immagineProfilo: undefined } : x))} style={{ fontSize: 10, color: T.red, cursor: "pointer", fontWeight: 600 }}>✕ Rimuovi</div>
+                    </div>
+                  ) : (
+                    <label style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 6, background: T.acc + "15", color: T.acc, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                      📷 Carica PNG
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                        const file = e.target.files?.[0]; if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = ev => { setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, immagineProfilo: ev.target?.result as string } : x)); };
+                        reader.readAsDataURL(file);
+                      }} />
+                    </label>
+                  )}
+                </div>
+                {/* Griglia prezzi */}
+                <div style={{ marginBottom: 8, padding: 8, borderRadius: 8, background: T.bg, border: `1px dashed ${T.bdr}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase" }}>Griglia prezzi L×H {s.griglia?.length > 0 ? `(${s.griglia.length})` : ""}</div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <label style={{ padding: "3px 8px", borderRadius: 4, background: T.acc + "15", color: T.acc, fontSize: 9, fontWeight: 600, cursor: "pointer" }}>
+                        📄 Carica CSV
+                        <input type="file" accept=".csv,.txt,.xlsx" style={{ display: "none" }} onChange={e => {
+                          const file = e.target.files?.[0]; if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = ev => {
+                            const text = ev.target?.result as string;
+                            const lines = text.split(/\r?\n/).filter(l => l.trim());
+                            const newGrid: any[] = [];
+                            lines.forEach(line => {
+                              const parts = line.split(/[,;\t]/).map(p => p.trim().replace(",","."));
+                              if (parts.length >= 3) {
+                                const l = parseInt(parts[0]); const h = parseInt(parts[1]); const p = parseFloat(parts[2]);
+                                if (l > 0 && h > 0 && p > 0) newGrid.push({ l, h, prezzo: p });
+                              }
+                            });
+                            if (newGrid.length > 0) {
+                              setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: newGrid } : x));
+                              alert(`✅ ${newGrid.length} prezzi importati!`);
+                            } else {
+                              alert("⚠️ Nessun prezzo trovato. Formato: L;H;Prezzo (una riga per combinazione)");
+                            }
+                          };
+                          reader.readAsText(file);
+                        }} />
+                      </label>
+                      <div onClick={() => {
+                        const l = prompt("Larghezza (mm):", "1000");
+                        const h = prompt("Altezza (mm):", "1200");
+                        const p = prompt("Prezzo €:", "300");
+                        if (l && h && p && parseInt(l) > 0 && parseInt(h) > 0 && parseFloat(p) > 0) {
+                          setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: [...(x.griglia||[]), { l: parseInt(l), h: parseInt(h), prezzo: parseFloat(p) }].sort((a,b) => a.l - b.l || a.h - b.h) } : x));
+                        }
+                      }} style={{ padding: "3px 8px", borderRadius: 4, background: T.grn + "15", color: T.grn, fontSize: 9, fontWeight: 600, cursor: "pointer" }}>+ Aggiungi</div>
+                    </div>
+                  </div>
+                  {s.griglia?.length > 0 ? (
+                    <div>
+                      <div style={{ fontSize: 9, color: T.sub, marginBottom: 3, fontStyle: "italic" }}>Il prezzo viene preso dalla combinazione L×H più vicina (per eccesso). Se la finestra è più grande della griglia, usa l'ultimo prezzo.</div>
+                      <div style={{ maxHeight: 120, overflowY: "auto", borderRadius: 4, border: `1px solid ${T.bdr}` }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9 }}>
+                          <thead><tr style={{ background: T.bg, position: "sticky", top: 0 }}>
+                            <th style={{ padding: "3px 6px", textAlign: "left", fontWeight: 700, color: T.sub }}>L (mm)</th>
+                            <th style={{ padding: "3px 6px", textAlign: "left", fontWeight: 700, color: T.sub }}>H (mm)</th>
+                            <th style={{ padding: "3px 6px", textAlign: "right", fontWeight: 700, color: T.sub }}>Prezzo €</th>
+                            <th style={{ width: 20 }}></th>
+                          </tr></thead>
+                          <tbody>{s.griglia.map((g, gi) => (
+                            <tr key={gi} style={{ borderTop: `1px solid ${T.bdr}20` }}>
+                              <td style={{ padding: "2px 6px" }}>{g.l}</td>
+                              <td style={{ padding: "2px 6px" }}>{g.h}</td>
+                              <td style={{ padding: "2px 6px", textAlign: "right", fontWeight: 700, color: T.grn }}>€{g.prezzo}</td>
+                              <td style={{ padding: "2px 4px", cursor: "pointer", color: T.red, textAlign: "center" }} onClick={() => {
+                                setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: x.griglia.filter((_, i) => i !== gi) } : x));
+                              }}>✕</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                      <div onClick={() => { if(confirm("Cancellare tutta la griglia?")) setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: [] } : x)); }} style={{ fontSize: 9, color: T.red, cursor: "pointer", textAlign: "right", marginTop: 4 }}>🗑 Svuota griglia</div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 10, color: T.sub, fontStyle: "italic" }}>Nessuna griglia inserita — il prezzo viene calcolato a €/mq.<br/>Puoi caricare il listino del fornitore (CSV: Larghezza;Altezza;Prezzo per riga) oppure aggiungere i prezzi a mano.</div>
+                  )}
+                </div>
+                {/* Minimi mq per tipologia */}
+                <div style={{ marginBottom: 8, padding: 8, borderRadius: 8, background: T.bg, border: `1px dashed ${T.bdr}` }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>Minimo mq fatturazione per tipologia</div>
+                  <div style={{ fontSize: 9, color: T.sub, marginBottom: 6, fontStyle: "italic" }}>Attiva solo le categorie che vuoi — se la finestra è più piccola, il prezzo viene calcolato sulla metratura minima</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {[
+                      { key: "1anta", label: "1 Anta" },
+                      { key: "2ante", label: "2 Ante" },
+                      { key: "3ante", label: "3+ Ante" },
+                      { key: "scorrevole", label: "Scorrevole" },
+                      { key: "fisso", label: "Fisso" },
+                    ].map(cat => {
+                      const isActive = (s.minimiMq?.[cat.key] || 0) > 0;
+                      return (
+                        <div key={cat.key} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, background: isActive ? T.acc + "10" : T.card, border: `1px solid ${isActive ? T.acc + "40" : T.bdr}`, opacity: isActive ? 1 : 0.6 }}>
+                          <div onClick={() => {
+                            if (isActive) {
+                              setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, minimiMq: { ...(x.minimiMq || {}), [cat.key]: 0 } } : x));
+                            } else {
+                              const def = { "1anta": 1.5, "2ante": 2.0, "3ante": 2.8, "scorrevole": 3.5, "fisso": 1.0 }[cat.key] || 1.5;
+                              setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, minimiMq: { ...(x.minimiMq || {}), [cat.key]: def } } : x));
+                            }
+                          }} style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${isActive ? T.acc : T.bdr}`, background: isActive ? T.acc : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 900, flexShrink: 0 }}>
+                            {isActive && "✓"}
+                          </div>
+                          <span style={{ fontSize: 10, fontWeight: 600, color: T.text, minWidth: 52 }}>{cat.label}</span>
+                          {isActive && (
+                            <>
+                              <input type="number" step="0.1" defaultValue={s.minimiMq?.[cat.key] || ""} onBlur={e => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, minimiMq: { ...(x.minimiMq || {}), [cat.key]: val } } : x));
+                              }} style={{ width: 45, padding: "2px 4px", borderRadius: 4, border: `1px solid ${T.acc}40`, fontSize: 11, fontWeight: 700, color: T.acc, textAlign: "center", fontFamily: FM }} />
+                              <span style={{ fontSize: 9, color: T.sub }}>mq</span>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 {s.sottosistemi && (
@@ -5934,6 +9371,135 @@ Grazie per il suo messaggio.
         )}
 
         {/* === PIPELINE === */}
+        {/* === LIBRERIA PRODOTTI === */}
+        {settingsTab === "libreria" && (
+          <>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Crea una libreria di prodotti/servizi da usare nelle Voci libere dei vani. Clicca sui campi per modificarli.</div>
+            {libreriaDB.map(item => (
+              <div key={item.id} style={{ ...S.card, marginBottom: 8 }}><div style={{ ...S.cardInner }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  {/* Foto */}
+                  <div style={{ flexShrink: 0 }}>
+                    {item.foto ? (
+                      <div style={{ position: "relative" }}>
+                        <img src={item.foto} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8, border: `1px solid ${T.bdr}` }} alt="" />
+                        <div onClick={() => setLibreriaDB(prev => prev.map(x => x.id === item.id ? { ...x, foto: undefined } : x))} style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: "50%", background: T.red, color: "#fff", fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontWeight: 900 }}>✕</div>
+                      </div>
+                    ) : (
+                      <label style={{ width: 56, height: 56, borderRadius: 8, background: T.bg, border: `1px dashed ${T.bdr}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", gap: 2 }}>
+                        <span style={{ fontSize: 18 }}>📷</span>
+                        <span style={{ fontSize: 7, color: T.sub }}>Foto</span>
+                        <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                          const file = e.target.files?.[0]; if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = ev => setLibreriaDB(prev => prev.map(x => x.id === item.id ? { ...x, foto: ev.target?.result as string } : x));
+                          reader.readAsDataURL(file);
+                        }} />
+                      </label>
+                    )}
+                  </div>
+                  {/* Campi editabili */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <input style={{ width: "100%", padding: "4px 6px", fontSize: 13, fontWeight: 700, border: `1px solid transparent`, borderRadius: 4, background: "transparent", marginBottom: 3 }} defaultValue={item.nome || ""} placeholder="Nome prodotto..." onFocus={e => e.target.style.borderColor = T.acc} onBlur={e => { e.target.style.borderColor = "transparent"; setLibreriaDB(prev => prev.map(x => x.id === item.id ? { ...x, nome: e.target.value } : x)); }} />
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span style={{ fontSize: 9, color: T.sub }}>Cat:</span>
+                        <input style={{ width: 80, padding: "2px 4px", fontSize: 10, border: `1px solid ${T.bdr}`, borderRadius: 4, background: T.bg }} defaultValue={item.categoria || ""} placeholder="Categoria" onBlur={e => setLibreriaDB(prev => prev.map(x => x.id === item.id ? { ...x, categoria: e.target.value } : x))} />
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span style={{ fontSize: 9, color: T.sub }}>€</span>
+                        <input type="number" step="0.01" style={{ width: 60, padding: "2px 4px", fontSize: 12, fontWeight: 700, fontFamily: FM, color: T.grn, border: `1px solid ${T.bdr}`, borderRadius: 4, textAlign: "right" }} defaultValue={item.prezzo || 0} onBlur={e => setLibreriaDB(prev => prev.map(x => x.id === item.id ? { ...x, prezzo: parseFloat(e.target.value) || 0 } : x))} />
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span style={{ fontSize: 9, color: T.sub }}>/</span>
+                        <select style={{ padding: "2px 4px", fontSize: 10, border: `1px solid ${T.bdr}`, borderRadius: 4, background: T.bg }} value={item.unita || "pz"} onChange={e => setLibreriaDB(prev => prev.map(x => x.id === item.id ? { ...x, unita: e.target.value } : x))}>
+                          <option value="pz">Pezzo</option>
+                          <option value="mq">mq</option>
+                          <option value="ml">ml</option>
+                          <option value="kg">kg</option>
+                          <option value="forfait">Forfait</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Delete */}
+                  <div onClick={() => setLibreriaDB(prev => prev.filter(x => x.id !== item.id))} style={{ padding: "6px", cursor: "pointer", color: T.sub, fontSize: 12, flexShrink: 0 }}>🗑</div>
+                </div>
+              </div></div>
+            ))}
+            <div onClick={() => {
+              setLibreriaDB(prev => [...prev, { id: Date.now(), nome: "", categoria: "", prezzo: 0, unita: "pz" }]);
+            }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600 }}>+ Aggiungi prodotto alla libreria</div>
+          </>
+        )}
+
+        {/* === SQUADRE MONTAGGIO === */}
+        {settingsTab === "squadre" && (
+          <>
+            <div style={{ fontSize: 12, color: T.sub, padding: "0 4px 10px", lineHeight: 1.5 }}>Configura le squadre di montaggio. Ogni squadra ha un nome, membri e colore.</div>
+            {squadreDB.map((sq, i) => (
+              <div key={sq.id} style={{ background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: 12, marginBottom: 8 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                  <input type="color" value={sq.colore} onChange={e => setSquadreDB(prev => prev.map((s, j) => j === i ? { ...s, colore: e.target.value } : s))} style={{ width: 32, height: 32, border: "none", borderRadius: 6, cursor: "pointer" }} />
+                  <input style={{ ...S.input, flex: 1, fontSize: 14, fontWeight: 700 }} value={sq.nome} onChange={e => setSquadreDB(prev => prev.map((s, j) => j === i ? { ...s, nome: e.target.value } : s))} />
+                  <div onClick={() => setSquadreDB(prev => prev.filter((_, j) => j !== i))} style={{ fontSize: 16, cursor: "pointer", color: T.red }}>🗑</div>
+                </div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, marginBottom: 3 }}>MEMBRI (uno per riga)</div>
+                <textarea style={{ ...S.input, width: "100%", minHeight: 50, fontSize: 11, boxSizing: "border-box" }} value={sq.membri.join("\n")} onChange={e => setSquadreDB(prev => prev.map((s, j) => j === i ? { ...s, membri: e.target.value.split("\n").filter(x => x.trim()) } : s))} />
+                <div style={{ fontSize: 9, color: T.sub, marginTop: 4 }}>Montaggi assegnati: {montaggiDB.filter(m => m.squadraId === sq.id).length}</div>
+              </div>
+            ))}
+            <button onClick={() => setSquadreDB(prev => [...prev, { id: "sq" + Date.now(), nome: "Nuova Squadra", membri: [], colore: "#ff9500" }])} style={{ width: "100%", padding: 12, borderRadius: 10, border: `1.5px dashed ${T.bdr}`, background: "transparent", color: T.acc, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Aggiungi squadra</button>
+          </>
+        )}
+
+        {/* === FATTURE EMESSE === */}
+        {settingsTab === "fatture" && (
+          <>
+            <div style={{ fontSize: 12, color: T.sub, padding: "0 4px 10px", lineHeight: 1.5 }}>Elenco fatture emesse. Puoi segnare le fatture come pagate o ristampare il PDF.</div>
+            {fattureDB.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 24, color: T.sub }}>Nessuna fattura emessa. Crea fatture dalla scheda preventivo di una commessa.</div>
+            ) : (
+              <>
+                {/* Riepilogo */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <div style={{ flex: 1, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: 10, textAlign: "center" }}>
+                    <div style={{ fontSize: 8, color: T.sub, textTransform: "uppercase" }}>Totale emesso</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: T.text }}>€{fattureDB.reduce((s, f) => s + f.importo, 0).toLocaleString("it-IT")}</div>
+                  </div>
+                  <div style={{ flex: 1, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: 10, textAlign: "center" }}>
+                    <div style={{ fontSize: 8, color: T.sub, textTransform: "uppercase" }}>Incassato</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: "#34c759" }}>€{fattureDB.filter(f => f.pagata).reduce((s, f) => s + f.importo, 0).toLocaleString("it-IT")}</div>
+                  </div>
+                  <div style={{ flex: 1, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: 10, textAlign: "center" }}>
+                    <div style={{ fontSize: 8, color: T.sub, textTransform: "uppercase" }}>Da incassare</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: "#ff3b30" }}>€{fattureDB.filter(f => !f.pagata).reduce((s, f) => s + f.importo, 0).toLocaleString("it-IT")}</div>
+                  </div>
+                </div>
+                {fattureDB.sort((a, b) => b.numero - a.numero).map(f => (
+                  <div key={f.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, marginBottom: 6 }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700 }}>N. {f.numero}/{f.anno} — {f.tipo.toUpperCase()}</div>
+                      <div style={{ fontSize: 10, color: T.sub }}>{f.cliente} · {f.cmCode} · {f.data}</div>
+                      <div style={{ fontSize: 9, color: f.pagata ? "#34c759" : (f.scadenza < new Date().toISOString().split("T")[0] ? "#ff3b30" : T.sub) }}>
+                        {f.pagata ? `✅ Pagata il ${f.dataPagamento}` : `⏳ Scadenza: ${f.scadenza}`}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: T.text }}>€{f.importo.toLocaleString("it-IT")}</div>
+                      <div onClick={() => setFattureDB(prev => prev.map(x => x.id === f.id ? { ...x, pagata: !x.pagata, dataPagamento: !x.pagata ? new Date().toLocaleDateString("it-IT") : null } : x))} style={{ padding: "4px 8px", borderRadius: 6, background: f.pagata ? "#34c75920" : "#ff3b3020", color: f.pagata ? "#34c759" : "#ff3b30", fontSize: 9, fontWeight: 700, cursor: "pointer" }}>
+                        {f.pagata ? "✅" : "💰"}
+                      </div>
+                      <div onClick={() => generaFatturaPDF(f)} style={{ fontSize: 16, cursor: "pointer" }}>📄</div>
+                      <div onClick={() => setFattureDB(prev => prev.filter(x => x.id !== f.id))} style={{ fontSize: 14, cursor: "pointer", color: T.red }}>🗑</div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
         {settingsTab === "pipeline" && (
           <>
             <div style={{fontSize:12,color:T.sub,padding:"0 4px 10px",lineHeight:1.5}}>Personalizza il flusso di lavoro. Disattiva le fasi che non usi, rinominale o riordinale.</div>
@@ -5964,6 +9530,72 @@ Grazie per il suo messaggio.
         )}
 
         {/* === GUIDA === */}
+        {/* === IMPORTA CATALOGO === */}
+        {settingsTab === "importa" && (
+          <>
+            <div style={{background:T.card,borderRadius:12,overflow:"hidden",border:`1px solid ${T.bdr}`,marginBottom:12}}>
+              <div style={{padding:"16px",borderBottom:`1px solid ${T.bdr}`,background:T.accLt}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                  <span style={{fontSize:24}}>📥</span>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:800,color:T.text}}>Importa Catalogo da Excel</div>
+                    <div style={{fontSize:11,color:T.sub}}>Carica il template MASTRO compilato con i tuoi dati</div>
+                  </div>
+                </div>
+              </div>
+              <div style={{padding:"16px"}}>
+                <div style={{fontSize:11,color:T.sub,lineHeight:1.5,marginBottom:14}}>
+                  Scarica il template Excel, compilalo con i tuoi sistemi, colori, vetri, prezzi e tutto il catalogo. Poi caricalo qui per importare tutto automaticamente.
+                </div>
+                <div style={{display:"flex",gap:8,marginBottom:16}}>
+                  <a href="/MASTRO_Catalogo_Template.xlsx" download style={{flex:1,padding:"12px",borderRadius:10,border:`1.5px solid ${T.acc}`,background:T.accLt,color:T.acc,fontSize:12,fontWeight:700,textAlign:"center",textDecoration:"none",cursor:"pointer"}}>
+                    📄 Scarica Template Excel
+                  </a>
+                </div>
+                <div style={{position:"relative",marginBottom:12}}>
+                  <input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files?.[0]; if(f) importExcelCatalog(f);}} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer",zIndex:2}} />
+                  <div style={{padding:"20px",borderRadius:12,border:`2px dashed ${T.acc}`,background:T.accLt,textAlign:"center",cursor:"pointer"}}>
+                    <div style={{fontSize:28,marginBottom:6}}>📂</div>
+                    <div style={{fontSize:13,fontWeight:700,color:T.acc}}>Carica file Excel compilato</div>
+                    <div style={{fontSize:10,color:T.sub,marginTop:4}}>Trascina qui o tocca per selezionare (.xlsx)</div>
+                  </div>
+                </div>
+                {importStatus && (
+                  <div style={{background:importStatus.ok?"#f0fdf4":"#fefce8",borderRadius:10,padding:"12px 14px",border:`1.5px solid ${importStatus.ok?"#34c759":"#ff9500"}`,marginBottom:10}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                      <span style={{fontSize:16}}>{importStatus.ok?"✅":importStatus.step==="error"?"❌":"⏳"}</span>
+                      <span style={{fontSize:12,fontWeight:700,color:importStatus.ok?"#1a9e40":importStatus.step==="error"?"#dc2626":"#7a4500"}}>{importStatus.msg}</span>
+                    </div>
+                    {importStatus.detail && <div style={{fontSize:10,color:"#666"}}>{importStatus.detail}</div>}
+                  </div>
+                )}
+                {importLog.length > 0 && (
+                  <div style={{background:T.card2,borderRadius:10,padding:"12px",border:`1px solid ${T.bdr}`,maxHeight:300,overflow:"auto"}}>
+                    <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:6,textTransform:"uppercase"}}>Log importazione</div>
+                    {importLog.map((l,i) => (
+                      <div key={i} style={{fontSize:11,color:l.startsWith("✅")?"#1a9e40":l.startsWith("❌")?"#dc2626":l.startsWith("⚠️")?"#d97706":l.startsWith("🎉")?"#7c3aed":T.text,fontFamily:FM,lineHeight:1.6,fontWeight:l.startsWith("🎉")?800:400}}>
+                        {l}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{background:T.card,borderRadius:12,overflow:"hidden",border:`1px solid ${T.bdr}`,padding:16}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                <span style={{fontSize:16}}>🤝</span>
+                <div style={{fontSize:13,fontWeight:700,color:T.text}}>Servizio compilazione catalogo</div>
+              </div>
+              <div style={{fontSize:11,color:T.sub,lineHeight:1.6,marginBottom:10}}>
+                Non hai tempo di compilare il template? Mandaci il tuo listino attuale (PDF, Excel, qualsiasi formato) e lo compiliamo noi per te.
+              </div>
+              <div style={{padding:"10px 14px",borderRadius:8,background:"#fff8ec",border:"1px solid #ffb800",fontSize:11,color:"#7a4500"}}>
+                💰 Servizio a pagamento — Contattaci: <strong>info@mastro.app</strong>
+              </div>
+            </div>
+          </>
+        )}
+
         {settingsTab === "guida" && (
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {/* Header */}
@@ -6119,6 +9751,454 @@ Grazie per il suo messaggio.
               </div>
             </div>
 
+            {/* CARD 7: CONTROTELAIO PSU */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#2563eb15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🔲</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come configurare il controtelaio</div><div style={{fontSize:10,color:T.sub}}>⏱ 30 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri un vano — scorri fino alla sezione <b>🔲 Controtelaio</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Scegli il tipo: <b>Singolo</b>, <b>Doppio</b> o <b>Con Cassonetto</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Inserisci <b>larghezza e altezza vano</b> — il calcolo infisso parte in automatico</div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:"#34c759",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
+                  <div style={{fontSize:12,color:"#34c759",fontWeight:700,lineHeight:1.5}}>L'infisso viene calcolato togliendo l'offset (default 10mm/lato)</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Cassonetto:</b> compila anche H e P cassonetto + modello cielino (A tampone, A tappo, Frontale)</div>
+              </div>
+            </div>
+
+            {/* CARD 8: FOTO VIDEO AUDIO */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#ff2d5515",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📸</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Foto, video e note vocali</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Dentro un rilievo, tocca il pulsante <b>📎 Allegati</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Scegli: <b>📷 Foto</b> (scatta dalla fotocamera), <b>🎥 Video</b> o <b>🎤 Nota vocale</b></div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Gli allegati vengono salvati e associati al vano — rivedili quando vuoi</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>AI Photo:</b> tocca il bottone 🤖 AI nel vano per analizzare la foto con intelligenza artificiale</div>
+              </div>
+            </div>
+
+            {/* CARD 9: FUORISQUADRO */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#ff950015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📐</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Fuorisquadro e diagonali</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Nelle misure del vano, inserisci <b>H1</b> (sinistra) e <b>H2</b> (destra) se diverse</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Inserisci le <b>diagonali D1 e D2</b> — il sistema calcola la differenza</div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:"#ff3b30",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>!</div>
+                  <div style={{fontSize:12,color:"#ff3b30",fontWeight:700,lineHeight:1.5}}>Se fuorisquadro: warning rosso + disegno SVG con forma reale</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Nel riepilogo WhatsApp</b> il fuorisquadro viene segnalato con ⚠️ per avvisare la produzione</div>
+              </div>
+            </div>
+
+            {/* CARD 10: IMPORT EXCEL */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#34c75915",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📥</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Importare il catalogo da Excel</div><div style={{fontSize:10,color:T.sub}}>⏱ 1 minuto</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Impostazioni → Importa</b> e scarica il <b>Template Excel</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri il file Excel — ogni <b>foglio</b> corrisponde a una categoria del catalogo</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Compila le colonne come indicato sotto — <b>una riga per ogni prodotto</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:10}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>4</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Torna in <b>Importa</b>, carica il file — il catalogo viene sostituito automaticamente</div>
+                </div>
+
+                {/* Tabella fogli */}
+                <div style={{fontSize:11,fontWeight:800,color:T.acc,marginBottom:6,marginTop:4}}>📊 COLONNE PER OGNI FOGLIO:</div>
+                {[
+                  {foglio:"SISTEMI", colonne:"Marca | Nome Sistema | Uf (W/m²K)", es:"Aluplast | Ideal 4000 | 1.1"},
+                  {foglio:"COLORI", colonne:"Nome | RAL/Codice | Tipo", es:"Grigio Antracite | 7016 | RAL"},
+                  {foglio:"VETRI", colonne:"Descrizione | Composizione | Ug (W/m²K) | Prezzo €/mq", es:"Basso emissivo | 4/20/4 | 1.0 | 35"},
+                  {foglio:"COPRIFILI", colonne:"Descrizione | Codice | Prezzo €/ml", es:"Coprifilo 70mm | CF70 | 4.50"},
+                  {foglio:"LAMIERE", colonne:"Descrizione | Codice | Prezzo €/ml", es:"Lamiera 25/10 | LM25 | 8.20"},
+                ].map((f,i) => (
+                  <div key={i} style={{marginBottom:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8,border:"1px solid "+(T.bdr||"#E5E3DE")}}>
+                    <div style={{fontSize:11,fontWeight:800,color:T.blue||"#2563eb",marginBottom:3}}>{"📋 "+f.foglio}</div>
+                    <div style={{fontSize:10,color:T.text,fontFamily:FM,marginBottom:2}}>{f.colonne}</div>
+                    <div style={{fontSize:9,color:T.sub,fontStyle:"italic"}}>{"Es: "+f.es}</div>
+                  </div>
+                ))}
+                <div style={{fontSize:10,color:T.sub,marginTop:4,padding:"8px 10px",background:"#fff8ec",borderRadius:8,border:"1px solid #ffcc0040"}}>
+                  ⚠️ <b>Attenzione:</b> l'importazione <b>sostituisce</b> il catalogo esistente — fai un backup prima se hai gia inserito dati a mano.
+                </div>
+                <div style={{fontSize:10,color:T.sub,marginTop:6,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>
+                  💡 <b>Fogli extra supportati:</b> ACCESSORI, TIPOLOGIE, CONTROTELAI, TAPPARELLE, ZANZARIERE, PERSIANE, SERVIZI, SAGOME_TELAIO, PROFILI — saranno attivati nei prossimi aggiornamenti.
+                </div>
+                <div style={{fontSize:10,color:T.sub,marginTop:6,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>
+                  🤝 <b>Non hai tempo?</b> Mandaci il tuo listino in qualsiasi formato (PDF, foto, Excel vecchio) a <b>info@mastro.app</b> e lo compiliamo noi per te.
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 11: CONDIZIONI PREVENTIVO */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#af52de15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📋</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Personalizzare le condizioni del preventivo</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Impostazioni → Azienda</b> e scorri in basso</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Trovi 5 sezioni: <b>Fornitura, Pagamento, Consegna, Contratto, Dettagli tecnici</b></div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Scrivi il tuo testo — appare nel PDF. Se lasci vuoto, usa il testo standard</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>PEC:</b> compila anche il campo PEC — apparira nell'intestazione del preventivo</div>
+              </div>
+            </div>
+
+            {/* CARD 12: AGENDA */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#007aff15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📅</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come usare l'agenda</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Agenda</b> dal menu — scegli vista <b>Mese, Settimana o Giorno</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>+ Nuovo evento</b> — scegli tipo (Sopralluogo, Misure, Posa, Consegna...)</div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Collega l'evento a una <b>commessa</b> — appare anche nella Home del giorno</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>10 tipi evento</b> con icone e colori diversi — i pallini colorati nel mese ti danno il colpo d'occhio</div>
+              </div>
+            </div>
+
+            {/* CARD 13: AI INBOX */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#5856d615",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🤖</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>AI Inbox — email intelligenti</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Messaggi → AI Inbox</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>L'AI classifica ogni email: <b>priorita, sentimento, commessa suggerita</b></div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Azioni rapide: <b>Archivia</b>, <b>Collega a commessa</b> o <b>Rispondi</b> con un tap</div>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 14: RIEPILOGO WHATSAPP */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#25d36618",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>💬</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Riepilogo per WhatsApp</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri una commessa con vani — tocca <b>📋 Riepilogo</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vedi il riepilogo formattato con tutti i vani, misure, colori, accessori</div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>Copia</b> — incolla direttamente in WhatsApp per la produzione</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Fuorisquadro incluso:</b> se un vano e fuorisquadro, il riepilogo lo segnala con ⚠️ e le misure reali</div>
+              </div>
+            </div>
+
+            {/* CARD 15: PIPELINE PERSONALIZZABILE */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#ff950015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>⚙️</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Personalizzare la pipeline</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Impostazioni → Pipeline</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Attiva/disattiva le fasi che ti servono con gli <b>switch</b></div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:"#34c759",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
+                  <div style={{fontSize:12,color:"#34c759",fontWeight:700,lineHeight:1.5}}>La fase Chiusura e sempre attiva — non si puo disabilitare</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Esempio:</b> non fai produzione interna? Disattiva "Produzione" e le commesse saltano direttamente a "Posa"</div>
+              </div>
+            </div>
+
+            {/* CARD 16: FIRMA CLIENTE */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#5856d615",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>✍️</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Far firmare il cliente sul telefono</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri il <b>Preventivo</b> di una commessa</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>✍️ Firma cliente</b> — appare un'area bianca per firmare col dito</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Il cliente firma col dito sullo schermo — tocca <b>Conferma</b></div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:"#34c759",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
+                  <div style={{fontSize:12,color:"#34c759",fontWeight:700,lineHeight:1.5}}>La firma viene salvata e inserita nel PDF del preventivo</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Puoi cancellare</b> e far rifirmare — tocca "Cancella" per resettare l'area firma</div>
+              </div>
+            </div>
+
+            {/* CARD 17: SISTEMA RILIEVI */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#ff950015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📂</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come funzionano i rilievi</div><div style={{fontSize:10,color:T.sub}}>⏱ 30 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri una commessa — tocca <b>+ Nuovo rilievo</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Compila <b>data, rilevatore</b> (dal team), note e condizioni</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Dentro ogni rilievo aggiungi i <b>vani</b> con misure e foto</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:4,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Piu rilievi per commessa:</b> puoi fare un primo sopralluogo esplorativo e poi un secondo con le misure definitive. Il tab <b>Report</b> confronta le differenze tra rilievi</div>
+              </div>
+            </div>
+
+            {/* CARD 18: CHAT AI */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#af52de15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>💬</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Chiedi a MASTRO AI</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Messaggi</b> — trovi la chat AI in basso</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Scrivi domande naturali: <b>"cosa ho in programma oggi?"</b>, <b>"quante commesse ho?"</b></div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>MASTRO AI risponde con dati reali dalle tue commesse, task e misure</div>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 19: INVIO EMAIL */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#007aff15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📧</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Inviare email dalla commessa</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Dentro una commessa, tocca <b>📧 Invia email</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Scegli il <b>destinatario</b> (cliente o fornitore), scrivi <b>oggetto e messaggio</b></div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>L'email viene inviata e collegata alla commessa nel <b>log attivita</b></div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Template pronti:</b> conferma appuntamento, promemoria, preventivo pronto — personalizzabili</div>
+              </div>
+            </div>
+
+            {/* CARD 20: RUBRICA */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#34c75915",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📇</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Rubrica contatti</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Messaggi → Rubrica</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Filtra per tipo: <b>Tutti, Preferiti, Team, Clienti, Fornitori</b></div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Ogni contatto mostra: nome, ruolo, canali disponibili (WhatsApp, email, SMS)</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>I membri del team</b> appaiono automaticamente nella rubrica con il loro ruolo e colore</div>
+              </div>
+            </div>
+
+            {/* CARD 21: TEAM */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#ff2d5515",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>👥</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Gestione Team</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Impostazioni → Team</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>+ Aggiungi membro</b> — inserisci nome, ruolo e colore</div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>I membri appaiono nei rilievi, negli eventi e nella rubrica automaticamente</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Assegnazione automatica:</b> quando una commessa avanza di fase, il responsabile viene assegnato in base al ruolo configurato</div>
+              </div>
+            </div>
+
+            {/* CARD 22: WIDGET DRAG & DROP */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#007aff15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🧩</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Personalizzare la Home</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Nella Home, tocca <b>✏️ Layout</b> in alto a destra</div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}><b>Trascina</b> i widget per riordinarli — metti in alto quelli che usi di piu</div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>✓ Fine</b> per salvare — l'ordine viene ricordato</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>7 widget disponibili:</b> Contatori, IO (briefing), Attenzione, Programma oggi, Settimana, Commesse, Azioni rapide</div>
+              </div>
+            </div>
+
+            {/* CARD 23: DATI AZIENDALI */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#ff950015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🏢</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Compilare i dati aziendali</div><div style={{fontSize:10,color:T.sub}}>⏱ 30 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Impostazioni → Azienda</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Compila: <b>Ragione sociale, P.IVA, CF, Indirizzo, Telefono, Email, PEC, CCIAA</b></div>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:"#34c759",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
+                  <div style={{fontSize:12,color:"#34c759",fontWeight:700,lineHeight:1.5}}>Questi dati appaiono nell'intestazione di ogni preventivo PDF</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Compila tutto subito:</b> cosi ogni preventivo che generi ha gia tutti i dati corretti senza doverli inserire ogni volta</div>
+              </div>
+            </div>
+
+            {/* CARD 24: MODULO PROBLEMI */}
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#FF3B3015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🚨</div>
+                <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Segnalare un problema</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri una commessa — tocca <b>🚨 Segnala problema</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Scegli <b>tipo</b> (Materiale, Misure, Installazione...) e <b>priorità</b></div>
+                </div>
+                <div style={{display:"flex",gap:12,marginBottom:8}}>
+                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Descrivi il problema e <b>assegna</b> a un membro del team</div>
+                </div>
+                <div style={{fontSize:11,color:T.sub,marginTop:4,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>3 stati:</b> Aperto → In corso → Risolto. I problemi aperti appaiono nel widget <b>Attenzione</b> in Home</div>
+              </div>
+            </div>
+
             {/* RIVEDI TUTORIAL */}
             <div onClick={() => { try{localStorage.removeItem("mastro:onboarded")}catch(e){} setTutoStep(1); }} style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),padding:"14px 16px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
               <div style={{fontSize:18}}>🔄</div>
@@ -6132,6 +10212,24 @@ Grazie per il suo messaggio.
             <div style={{height:20}}/>
           </div>
         )}
+
+        {/* === 🔄 RESET DEMO === */}
+        <div style={{ margin: "20px 0", padding: 16, background: "#ff3b3008", borderRadius: 12, border: "1px solid #ff3b3025" }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#ff3b30", textTransform: "uppercase", marginBottom: 6 }}>🔄 Zona Reset</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 10 }}>Ricarica i 4 clienti demo con tutti i dati precompilati per testare il flusso completo.</div>
+          <button onClick={() => {
+            if (!confirm("Vuoi ricaricare i dati demo? I dati attuali verranno sostituiti.")) return;
+            ["cantieri","tasks","events","fatture","ordiniForn","montaggi","contatti","pipeline","azienda","team","settori","piano","colori","sistemi","vetri","coprifili","lamiere","libreria","squadre"].forEach(k => {
+              try { localStorage.removeItem("mastro:" + k); } catch(e) {}
+            });
+            localStorage.removeItem("mastro:demoVer");
+            window.location.reload();
+          }} style={{
+            width: "100%", padding: 12, borderRadius: 10, border: "2px solid #ff3b30",
+            background: "#fff", color: "#ff3b30", fontSize: 13, fontWeight: 800,
+            cursor: "pointer", fontFamily: "inherit",
+          }}>🔄 RICARICA DATI DEMO (4 clienti)</button>
+        </div>
 
       </div>
     </div>
@@ -6521,11 +10619,11 @@ Fabio Cozza - Walter Cozza Serramenti` },
                       </div>
                     </div>
 
-                    {ripCMSel && ripCMSel.vani.length > 0 && (
+                    {ripCMSel && getVaniAttivi(ripCMSel).length > 0 && (
                       <div>
                         <label style={S.fieldLabel}>Vano con il problema</label>
                         <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
-                          {ripCMSel.vani.map(v => (
+                          {getVaniAttivi(ripCMSel).map(v => (
                             <div key={v.id} onClick={() => setNewCM(c=>({...c,vanoProblema:c.vanoProblema===v.nome?"":v.nome}))}
                               style={{ padding:"5px 10px", borderRadius:20, border:`1.5px solid ${newCM.vanoProblema===v.nome?T.acc:T.bdr}`, background:newCM.vanoProblema===v.nome?T.accLt:T.card, fontSize:11, fontWeight:600, color:newCM.vanoProblema===v.nome?T.acc:T.sub, cursor:"pointer" }}>
                               {v.nome}
@@ -6713,12 +10811,42 @@ Fabio Cozza - Walter Cozza Serramenti` },
 
 
   const generaPreventivoPDF = (c) => {
+    // Grid price lookup: find smallest grid cell where L>=vanoL and H>=vanoH (ceiling approach like real suppliers)
+    const grigliaLookup = (griglia: any[], lmm: number, hmm: number): number | null => {
+      if (!griglia || griglia.length === 0) return null;
+      // Sort by L then H
+      const sorted = [...griglia].sort((a, b) => a.l - b.l || a.h - b.h);
+      // Find exact match first
+      const exact = sorted.find(g => g.l === lmm && g.h === hmm);
+      if (exact) return exact.prezzo;
+      // Find ceiling: smallest grid cell that covers the window
+      const ceiling = sorted.find(g => g.l >= lmm && g.h >= hmm);
+      if (ceiling) return ceiling.prezzo;
+      // If window is larger than any grid entry, find the largest grid entry
+      const largest = sorted[sorted.length - 1];
+      if (largest) return largest.prezzo;
+      return null;
+    };
+
     const calcolaVanoPDF = (v) => {
       const m = v.misure||{};
       const lc=(m.lCentro||0)/1000, hc=(m.hCentro||0)/1000;
+      const lmm=m.lCentro||0, hmm=m.hCentro||0;
       const mq=lc*hc, perim=2*(lc+hc);
       const sysRec = sistemiDB.find(s=>(s.marca+" "+s.sistema)===v.sistema||s.sistema===v.sistema);
-      let tot = mq * parseFloat(sysRec?.prezzoMq||sysRec?.euroMq||c.prezzoMq||350);
+      // Get minimo mq for this tipologia
+      const minCat = tipoToMinCat(v.tipo || "F1A");
+      const minimoMq = sysRec?.minimiMq?.[minCat] || 0;
+      const mqCalc = (minimoMq > 0 && mq > 0 && mq < minimoMq) ? minimoMq : mq;
+      // Price: try grid first, fallback to €/mq with minimo applied
+      let basePrezzoSer = 0;
+      const gridPrice = sysRec?.griglia ? grigliaLookup(sysRec.griglia, lmm, hmm) : null;
+      if (gridPrice !== null) {
+        basePrezzoSer = gridPrice;
+      } else {
+        basePrezzoSer = mqCalc * parseFloat(sysRec?.prezzoMq||sysRec?.euroMq||c.prezzoMq||350);
+      }
+      let tot = basePrezzoSer;
       const vetroRec = vetriDB.find(g=>g.code===v.vetro||g.nome===v.vetro);
       if(vetroRec?.prezzoMq) tot += mq * parseFloat(vetroRec.prezzoMq);
       const copRec = coprifiliDB.find(cp=>cp.cod===v.coprifilo);
@@ -6728,39 +10856,1793 @@ Fabio Cozza - Walter Cozza Serramenti` },
       const tapp=v.accessori?.tapparella; if(tapp?.attivo&&c.prezzoTapparella){const tmq=((tapp.l||m.lCentro||0)/1000)*((tapp.h||m.hCentro||0)/1000);tot+=tmq*parseFloat(c.prezzoTapparella);}
       const pers=v.accessori?.persiana; if(pers?.attivo&&c.prezzoPersiana){const pmq=((pers.l||m.lCentro||0)/1000)*((pers.h||m.hCentro||0)/1000);tot+=pmq*parseFloat(c.prezzoPersiana);}
       const zanz=v.accessori?.zanzariera; if(zanz?.attivo&&c.prezzoZanzariera){const zmq=((zanz.l||m.lCentro||0)/1000)*((zanz.h||m.hCentro||0)/1000);tot+=zmq*parseFloat(c.prezzoZanzariera);}
-      return { tot, mq };
+      // Voci libere
+      if (v.vociLibere?.length > 0) v.vociLibere.forEach(vl => { tot += (vl.prezzo || 0) * (vl.qta || 1); });
+      return { tot, mq, perim, sysRec, vetroRec, copRec, lamRec };
     };
-    const vaniPDF = getVaniAttivi(c); const totale = vaniPDF.reduce((s,v)=>s+calcolaVanoPDF(v).tot, 0);
+    const vaniPDF = getVaniAttivi(c);
+    const totale = vaniPDF.reduce((s,v)=>s+calcolaVanoPDF(v).tot, 0);
     const sconto = parseFloat(c.sconto||0);
     const scontoVal = totale * sconto / 100;
     const imponibile = totale - scontoVal;
-    const iva = imponibile * 0.10;
+    const ivaPerc = parseFloat(c.ivaPerc||10);
+    const iva = imponibile * ivaPerc / 100;
     const totIva = imponibile + iva;
     const oggi = new Date().toLocaleDateString("it-IT");
-    const righeVani = vaniPDF.map((v, i) => {
-      const { tot: sub, mq } = calcolaVanoPDF(v);
+    const totalMq = vaniPDF.reduce((s,v)=>s+calcolaVanoPDF(v).mq, 0);
+    const az = aziendaInfo;
+    const fmt = (n: number) => n.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const TIPI_LABEL: Record<string,string> = { F1A:"Finestra 1 anta", F2A:"Finestra 2 ante", PF1A:"Portafinestra 1 anta", PF2A:"Portafinestra 2 ante", SC2A:"Scorrevole 2 ante", SC4A:"Scorrevole 4 ante", VAS:"Vasistas", FIS:"Fisso", PB:"Porta blindata", PI:"Porta interna" };
+
+    // SVG technical drawing per tipo - IMPROVED
+    const drawSVG = (tipo: string, w: number, h: number) => {
+      // Use standard dimensions if 0
+      const DEFAULTS: Record<string,number[]> = { F1A:[700,1200], F2A:[1200,1400], F3A:[1800,1400], PF1A:[800,2200], PF2A:[1400,2200], PF3A:[2100,2200], VAS:[700,500], SOPR:[800,400], FIS:[600,1000], FISTONDO:[600,600], SC2A:[1600,2200], SC4A:[2800,2200], ALZSC:[3000,2200], BLI:[900,2100], PI:[900,2100] };
+      const [defW, defH] = DEFAULTS[tipo] || [1000, 1300];
+      const ww = w > 0 ? w : defW;
+      const hh = h > 0 ? h : defH;
+      const vw=140, vh=Math.max(Math.min(Math.round(vw*(hh/Math.max(ww,1))),180), 60);
+      const pad=5, iw=vw-pad*2, ih=vh-pad*2;
+      // Frame
+      let d = `<rect x="${pad}" y="${pad}" width="${iw}" height="${ih}" rx="1.5" fill="#f0f6ff" stroke="#333" stroke-width="2.5"/>`;
+      // Internal frame
+      d += `<rect x="${pad+3}" y="${pad+3}" width="${iw-6}" height="${ih-6}" rx="0.5" fill="none" stroke="#555" stroke-width="0.8"/>`;
+      
+      if (tipo.includes("SC") || tipo === "ALZSC") {
+        // Scorrevole
+        const mid=vw/2;
+        d += `<rect x="${pad+5}" y="${pad+5}" width="${mid-pad-7}" height="${ih-10}" fill="#e8f0fe" stroke="#555" stroke-width="0.7"/>`;
+        d += `<rect x="${mid+2}" y="${pad+5}" width="${mid-pad-7}" height="${ih-10}" fill="#e8f0fe" stroke="#555" stroke-width="0.7"/>`;
+        // Rails
+        d += `<line x1="${pad+5}" y1="${vh/2}" x2="${vw-pad-5}" y2="${vh/2}" stroke="#bbb" stroke-width="0.3" stroke-dasharray="2,2"/>`;
+        // Handles
+        d += `<rect x="${mid-10}" y="${vh/2-6}" width="3" height="12" rx="1" fill="#666"/>`;
+        d += `<rect x="${mid+7}" y="${vh/2-6}" width="3" height="12" rx="1" fill="#666"/>`;
+        // Arrows
+        d += `<path d="M${mid-16},${vh/2} L${mid-22},${vh/2-3} L${mid-22},${vh/2+3}Z" fill="#999"/>`;
+        d += `<path d="M${mid+16},${vh/2} L${mid+22},${vh/2-3} L${mid+22},${vh/2+3}Z" fill="#999"/>`;
+      } else if (tipo.includes("2A") || tipo === "PF2A") {
+        // 2 ante
+        const mid=vw/2;
+        d += `<line x1="${mid}" y1="${pad+3}" x2="${mid}" y2="${vh-pad-3}" stroke="#333" stroke-width="1.5"/>`;
+        // Left pane
+        d += `<rect x="${pad+5}" y="${pad+5}" width="${mid-pad-7}" height="${ih-10}" fill="#e8f0fe" stroke="#555" stroke-width="0.5"/>`;
+        d += `<line x1="${pad+5}" y1="${pad+5}" x2="${mid-2}" y2="${vh-pad-5}" stroke="#ccc" stroke-width="0.4"/>`;
+        d += `<line x1="${mid-2}" y1="${pad+5}" x2="${pad+5}" y2="${vh-pad-5}" stroke="#ccc" stroke-width="0.4"/>`;
+        // Right pane
+        d += `<rect x="${mid+2}" y="${pad+5}" width="${mid-pad-7}" height="${ih-10}" fill="#e8f0fe" stroke="#555" stroke-width="0.5"/>`;
+        d += `<line x1="${mid+2}" y1="${pad+5}" x2="${vw-pad-5}" y2="${vh-pad-5}" stroke="#ccc" stroke-width="0.4"/>`;
+        d += `<line x1="${vw-pad-5}" y1="${pad+5}" x2="${mid+2}" y2="${vh-pad-5}" stroke="#ccc" stroke-width="0.4"/>`;
+        // Handles
+        d += `<circle cx="${mid-8}" cy="${vh/2}" r="3" fill="none" stroke="#333" stroke-width="1"/>`;
+        d += `<circle cx="${mid+8}" cy="${vh/2}" r="3" fill="none" stroke="#333" stroke-width="1"/>`;
+        // Hinge indicators
+        d += `<rect x="${pad+2}" y="${vh/3}" width="2" height="8" rx="1" fill="#888"/>`;
+        d += `<rect x="${pad+2}" y="${vh*2/3}" width="2" height="8" rx="1" fill="#888"/>`;
+        d += `<rect x="${vw-pad-4}" y="${vh/3}" width="2" height="8" rx="1" fill="#888"/>`;
+        d += `<rect x="${vw-pad-4}" y="${vh*2/3}" width="2" height="8" rx="1" fill="#888"/>`;
+      } else if (tipo === "VAS" || tipo === "SOPR") {
+        // Vasistas / Sopraluce
+        d += `<rect x="${pad+5}" y="${pad+5}" width="${iw-10}" height="${ih-10}" fill="#e8f0fe" stroke="#555" stroke-width="0.5"/>`;
+        d += `<line x1="${pad+5}" y1="${vh-pad-5}" x2="${vw/2}" y2="${pad+5}" stroke="#ccc" stroke-width="0.4"/>`;
+        d += `<line x1="${vw-pad-5}" y1="${vh-pad-5}" x2="${vw/2}" y2="${pad+5}" stroke="#ccc" stroke-width="0.4"/>`;
+        // Handle bottom center
+        d += `<rect x="${vw/2-5}" y="${vh-pad-9}" width="10" height="3" rx="1" fill="#666"/>`;
+        // Hinge top
+        d += `<rect x="${vw/3}" y="${pad+2}" width="8" height="2" rx="1" fill="#888"/>`;
+        d += `<rect x="${vw*2/3-8}" y="${pad+2}" width="8" height="2" rx="1" fill="#888"/>`;
+      } else if (tipo === "FIS" || tipo === "FISTONDO") {
+        // Fisso
+        d += `<rect x="${pad+5}" y="${pad+5}" width="${iw-10}" height="${ih-10}" fill="#e8f0fe" stroke="#555" stroke-width="0.5"/>`;
+        // Glass dividers
+        d += `<line x1="${vw/2}" y1="${pad+5}" x2="${vw/2}" y2="${vh-pad-5}" stroke="#ddd" stroke-width="0.3"/>`;
+        d += `<line x1="${pad+5}" y1="${vh/2}" x2="${vw-pad-5}" y2="${vh/2}" stroke="#ddd" stroke-width="0.3"/>`;
+        // "FISSO" label
+        d += `<text x="${vw/2}" y="${vh/2+3}" text-anchor="middle" font-size="8" fill="#999" font-style="italic">fisso</text>`;
+      } else if (tipo === "BLI") {
+        // Porta blindata
+        d += `<rect x="${pad+5}" y="${pad+5}" width="${iw-10}" height="${ih-10}" fill="#f5ece0" stroke="#555" stroke-width="0.7"/>`;
+        // Panel details
+        d += `<rect x="${pad+12}" y="${pad+15}" width="${iw-24}" height="${ih/4}" rx="2" fill="none" stroke="#987" stroke-width="0.5"/>`;
+        d += `<rect x="${pad+12}" y="${vh/2-ih/8}" width="${iw-24}" height="${ih/4}" rx="2" fill="none" stroke="#987" stroke-width="0.5"/>`;
+        // Handle
+        d += `<rect x="${vw-pad-14}" y="${vh/2-8}" width="3" height="16" rx="1.5" fill="#666"/>`;
+        // Lock
+        d += `<circle cx="${vw-pad-12}" cy="${vh/2+14}" r="2.5" fill="none" stroke="#666" stroke-width="0.8"/>`;
+      } else {
+        // 1 anta standard (F1A, PF1A)
+        d += `<rect x="${pad+5}" y="${pad+5}" width="${iw-10}" height="${ih-10}" fill="#e8f0fe" stroke="#555" stroke-width="0.5"/>`;
+        // Opening diagonals
+        d += `<line x1="${pad+5}" y1="${pad+5}" x2="${vw-pad-5}" y2="${vh-pad-5}" stroke="#ccc" stroke-width="0.4"/>`;
+        d += `<line x1="${vw-pad-5}" y1="${pad+5}" x2="${pad+5}" y2="${vh-pad-5}" stroke="#ccc" stroke-width="0.4"/>`;
+        // Handle
+        d += `<circle cx="${vw-pad-12}" cy="${vh/2}" r="3" fill="none" stroke="#333" stroke-width="1"/>`;
+        d += `<line x1="${vw-pad-12}" y1="${vh/2-3}" x2="${vw-pad-12}" y2="${vh/2-10}" stroke="#333" stroke-width="1"/>`;
+        // Hinges left
+        d += `<rect x="${pad+2}" y="${vh/3}" width="2" height="8" rx="1" fill="#888"/>`;
+        d += `<rect x="${pad+2}" y="${vh*2/3}" width="2" height="8" rx="1" fill="#888"/>`;
+      }
+      // Dimension labels
+      d += `<text x="${vw/2}" y="${vh+10}" text-anchor="middle" font-size="8" fill="#333" font-weight="700">${w} mm</text>`;
+      d += `<text x="${vw+6}" y="${vh/2+3}" text-anchor="start" font-size="8" fill="#333" font-weight="700" transform="rotate(90,${vw+6},${vh/2})">${h} mm</text>`;
+      return `<svg viewBox="0 0 ${vw+14} ${vh+14}" width="160" style="display:block;margin:6px auto;">${d}</svg>`;
+    };
+
+    // Build grouped sections by sistema
+    const vaniWithCalc = vaniPDF.map((v, i) => {
+      const { tot: sub, mq, perim, sysRec, vetroRec, copRec, lamRec } = calcolaVanoPDF(v);
       const m = v.misure||{};
-      return '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">'+(i+1)+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">'+(v.nome||"Vano "+(i+1))+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;color:#666;">'+(v.tipo||"")+" — "+(v.stanza||"")+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;color:#666;">'+(v.sistema||c.sistema||"")+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">'+(m.lCentro||0)+" × "+(m.hCentro||0)+' mm</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">'+mq.toFixed(2)+' mq</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:700;">€ '+sub.toFixed(2)+'</td></tr>';
+      const lmm = m.lCentro||0, hmm = m.hCentro||0;
+      const colInt = v.coloreInt || v.coloreInterno || v.colore || "Bianco";
+      const colEst = v.coloreEst || v.coloreEsterno || v.colore || "Bianco";
+      const vetroDesc = vetroRec ? vetroRec.code + (vetroRec.nome ? " " + vetroRec.nome : "") : (v.vetro || "");
+      const sysKey = sysRec ? sysRec.id : (v.sistema || "nessuno");
+      const sysName = sysRec ? (sysRec.marca ? sysRec.marca.toUpperCase() + " - " + sysRec.sistema.toUpperCase() : sysRec.sistema.toUpperCase()) : (v.sistema ? v.sistema.toUpperCase() : "");
+      const tipoCode = v.tipo || "F1A";
+      const tipoLabel = TIPI_LABEL[tipoCode] || tipoCode;
+      const acc = v.accessori || {};
+      let specs = '';
+      const addS = (l: string, val: string) => { if (val) specs += `<tr><td class="sl">${l}</td><td class="sv"><b>${val}</b></td></tr>`; };
+      addS("Colore interno:", colInt);
+      addS("Colore esterno:", colEst);
+      if (v.bicolore) addS("Finitura:", "Bicolore");
+      if (vetroDesc) addS("Vetro:", vetroDesc);
+      if (v.maniglia) addS("Martellina:", v.maniglia);
+      addS("Superficie:", mq.toFixed(2).replace(".",",") + " m\u00b2");
+      if (v.rifilDx) addS("Sagoma telaio dx:", v.rifilDx);
+      if (v.rifilSotto || v.sagomaInf) addS("Sagoma telaio inf:", v.rifilSotto || v.sagomaInf || "");
+      if (v.rifilSopra || v.sagomaSup) addS("Sagoma telaio sup:", v.rifilSopra || v.sagomaSup || "");
+      if (v.rifilSx) addS("Sagoma telaio sx:", v.rifilSx);
+      if (v.telaio) addS("Telaio fisso:", v.telaio);
+      if (v.telaioAlaZ) addS("Telaio mobile:", v.telaioAlaZ);
+      if (copRec) addS("Coprifilo:", copRec.nome || copRec.cod);
+      if (lamRec) addS("Lamiera:", lamRec.nome || lamRec.cod);
+      addS("Trasmitt. termica:", (v.trasmittanzaUw || sysRec?.uw || "1,2") + " W/m\u00b2K");
+      if (acc.tapparella?.attivo) addS("Tapparella:", (acc.tapparella.tipo || "PVC") + (acc.tapparella.colore ? " " + acc.tapparella.colore : ""));
+      if (acc.persiana?.attivo) addS("Persiana:", (acc.persiana.tipo || "Alluminio"));
+      if (acc.zanzariera?.attivo) addS("Zanzariera:", (acc.zanzariera.tipo || "Rullo"));
+      if (v.note && !v.note.startsWith("\ud83d\udd34")) addS("Note:", v.note);
+      // Voci libere
+      if (v.vociLibere?.length > 0) {
+        v.vociLibere.forEach(vl => {
+          const vlTot = (vl.prezzo || 0) * (vl.qta || 1);
+          const unitaLabel = { pz: "pz", mq: "mq", ml: "ml", kg: "kg", forfait: "forfait" }[vl.unita] || vl.unita || "pz";
+          addS("📦 " + (vl.descrizione || "Voce extra") + ":", `€${(vl.prezzo||0).toFixed(2)}/${unitaLabel} × ${vl.qta||1} = <b style="color:#1a7f37">€${vlTot.toFixed(2)}</b>`);
+        });
+      }
+      return { ...v, idx: i, sub, mq, sysKey, sysName, sysRec, tipoCode, tipoLabel, lmm, hmm, specs };
+    });
+
+    // Group by system
+    const groups: Record<string, typeof vaniWithCalc> = {};
+    vaniWithCalc.forEach(v => {
+      const k = String(v.sysKey);
+      if (!groups[k]) groups[k] = [];
+      groups[k].push(v);
+    });
+
+    // Build HTML sections
+    let globalIdx = 0;
+    const sectionsHtml = Object.entries(groups).map(([key, vani]) => {
+      const sys = vani[0].sysRec;
+      const sysName = vani[0].sysName || "Senza sistema assegnato";
+      const subTot = vani.reduce((s, v) => s + v.sub, 0);
+      const subMq = vani.reduce((s, v) => s + v.mq, 0);
+
+      // System header with profile image
+      const sysHeader = `<div style="margin-top:16px;margin-bottom:8px;padding:10px 14px;background:#f5f8fc;border:1.5px solid #0066cc30;border-radius:6px;display:flex;align-items:center;gap:14px;page-break-inside:avoid">
+        ${sys?.immagineProfilo ? `<img src="${sys.immagineProfilo}" style="height:65px;max-width:140px;object-fit:contain;border-radius:4px;background:#fff;padding:4px;border:1px solid #ddd" alt=""/>` : `<div style="width:60px;height:60px;background:#e8f0fe;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:28px">🪟</div>`}
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:900;color:#0066cc;letter-spacing:-0.3px">${sysName}</div>
+          ${sys ? `<div style="font-size:9px;color:#666;margin-top:2px">${sys.euroMq ? "€" + sys.euroMq + "/m² base" : ""} ${sys.uw ? " · Uw " + sys.uw + " W/m²K" : ""}</div>` : ""}
+          <div style="font-size:9px;color:#888;margin-top:1px">${vani.length} element${vani.length > 1 ? "i" : "o"} · ${subMq.toFixed(2).replace(".",",")} m²</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:900;color:#1a1a1c">&euro; ${fmt(subTot)}</div>
+          <div style="font-size:8px;color:#888">subtotale</div>
+        </div>
+      </div>`;
+
+      // Vani rows
+      const rows = vani.map(v => {
+        globalIdx++;
+        return `<div style="display:flex;gap:10px;padding:10px 8px;border-bottom:1px solid #eee;page-break-inside:avoid">
+          <div style="width:180px;text-align:center;flex-shrink:0">
+            <div style="font-size:22px;font-weight:900;color:#0066cc;margin-bottom:2px">${String(globalIdx).padStart(2,"0")}</div>
+            ${drawSVG(v.tipoCode, v.lmm, v.hmm)}
+            <div style="font-size:7.5px;color:#999;font-style:italic;margin-top:1px">Vista interna</div>
+            <div style="font-size:9px;font-weight:700;color:#333;margin-top:2px">${v.tipoLabel}</div>
+            ${v.stanza ? `<div style="font-size:8px;color:#888">${v.stanza}${v.piano ? ", " + v.piano : ""}</div>` : ""}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+              <div style="font-size:11px;font-weight:700">${v.lmm} × ${v.hmm} mm</div>
+              <div style="font-size:12px;font-weight:900;color:#1a1a1c">&euro; ${fmt(v.sub)}</div>
+            </div>
+            <table class="st"><tbody>${v.specs}</tbody></table>
+            ${Object.values(v.foto || {}).filter(f => f.tipo === "foto" && f.dataUrl).length > 0 ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${Object.values(v.foto || {}).filter(f => f.tipo === "foto" && f.dataUrl).slice(0, 4).map(f => `<img src="${f.dataUrl}" style="width:60px;height:45px;object-fit:cover;border-radius:3px;border:1px solid #ddd" alt=""/>`).join("")}${Object.values(v.foto || {}).filter(f => f.tipo === "foto" && f.dataUrl).length > 4 ? `<div style="width:60px;height:45px;background:#f0f0f0;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#666">+${Object.values(v.foto || {}).filter(f => f.tipo === "foto" && f.dataUrl).length - 4}</div>` : ""}</div>` : ""}
+          </div>
+        </div>`;
+      }).join("");
+
+      return sysHeader + `<div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;margin-bottom:6px">${rows}</div>`;
     }).join("");
-    const scontoHtml = sconto>0 ? '<div class="row" style="color:#ff9500;"><span>Sconto '+sconto+'%</span><span>− € '+scontoVal.toFixed(2)+'</span></div><div class="row"><span>Imponibile netto</span><span>€ '+imponibile.toFixed(2)+'</span></div>' : '';
-    const noteHtml = c.notePreventivo ? '<div style="border:1px solid #eee;border-radius:10px;padding:14px 18px;margin-bottom:24px;font-size:12px;color:#444;line-height:1.6;"><strong>Note:</strong> '+c.notePreventivo+'</div>' : '';
-    const firmaHtml = c.firmaCliente ? '<img src="'+c.firmaCliente+'" style="max-height:60px;max-width:100%;display:block;margin:0 auto 4px;"/>' : '<div class="linea"></div>';
-    const dataFirmaHtml = c.dataFirma ? ' — '+c.dataFirma : '';
-    const html = '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"/><title>Preventivo '+c.code+'</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,Arial,sans-serif;color:#1a1a1c;font-size:13px;padding:40px;max-width:900px;margin:0 auto;}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #007aff;}.azienda{font-size:22px;font-weight:900;color:#007aff;}.doc-title{text-align:right;}.doc-title h1{font-size:28px;font-weight:900;}table{width:100%;border-collapse:collapse;margin-bottom:20px;}thead{background:#007aff;color:white;}thead th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;}thead th:last-child,thead th:nth-last-child(-n+3){text-align:right;}.totali{max-width:340px;margin-left:auto;background:#f5f5f7;border-radius:10px;padding:16px 20px;margin-bottom:24px;}.totali .row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;}.totali .row.main{font-size:16px;font-weight:900;padding-top:10px;border-top:2px solid #1a1a1c;margin-top:4px;color:#007aff;}.cliente-box{background:#f5f5f7;border-radius:10px;padding:16px 20px;margin-bottom:24px;display:flex;gap:40px;}.cliente-box .label{font-size:10px;font-weight:700;color:#999;text-transform:uppercase;margin-bottom:4px;}.cliente-box .val{font-size:14px;font-weight:700;}.validita{background:#fff8ec;border:1px solid #ffb800;border-radius:8px;padding:10px 16px;font-size:11px;color:#7a5000;margin-bottom:20px;}.firma{display:flex;gap:40px;margin-top:40px;padding-top:20px;border-top:1px solid #eee;}.firma .box{flex:1;text-align:center;}.firma .linea{border-bottom:1px solid #999;margin-bottom:6px;height:50px;}.firma .label{font-size:10px;color:#666;text-transform:uppercase;}.footer{font-size:10px;color:#999;text-align:center;padding-top:20px;border-top:1px solid #eee;}@media print{body{padding:20px;}button{display:none!important;}}</style></head><body>'
-      +(aziendaInfo.logo?'<div class="header" style="display:flex;justify-content:space-between;align-items:flex-start;"><div style="display:flex;align-items:center;gap:14px;"><img src="'+aziendaInfo.logo+'" style="height:56px;max-width:120px;object-fit:contain;" alt="logo"/><div>':'<div class="header"><div>')+'<div style="font-size:20px;font-weight:900;color:#007aff;">'+aziendaInfo.ragione+'</div>'+'<div style="font-size:11px;color:#666;">'+aziendaInfo.indirizzo+'</div>'+'<div style="font-size:11px;color:#666;">'+aziendaInfo.telefono+(aziendaInfo.email?' · '+aziendaInfo.email:'')+'</div>'+(aziendaInfo.piva?'<div style="font-size:10px;color:#999;">P.IVA '+aziendaInfo.piva+(aziendaInfo.cciaa?' · CCIAA '+aziendaInfo.cciaa:'')+'</div>':'')+(aziendaInfo.logo?'</div></div>':'</div>')+'<div style="text-align:right">'+'<h1 style="font-size:28px;font-weight:900;">PREVENTIVO</h1>'+'<div style="font-size:14px;color:#007aff;font-weight:700;">'+c.code+'</div>'+'<div style="font-size:11px;color:#666;">Data: '+oggi+'</div>'+'</div></div>'
-      +'<div class="cliente-box"><div><div class="label">Cliente</div><div class="val">'+c.cliente+' '+(c.cognome||'')+'</div><div style="font-size:12px;color:#444;">'+(c.indirizzo||'')+'</div></div><div><div class="label">Contatto</div><div class="val">'+(c.telefono||'—')+'</div></div><div><div class="label">Vani</div><div class="val">'+vaniPDF.length+'</div></div></div>'
-      +'<button onclick="window.print()" style="margin-bottom:16px;padding:10px 24px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">🖨 Stampa / Salva PDF</button>'
-      +'<table><thead><tr><th>#</th><th>Vano</th><th>Tipologia</th><th>Sistema</th><th>Misura</th><th>Mq</th><th>Importo</th></tr></thead><tbody>'+righeVani+'</tbody></table>'
-      +'<div class="totali"><div class="row"><span>Totale imponibile</span><span>€ '+totale.toFixed(2)+'</span></div>'+scontoHtml+'<div class="row"><span>IVA 10%</span><span>€ '+iva.toFixed(2)+'</span></div><div class="row main"><span>TOTALE</span><span>€ '+totIva.toFixed(2)+'</span></div></div>'
-      +noteHtml
-      +'<div class="validita">⏰ Preventivo valido 30 giorni. Prezzi IVA 10% inclusa per lavori di ristrutturazione.</div>'
-      +'<div class="firma"><div class="box"><div class="linea"></div><div class="label">Timbro e firma azienda</div></div><div class="box">'+firmaHtml+'<div class="label">Firma cliente per accettazione'+dataFirmaHtml+'</div></div></div>'
-      +'<div class="footer">'+aziendaInfo.ragione+(aziendaInfo.piva?' · P.IVA '+aziendaInfo.piva:'')+(aziendaInfo.iban?'<br>IBAN: '+aziendaInfo.iban:'')+'</div></body></html>';
+
+    // Extra rows (trasporto etc)
+    let extraHtml = '';
+    if (c.trasporto && parseFloat(c.trasporto) > 0) {
+      extraHtml = `<div style="margin-top:8px;padding:10px 14px;background:#f9f9f9;border:1px solid #ddd;border-radius:4px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:11px;font-weight:700">🚛 Trasporto</div><div style="font-size:9px;color:#666">${c.trasportoNote || "Trasporto e scarico"}</div></div>
+        <div style="font-size:12px;font-weight:900">&euro; ${fmt(parseFloat(c.trasporto))}</div>
+      </div>`;
+    }
+
+    const scontoRow = sconto > 0 ? `<tr><td class="tl" style="color:#D08008">Sconto ${sconto}%</td><td class="tv" style="color:#D08008">&minus; ${fmt(scontoVal)}</td></tr>` : '';
+    const noteHtml = c.notePreventivo ? `<div style="border:1px solid #ddd;padding:10px 12px;margin:10px 0;font-size:9.5px;color:#444;line-height:1.5"><b>Note:</b> ${c.notePreventivo}</div>` : '';
+    const firmaHtml = c.firmaCliente ? `<img src="${c.firmaCliente}" style="max-height:55px;max-width:100%;display:block;margin:0 auto 4px"/>` : '<div style="border-bottom:1px solid #666;height:45px;margin-bottom:4px"></div>';
+
+    const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"/><title>Preventivo ${c.code}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@page{size:A4;margin:12mm 10mm 15mm 10mm}
+body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#1a1a1c;font-size:10px;line-height:1.35;background:#fff}
+.pg{max-width:210mm;margin:0 auto;padding:12px 16px}
+/* HEADER */
+.hd{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;margin-bottom:14px;border-bottom:3px solid #0066cc}
+.an{font-size:20px;font-weight:900;color:#0066cc;letter-spacing:-0.3px}
+.ai{font-size:9px;color:#555;line-height:1.6}
+/* CLIENT */
+.cl-s{margin-bottom:12px;display:flex;justify-content:space-between}
+.cl-l{font-size:9px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.cl-n{font-size:13px;font-weight:800}
+.cl-a{font-size:10px;color:#555}
+.pi{font-size:10px;line-height:1.6}.pi b{color:#0066cc}
+.intro{font-size:10px;color:#444;margin:10px 0 8px;font-style:italic}
+/* TABLE */
+.pt{width:100%;border-collapse:collapse;margin-bottom:8px;border:1px solid #ccc}
+.pt thead th{background:#f0f0f0;border:1px solid #ccc;padding:5px 7px;font-size:8.5px;font-weight:700;text-transform:uppercase;color:#444;text-align:center}
+.ir{border-bottom:1px solid #ddd}.ir2{border-bottom:1.5px solid #aaa}
+.cn{width:150px;padding:8px;vertical-align:top;border-right:1px solid #ddd;text-align:center}
+.n0{font-size:26px;font-weight:900;color:#0066cc;margin-bottom:4px}
+.cv{font-size:7.5px;color:#999;font-style:italic;margin-top:2px}
+.ct{font-size:9px;font-weight:700;color:#333;margin-top:3px;text-transform:uppercase}
+.cs{font-size:8px;color:#888}
+.csys{font-size:8px;font-weight:700;color:#0066cc;margin-top:2px;line-height:1.2}
+.cd{padding:5px 7px;vertical-align:top;border-bottom:1px solid #eee}
+.dv{font-size:11px;font-weight:700}
+.cp,.cq,.ce{width:70px;padding:5px 7px;text-align:right;vertical-align:top;border-left:1px solid #ddd;font-size:10px}
+.ce{font-weight:800}
+.csp{padding:0 7px 7px;border-bottom:none}
+.st{border-collapse:collapse;width:100%}
+.st td{padding:1.5px 5px;font-size:9.5px;vertical-align:top}
+.st .sl{color:#666;width:130px;white-space:nowrap}
+.st .sv b{font-weight:700;color:#1a1a1c}
+/* TOTALS */
+.ts{margin-top:4px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.qi{font-size:10px;color:#555;padding-top:6px}.qi b{color:#1a1a1c}
+.tt{border-collapse:collapse;min-width:250px}
+.tt td{padding:4px 10px;font-size:10px}
+.tl{text-align:right;color:#555;border:1px solid #ddd;background:#fafafa}
+.tv{text-align:right;font-weight:700;border:1px solid #ddd;min-width:85px}
+.tf .tl,.tf .tv{font-size:14px;font-weight:900;background:#f0f0f0;border:2px solid #333}
+.tf .tv{color:#0066cc}
+/* CONDIZIONI */
+.ct2{font-size:10px;font-weight:800;text-transform:uppercase;text-align:center;margin:14px 0 8px;letter-spacing:.5px}
+.cst{font-size:9px;font-weight:700;text-align:center;margin-bottom:6px;color:#555}
+.ctx{font-size:9px;color:#444;line-height:1.6;margin-bottom:8px}.ctx b{color:#1a1a1c}
+/* FIRMA */
+.fs{display:flex;gap:36px;margin-top:20px;padding-top:14px;border-top:1.5px solid #ccc}
+.fb{flex:1;text-align:center}.fl{font-size:8.5px;color:#555}
+/* FOOTER */
+.ft{margin-top:14px;padding:10px 0;border-top:2px solid #0066cc;display:flex;justify-content:space-between;font-size:8px;color:#888}
+.ft b{color:#555}
+/* PRINT */
+.pb{display:block;margin:0 auto 12px;padding:10px 28px;background:#0066cc;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+@media print{.pb{display:none!important}.pg{padding:0;margin:0}}
+</style></head><body>
+<div class="pg">
+<button class="pb" onclick="window.print()">\ud83d\udda8\ufe0f Stampa / Salva PDF</button>
+
+<div class="hd">
+  <div>
+    ${az.logo?`<img src="${az.logo}" style="height:48px;max-width:120px;object-fit:contain;margin-bottom:6px;display:block" alt=""/>`:''}
+    <div class="an">${az.ragione||"La Tua Azienda"}</div>
+    <div class="ai">${az.indirizzo||""}<br/>Tel. ${az.telefono||""}${az.email?" &middot; "+az.email:""}${az.piva?"<br/>P.IVA "+az.piva:""}${az.cciaa?" &middot; REA "+az.cciaa:""}${(az as any).pec?"<br/>PEC: "+(az as any).pec:""}</div>
+  </div>
+  <div style="text-align:right">
+
+  </div>
+</div>
+
+<div class="cl-s">
+  <div>
+    <div class="cl-l">Spett.le</div>
+    <div class="cl-n">${c.cliente} ${c.cognome||""}</div>
+    <div class="cl-a">${c.indirizzo||""}</div>
+    ${c.telefono?`<div class="cl-a">Tel. ${c.telefono}</div>`:""}
+    ${c.email?`<div class="cl-a">${c.email}</div>`:""}
+  </div>
+  <div style="text-align:right">
+    <div class="pi">Preventivo n. <b>${c.code.replace("CM-","")}</b></div>
+    <div class="pi">Riferimento ordine <b>${c.cliente} ${c.cognome||""}</b></div>
+    <div class="pi">Data: <b>${oggi}</b></div>
+  </div>
+</div>
+
+<div class="intro">A seguito della Vostra gentile richiesta Vi rimettiamo il presente preventivo:</div>
+
+${sectionsHtml}
+${extraHtml}
+
+<div class="ts">
+  <div class="qi">Quadratura: <b>${totalMq.toFixed(2).replace(".",",")} m&sup2;</b></div>
+  <table class="tt">
+    <tr><td class="tl">Imponibile:</td><td class="tv">${fmt(imponibile)}</td></tr>
+    ${scontoRow}
+    <tr><td class="tl">I.V.A. ${ivaPerc}%:</td><td class="tv">${fmt(iva)}</td></tr>
+    <tr class="tf"><td class="tl">Totale iva inclusa:</td><td class="tv">&euro; ${fmt(totIva)}</td></tr>
+  </table>
+</div>
+
+${noteHtml}
+
+${(() => {
+  const nl2br = (s: string) => s.replace(/\n/g, "<br/>");
+  const defFornitura = (az.ragione?az.ragione.toUpperCase():"L'AZIENDA") + ", NELL'ESECUZIONE DELLA PRODUZIONE E' GARANTE DELL'OSSERVANZA SCRUPOLOSA DELLA REGOLA D'ARTE E DELLE NORME VIGENTI.";
+  const defPagamento = "<b>1. Pagamento</b><br/>&middot; 50% acconto alla firma del contratto previa ricezione di ns fattura di acconto<br/>&middot; 50% a SALDO, se non diversamente autorizzato a mezzo mail, a comunicazione merce pronta previa ricezione ns fattura a saldo fornitura.";
+  const defConsegna = "<b>2. Tempi di consegna per tipologia di prodotto:</b><br/>&middot; PVC: BATTENTE STANDARD 30 GG.<br/>&middot; PVC: PORTE 35 GG.<br/>&middot; PVC: ALZANTI SCORREVOLI 40 GG.<br/>&middot; PVC: SCORREVOLE PARALLELO/RIBALTA E SCORRE 35 GG.<br/>&middot; PVC: FUORI SQUADRO 50 GG.<br/>&middot; ALLUMINIO: 45/50 GG LAVORATIVI.<br/><br/>Il contratto aggiornato datato e sottoscritto dal cliente con accettazione dei disegni tecnici allegati ed avviato dopo aver avviato l'ordine al fornitore dei materiali, non potranno pi&ugrave; essere accettate variazioni di alcun tipo.";
+  const defContratto = "(I prezzi si intendono IVA esclusa)<br/><br/><b>1. Qualificazione giuridica del contratto</b><br/>Il contratto &egrave; ad ogni utile effetto di legge una compravendita in quanto la fornitura del materiale &egrave; prevalente.<br/><br/><b>2. Conclusione del contratto</b><br/>Il presente contratto si conclude con la sua sottoscrizione da parte dell'Acquirente e del Venditore.<br/><br/><b>3. Misure</b><br/>L'Acquirente &egrave; responsabile nel caso in cui abbia dato misure inesatte o non abbia comunicato tempestivamente variazioni.<br/><br/><b>4. Consegna</b><br/>La data di consegna ha natura meramente indicativa e non tassativa.<br/><br/><b>5. Garanzia</b><br/>I manufatti sono coperti da garanzia a norma di legge.<br/><br/><b>6. Trattamento dati</b><br/>Il trattamento dei dati personali viene svolto nel rispetto del D. Lgs. n. 196/2003.";
+  const defDettagli = (vaniPDF.length > 0 && vaniPDF[0].sistema ? "Telai e strutture di manovra, sistema " + vaniPDF[0].sistema + ", colorazione \"" + (vaniPDF[0].coloreInt || vaniPDF[0].coloreEst || vaniPDF[0].colore || "Bianco") + "\"." : "Come da specifiche indicate per ogni singola voce del preventivo.") + "<br/><br/><b>Documenti da allegare alla consegna:</b><br/>- Dichiarazione di Prestazione;<br/>- Dichiarazione energetica;<br/>- Etichetta CE;<br/>- Manuale d'uso e manutenzione.";
+  
+  const txFornitura = az.condFornitura ? nl2br(az.condFornitura) : defFornitura;
+  const txPagamento = az.condPagamento ? nl2br(az.condPagamento) : defPagamento;
+  const txConsegna = az.condConsegna ? nl2br(az.condConsegna) : defConsegna;
+  const txContratto = az.condContratto ? nl2br(az.condContratto) : defContratto;
+  const txDettagli = az.condDettagli ? nl2br(az.condDettagli) : defDettagli;
+
+  return `
+<div class="ct2">CONDIZIONI GENERALI DI FORNITURA:</div>
+<div class="ctx">${txFornitura}</div>
+
+<div class="cst">CONDIZIONI PAGAMENTO E CONSEGNA (parte del preventivo)</div>
+<div class="ctx">${txPagamento}<br/><br/>${txConsegna}</div>
+
+<div class="ct2">CONDIZIONI GENERALI DI CONTRATTO</div>
+<div class="ctx">${txContratto}</div>
+
+<div class="ctx" style="margin-top:10px">
+<b>Dettagli tecnici:</b><br/>
+${txDettagli}<br/><br/>
+${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${oggi}<br/><br/>
+<div style="text-align:right;font-style:italic">Distinti saluti.</div>
+</div>`;
+})()}
+
+<div class="fs">
+  <div class="fb"><div style="border-bottom:1px solid #666;height:45px;margin-bottom:4px"></div><div class="fl">Firma tecnico / Timbro azienda</div></div>
+  <div class="fb">${firmaHtml}<div class="fl">Firma cliente per accettazione${c.dataFirma?" &mdash; "+c.dataFirma:""}</div></div>
+</div>
+
+<div class="ft">
+  <div><b>Indirizzo:</b><br/>${az.indirizzo||""}</div>
+  <div><b>Contatti:</b><br/>Tel. ${az.telefono||""}${az.email?"<br/>"+az.email:""}</div>
+  <div><b>Dati Aziendali:</b><br/>${az.ragione||""}${az.piva?"<br/>P.IVA "+az.piva:""}${az.iban?"<br/>IBAN: "+az.iban:""}</div>
+</div>
+<div style="text-align:center;font-size:7px;color:#bbb;margin-top:6px">Documento generato con MASTRO ERP &mdash; mastro.app</div>
+</div>
+</body></html>`;
+
     const blob = new Blob([html], {type:"text/html"});
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank");
   };
 
+  // === PDF MISURE PER PRODUZIONE ===
+  const generaPDFMisure = (c) => {
+    const az = aziendaDB;
+    const vani = getVaniAttivi(c);
+    const fmt = (n) => n.toLocaleString("it-IT", { minimumFractionDigits: 2 });
+
+    const vaniHtml = vani.map((v, i) => {
+      const m = v.misure || {};
+      const fotoEntries = Object.entries(v.foto || {}).filter(([, f]) => f.tipo === "foto" && f.dataUrl);
+      const tip = TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo);
+      const lmm = m.lCentro || m.lAlto || m.lBasso || 0;
+      const hmm = m.hCentro || m.hSx || m.hDx || 0;
+      const mq = lmm > 0 && hmm > 0 ? ((lmm / 1000) * (hmm / 1000)) : 0;
+
+      return `<div style="border:1.5px solid #333;border-radius:6px;padding:12px;margin-bottom:10px;page-break-inside:avoid">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #333;padding-bottom:6px;margin-bottom:8px">
+          <div>
+            <span style="font-size:18px;font-weight:900;color:#0066cc">${String(i + 1).padStart(2, "0")}</span>
+            <span style="font-size:14px;font-weight:800;margin-left:8px">${v.nome}</span>
+            <span style="font-size:11px;color:#666;margin-left:8px">${tip?.label || v.tipo} · ${v.stanza || ""} · ${v.piano || ""}</span>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;font-weight:900">${lmm} × ${hmm} mm</div>
+            <div style="font-size:10px;color:#666">${mq.toFixed(2)} m² ${(v.pezzi || 1) > 1 ? "× " + v.pezzi + " pz" : ""}</div>
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px">
+          <tr>
+            <td style="border:1px solid #ccc;padding:4px;background:#f0f8ff;font-weight:700;width:50%" colspan="2">📏 LARGHEZZE (mm)</td>
+            <td style="border:1px solid #ccc;padding:4px;background:#fff8f0;font-weight:700;width:50%" colspan="2">📐 ALTEZZE (mm)</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ccc;padding:4px">Alto</td><td style="border:1px solid #ccc;padding:4px;font-weight:700;font-family:monospace">${m.lAlto || "—"}</td>
+            <td style="border:1px solid #ccc;padding:4px">Sinistra</td><td style="border:1px solid #ccc;padding:4px;font-weight:700;font-family:monospace">${m.hSx || "—"}</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ccc;padding:4px">Centro</td><td style="border:1px solid #ccc;padding:4px;font-weight:700;font-family:monospace">${m.lCentro || "—"}</td>
+            <td style="border:1px solid #ccc;padding:4px">Centro</td><td style="border:1px solid #ccc;padding:4px;font-weight:700;font-family:monospace">${m.hCentro || "—"}</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ccc;padding:4px">Basso</td><td style="border:1px solid #ccc;padding:4px;font-weight:700;font-family:monospace">${m.lBasso || "—"}</td>
+            <td style="border:1px solid #ccc;padding:4px">Destra</td><td style="border:1px solid #ccc;padding:4px;font-weight:700;font-family:monospace">${m.hDx || "—"}</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ccc;padding:4px;background:#fef3f3" colspan="2">↗ Diag 1: <b>${m.d1 || "—"}</b></td>
+            <td style="border:1px solid #ccc;padding:4px;background:#fef3f3" colspan="2">↘ Diag 2: <b>${m.d2 || "—"}</b> ${m.d1 > 0 && m.d2 > 0 ? `(Δ ${Math.abs(m.d1 - m.d2)} mm${Math.abs(m.d1 - m.d2) > 3 ? " ⚠️" : " ✅"})` : ""}</td>
+          </tr>
+        </table>
+        <table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:4px">
+          <tr>
+            <td style="border:1px solid #ccc;padding:4px;background:#f0fff0;font-weight:700" colspan="4">⚙️ CONFIGURAZIONE</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ccc;padding:4px">Sistema</td><td style="border:1px solid #ccc;padding:4px;font-weight:700">${v.sistema || "—"}</td>
+            <td style="border:1px solid #ccc;padding:4px">Vetro</td><td style="border:1px solid #ccc;padding:4px;font-weight:700">${v.vetro || "—"}</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ccc;padding:4px">Colore INT</td><td style="border:1px solid #ccc;padding:4px;font-weight:700">${v.coloreInt || "—"}</td>
+            <td style="border:1px solid #ccc;padding:4px">Colore EST</td><td style="border:1px solid #ccc;padding:4px;font-weight:700">${v.bicolore ? (v.coloreEst || "—") : "= INT"}</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ccc;padding:4px">Telaio</td><td style="border:1px solid #ccc;padding:4px;font-weight:700">${v.telaio === "Z" ? "Z" : v.telaio === "L" ? "L" : "—"}${v.telaioAlaZ ? " Ala " + v.telaioAlaZ : ""}</td>
+            <td style="border:1px solid #ccc;padding:4px">Coprifilo</td><td style="border:1px solid #ccc;padding:4px;font-weight:700">${v.coprifilo || "—"}</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ccc;padding:4px">Lamiera</td><td style="border:1px solid #ccc;padding:4px;font-weight:700">${v.lamiera || "—"}</td>
+            <td style="border:1px solid #ccc;padding:4px">Col. Acc.</td><td style="border:1px solid #ccc;padding:4px;font-weight:700">${v.coloreAcc || "= profili"}</td>
+          </tr>
+          ${v.rifilato ? `<tr><td style="border:1px solid #ccc;padding:4px;background:#fff8e6" colspan="4">✂️ RIFILATO — Sx: ${v.rifilSx || "—"} · Dx: ${v.rifilDx || "—"} · Sopra: ${v.rifilSopra || "—"} · Sotto: ${v.rifilSotto || "—"}</td></tr>` : ""}
+        </table>
+        <table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:4px">
+          <tr>
+            <td style="border:1px solid #ccc;padding:4px;background:#f5f0ff;font-weight:700" colspan="4">🧱 MURATURA</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ccc;padding:3px">Sp. Sx</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${m.spSx || "—"}</td>
+            <td style="border:1px solid #ccc;padding:3px">Sp. Dx</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${m.spDx || "—"}</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ccc;padding:3px">Sp. Sopra</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${m.spSopra || "—"}</td>
+            <td style="border:1px solid #ccc;padding:3px">Imbotte</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${m.imbotte || "—"}</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ccc;padding:3px">Dav. Prof.</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${m.davProf || "—"}</td>
+            <td style="border:1px solid #ccc;padding:3px">Dav. Sporg.</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${m.davSporg || "—"}</td>
+          </tr>
+          <tr><td style="border:1px solid #ccc;padding:3px">Soglia</td><td style="border:1px solid #ccc;padding:3px;font-weight:700" colspan="3">${m.soglia || "—"}</td></tr>
+        </table>
+        ${v.controtelaio?.tipo ? `<table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:4px">
+          <tr><td style="border:1px solid #ccc;padding:4px;background:#e8f4fd;font-weight:700" colspan="4">🔲 CONTROTELAIO ${(v.controtelaio.tipo || "").toUpperCase()}</td></tr>
+          <tr><td style="border:1px solid #ccc;padding:3px">L</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${v.controtelaio.l || "—"}</td><td style="border:1px solid #ccc;padding:3px">H</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${v.controtelaio.h || "—"}</td></tr>
+          ${v.controtelaio.hCass ? `<tr><td style="border:1px solid #ccc;padding:3px">H Cass.</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${v.controtelaio.hCass}</td><td style="border:1px solid #ccc;padding:3px">Sezione</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${v.controtelaio.sezione || "—"}</td></tr>` : ""}
+        </table>` : ""}
+        ${v.accessori?.tapparella?.attivo || v.accessori?.persiana?.attivo || v.accessori?.zanzariera?.attivo ? `<div style="font-size:10px;margin-top:4px;padding:4px;background:#f5f5ff;border:1px solid #ddd;border-radius:3px">
+          <b>Accessori:</b> ${v.accessori?.tapparella?.attivo ? "🪟 Tapparella" : ""} ${v.accessori?.persiana?.attivo ? "🏠 Persiana" : ""} ${v.accessori?.zanzariera?.attivo ? "🦟 Zanzariera" : ""}
+        </div>` : ""}
+        ${fotoEntries.length > 0 ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${fotoEntries.slice(0, 6).map(([, f]) => `<img src="${f.dataUrl}" style="width:70px;height:52px;object-fit:cover;border-radius:3px;border:1px solid #ccc" alt=""/>`).join("")}</div>` : ""}
+        ${v.note ? `<div style="font-size:10px;margin-top:4px;padding:4px;background:#fff8e6;border:1px solid #f0e0b0;border-radius:3px">📝 <b>Note:</b> ${v.note}</div>` : ""}
+        ${v.difficoltaSalita ? `<div style="font-size:10px;margin-top:3px;color:#b45309">🏗 Accesso: ${v.difficoltaSalita}${v.mezzoSalita ? " — " + v.mezzoSalita : ""}</div>` : ""}
+      </div>`;
+    }).join("");
+
+    const totalMq = vani.reduce((s, v) => {
+      const m = v.misure || {};
+      const l = m.lCentro || m.lAlto || m.lBasso || 0;
+      const h = m.hCentro || m.hSx || m.hDx || 0;
+      return s + (l > 0 && h > 0 ? (l / 1000) * (h / 1000) * (v.pezzi || 1) : 0);
+    }, 0);
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Misure — ${c.code}</title>
+    <style>
+      body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:15px;font-size:11px}
+      @media print{body{padding:5px} .no-print{display:none!important}}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #333;padding-bottom:10px;margin-bottom:12px}
+    </style></head><body>
+    <div class="header">
+      <div>
+        ${az.logo ? `<img src="${az.logo}" style="max-height:50px;max-width:180px;margin-bottom:4px" alt=""/>` : ""}
+        <div style="font-size:16px;font-weight:900;color:#333">${az.nome || "MASTRO"}</div>
+        <div style="font-size:9px;color:#666">${az.indirizzo || ""} ${az.citta || ""} · ${az.tel || ""}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:20px;font-weight:900;color:#5856d6">SCHEDA MISURE</div>
+        <div style="font-size:11px;color:#333;margin-top:2px"><b>${c.code}</b></div>
+        <div style="font-size:10px;color:#666">${new Date().toLocaleDateString("it-IT")}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:16px;margin-bottom:12px;padding:10px;background:#f5f5f7;border-radius:6px">
+      <div style="flex:1"><div style="font-size:8px;color:#999;text-transform:uppercase">Cliente</div><div style="font-size:13px;font-weight:800">${c.cliente}</div></div>
+      <div style="flex:1"><div style="font-size:8px;color:#999;text-transform:uppercase">Indirizzo</div><div style="font-size:11px">${c.indirizzo || "—"}</div></div>
+      <div><div style="font-size:8px;color:#999;text-transform:uppercase">Vani</div><div style="font-size:13px;font-weight:800">${vani.length}</div></div>
+      <div><div style="font-size:8px;color:#999;text-transform:uppercase">Tot. m²</div><div style="font-size:13px;font-weight:800">${totalMq.toFixed(2)}</div></div>
+    </div>
+    ${vaniHtml}
+    <div style="margin-top:12px;padding:10px;background:#f9f9f9;border:1px solid #ddd;border-radius:6px;font-size:10px;color:#666;text-align:center">
+      Documento generato da MASTRO ERP — ${new Date().toLocaleDateString("it-IT")} ${new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+      <br><b style="color:#333">⚠ DOCUMENTO PER USO INTERNO / PRODUZIONE — NON VALIDO COME PREVENTIVO</b>
+    </div>
+    <button class="no-print" onclick="window.print()" style="position:fixed;bottom:20px;right:20px;padding:12px 24px;background:#5856d6;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(88,86,214,0.3)">🖨️ Stampa / Salva PDF</button>
+    </body></html>`;
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  };
+
+  // === FATTURAZIONE ===
+  const nextNumFattura = () => {
+    const anno = new Date().getFullYear();
+    const annoPrev = fattureDB.filter(f => f.anno === anno);
+    return annoPrev.length + 1;
+  };
+
+  const creaFattura = (c, tipo: "acconto" | "saldo" | "unica") => {
+    const num = nextNumFattura();
+    const anno = new Date().getFullYear();
+    // Calcola totale REALE dai vani + voci libere
+    const importoBase = calcolaTotaleCommessa(c);
+    const giaPagato = fattureDB.filter(f => f.cmId === c.id && f.pagata).reduce((s, f) => s + (f.importo || 0), 0);
+    const importo = tipo === "acconto" ? Math.round(importoBase * 0.5) : tipo === "saldo" ? Math.round(importoBase - giaPagato) : importoBase;
+    const iva = 10; // serramenti = 10% se ristrutturazione, 22% se nuova costruzione
+    const imponibile = Math.round(importo / (1 + iva / 100) * 100) / 100;
+    const ivaAmt = importo - imponibile;
+    const fattura = {
+      id: "fat_" + Date.now(),
+      numero: num,
+      anno,
+      data: new Date().toLocaleDateString("it-IT"),
+      dataISO: new Date().toISOString().split("T")[0],
+      tipo,
+      cmId: c.id,
+      cmCode: c.code,
+      cliente: c.cliente,
+      cognome: c.cognome || "",
+      indirizzo: c.indirizzo || "",
+      cf: c.cf || "",
+      piva: c.piva || "",
+      sdi: c.sdi || "",
+      pec: c.pec || "",
+      importo,
+      imponibile,
+      iva,
+      ivaAmt,
+      pagata: false,
+      dataPagamento: null,
+      metodoPagamento: "",
+      scadenza: (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split("T")[0]; })(),
+      note: tipo === "acconto" ? "Acconto 50% su ordine" : tipo === "saldo" ? "Saldo a completamento lavori" : "",
+    };
+    setFattureDB(prev => [...prev, fattura]);
+    // AUTO-ADVANCE pipeline
+    if (tipo === "acconto" || tipo === "unica") setFaseTo(c.id, "ordini");
+    if (tipo === "saldo") setFaseTo(c.id, "chiusura");
+    return fattura;
+  };
+
+  const generaFatturaPDF = (fat) => {
+    const az = aziendaDB;
+    const fmt = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2 }) : "0,00";
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Fattura ${fat.numero}/${fat.anno}</title>
+    <style>
+      body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;font-size:12px;color:#333}
+      @media print{.no-print{display:none!important}body{padding:10px}}
+      table{width:100%;border-collapse:collapse} th,td{border:1px solid #ccc;padding:8px;text-align:left}
+      th{background:#f5f8fc;font-size:10px;text-transform:uppercase;color:#666}
+      .totale{font-size:16px;font-weight:900}
+    </style></head><body>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+      <div>
+        ${az.logo ? `<img src="${az.logo}" style="max-height:60px;max-width:200px;margin-bottom:6px" alt=""/>` : ""}
+        <div style="font-size:18px;font-weight:900">${az.nome || "MASTRO"}</div>
+        <div style="font-size:10px;color:#666">${az.indirizzo || ""} · ${az.citta || ""}</div>
+        <div style="font-size:10px;color:#666">P.IVA: ${az.piva || "—"} · Tel: ${az.tel || "—"}</div>
+        ${az.pec ? `<div style="font-size:10px;color:#666">PEC: ${az.pec}</div>` : ""}
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:24px;font-weight:900;color:#007aff">FATTURA</div>
+        <div style="font-size:14px;font-weight:700">N. ${fat.numero}/${fat.anno}</div>
+        <div style="font-size:11px;color:#666">Data: ${fat.data}</div>
+        <div style="font-size:10px;color:#999;margin-top:4px">${fat.tipo === "acconto" ? "ACCONTO" : fat.tipo === "saldo" ? "SALDO" : "FATTURA"}</div>
+      </div>
+    </div>
+    <div style="background:#f5f5f7;padding:14px;border-radius:8px;margin-bottom:16px">
+      <div style="font-size:9px;color:#999;text-transform:uppercase;margin-bottom:4px">Destinatario</div>
+      <div style="font-size:14px;font-weight:800">${fat.cliente} ${fat.cognome}</div>
+      <div style="font-size:11px">${fat.indirizzo || ""}</div>
+      ${fat.cf ? `<div style="font-size:10px;color:#666">C.F.: ${fat.cf}</div>` : ""}
+      ${fat.piva ? `<div style="font-size:10px;color:#666">P.IVA: ${fat.piva}</div>` : ""}
+      ${fat.sdi ? `<div style="font-size:10px;color:#666">SDI: ${fat.sdi}</div>` : ""}
+      ${fat.pec ? `<div style="font-size:10px;color:#666">PEC: ${fat.pec}</div>` : ""}
+      <div style="font-size:10px;color:#666;margin-top:4px">Rif. commessa: ${fat.cmCode}</div>
+    </div>
+    <table>
+      <thead><tr><th>Descrizione</th><th style="width:80px;text-align:right">Imponibile</th><th style="width:60px;text-align:right">IVA %</th><th style="width:80px;text-align:right">IVA</th><th style="width:90px;text-align:right">Totale</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Fornitura e posa serramenti${fat.tipo === "acconto" ? " — Acconto 50%" : fat.tipo === "saldo" ? " — Saldo" : ""}<br><span style="font-size:10px;color:#666">${fat.note || ""}</span></td>
+          <td style="text-align:right;font-weight:700">&euro; ${fmt(fat.imponibile)}</td>
+          <td style="text-align:right">${fat.iva}%</td>
+          <td style="text-align:right">&euro; ${fmt(fat.ivaAmt)}</td>
+          <td style="text-align:right;font-weight:900;font-size:14px">&euro; ${fmt(fat.importo)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="text-align:right;margin-top:12px;padding:12px;background:#f0f8ff;border-radius:8px">
+      <div style="font-size:10px;color:#666">Imponibile: &euro; ${fmt(fat.imponibile)}</div>
+      <div style="font-size:10px;color:#666">IVA ${fat.iva}%: &euro; ${fmt(fat.ivaAmt)}</div>
+      <div class="totale" style="margin-top:6px;color:#007aff">TOTALE: &euro; ${fmt(fat.importo)}</div>
+    </div>
+    <div style="margin-top:16px;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:10px;color:#666">
+      <b>Modalità pagamento:</b> Bonifico bancario<br>
+      <b>IBAN:</b> ${az.iban || "________________"}<br>
+      <b>Scadenza:</b> ${fat.scadenza || "30 giorni data fattura"}<br>
+      ${fat.note ? `<b>Note:</b> ${fat.note}` : ""}
+    </div>
+    <div style="margin-top:20px;text-align:center;font-size:9px;color:#999">Documento generato da MASTRO ERP</div>
+    <button class="no-print" onclick="window.print()" style="position:fixed;bottom:20px;right:20px;padding:12px 24px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Stampa / Salva PDF</button>
+    </body></html>`;
+    const blob = new Blob([html], { type: "text/html" });
+    window.open(URL.createObjectURL(blob), "_blank");
+  };
+
+  // === WHATSAPP / EMAIL HELPERS ===
+  const inviaWhatsApp = (c, tipo: "preventivo" | "conferma" | "stato") => {
+    const tel = (c.telefono || "").replace(/\D/g, "");
+    const msgs = {
+      preventivo: `Gentile ${c.cliente}, le invio in allegato il preventivo per la fornitura serramenti. Rif: ${c.code}. Resto a disposizione per qualsiasi chiarimento.`,
+      conferma: `Gentile ${c.cliente}, confermiamo la ricezione del suo ordine ${c.code}. Provvederemo a ordinare il materiale. La terremo aggiornata sullo stato di avanzamento.`,
+      stato: `Gentile ${c.cliente}, aggiornamento sul suo ordine ${c.code}: ${c.trackingStato === "ordinato" ? "il materiale è stato ordinato" : c.trackingStato === "produzione" ? "il materiale è in produzione" : c.trackingStato === "pronto" ? "il materiale è pronto per la consegna" : c.trackingStato === "consegnato" ? "il materiale è stato consegnato" : c.trackingStato === "montato" ? "il montaggio è completato" : "in lavorazione"}.${c.dataPrevConsegna ? " Consegna prevista: " + c.dataPrevConsegna : ""}`,
+    };
+    const msg = encodeURIComponent(msgs[tipo] || "");
+    window.open(`https://wa.me/${tel.startsWith("39") ? tel : "39" + tel}?text=${msg}`, "_blank");
+  };
+
+  const inviaEmail = (c, tipo: "preventivo" | "conferma") => {
+    const sogg = tipo === "preventivo" ? `Preventivo ${c.code} — ${aziendaDB.nome || "MASTRO"}` : `Conferma ordine ${c.code}`;
+    const body = tipo === "preventivo"
+      ? `Gentile ${c.cliente},\n\nle invio in allegato il preventivo per la fornitura e posa in opera dei serramenti.\n\nRif: ${c.code}\nImporto: €${c.euro || "—"}\n\nResto a disposizione.\nCordiali saluti\n${aziendaDB.nome || ""}`
+      : `Gentile ${c.cliente},\n\ncon la presente le confermiamo l'ordine ${c.code}.\n\nProvvederemo a ordinare il materiale e la terremo aggiornata.\n\nCordiali saluti\n${aziendaDB.nome || ""}`;
+    window.open(`mailto:${c.email || ""}?subject=${encodeURIComponent(sogg)}&body=${encodeURIComponent(body)}`, "_blank");
+  };
+
+  // =============================================
+  // === ORDINI FORNITORE — MODULO COMPLETO ===
+  // =============================================
+
+  const [ordineDetail, setOrdineDetail] = useState<string | null>(null); // id ordine aperto
+  const [extractingPDF, setExtractingPDF] = useState(false); // loading AI extraction
+  const [showInboxDoc, setShowInboxDoc] = useState(false); // global document inbox
+  const [inboxResult, setInboxResult] = useState<any>(null); // extracted data from inbox
+
+  // Crea nuovo ordine fornitore da commessa
+  const creaOrdineFornitore = (c, fornitoreNome = "") => {
+    const vani = getVaniAttivi(c);
+    // Auto-genera righe da vani commessa con prezzi
+    const righe = vani.map(v => {
+      const tipLabel = TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.label || v.tipo || "—";
+      const m = v.misure || {};
+      const lmm = m.lCentro || 0, hmm = m.hCentro || 0;
+      const prezzo = calcolaVanoPrezzo(v, c);
+      return {
+        id: "r_" + Math.random().toString(36).slice(2, 8),
+        desc: `${tipLabel} — ${v.stanza || ""} ${v.piano || ""}`.trim(),
+        misure: lmm > 0 && hmm > 0 ? `${lmm}×${hmm}` : "da definire",
+        qta: v.pezzi || 1,
+        prezzoUnit: Math.round(prezzo * 100) / 100,
+        totale: Math.round(prezzo * (v.pezzi || 1) * 100) / 100,
+        note: v.coloreEst ? `Colore: ${v.coloreEst}` : "",
+      };
+    });
+
+    const ord = {
+      id: "ord_" + Date.now(),
+      cmId: c.id,
+      cmCode: c.code,
+      cliente: c.cliente,
+      numero: ordiniFornDB.filter(o => new Date(o.dataOrdine).getFullYear() === new Date().getFullYear()).length + 1,
+      anno: new Date().getFullYear(),
+      dataOrdine: new Date().toISOString().split("T")[0],
+      fornitore: {
+        nome: fornitoreNome,
+        email: "",
+        tel: "",
+        piva: "",
+        referente: "",
+      },
+      righe,
+      totale: righe.reduce((s, r) => s + r.totale, 0),
+      iva: 22, // IVA fornitore standard
+      totaleIva: Math.round(righe.reduce((s, r) => s + r.totale, 0) * 1.22 * 100) / 100,
+      sconto: 0,
+
+      // STATO ORDINE
+      stato: "bozza" as string, // bozza → inviato → confermato → in_produzione → spedito → consegnato
+
+      // CONFERMA FORNITORE
+      conferma: {
+        ricevuta: false,
+        dataRicezione: "",
+        verificata: false, // MASTRO ha controllato
+        differenze: "",    // note su differenze
+        firmata: false,
+        dataFirma: "",
+        reinviata: false,
+        dataReinvio: "",
+      },
+
+      // CONSEGNA
+      consegna: {
+        prevista: "",       // data prevista dal fornitore
+        settimane: 0,       // settimane di produzione
+        effettiva: "",      // data effettiva consegna
+        luogo: c.indirizzo || "",
+        note: "",
+      },
+
+      // PAGAMENTO
+      pagamento: {
+        termini: "30gg_fm" as string, // anticipato, 30gg_fm, 60gg_fm, 90gg_fm, ricevuta_merce
+        scadenza: "",
+        importo: 0,
+        pagato: false,
+        dataPagamento: "",
+        metodo: "", // bonifico, assegno, riba
+      },
+
+      note: "",
+    };
+
+    setOrdiniFornDB(prev => [...prev, ord]);
+    setFaseTo(c.id, "ordini"); // AUTO-ADVANCE: ordine creato → fase ordini
+    return ord;
+  };
+
+  // Ricalcola totali ordine
+  const ricalcolaOrdine = (ordId: string) => {
+    setOrdiniFornDB(prev => prev.map(o => {
+      if (o.id !== ordId) return o;
+      const subtot = o.righe.reduce((s, r) => s + (r.qta * r.prezzoUnit), 0);
+      const scontoVal = subtot * (o.sconto || 0) / 100;
+      const imponibile = subtot - scontoVal;
+      const ivaVal = imponibile * o.iva / 100;
+      return { ...o, totale: imponibile, totaleIva: imponibile + ivaVal, pagamento: { ...o.pagamento, importo: imponibile + ivaVal } };
+    }));
+  };
+
+  // Aggiorna campo ordine
+  const updateOrdine = (ordId: string, path: string, value: any) => {
+    setOrdiniFornDB(prev => prev.map(o => {
+      if (o.id !== ordId) return o;
+      const parts = path.split(".");
+      const updated = { ...o };
+      let current: any = updated;
+      for (let i = 0; i < parts.length - 1; i++) {
+        current[parts[i]] = { ...current[parts[i]] };
+        current = current[parts[i]];
+      }
+      current[parts[parts.length - 1]] = value;
+      return updated;
+    }));
+  };
+
+  // Calcola scadenza pagamento
+  const calcolaScadenzaPagamento = (dataOrdine: string, termini: string) => {
+    const d = new Date(dataOrdine);
+    if (termini === "anticipato") return dataOrdine;
+    if (termini === "ricevuta_merce") return ""; // da compilare alla consegna
+    const days = termini === "30gg_fm" ? 30 : termini === "60gg_fm" ? 60 : termini === "90gg_fm" ? 90 : 30;
+    // Fine mese + giorni
+    const fm = new Date(d.getFullYear(), d.getMonth() + 1, 0); // fine mese ordine
+    fm.setDate(fm.getDate() + days);
+    return fm.toISOString().split("T")[0];
+  };
+
+  // Genera PDF ordine fornitore
+  const generaOrdinePDF = (ord) => {
+    const az = aziendaDB;
+    const fmt = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00";
+    const imponibile = ord.totale;
+    const ivaVal = imponibile * ord.iva / 100;
+    const scontoPerc = ord.sconto || 0;
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#1a1a1c;padding:20px;max-width:800px;margin:0 auto}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #1a1a1c}
+      .title{font-size:20px;font-weight:800;letter-spacing:-0.3px}
+      table{width:100%;border-collapse:collapse;margin:16px 0}
+      th{background:#f5f5f7;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #ddd}
+      td{padding:8px 10px;border-bottom:1px solid #eee}
+      .total-row td{font-weight:700;border-top:2px solid #1a1a1c;border-bottom:none}
+      .box{background:#f9f9fb;border-radius:8px;padding:14px;margin-bottom:12px}
+      .sign-area{margin-top:40px;display:flex;justify-content:space-between}
+      .sign-box{width:45%;border-top:1px solid #aaa;padding-top:8px;text-align:center;font-size:10px;color:#888}
+      @media print{body{padding:10px}}
+    </style></head><body>
+
+    <div class="header">
+      <div>
+        ${az.logo ? `<img src="${az.logo}" style="max-height:45px;margin-bottom:6px" /><br>` : ""}
+        <div class="title">${az.nome || "MASTRO"}</div>
+        <div style="font-size:10px;color:#666;margin-top:2px">${az.indirizzo || ""}<br>${az.tel || ""} · ${az.email || ""}<br>${az.piva ? "P.IVA " + az.piva : ""}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:16px;font-weight:800;color:#007aff">ORDINE FORNITORE</div>
+        <div style="font-size:12px;font-weight:700">N. ${ord.numero}/${ord.anno}</div>
+        <div style="font-size:10px;color:#666">Data: ${new Date(ord.dataOrdine).toLocaleDateString("it-IT")}</div>
+        <div style="font-size:10px;color:#666">Rif. Commessa: ${ord.cmCode}</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:16px;margin-bottom:16px">
+      <div class="box" style="flex:1">
+        <div style="font-size:9px;text-transform:uppercase;color:#888;letter-spacing:1px;margin-bottom:6px">Fornitore</div>
+        <div style="font-size:14px;font-weight:700">${ord.fornitore.nome || "—"}</div>
+        ${ord.fornitore.referente ? `<div>Att.ne: ${ord.fornitore.referente}</div>` : ""}
+        ${ord.fornitore.email ? `<div>${ord.fornitore.email}</div>` : ""}
+        ${ord.fornitore.tel ? `<div>${ord.fornitore.tel}</div>` : ""}
+        ${ord.fornitore.piva ? `<div>P.IVA: ${ord.fornitore.piva}</div>` : ""}
+      </div>
+      <div class="box" style="flex:1">
+        <div style="font-size:9px;text-transform:uppercase;color:#888;letter-spacing:1px;margin-bottom:6px">Consegna</div>
+        <div style="font-size:12px;font-weight:600">${ord.consegna.luogo || "Da definire"}</div>
+        ${ord.consegna.prevista ? `<div>📅 Prevista: ${new Date(ord.consegna.prevista).toLocaleDateString("it-IT")}</div>` : ""}
+        ${ord.consegna.settimane ? `<div>⏱ Produzione: ${ord.consegna.settimane} settimane</div>` : ""}
+        <div style="margin-top:4px;font-size:10px;color:#888">Pagamento: ${ord.pagamento.termini === "anticipato" ? "Anticipato" : ord.pagamento.termini === "30gg_fm" ? "30gg FM" : ord.pagamento.termini === "60gg_fm" ? "60gg FM" : ord.pagamento.termini === "90gg_fm" ? "90gg FM" : "A ricevimento merce"}</div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;margin-bottom:4px">Cliente finale: ${ord.cliente}</div>
+
+    <table>
+      <tr><th style="width:5%">#</th><th style="width:40%">Descrizione</th><th style="width:12%">Misure</th><th style="width:8%">Qtà</th><th style="width:15%">Prezzo Unit.</th><th style="width:15%">Totale</th><th>Note</th></tr>
+      ${ord.righe.map((r, i) => `<tr>
+        <td>${i + 1}</td>
+        <td style="font-weight:600">${r.desc}</td>
+        <td>${r.misure}</td>
+        <td style="text-align:center">${r.qta}</td>
+        <td style="text-align:right">&euro;${fmt(r.prezzoUnit)}</td>
+        <td style="text-align:right">&euro;${fmt(r.qta * r.prezzoUnit)}</td>
+        <td style="font-size:9px;color:#666">${r.note || ""}</td>
+      </tr>`).join("")}
+      ${scontoPerc > 0 ? `<tr><td colspan="5" style="text-align:right;font-weight:600">Sconto ${scontoPerc}%</td><td style="text-align:right;color:#ff3b30">-&euro;${fmt(ord.righe.reduce((s, r) => s + r.qta * r.prezzoUnit, 0) * scontoPerc / 100)}</td><td></td></tr>` : ""}
+      <tr><td colspan="5" style="text-align:right">Imponibile</td><td style="text-align:right">&euro;${fmt(imponibile)}</td><td></td></tr>
+      <tr><td colspan="5" style="text-align:right">IVA ${ord.iva}%</td><td style="text-align:right">&euro;${fmt(ivaVal)}</td><td></td></tr>
+      <tr class="total-row"><td colspan="5" style="text-align:right;font-size:13px">TOTALE</td><td style="text-align:right;font-size:13px">&euro;${fmt(ord.totaleIva)}</td><td></td></tr>
+    </table>
+
+    ${ord.note ? `<div class="box"><div style="font-size:9px;text-transform:uppercase;color:#888;margin-bottom:4px">Note</div>${ord.note}</div>` : ""}
+
+    <div class="sign-area">
+      <div class="sign-box">Timbro e firma ordinante<br><br><br></div>
+      <div class="sign-box">Per accettazione fornitore<br><br><br></div>
+    </div>
+
+    <div style="text-align:center;font-size:8px;color:#ccc;margin-top:30px">Generato con MASTRO · ${new Date().toLocaleDateString("it-IT")}</div>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); w.print(); }
+  };
+
+  // Genera PDF conferma firmata (per reinvio al fornitore)
+  const generaConfermaFirmataPDF = (ord) => {
+    const az = aziendaDB;
+    const fmt = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2 }) : "0,00";
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#1a1a1c;padding:30px;max-width:800px;margin:0 auto}
+      .stamp{border:3px solid #34c759;border-radius:12px;padding:16px;margin:20px 0;text-align:center}
+    </style></head><body>
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:18px;font-weight:800;color:#34c759">✅ CONFERMA ORDINE APPROVATA</div>
+      <div style="font-size:12px;color:#666;margin-top:4px">Ordine N. ${ord.numero}/${ord.anno} — ${ord.fornitore.nome}</div>
+    </div>
+
+    <div style="background:#f9f9fb;border-radius:8px;padding:14px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between">
+        <div><b>Committente:</b> ${az.nome || "MASTRO"}<br>${az.indirizzo || ""}<br>${az.piva ? "P.IVA " + az.piva : ""}</div>
+        <div style="text-align:right"><b>Fornitore:</b> ${ord.fornitore.nome}<br>${ord.fornitore.email || ""}<br>${ord.fornitore.piva ? "P.IVA " + ord.fornitore.piva : ""}</div>
+      </div>
+    </div>
+
+    <div style="margin:14px 0"><b>Rif. Commessa:</b> ${ord.cmCode} — ${ord.cliente}</div>
+
+    <table style="width:100%;border-collapse:collapse">
+      <tr><th style="background:#34c75920;padding:8px;text-align:left;border-bottom:2px solid #34c759">#</th><th style="background:#34c75920;padding:8px;text-align:left;border-bottom:2px solid #34c759">Descrizione</th><th style="background:#34c75920;padding:8px;border-bottom:2px solid #34c759">Misure</th><th style="background:#34c75920;padding:8px;border-bottom:2px solid #34c759">Qtà</th><th style="background:#34c75920;padding:8px;text-align:right;border-bottom:2px solid #34c759">Prezzo</th></tr>
+      ${ord.righe.map((r, i) => `<tr><td style="padding:6px;border-bottom:1px solid #eee">${i + 1}</td><td style="padding:6px;border-bottom:1px solid #eee">${r.desc}</td><td style="padding:6px;border-bottom:1px solid #eee">${r.misure}</td><td style="padding:6px;border-bottom:1px solid #eee;text-align:center">${r.qta}</td><td style="padding:6px;border-bottom:1px solid #eee;text-align:right">&euro;${fmt(r.qta * r.prezzoUnit)}</td></tr>`).join("")}
+    </table>
+    <div style="text-align:right;font-size:14px;font-weight:800;margin-top:8px">TOTALE: &euro;${fmt(ord.totaleIva)}</div>
+
+    <div class="stamp">
+      <div style="font-size:14px;font-weight:800;color:#34c759">CONFERMATO E APPROVATO</div>
+      <div style="font-size:11px;color:#666;margin-top:4px">Data conferma: ${ord.conferma.dataFirma ? new Date(ord.conferma.dataFirma).toLocaleDateString("it-IT") : new Date().toLocaleDateString("it-IT")}</div>
+      <div style="font-size:11px;color:#666">Consegna prevista: ${ord.consegna.prevista ? new Date(ord.consegna.prevista).toLocaleDateString("it-IT") : "Da concordare"}</div>
+      <div style="font-size:11px;color:#666">Pagamento: ${ord.pagamento.termini === "anticipato" ? "Anticipato" : ord.pagamento.termini.replace("_", " ").toUpperCase()}</div>
+      ${ord.conferma.differenze ? `<div style="margin-top:8px;font-size:10px;color:#ff9500;font-weight:600">⚠️ Note: ${ord.conferma.differenze}</div>` : ""}
+    </div>
+
+    <div style="display:flex;justify-content:space-between;margin-top:40px">
+      <div style="width:45%;border-top:1px solid #aaa;padding-top:8px;text-align:center;font-size:10px;color:#888">Firma ${az.nome || "committente"}<br>${ord.conferma.dataFirma || ""}</div>
+      <div style="width:45%;border-top:1px solid #aaa;padding-top:8px;text-align:center;font-size:10px;color:#888">Per accettazione fornitore</div>
+    </div>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); w.print(); }
+  };
+
+  // Invio ordine/conferma via email/whatsapp
+  const inviaOrdineFornitore = (ord, mezzo: "email" | "whatsapp") => {
+    const az = aziendaDB;
+    if (mezzo === "email") {
+      const subject = ord.conferma.firmata
+        ? `Conferma ordine N.${ord.numero}/${ord.anno} — ${az.nome}`
+        : `Ordine N.${ord.numero}/${ord.anno} — ${az.nome}`;
+      const body = ord.conferma.firmata
+        ? `Gentile ${ord.fornitore.referente || ord.fornitore.nome},\n\nconfermiamo l'ordine N.${ord.numero}/${ord.anno} per la commessa ${ord.cmCode} (${ord.cliente}).\n\nTotale: €${ord.totaleIva?.toLocaleString("it-IT", { minimumFractionDigits: 2 })}\nConsegna prevista: ${ord.consegna.prevista ? new Date(ord.consegna.prevista).toLocaleDateString("it-IT") : "da concordare"}\nPagamento: ${ord.pagamento.termini}\n\nIn allegato la conferma firmata.\n\nCordiali saluti,\n${az.nome}`
+        : `Gentile ${ord.fornitore.referente || ord.fornitore.nome},\n\ncon la presente vi trasmettiamo l'ordine N.${ord.numero}/${ord.anno} per la commessa ${ord.cmCode} (${ord.cliente}).\n\nRichiediamo conferma d'ordine con tempi di consegna e condizioni di pagamento.\n\nCordiali saluti,\n${az.nome}`;
+      window.open(`mailto:${ord.fornitore.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
+    } else {
+      const tel = (ord.fornitore.tel || "").replace(/\D/g, "");
+      const msg = ord.conferma.firmata
+        ? `Buongiorno, vi confermiamo ordine N.${ord.numero}/${ord.anno} — Commessa ${ord.cmCode} (${ord.cliente}). Totale €${ord.totaleIva?.toLocaleString("it-IT", { minimumFractionDigits: 2 })}. Consegna prevista: ${ord.consegna.prevista ? new Date(ord.consegna.prevista).toLocaleDateString("it-IT") : "da concordare"}. Vi inviamo conferma firmata via email. ${az.nome}`
+        : `Buongiorno, vi invio ordine N.${ord.numero}/${ord.anno} — Commessa ${ord.cmCode} (${ord.cliente}). Attendo conferma d'ordine con tempi e condizioni. Grazie. ${az.nome}`;
+      window.open(`https://wa.me/${tel.startsWith("39") ? tel : "39" + tel}?text=${encodeURIComponent(msg)}`, "_blank");
+    }
+  };
+
+  // Stati ordine con colori
+  const ORDINE_STATI = [
+    { id: "bozza", label: "Bozza", icon: "📝", color: "#8e8e93" },
+    { id: "inviato", label: "Inviato", icon: "📤", color: "#007aff" },
+    { id: "confermato", label: "Confermato", icon: "✅", color: "#34c759" },
+    { id: "in_produzione", label: "In Produzione", icon: "🏭", color: "#ff9500" },
+    { id: "spedito", label: "Spedito", icon: "🚛", color: "#5856d6" },
+    { id: "consegnato", label: "Consegnato", icon: "📦", color: "#30b0c7" },
+  ];
+
+  // === PIANIFICAZIONE MONTAGGIO ===
+  const creaMontaggio = (c) => {
+    const m = {
+      id: "mont_" + Date.now(),
+      cmId: c.id,
+      cmCode: c.code,
+      cliente: c.cliente,
+      indirizzo: c.indirizzo || "",
+      squadraId: squadreDB[0]?.id || "",
+      data: "",
+      oraInizio: "08:00",
+      durata: "giornata", // "mezza", "giornata", "2giorni", "3giorni"
+      stato: "pianificato", // pianificato, in_corso, completato
+      note: "",
+      vaniCount: getVaniAttivi(c).length,
+    };
+    setMontaggiDB(prev => [...prev, m]);
+    return m;
+  };
+
+  // Genera giorni della settimana
+  const getWeekDays = (offset: number) => {
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - now.getDay() + 1 + offset * 7);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d;
+    });
+  };
+
+  // Render calendario montaggi (vista settimanale con squadre)
+  const renderCalendarioMontaggi = (targetMontaggioId?: string) => {
+    const days = getWeekDays(calMontaggiWeek);
+    const durataGiorni = (d: string) => d === "mezza" ? 0.5 : d === "2giorni" ? 2 : d === "3giorni" ? 3 : 1;
+    const isOccupied = (sq: any, day: Date) => {
+      const dayStr = day.toISOString().split("T")[0];
+      return montaggiDB.some(m => {
+        if (m.squadraId !== sq.id || !m.data || m.stato === "completato") return false;
+        const startDate = new Date(m.data);
+        const numDays = durataGiorni(m.durata);
+        for (let i = 0; i < Math.ceil(numDays); i++) {
+          const d = new Date(startDate);
+          d.setDate(startDate.getDate() + i);
+          if (d.toISOString().split("T")[0] === dayStr) return m;
+        }
+        return false;
+      });
+    };
+    const today = new Date().toISOString().split("T")[0];
+    const isSunday = (d: Date) => d.getDay() === 0;
+
+    return (
+      <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, overflow: "hidden" }}>
+        {/* Header navigazione settimana */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: T.bg, borderBottom: `1px solid ${T.bdr}` }}>
+          <div onClick={() => setCalMontaggiWeek(w => w - 1)} style={{ padding: "4px 10px", cursor: "pointer", fontSize: 16, fontWeight: 700, color: T.acc }}>◀</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>
+            {days[0].toLocaleDateString("it-IT", { day: "numeric", month: "short" })} — {days[6].toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" })}
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div onClick={() => setCalMontaggiWeek(0)} style={{ padding: "3px 8px", borderRadius: 6, background: calMontaggiWeek === 0 ? T.acc : "transparent", color: calMontaggiWeek === 0 ? "#fff" : T.sub, fontSize: 9, fontWeight: 700, cursor: "pointer" }}>Oggi</div>
+            <div onClick={() => setCalMontaggiWeek(w => w + 1)} style={{ padding: "4px 10px", cursor: "pointer", fontSize: 16, fontWeight: 700, color: T.acc }}>▶</div>
+          </div>
+        </div>
+
+        {/* Griglia: header giorni */}
+        <div style={{ display: "grid", gridTemplateColumns: `80px repeat(7, 1fr)`, fontSize: 9 }}>
+          <div style={{ padding: "6px 4px", fontWeight: 700, color: T.sub, textAlign: "center", borderBottom: `1px solid ${T.bdr}`, borderRight: `1px solid ${T.bdr}` }}>Squadra</div>
+          {days.map((d, i) => {
+            const isToday = d.toISOString().split("T")[0] === today;
+            const isSun = isSunday(d);
+            return (
+              <div key={i} style={{
+                padding: "6px 2px", textAlign: "center", fontWeight: 700,
+                color: isToday ? "#fff" : isSun ? T.red : T.text,
+                background: isToday ? T.acc : isSun ? "#ff3b3010" : "transparent",
+                borderBottom: `1px solid ${T.bdr}`,
+                borderRight: i < 6 ? `1px solid ${T.bdr}` : "none",
+              }}>
+                <div>{["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"][i]}</div>
+                <div style={{ fontSize: 12 }}>{d.getDate()}</div>
+              </div>
+            );
+          })}
+
+          {/* Righe squadre */}
+          {squadreDB.map(sq => (
+            <React.Fragment key={sq.id}>
+              <div style={{ padding: "8px 6px", fontWeight: 700, fontSize: 10, color: sq.colore, borderRight: `1px solid ${T.bdr}`, borderBottom: `1px solid ${T.bdr}`, display: "flex", alignItems: "center", gap: 3 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 4, background: sq.colore, flexShrink: 0 }} />
+                {sq.nome}
+              </div>
+              {days.map((d, i) => {
+                const occ = isOccupied(sq, d);
+                const dayStr = d.toISOString().split("T")[0];
+                const isPast = dayStr < today;
+                const isSun = isSunday(d);
+                const canClick = !occ && !isPast && !isSun && targetMontaggioId;
+                return (
+                  <div key={i} onClick={() => {
+                    if (canClick) {
+                      setMontaggiDB(prev => prev.map(m => m.id === targetMontaggioId ? { ...m, data: dayStr, squadraId: sq.id } : m));
+                    }
+                  }} style={{
+                    padding: "4px 3px", borderBottom: `1px solid ${T.bdr}`,
+                    borderRight: i < 6 ? `1px solid ${T.bdr}` : "none",
+                    background: occ ? sq.colore + "20" : isPast ? T.bg + "80" : isSun ? "#ff3b3005" : canClick ? "#34c75908" : "transparent",
+                    cursor: canClick ? "pointer" : "default",
+                    minHeight: 36, position: "relative" as any,
+                  }}>
+                    {occ && (
+                      <div style={{ fontSize: 7, fontWeight: 700, color: sq.colore, lineHeight: 1.2 }}>
+                        <div>{(occ as any).cliente?.slice(0, 8)}</div>
+                        <div style={{ color: T.sub }}>{(occ as any).vaniCount}v · {(occ as any).durata === "mezza" ? "½" : (occ as any).durata === "2giorni" ? "2g" : (occ as any).durata === "3giorni" ? "3g" : "1g"}</div>
+                      </div>
+                    )}
+                    {canClick && !occ && (
+                      <div style={{ position: "absolute" as any, inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#34c75950" }}>+</div>
+                    )}
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* Legenda */}
+        <div style={{ padding: "6px 12px", display: "flex", gap: 12, flexWrap: "wrap" as any, fontSize: 9, color: T.sub, borderTop: `1px solid ${T.bdr}` }}>
+          {squadreDB.map(sq => (
+            <span key={sq.id} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: sq.colore }} />
+              {sq.nome}: {montaggiDB.filter(m => m.squadraId === sq.id && m.stato !== "completato").length} in programma
+            </span>
+          ))}
+          <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: "#ff9500" }} />
+            Consegne: {ordiniFornDB.filter(o => o.dataConsegnaPrev && o.stato !== "consegnato").length} attese
+          </span>
+        </div>
+
+        {/* Consegne fornitore nella settimana */}
+        {(() => {
+          const weekDeliveries = ordiniFornDB.filter(o => {
+            if (!o.dataConsegnaPrev || o.stato === "consegnato") return false;
+            const d = new Date(o.dataConsegnaPrev);
+            return d >= days[0] && d <= days[6];
+          });
+          if (weekDeliveries.length === 0) return null;
+          return (
+            <div style={{ padding: "8px 12px", borderTop: `1px solid ${T.bdr}`, background: "#ff950008" }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "#ff9500", marginBottom: 4 }}>🚛 Consegne questa settimana:</div>
+              {weekDeliveries.map(o => {
+                const cm = cantieri.find(cc => cc.id === o.cmId);
+                const isLate = new Date(o.dataConsegnaPrev) < new Date();
+                return (
+                  <div key={o.id} style={{ fontSize: 10, color: isLate ? T.red : T.text, padding: "2px 0", display: "flex", gap: 8 }}>
+                    <span style={{ fontWeight: 700, width: 30, color: "#ff9500" }}>{new Date(o.dataConsegnaPrev).toLocaleDateString("it-IT", { weekday: "short" })}</span>
+                    <span style={{ fontWeight: 600 }}>{o.fornitore}</span>
+                    <span style={{ color: T.sub }}>→ {cm?.cliente || o.cmId}</span>
+                    {o.costo > 0 && <span style={{ color: T.sub }}>€{o.costo.toLocaleString("it-IT")}</span>}
+                    {isLate && <span style={{ color: T.red, fontWeight: 700 }}>⚠️ RITARDO</span>}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+      </div>
+    );
+  };
+
+  // === PAGINA PREVENTIVO CONDIVISIBILE (link per cliente) ===
+  const generaPreventivoCondivisibile = async (c) => {
+    const az = aziendaDB;
+    const vani = getVaniAttivi(c);
+    const fmt = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00";
+    // Calcola prezzi reali dai sistemi/griglie
+    const vaniConPrezzi = vani.map(v => ({ ...v, _prezzo: calcolaVanoPrezzo(v, c) }));
+    const subtot = vaniConPrezzi.reduce((s, v) => s + v._prezzo, 0) + (c.vociLibere || []).reduce((s, vl) => s + ((vl.importo || 0) * (vl.qta || 1)), 0);
+    const iva = subtot * 0.1;
+    const tot = subtot + iva;
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1d1d1f;max-width:600px;margin:0 auto;padding:16px;background:#f5f5f7}
+      .card{background:#fff;border-radius:14px;padding:18px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+      .header{text-align:center;margin-bottom:16px}
+      .logo{max-height:50px;margin-bottom:8px}
+      .title{font-size:22px;font-weight:800;color:#1d1d1f}
+      .sub{font-size:12px;color:#86868b}
+      .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+      .row:last-child{border:none}
+      .total{font-size:18px;font-weight:800;color:#007aff;text-align:right;padding:12px 0}
+      .btn{width:100%;padding:16px;border-radius:12px;border:none;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;font-family:inherit}
+      .btn-green{background:#34c759;color:#fff}
+      .btn-outline{background:#fff;color:#007aff;border:2px solid #007aff}
+      canvas{border:1px solid #e5e5ea;border-radius:10px;background:#fff;touch-action:none}
+      .firma-done{background:#f0fdf4;border:2px solid #34c759;border-radius:12px;padding:16px;text-align:center}
+    </style></head><body>
+    <div class="header">
+      ${az.logo ? `<img src="${az.logo}" class="logo"/><br>` : ""}
+      <div class="title">${az.nome || "MASTRO"}</div>
+      <div class="sub">${az.indirizzo || ""}<br>${az.tel || ""} · ${az.email || ""}</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:11px;text-transform:uppercase;color:#86868b;letter-spacing:1px;margin-bottom:8px">Preventivo</div>
+      <div style="font-size:16px;font-weight:700">${c.code}</div>
+      <div style="font-size:13px;color:#86868b;margin-top:2px">Per: ${c.cliente} ${c.cognome || ""}</div>
+      <div style="font-size:12px;color:#86868b">${c.indirizzo || ""}</div>
+      <div style="font-size:11px;color:#86868b;margin-top:4px">Data: ${new Date().toLocaleDateString("it-IT")}</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:11px;text-transform:uppercase;color:#86868b;letter-spacing:1px;margin-bottom:10px">Riepilogo fornitura</div>
+      ${vaniConPrezzi.map((v, i) => {
+        const tipLabel = TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.label || v.tipo || "Vano";
+        return `<div class="row">
+          <div><strong>${i + 1}. ${tipLabel}</strong><br><span style="font-size:11px;color:#86868b">${v.stanza || ""} ${v.piano || ""} — ${v.misure?.lCentro || 0}×${v.misure?.hCentro || 0} mm</span></div>
+          <div style="font-weight:700;white-space:nowrap">&euro;${fmt(v._prezzo)}</div>
+        </div>`;
+      }).join("")}
+      ${(c.vociLibere || []).map(vl => `<div class="row"><div>${vl.desc}</div><div style="font-weight:700">&euro;${fmt(vl.importo)}</div></div>`).join("")}
+      <div style="border-top:2px solid #e5e5ea;margin-top:8px;padding-top:8px">
+        <div class="row"><span>Imponibile</span><span style="font-weight:600">&euro;${fmt(subtot)}</span></div>
+        <div class="row"><span>IVA 10%</span><span>&euro;${fmt(iva)}</span></div>
+      </div>
+      <div class="total">TOTALE: &euro;${fmt(tot)}</div>
+    </div>
+
+    ${c.condPagamento ? `<div class="card"><div style="font-size:11px;text-transform:uppercase;color:#86868b;letter-spacing:1px;margin-bottom:6px">Condizioni di pagamento</div><div style="font-size:12px;line-height:1.5">${c.condPagamento.replace(/\n/g, "<br>")}</div></div>` : ""}
+
+    <div class="card" id="firma-section">
+      <div style="font-size:11px;text-transform:uppercase;color:#86868b;letter-spacing:1px;margin-bottom:10px">Firma di accettazione</div>
+      <div id="firma-pad" style="text-align:center">
+        <canvas id="sigCanvas" width="340" height="150" style="width:100%;max-width:340px"></canvas>
+        <div style="font-size:10px;color:#86868b;margin-top:4px">Firma con il dito o con il mouse</div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-outline" onclick="clearSig()" style="flex:1;padding:10px;font-size:13px">Cancella</button>
+          <button class="btn btn-green" onclick="confirmSig()" style="flex:1;padding:10px;font-size:13px">✅ Conferma e Firma</button>
+        </div>
+      </div>
+      <div id="firma-done" class="firma-done" style="display:none">
+        <div style="font-size:24px;margin-bottom:6px">✅</div>
+        <div style="font-size:16px;font-weight:700;color:#34c759">Preventivo Firmato!</div>
+        <div style="font-size:12px;color:#86868b;margin-top:4px">Grazie per la conferma. Riceverà aggiornamenti sull'avanzamento del suo ordine.</div>
+        <img id="firma-img" style="max-height:60px;margin-top:10px" alt=""/>
+      </div>
+    </div>
+
+    <div style="text-align:center;font-size:10px;color:#ccc;margin-top:16px">Generato con MASTRO · ${new Date().toLocaleDateString("it-IT")}</div>
+
+    <script>
+    const canvas=document.getElementById('sigCanvas'),ctx=canvas.getContext('2d');
+    let drawing=false,lastX=0,lastY=0,hasDrawn=false;
+    ctx.strokeStyle='#1d1d1f';ctx.lineWidth=2;ctx.lineCap='round';
+    function getPos(e){const r=canvas.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
+    canvas.addEventListener('mousedown',e=>{drawing=true;const p=getPos(e);lastX=p.x;lastY=p.y;});
+    canvas.addEventListener('mousemove',e=>{if(!drawing)return;hasDrawn=true;const p=getPos(e);ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(p.x,p.y);ctx.stroke();lastX=p.x;lastY=p.y;});
+    canvas.addEventListener('mouseup',()=>drawing=false);
+    canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=getPos(e);lastX=p.x;lastY=p.y;},{passive:false});
+    canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!drawing)return;hasDrawn=true;const p=getPos(e);ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(p.x,p.y);ctx.stroke();lastX=p.x;lastY=p.y;},{passive:false});
+    canvas.addEventListener('touchend',()=>drawing=false);
+    function clearSig(){ctx.clearRect(0,0,canvas.width,canvas.height);hasDrawn=false;}
+    function confirmSig(){
+      if(!hasDrawn){alert('Firma prima di confermare');return;}
+      const img=canvas.toDataURL();
+      document.getElementById('firma-pad').style.display='none';
+      document.getElementById('firma-done').style.display='block';
+      document.getElementById('firma-img').src=img;
+    }
+    <\/script>
+    </body></html>`;
+
+    // Upload to Supabase Storage per URL pubblico condivisibile
+    const fileName = `preventivo_${c.code}_${Date.now()}.html`;
+    try {
+      const blob = new Blob([html], { type: "text/html" });
+      const { data: uploadData, error } = await supabase.storage
+        .from("preventivi")
+        .upload(`public/${fileName}`, blob, { contentType: "text/html", upsert: true });
+      
+      if (!error && uploadData) {
+        const { data: urlData } = supabase.storage.from("preventivi").getPublicUrl(`public/${fileName}`);
+        const publicUrl = urlData?.publicUrl;
+        if (publicUrl) {
+          // Salva URL nella commessa
+          setCantieri(cs => cs.map(x => x.id === c.id ? { ...x, linkPreventivo: publicUrl } : x));
+          setSelectedCM(p => p?.id === c.id ? { ...p, linkPreventivo: publicUrl } : p);
+          
+          // Apri link + offri invio WhatsApp
+          window.open(publicUrl, "_blank");
+          
+          // Auto-WhatsApp
+          const tel = (c.telefono || "").replace(/\D/g, "");
+          if (tel) {
+            const msg = `Gentile ${c.cliente}, ecco il preventivo per ${c.code}:\n${publicUrl}\n\nPuò visionarlo e firmarlo direttamente dal suo telefono.\n\nCordiali saluti,\n${aziendaDB.nome || "MASTRO"}`;
+            setTimeout(() => {
+              if (confirm("Inviare il link via WhatsApp al cliente?")) {
+                window.open(`https://wa.me/${tel.startsWith("39") ? tel : "39" + tel}?text=${encodeURIComponent(msg)}`, "_blank");
+              }
+            }, 500);
+          }
+          return publicUrl;
+        }
+      }
+    } catch (e) { console.warn("Upload Supabase non riuscito, uso blob locale:", e); }
+    
+    // Fallback: blob locale se Supabase non disponibile
+    const blobFallback = new Blob([html], { type: "text/html" });
+    const urlFallback = URL.createObjectURL(blobFallback);
+    window.open(urlFallback, "_blank");
+    return urlFallback;
+  };
+
+  // === UPLOAD CONFERMA FORNITORE (Supabase Storage + AI Extraction) ===
+  const uploadConfermaFornitore = (ordId: string) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/pdf,image/*";
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      // 1. Upload a Supabase Storage
+      const fileName = `conferma_${ordId}_${Date.now()}_${file.name}`;
+      let fileUrl = "";
+      try {
+        const { data: uploadData, error } = await supabase.storage
+          .from("conferme-fornitore")
+          .upload(`docs/${fileName}`, file, { contentType: file.type, upsert: true });
+        if (!error && uploadData) {
+          const { data: urlData } = supabase.storage.from("conferme-fornitore").getPublicUrl(`docs/${fileName}`);
+          fileUrl = urlData?.publicUrl || "";
+        }
+      } catch (err) { console.warn("Upload Supabase fallito:", err); }
+
+      // 2. AI Extraction — funziona con PDF, immagini, scansioni
+      let extractedData: any = {};
+      setExtractingPDF(true);
+      try {
+        extractedData = await estraiDatiPDF(file);
+      } catch (err) { console.warn("Estrazione:", err); }
+      setExtractingPDF(false);
+
+      // 3. Aggiorna ordine con allegato + dati estratti
+      setOrdiniFornDB(prev => prev.map(o => {
+        if (o.id !== ordId) return o;
+        const updated = {
+          ...o,
+          conferma: {
+            ...o.conferma,
+            ricevuta: true,
+            dataRicezione: new Date().toISOString().split("T")[0],
+            nomeFile: file.name,
+            fileUrl: fileUrl,
+            datiEstratti: extractedData, // salva tutto per riferimento
+          },
+          stato: o.stato === "bozza" || o.stato === "inviato" ? "confermato" : o.stato,
+        };
+        // Auto-fill dati estratti
+        if (extractedData.totale) updated.totaleIva = extractedData.totale;
+        if (extractedData.imponibile) updated.totale = extractedData.imponibile;
+        if (extractedData.settimane) updated.consegna = { ...updated.consegna, settimane: extractedData.settimane };
+        if (extractedData.dataConsegna) updated.consegna = { ...updated.consegna, prevista: extractedData.dataConsegna };
+        if (extractedData.pagamento) updated.pagamento = { ...updated.pagamento, termini: extractedData.pagamento };
+        if (extractedData.fornitoreNome && !o.fornitore?.nome) updated.fornitore = { ...updated.fornitore, nome: extractedData.fornitoreNome };
+        if (extractedData.numeroOrdine) updated.numero = extractedData.numeroOrdine;
+        // Auto-fill righe se estratte dall'AI
+        if (extractedData.righe?.length > 0 && (!o.righe || o.righe.length === 0)) {
+          updated.righe = extractedData.righe.map((r: any, i: number) => ({
+            id: Date.now() + i,
+            desc: r.descrizione || "",
+            misure: r.misure || "",
+            qta: r.quantita || 1,
+            prezzoUnit: r.prezzo_unitario || 0,
+            totale: r.prezzo_totale || (r.prezzo_unitario || 0) * (r.quantita || 1),
+            note: "",
+          }));
+        }
+        return updated;
+      }));
+    };
+    input.click();
+  };
+
+  // === AI PDF EXTRACTION — Claude legge QUALSIASI PDF ===
+  const estraiDatiPDF = async (file: File): Promise<any> => {
+    // METODO 1: Supabase Edge Function + Claude API (funziona con TUTTO)
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      const supabaseUrl = (supabase as any).supabaseUrl || "";
+      
+      const resp = await fetch(`${supabaseUrl}/functions/v1/extract-pdf`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${session?.access_token || ""}`,
+        },
+        body: formData,
+      });
+      
+      if (resp.ok) {
+        const result = await resp.json();
+        if (result.success && result.data) {
+          const d = result.data;
+          const extracted: any = {};
+          if (d.totale) extracted.totale = d.totale;
+          if (d.imponibile) extracted.imponibile = d.imponibile;
+          if (d.settimane) extracted.settimane = d.settimane;
+          if (d.data_consegna) extracted.dataConsegna = d.data_consegna;
+          if (d.termini_pagamento) extracted.pagamento = d.termini_pagamento;
+          if (d.fornitore_nome) extracted.fornitoreNome = d.fornitore_nome;
+          if (d.numero_ordine) extracted.numeroOrdine = d.numero_ordine;
+          if (d.righe) extracted.righe = d.righe;
+          if (d.note) extracted.note = d.note;
+          return extracted;
+        }
+      }
+    } catch (e) { console.warn("Edge Function non disponibile, uso fallback locale:", e); }
+
+    // METODO 2: Fallback — estrazione testo locale (PDF text-based)
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const text = reader.result as string;
+        const extracted: any = {};
+
+        // Totale
+        const totMatch = text.match(/(?:TOTALE|Totale\s*(?:Documento|Ordine|Generale)?|Tot\.?\s*€?)\s*[€:]?\s*([\d.,]+)/i);
+        if (totMatch) {
+          const val = parseFloat(totMatch[1].replace(/\./g, "").replace(",", "."));
+          if (val > 0 && val < 1000000) extracted.totale = val;
+        }
+        // Imponibile
+        const impMatch = text.match(/(?:Imponibile|Subtotale|Sub\s*tot)\s*[€:]?\s*([\d.,]+)/i);
+        if (impMatch) {
+          const val = parseFloat(impMatch[1].replace(/\./g, "").replace(",", "."));
+          if (val > 0) extracted.imponibile = val;
+        }
+        // Settimane
+        const settMatch = text.match(/(\d{1,2})\s*(?:settiman[ea]|sett\.?|weeks?)/i);
+        if (settMatch) extracted.settimane = parseInt(settMatch[1]);
+        const giorniMatch = text.match(/(\d{1,3})\s*(?:giorni?\s*(?:lavorativ|lavor))/i);
+        if (giorniMatch) extracted.settimane = Math.ceil(parseInt(giorniMatch[1]) / 5);
+        // Data consegna
+        const consMatch = text.match(/(?:consegna|delivery|spedizione)\s*(?:prevista)?:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+        if (consMatch) {
+          const parts = consMatch[1].split(/[\/\-]/);
+          if (parts.length === 3) {
+            const y = parts[2].length === 2 ? "20" + parts[2] : parts[2];
+            extracted.dataConsegna = `${y}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+          }
+        }
+        // Pagamento
+        const pagMatch = text.match(/(\d{2,3})\s*(?:gg|giorni)\s*(?:FM|D\.?F\.?|f\.?m\.?)?/i);
+        if (pagMatch) {
+          const days = parseInt(pagMatch[1]);
+          extracted.pagamento = days <= 30 ? "30gg_fm" : days <= 60 ? "60gg_fm" : "90gg_fm";
+        }
+        if (text.match(/anticip/i)) extracted.pagamento = "anticipato";
+        if (text.match(/ricevimento\s*merce/i)) extracted.pagamento = "ricevuta_merce";
+
+        resolve(extracted);
+      };
+      reader.readAsText(file);
+    });
+  };
+
+  // === 📥 INBOX UNIVERSALE — Classifica qualsiasi documento ===
+  const apriInboxDocumento = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/pdf,image/*,.jpg,.jpeg,.png";
+    input.onchange = async (ev: any) => {
+      const file = ev.target.files?.[0];
+      if (!file) return;
+      setShowInboxDoc(true);
+      setInboxResult({ stato: "caricamento", file: file.name, tipo: file.type });
+
+      let fileUrl = "";
+      let extractedData: any = {};
+
+      try {
+        try {
+          if (typeof supabase !== "undefined" && supabase?.storage) {
+            const fileName = `inbox_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+            const result: any = await Promise.race([
+              supabase.storage.from("conferme-fornitore").upload(`docs/${fileName}`, file, { contentType: file.type, upsert: true }),
+              new Promise((_, rej) => setTimeout(() => rej("timeout"), 5000)),
+            ]).catch(() => null);
+            if (result && !result.error) {
+              const { data: urlData } = supabase.storage.from("conferme-fornitore").getPublicUrl(`docs/${fileName}`);
+              fileUrl = urlData?.publicUrl || "";
+            }
+          }
+        } catch (err) { /* skip upload */ }
+
+        setInboxResult(prev => ({ ...prev, stato: "analisi" }));
+        try {
+          extractedData = await Promise.race([
+            estraiDatiPDF(file),
+            new Promise((_, rej) => setTimeout(() => rej("timeout"), 8000)),
+          ]).catch(() => ({ nomeFile: file.name }));
+        } catch (err) { extractedData = { nomeFile: file.name }; }
+      } catch (err) { console.warn("Inbox error:", err); }
+
+      // === CLASSIFICAZIONE UNIVERSALE ===
+      const fname = file.name.toLowerCase();
+      const dati = extractedData;
+      let docTipo: string = "sconosciuto"; // firma | conferma | fattura | ricevuta | foto
+      let matchedCommessa: any = null;
+      let matchedOrdine: any = null;
+      let confidence = 0;
+
+      // 1. Detect tipo from filename + content
+      if (fname.includes("firmato") || fname.includes("firma") || fname.includes("signed") || dati.text?.match(/firmato|firma.*cliente|approvato/i)) {
+        docTipo = "firma"; confidence = 90;
+      } else if (fname.includes("conferma") || fname.includes("order_confirm") || dati.fornitoreNome || dati.settimane) {
+        docTipo = "conferma"; confidence = 85;
+      } else if (fname.includes("fattura") || fname.includes("invoice") || dati.text?.match(/fattura\s*(n\.?|numero)/i)) {
+        docTipo = "fattura"; confidence = 85;
+      } else if (fname.includes("bonifico") || fname.includes("ricevuta") || fname.includes("pagamento") || dati.text?.match(/bonifico|accredito|pagamento/i)) {
+        docTipo = "ricevuta"; confidence = 80;
+      } else if (file.type.startsWith("image/") && !dati.fornitoreNome && !dati.totale) {
+        docTipo = "foto"; confidence = 60;
+      } else if (dati.fornitoreNome || dati.settimane) {
+        docTipo = "conferma"; confidence = 70;
+      } else if (dati.totale > 0) {
+        docTipo = "fattura"; confidence = 50;
+      }
+
+      // 2. Match to commessa/ordine
+      const ordiniAttivi = ordiniFornDB.filter(o => !o.conferma?.ricevuta);
+      
+      if (docTipo === "conferma") {
+        // Match conferma to ordine fornitore
+        if (dati.fornitoreNome) {
+          matchedOrdine = ordiniAttivi.find(o =>
+            (o.fornitore?.nome || "").toLowerCase().includes(dati.fornitoreNome.toLowerCase()) ||
+            dati.fornitoreNome.toLowerCase().includes((o.fornitore?.nome || "").toLowerCase())
+          );
+        }
+        if (!matchedOrdine && dati.totale) {
+          matchedOrdine = ordiniAttivi.find(o => Math.abs((o.totaleIva || o.totale || 0) - dati.totale) < 100);
+        }
+        if (!matchedOrdine && ordiniAttivi.length === 1) matchedOrdine = ordiniAttivi[0];
+        if (matchedOrdine) matchedCommessa = cantieri.find(cm => cm.id === matchedOrdine.cmId);
+      } else if (docTipo === "firma") {
+        // Match firma to commessa in attesa firma
+        const cmInAttesaFirma = cantieri.filter(cm => !cm.firmaCliente && cm.rilievi?.length > 0);
+        // Try match by client name in filename
+        for (const cm of cmInAttesaFirma) {
+          const cliName = `${cm.cliente} ${cm.cognome || ""}`.toLowerCase();
+          if (fname.includes(cm.cliente.toLowerCase()) || fname.includes((cm.cognome || "").toLowerCase()) || fname.includes(cm.code.toLowerCase())) {
+            matchedCommessa = cm; confidence = 95; break;
+          }
+        }
+        if (!matchedCommessa && cmInAttesaFirma.length === 1) { matchedCommessa = cmInAttesaFirma[0]; confidence = 75; }
+        if (!matchedCommessa && cmInAttesaFirma.length > 0) { matchedCommessa = null; } // ambiguous — will show options
+      } else if (docTipo === "ricevuta") {
+        // Match ricevuta to fattura non pagata
+        const fatNonPagate = fattureDB.filter(f => !f.pagata);
+        if (dati.totale) {
+          const match = fatNonPagate.find(f => Math.abs(f.importo - dati.totale) < 10);
+          if (match) matchedCommessa = cantieri.find(cm => cm.id === match.cmId);
+        }
+        if (!matchedCommessa && fatNonPagate.length === 1) {
+          matchedCommessa = cantieri.find(cm => cm.id === fatNonPagate[0].cmId);
+        }
+      } else if (docTipo === "foto") {
+        // Match foto to montaggio in corso
+        const montInCorso = montaggiDB.filter(m => m.stato === "in_corso" || m.stato === "programmato");
+        if (montInCorso.length === 1) matchedCommessa = cantieri.find(cm => cm.id === montInCorso[0].cmId);
+      }
+
+      // All commesse for manual selection
+      const commesseAttive = cantieri.filter(cm => cm.fase !== "chiusura");
+
+      setInboxResult({
+        stato: "completato", file: file.name, tipo: file.type, fileUrl,
+        dati: extractedData, docTipo, confidence,
+        matchedOrdine, matchedCommessa, tuttiOrdini: ordiniAttivi, commesseAttive,
+      });
+    };
+    input.click();
+  };
+
+  // Conferma inbox → assegna a ordine
+  const confermaInboxDoc = (ordId: string) => {
+    const res = inboxResult;
+    if (!res || !ordId) return;
+    setOrdiniFornDB(prev => prev.map(o => {
+      if (o.id !== ordId) return o;
+      const updated = {
+        ...o,
+        conferma: {
+          ...o.conferma,
+          ricevuta: true,
+          dataRicezione: new Date().toISOString().split("T")[0],
+          nomeFile: res.file,
+          fileUrl: res.fileUrl || "",
+          datiEstratti: res.dati,
+        },
+        stato: o.stato === "bozza" || o.stato === "inviato" ? "confermato" : o.stato,
+      };
+      if (res.dati?.totale) updated.totaleIva = res.dati.totale;
+      if (res.dati?.imponibile) updated.totale = res.dati.imponibile;
+      if (res.dati?.settimane) updated.consegna = { ...updated.consegna, settimane: res.dati.settimane };
+      if (res.dati?.dataConsegna) updated.consegna = { ...updated.consegna, prevista: res.dati.dataConsegna };
+      if (res.dati?.pagamento) updated.pagamento = { ...updated.pagamento, termini: res.dati.pagamento };
+      if (res.dati?.righe?.length > 0 && (!o.righe || o.righe.length === 0)) {
+        updated.righe = res.dati.righe.map((r: any, i: number) => ({
+          id: Date.now() + i, desc: r.descrizione || "", misure: r.misure || "",
+          qta: r.quantita || 1, prezzoUnit: r.prezzo_unitario || 0,
+          totale: r.prezzo_totale || 0, note: "",
+        }));
+      }
+      return updated;
+    }));
+    // Auto-advance commessa
+    const ord = ordiniFornDB.find(o => o.id === ordId);
+    if (ord?.cmId) setFaseTo(ord.cmId, "produzione");
+    setShowInboxDoc(false);
+    setInboxResult(null);
+  };
+
+  // Assegna documento universale a commessa/step
+  const assegnaDocUniversale = (cmId: number, tipo: string) => {
+    const res = inboxResult;
+    if (!res) return;
+    const allegato = { id: Date.now(), tipo, nome: res.file, data: new Date().toLocaleDateString("it-IT"), dataUrl: res.fileUrl || "" };
+    
+    if (tipo === "firma") {
+      setCantieri(cs => cs.map(cm => cm.id === cmId ? {
+        ...cm, firmaCliente: true, dataFirma: new Date().toISOString().split("T")[0],
+        firmaDocumento: allegato, allegati: [...(cm.allegati || []), allegato],
+        log: [{ chi: "Fabio", cosa: `📥 documento firmato caricato da inbox`, quando: "Adesso", color: "#34c759" }, ...(cm.log || [])]
+      } : cm));
+      if (selectedCM?.id === cmId) setSelectedCM(prev => ({ ...prev, firmaCliente: true, dataFirma: new Date().toISOString().split("T")[0] }));
+    } else if (tipo === "ricevuta") {
+      // Segna fattura come pagata
+      const fatNonPagata = fattureDB.find(f => f.cmId === cmId && !f.pagata);
+      if (fatNonPagata) {
+        setFattureDB(prev => prev.map(f => f.id === fatNonPagata.id ? { ...f, pagata: true, dataPagamento: new Date().toISOString().split("T")[0], metodoPagamento: "Bonifico" } : f));
+      }
+      setCantieri(cs => cs.map(cm => cm.id === cmId ? {
+        ...cm, allegati: [...(cm.allegati || []), allegato],
+        log: [{ chi: "Fabio", cosa: `📥 ricevuta pagamento caricata da inbox`, quando: "Adesso", color: "#007aff" }, ...(cm.log || [])]
+      } : cm));
+    } else if (tipo === "foto") {
+      setCantieri(cs => cs.map(cm => cm.id === cmId ? {
+        ...cm, allegati: [...(cm.allegati || []), allegato],
+        log: [{ chi: "Fabio", cosa: `📥 foto cantiere caricata da inbox`, quando: "Adesso", color: "#5856d6" }, ...(cm.log || [])]
+      } : cm));
+    } else {
+      // Generic: just add as allegato
+      setCantieri(cs => cs.map(cm => cm.id === cmId ? {
+        ...cm, allegati: [...(cm.allegati || []), allegato],
+        log: [{ chi: "Fabio", cosa: `📥 documento "${res.file}" caricato da inbox`, quando: "Adesso", color: "#86868b" }, ...(cm.log || [])]
+      } : cm));
+    }
+    
+    setShowInboxDoc(false); setInboxResult(null);
+  };
+
+  // === TRACKING CLIENTE (pagina pubblica) ===
+  const generaTrackingCliente = (c) => {
+    const az = aziendaDB;
+    const trackSteps = [
+      { id: "ordinato", label: "Ordinato", icon: "📦", desc: "Il materiale è stato ordinato al fornitore" },
+      { id: "produzione", label: "In Produzione", icon: "🏭", desc: "I serramenti sono in fase di produzione" },
+      { id: "pronto", label: "Pronto", icon: "✅", desc: "Il materiale è pronto per la consegna" },
+      { id: "consegnato", label: "Consegnato", icon: "🚛", desc: "Il materiale è stato consegnato" },
+      { id: "montato", label: "Montato", icon: "🔧", desc: "L'installazione è completata" },
+    ];
+    const curIdx = trackSteps.findIndex(s => s.id === c.trackingStato);
+    const fatture = fattureDB.filter(f => f.cmId === c.id);
+    const totFat = fatture.reduce((s, f) => s + f.importo, 0);
+    const totPag = fatture.filter(f => f.pagata).reduce((s, f) => s + f.importo, 0);
+    const montaggio = montaggiDB.find(m => m.cmId === c.id && m.stato !== "completato");
+    const fmt = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2 }) : "0,00";
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Tracking Ordine ${c.code} — ${az.nome || "MASTRO"}</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f7;color:#1a1a1c;padding:16px;max-width:480px;margin:0 auto}
+      .card{background:#fff;border-radius:16px;padding:20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+      .step{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid #f0f0f2}
+      .step:last-child{border-bottom:none}
+      .dot{width:36px;height:36px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+      .active .dot{background:#007aff20} .done .dot{background:#34c75920} .pending .dot{background:#f0f0f2}
+      .line{width:2px;height:20px;margin:0 17px;background:#e0e0e2}
+      .done .line{background:#34c759} .active .line{background:#007aff}
+      .badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700}
+      h2{font-size:20px;font-weight:800;letter-spacing:-0.3px}
+    </style></head><body>
+    <div class="card" style="text-align:center">
+      ${az.logo ? `<img src="${az.logo}" style="max-height:50px;max-width:180px;margin-bottom:8px" alt="">` : ""}
+      <h2>${az.nome || "MASTRO"}</h2>
+      <div style="font-size:12px;color:#8e8e93;margin-top:4px">${az.tel || ""} · ${az.email || ""}</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:11px;color:#8e8e93;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Ordine</div>
+      <h2>${c.code}</h2>
+      <div style="font-size:13px;color:#8e8e93;margin-top:2px">${c.cliente} ${c.cognome || ""}</div>
+      <div style="font-size:12px;color:#8e8e93">${c.indirizzo || ""}</div>
+      ${c.dataPrevConsegna ? `<div style="margin-top:10px;padding:8px 12px;background:#007aff10;border-radius:8px;font-size:12px;color:#007aff;font-weight:600">📅 Consegna prevista: ${new Date(c.dataPrevConsegna).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>` : ""}
+      ${montaggio?.data ? `<div style="margin-top:6px;padding:8px 12px;background:#30b0c710;border-radius:8px;font-size:12px;color:#30b0c7;font-weight:600">🔧 Montaggio programmato: ${new Date(montaggio.data).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })} ore ${montaggio.oraInizio || "08:00"}</div>` : ""}
+    </div>
+
+    <div class="card">
+      <div style="font-size:11px;color:#8e8e93;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Stato avanzamento</div>
+      ${trackSteps.map((st, i) => {
+        const isDone = i < curIdx;
+        const isActive = i === curIdx;
+        const cls = isDone ? "done" : isActive ? "active" : "pending";
+        return `<div class="step ${cls}">
+          <div>
+            <div class="dot">${st.icon}</div>
+            ${i < trackSteps.length - 1 ? `<div class="line"></div>` : ""}
+          </div>
+          <div style="padding-top:6px">
+            <div style="font-size:14px;font-weight:700;color:${isDone ? "#34c759" : isActive ? "#007aff" : "#c7c7cc"}">${st.label}</div>
+            <div style="font-size:11px;color:#8e8e93;margin-top:2px">${st.desc}</div>
+            ${isDone && c["tracking_" + st.id + "_data"] ? `<div style="font-size:10px;color:#34c759;margin-top:2px">✅ ${c["tracking_" + st.id + "_data"]}</div>` : ""}
+            ${isActive ? `<span class="badge" style="background:#007aff20;color:#007aff;margin-top:4px">In corso</span>` : ""}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+
+    ${fatture.length > 0 ? `<div class="card">
+      <div style="font-size:11px;color:#8e8e93;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Situazione pagamenti</div>
+      ${fatture.map(f => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f2">
+        <div>
+          <div style="font-size:12px;font-weight:600">${f.tipo === "acconto" ? "Acconto" : f.tipo === "saldo" ? "Saldo" : "Fattura"} N.${f.numero}/${f.anno}</div>
+          <div style="font-size:10px;color:#8e8e93">${f.data}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:14px;font-weight:800">&euro;${fmt(f.importo)}</div>
+          <div style="font-size:10px;color:${f.pagata ? "#34c759" : "#ff3b30"};font-weight:600">${f.pagata ? "✅ Pagata" : "⏳ Da pagare"}</div>
+        </div>
+      </div>`).join("")}
+      <div style="display:flex;justify-content:space-between;padding:10px 0 0;margin-top:4px">
+        <span style="font-size:12px;color:#8e8e93">Totale: &euro;${fmt(totFat)}</span>
+        <span style="font-size:12px;font-weight:700;color:${totPag >= totFat ? "#34c759" : "#ff9500"}">${totPag >= totFat ? "✅ Saldato" : `Da pagare: €${fmt(totFat - totPag)}`}</span>
+      </div>
+    </div>` : ""}
+
+    <div style="text-align:center;font-size:10px;color:#c7c7cc;margin-top:16px;padding:12px">
+      Pagina generata da MASTRO · ${new Date().toLocaleDateString("it-IT")}
+    </div>
+    </body></html>`;
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    return url;
+  };
+
+  // === ONBOARDING MODAL "COSA VENDI?" ===
+  const renderOnboarding = () => {
+    if (!showOnboarding) return null;
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div style={{ background: T.card, borderRadius: 20, padding: 24, maxWidth: 420, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 16 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 14, background: T.text, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+              <span style={{ fontSize: 28, fontWeight: 900, color: T.card, fontFamily: FF }}>M</span>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: T.text, letterSpacing: -0.5 }}>Benvenuto in MASTRO</div>
+            <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Seleziona i prodotti che vendi o installi. Puoi modificare in qualsiasi momento dalle Impostazioni.</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {SETTORI.map(s => {
+              const isOn = settoriAttivi.includes(s.id);
+              return (
+                <div key={s.id} onClick={() => {
+                  setSettoriAttivi(prev => isOn ? prev.filter(x => x !== s.id) : [...prev, s.id]);
+                }} style={{
+                  padding: "14px 16px", borderRadius: 14, cursor: "pointer",
+                  border: `2px solid ${isOn ? "#007aff" : T.bdr}`,
+                  background: isOn ? "#007aff10" : T.bg,
+                  display: "flex", alignItems: "center", gap: 12, transition: "all .15s",
+                }}>
+                  <div style={{ fontSize: 28, width: 36, textAlign: "center" }}>{s.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: isOn ? "#007aff" : T.text }}>{s.label}</div>
+                    <div style={{ fontSize: 10, color: T.sub }}>{s.desc}</div>
+                  </div>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 14,
+                    background: isOn ? "#007aff" : T.bg,
+                    border: `2px solid ${isOn ? "#007aff" : T.bdr}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 14, color: "#fff", fontWeight: 900,
+                  }}>{isOn ? "✓" : ""}</div>
+                </div>
+              );
+            })}
+          </div>
+          <button onClick={() => {
+            if (settoriAttivi.length === 0) { setSettoriAttivi(SETTORI_DEFAULT); }
+            setShowOnboarding(false);
+          }} style={{
+            width: "100%", padding: 16, borderRadius: 14, border: "none",
+            background: settoriAttivi.length > 0 ? "#007aff" : T.bdr,
+            color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: FF,
+            marginTop: 16,
+          }}>
+            {settoriAttivi.length > 0 ? `Inizia con ${settoriAttivi.length} ${settoriAttivi.length === 1 ? "settore" : "settori"} →` : "Seleziona almeno un settore"}
+          </button>
+          <div style={{ textAlign: "center", fontSize: 10, color: T.sub, marginTop: 10 }}>
+            MASTRO si adatta al tuo lavoro: serramenti, zanzariere, tende, box doccia e altro.
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderFirmaModal = () => {
     if (!showFirmaModal) return null;
@@ -6771,6 +12653,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
       const dataUrl=cv.toDataURL("image/png");
       setCantieri(cs=>cs.map(x=>x.id===c.id?{...x,firmaCliente:dataUrl,dataFirma:new Date().toLocaleDateString("it-IT")}:x));
       setSelectedCM(p=>({...p,firmaCliente:dataUrl,dataFirma:new Date().toLocaleDateString("it-IT")}));
+      setFaseTo(c.id, "conferma"); // AUTO-ADVANCE: firma → conferma
       setShowFirmaModal(false);
     };
     return (
@@ -6809,18 +12692,32 @@ Fabio Cozza - Walter Cozza Serramenti` },
     const c = selectedCM;
     const updateCMp = (field, val) => { setCantieri(cs=>cs.map(x=>x.id===c.id?{...x,[field]:val}:x)); setSelectedCM(p=>({...p,[field]:val})); };
     const calcolaVano = (v) => {
-      const m=v.misure||{}; const lc=(m.lCentro||0)/1000,hc=(m.hCentro||0)/1000; const mq=lc*hc,perim=2*(lc+hc);
+      const m=v.misure||{}; const lc=(m.lCentro||0)/1000,hc=(m.hCentro||0)/1000; const lmm=m.lCentro||0,hmm=m.hCentro||0; const mq=lc*hc,perim=2*(lc+hc);
       const sysRec=sistemiDB.find(s=>(s.marca+" "+s.sistema)===v.sistema||s.sistema===v.sistema);
-      let tot=mq*parseFloat(sysRec?.prezzoMq||sysRec?.euroMq||c.prezzoMq||350);
+      // Minimo mq per tipologia
+      const minCat = tipoToMinCat(v.tipo || "F1A");
+      const minimoMq = sysRec?.minimiMq?.[minCat] || 0;
+      const mqCalc = (minimoMq > 0 && mq > 0 && mq < minimoMq) ? minimoMq : mq;
+      // Grid lookup: ceiling approach
+      let basePrezzoSer = 0;
+      const grid = sysRec?.griglia;
+      let gridPrice = null;
+      if (grid && grid.length > 0) {
+        const sorted = [...grid].sort((a,b) => a.l - b.l || a.h - b.h);
+        gridPrice = sorted.find(g => g.l === lmm && g.h === hmm)?.prezzo ?? sorted.find(g => g.l >= lmm && g.h >= hmm)?.prezzo ?? sorted[sorted.length-1]?.prezzo ?? null;
+      }
+      if (gridPrice !== null) { basePrezzoSer = gridPrice; } else { basePrezzoSer = mqCalc*parseFloat(sysRec?.prezzoMq||sysRec?.euroMq||c.prezzoMq||350); }
+      let tot=basePrezzoSer;
       const vetroRec=vetriDB.find(g=>g.code===v.vetro||g.nome===v.vetro); if(vetroRec?.prezzoMq) tot+=mq*parseFloat(vetroRec.prezzoMq);
       const copRec=coprifiliDB.find(cp=>cp.cod===v.coprifilo); if(copRec?.prezzoMl) tot+=perim*parseFloat(copRec.prezzoMl);
       const lamRec=lamiereDB.find(l=>l.cod===v.lamiera); if(lamRec?.prezzoMl) tot+=lc*parseFloat(lamRec.prezzoMl);
       const tapp=v.accessori?.tapparella; if(tapp?.attivo&&c.prezzoTapparella){const tmq=((tapp.l||m.lCentro||0)/1000)*((tapp.h||m.hCentro||0)/1000);tot+=tmq*parseFloat(c.prezzoTapparella);}
       const pers=v.accessori?.persiana; if(pers?.attivo&&c.prezzoPersiana){const pmq=((pers.l||m.lCentro||0)/1000)*((pers.h||m.hCentro||0)/1000);tot+=pmq*parseFloat(c.prezzoPersiana);}
       const zanz=v.accessori?.zanzariera; if(zanz?.attivo&&c.prezzoZanzariera){const zmq=((zanz.l||m.lCentro||0)/1000)*((zanz.h||m.hCentro||0)/1000);tot+=zmq*parseFloat(c.prezzoZanzariera);}
+      if (v.vociLibere?.length > 0) v.vociLibere.forEach(vl => { tot += (vl.prezzo || 0) * (vl.qta || 1); });
       return {tot,mq,sysRec,vetroRec,copRec,lamRec};
     };
-    const vaniCalc=(c.vani||[]).map(v=>({...v,calc:calcolaVano(v)}));
+    const vaniCalc=getVaniAttivi(c).map(v=>({...v,calc:calcolaVano(v)}));
     const totale=vaniCalc.reduce((s,v)=>s+v.calc.tot,0);
     const vaniSenzaSistema = vaniCalc.filter(v=>!v.calc.sysRec && !v.sistema);
     const vaniSenzaMisure = vaniCalc.filter(v=>!(v.misure?.lCentro) || !(v.misure?.hCentro));
@@ -6892,6 +12789,454 @@ Fabio Cozza - Walter Cozza Serramenti` },
             <button onClick={()=>generaPreventivoPDF(c)} style={{width:"100%",padding:14,borderRadius:12,border:"none",background:hasWarnings?"linear-gradient(135deg,#8e8e93,#636366)":"linear-gradient(135deg,#007aff,#0055cc)",color:"#fff",fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:hasWarnings?"none":"0 4px 12px rgba(0,122,255,0.3)"}}>
               {hasWarnings?"⚠️ Genera PDF (incompleto)":"📄 Genera & Scarica PDF"}
             </button>
+            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+              <button onClick={() => generaPDFMisure(c)} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1.5px solid #5856d6`, background: "#5856d615", color: "#5856d6", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                📐 PDF Misure (Produzione)
+              </button>
+              <button onClick={() => {
+                const upd = { ...c, confermato: true, dataConferma: new Date().toLocaleDateString("it-IT"), stato: "conferma" };
+                setCantieri(cs => cs.map(x => x.id === c.id ? upd : x));
+                setSelectedCM(upd);
+              }} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1.5px solid ${c.confermato ? "#34c759" : "#af52de"}`, background: c.confermato ? "#34c75915" : "#af52de15", color: c.confermato ? "#34c759" : "#af52de", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                {c.confermato ? `✅ Confermato ${c.dataConferma || ""}` : "✍️ Conferma ordine"}
+              </button>
+            </div>
+            {/* Tracking produzione */}
+            <div style={{ marginTop: 10, background: T.bg, borderRadius: 10, padding: 10, border: `1px solid ${T.bdr}` }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>📦 Tracking produzione</div>
+              <div style={{ display: "flex", gap: 2 }}>
+                {[
+                  { id: "ordinato", l: "Ordinato", ico: "📦", c: "#ff9500" },
+                  { id: "produzione", l: "In Prod.", ico: "🏭", c: "#5856d6" },
+                  { id: "pronto", l: "Pronto", ico: "✅", c: "#34c759" },
+                  { id: "consegnato", l: "Consegnato", ico: "🚛", c: "#007aff" },
+                  { id: "montato", l: "Montato", ico: "🔧", c: "#30b0c7" },
+                ].map((st, i) => {
+                  const trackSteps = ["ordinato", "produzione", "pronto", "consegnato", "montato"];
+                  const curIdx = trackSteps.indexOf(c.trackingStato || "");
+                  const stIdx = trackSteps.indexOf(st.id);
+                  const isActive = stIdx <= curIdx;
+                  const isCurrent = st.id === c.trackingStato;
+                  return (
+                    <div key={st.id} onClick={() => {
+                      const upd = { ...c, trackingStato: st.id, [`tracking_${st.id}_data`]: new Date().toLocaleDateString("it-IT") };
+                      setCantieri(cs => cs.map(x => x.id === c.id ? upd : x));
+                      setSelectedCM(upd);
+                    }} style={{
+                      flex: 1, padding: "6px 2px", borderRadius: 6, textAlign: "center", cursor: "pointer",
+                      background: isActive ? st.c + "20" : "transparent",
+                      border: `1.5px solid ${isCurrent ? st.c : isActive ? st.c + "40" : T.bdr}`,
+                    }}>
+                      <div style={{ fontSize: 14 }}>{st.ico}</div>
+                      <div style={{ fontSize: 7, fontWeight: 700, color: isActive ? st.c : T.sub }}>{st.l}</div>
+                      {isActive && c[`tracking_${st.id}_data`] && <div style={{ fontSize: 6, color: st.c + "99" }}>{c[`tracking_${st.id}_data`]}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+              {c.trackingStato && <div style={{ fontSize: 9, color: T.sub, marginTop: 4, textAlign: "center" }}>Data prevista consegna: <input type="date" value={c.dataPrevConsegna || ""} onChange={e => { const upd = { ...c, dataPrevConsegna: e.target.value }; setCantieri(cs => cs.map(x => x.id === c.id ? upd : x)); setSelectedCM(upd); }} style={{ fontSize: 9, border: `1px solid ${T.bdr}`, borderRadius: 4, padding: "2px 6px" }} /></div>}
+            </div>
+
+            {/* === INVIO WhatsApp / Email === */}
+            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+              <button onClick={() => inviaWhatsApp(c, c.confermato ? "conferma" : "preventivo")} style={{ flex: 1, padding: 10, borderRadius: 10, border: "1.5px solid #25d366", background: "#25d36615", color: "#25d366", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                💬 WhatsApp
+              </button>
+              <button onClick={() => inviaEmail(c, c.confermato ? "conferma" : "preventivo")} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1.5px solid #007aff`, background: "#007aff15", color: "#007aff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                📧 Email
+              </button>
+              {c.trackingStato && (
+                <button onClick={() => inviaWhatsApp(c, "stato")} style={{ flex: 1, padding: 10, borderRadius: 10, border: "1.5px solid #ff9500", background: "#ff950015", color: "#ff9500", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                  📲 Stato
+                </button>
+              )}
+            </div>
+
+            {/* === FATTURAZIONE === */}
+            <div style={{ marginTop: 10, background: T.bg, borderRadius: 10, padding: 10, border: `1px solid ${T.bdr}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase" }}>💰 Fatturazione</div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button onClick={() => { const f = creaFattura(c, "acconto"); generaFatturaPDF(f); }} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid #ff9500`, background: "#ff950015", color: "#ff9500", fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Acconto</button>
+                  <button onClick={() => { const f = creaFattura(c, "saldo"); generaFatturaPDF(f); }} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid #34c759`, background: "#34c75915", color: "#34c759", fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Saldo</button>
+                  <button onClick={() => { const f = creaFattura(c, "unica"); generaFatturaPDF(f); }} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid #007aff`, background: "#007aff15", color: "#007aff", fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Unica</button>
+                </div>
+              </div>
+              {fattureDB.filter(f => f.cmId === c.id).length > 0 ? (
+                <div>
+                  {fattureDB.filter(f => f.cmId === c.id).map(f => (
+                    <div key={f.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${T.bdr}` }}>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700 }}>N. {f.numero}/{f.anno} · {f.tipo.toUpperCase()}</div>
+                        <div style={{ fontSize: 9, color: T.sub }}>{f.data} · Scad: {f.scadenza}</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: f.pagata ? "#34c759" : T.text }}>€{f.importo.toLocaleString("it-IT")}</span>
+                        <div onClick={() => { setFattureDB(prev => prev.map(x => x.id === f.id ? { ...x, pagata: !x.pagata, dataPagamento: !x.pagata ? new Date().toLocaleDateString("it-IT") : null } : x)); }} style={{ padding: "3px 8px", borderRadius: 4, background: f.pagata ? "#34c75920" : "#ff3b3020", color: f.pagata ? "#34c759" : "#ff3b30", fontSize: 9, fontWeight: 700, cursor: "pointer" }}>
+                          {f.pagata ? "✅ Pagata" : "⏳ Da pagare"}
+                        </div>
+                        <div onClick={() => generaFatturaPDF(f)} style={{ fontSize: 14, cursor: "pointer" }}>📄</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 10, color: T.sub, textAlign: "center", padding: 6 }}>Nessuna fattura emessa</div>
+              )}
+            </div>
+
+            {/* === ORDINI FORNITORE — COMPLETO === */}
+            <div style={{ marginTop: 10, background: T.bg, borderRadius: 10, padding: 10, border: `1px solid ${T.bdr}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase" }}>📦 Ordini Fornitore</div>
+                <button onClick={() => {
+                  const ord = creaOrdineFornitore(c);
+                  setOrdineDetail(ord.id);
+                }} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid #ff2d55`, background: "#ff2d5515", color: "#ff2d55", fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Nuovo Ordine</button>
+              </div>
+
+              {/* Lista ordini della commessa */}
+              {ordiniFornDB.filter(o => o.cmId === c.id).length > 0 ? (
+                <div>
+                  {ordiniFornDB.filter(o => o.cmId === c.id).map(o => {
+                    const st = ORDINE_STATI.find(s => s.id === o.stato) || ORDINE_STATI[0];
+                    const isOpen = ordineDetail === o.id;
+                    const fmt = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2 }) : "0,00";
+                    const isLate = o.consegna?.prevista && new Date(o.consegna.prevista) < new Date() && o.stato !== "consegnato";
+
+                    return (
+                      <div key={o.id} style={{ marginBottom: 8 }}>
+                        {/* Header ordine (clickabile per expand) */}
+                        <div onClick={() => setOrdineDetail(isOpen ? null : o.id)} style={{
+                          padding: "10px 12px", borderRadius: 10, cursor: "pointer",
+                          background: T.card, border: `1.5px solid ${isLate ? "#ff3b30" : st.color}30`,
+                        }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ fontSize: 16 }}>{st.icon}</span>
+                              <div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>
+                                  {o.fornitore?.nome || "Fornitore da inserire"} <span style={{ fontSize: 10, color: T.sub, fontWeight: 400 }}>N.{o.numero}/{o.anno}</span>
+                                </div>
+                                <div style={{ fontSize: 9, color: T.sub }}>
+                                  {new Date(o.dataOrdine).toLocaleDateString("it-IT")} · {o.righe?.length || 0} articoli · €{fmt(o.totaleIva || 0)}
+                                </div>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ padding: "3px 8px", borderRadius: 6, fontSize: 8, fontWeight: 700, background: st.color + "20", color: st.color }}>{st.label}</span>
+                              <span style={{ fontSize: 12, color: T.sub, transform: isOpen ? "rotate(180deg)" : "none", transition: "all .2s" }}>▼</span>
+                            </div>
+                          </div>
+                          {isLate && <div style={{ fontSize: 9, color: "#ff3b30", fontWeight: 700, marginTop: 4 }}>⚠️ Consegna in ritardo! Prevista: {new Date(o.consegna.prevista).toLocaleDateString("it-IT")}</div>}
+                          {o.conferma?.firmata && !o.conferma?.reinviata && <div style={{ fontSize: 9, color: "#ff9500", fontWeight: 700, marginTop: 4 }}>📤 Conferma firmata — da reinviare al fornitore</div>}
+                        </div>
+
+                        {/* Dettaglio ordine espanso */}
+                        {isOpen && (
+                          <div style={{ marginTop: 6, padding: 12, background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
+
+                            {/* === 1. DATI FORNITORE === */}
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "#ff2d55", textTransform: "uppercase", marginBottom: 6 }}>1. Fornitore</div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+                              <input value={o.fornitore?.nome || ""} onChange={e => updateOrdine(o.id, "fornitore.nome", e.target.value)} placeholder="Nome fornitore" style={{ padding: 6, fontSize: 11, border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: "inherit", gridColumn: "1/3" }} />
+                              <input value={o.fornitore?.referente || ""} onChange={e => updateOrdine(o.id, "fornitore.referente", e.target.value)} placeholder="Referente" style={{ padding: 6, fontSize: 11, border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: "inherit" }} />
+                              <input value={o.fornitore?.tel || ""} onChange={e => updateOrdine(o.id, "fornitore.tel", e.target.value)} placeholder="Telefono" style={{ padding: 6, fontSize: 11, border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: "inherit" }} />
+                              <input value={o.fornitore?.email || ""} onChange={e => updateOrdine(o.id, "fornitore.email", e.target.value)} placeholder="Email" style={{ padding: 6, fontSize: 11, border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: "inherit" }} />
+                              <input value={o.fornitore?.piva || ""} onChange={e => updateOrdine(o.id, "fornitore.piva", e.target.value)} placeholder="P.IVA" style={{ padding: 6, fontSize: 11, border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: "inherit" }} />
+                            </div>
+
+                            {/* === 2. RIGHE ORDINE === */}
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "#ff2d55", textTransform: "uppercase", marginBottom: 6, display: "flex", justifyContent: "space-between" }}>
+                              <span>2. Articoli ordinati</span>
+                              <span onClick={() => {
+                                const newRiga = { id: "r_" + Math.random().toString(36).slice(2, 8), desc: "", misure: "", qta: 1, prezzoUnit: 0, totale: 0, note: "" };
+                                updateOrdine(o.id, "righe", [...(o.righe || []), newRiga]);
+                              }} style={{ color: "#007aff", cursor: "pointer", fontWeight: 700 }}>+ Aggiungi riga</span>
+                            </div>
+                            {(o.righe || []).map((r, ri) => (
+                              <div key={r.id} style={{ display: "flex", gap: 4, marginBottom: 4, alignItems: "center" }}>
+                                <span style={{ fontSize: 9, color: T.sub, width: 16 }}>{ri + 1}</span>
+                                <input value={r.desc} onChange={e => {
+                                  const righe = [...o.righe]; righe[ri] = { ...righe[ri], desc: e.target.value };
+                                  updateOrdine(o.id, "righe", righe);
+                                }} placeholder="Descrizione" style={{ flex: 2, padding: 5, fontSize: 10, border: `1px solid ${T.bdr}`, borderRadius: 4, fontFamily: "inherit" }} />
+                                <input value={r.misure} onChange={e => {
+                                  const righe = [...o.righe]; righe[ri] = { ...righe[ri], misure: e.target.value };
+                                  updateOrdine(o.id, "righe", righe);
+                                }} placeholder="LxH" style={{ width: 55, padding: 5, fontSize: 10, border: `1px solid ${T.bdr}`, borderRadius: 4 }} />
+                                <input type="number" value={r.qta || ""} onChange={e => {
+                                  const righe = [...o.righe]; righe[ri] = { ...righe[ri], qta: parseInt(e.target.value) || 0 };
+                                  updateOrdine(o.id, "righe", righe);
+                                }} placeholder="Q" style={{ width: 32, padding: 5, fontSize: 10, border: `1px solid ${T.bdr}`, borderRadius: 4, textAlign: "center" }} />
+                                <input type="number" value={r.prezzoUnit || ""} onChange={e => {
+                                  const righe = [...o.righe]; righe[ri] = { ...righe[ri], prezzoUnit: parseFloat(e.target.value) || 0 };
+                                  updateOrdine(o.id, "righe", righe); setTimeout(() => ricalcolaOrdine(o.id), 50);
+                                }} placeholder="€" style={{ width: 55, padding: 5, fontSize: 10, border: `1px solid ${T.bdr}`, borderRadius: 4, textAlign: "right" }} />
+                                <span style={{ fontSize: 9, fontWeight: 700, color: T.text, width: 55, textAlign: "right" }}>€{fmt(r.qta * r.prezzoUnit)}</span>
+                                <span onClick={() => {
+                                  const righe = o.righe.filter((_, i) => i !== ri);
+                                  updateOrdine(o.id, "righe", righe); setTimeout(() => ricalcolaOrdine(o.id), 50);
+                                }} style={{ fontSize: 12, cursor: "pointer", color: T.red }}>✕</span>
+                              </div>
+                            ))}
+                            {/* Totali */}
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, marginTop: 6, paddingTop: 6, borderTop: `1px solid ${T.bdr}` }}>
+                              <div style={{ display: "flex", gap: 8, fontSize: 10 }}>
+                                <span style={{ color: T.sub }}>Sconto %</span>
+                                <input type="number" value={o.sconto || ""} onChange={e => { updateOrdine(o.id, "sconto", parseFloat(e.target.value) || 0); setTimeout(() => ricalcolaOrdine(o.id), 50); }} style={{ width: 40, padding: 3, fontSize: 10, border: `1px solid ${T.bdr}`, borderRadius: 4, textAlign: "center" }} />
+                              </div>
+                              <div style={{ fontSize: 10, color: T.sub }}>Imponibile: <b>€{fmt(o.totale || 0)}</b></div>
+                              <div style={{ fontSize: 10, color: T.sub }}>IVA {o.iva || 22}%: <b>€{fmt((o.totale || 0) * (o.iva || 22) / 100)}</b></div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>TOTALE: €{fmt(o.totaleIva || 0)}</div>
+                            </div>
+
+                            {/* === 3. STATO + CONFERMA === */}
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "#ff2d55", textTransform: "uppercase", marginTop: 12, marginBottom: 6 }}>3. Stato & Conferma</div>
+                            {/* Barra stati */}
+                            <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
+                              {ORDINE_STATI.map(s => (
+                                <div key={s.id} onClick={() => updateOrdine(o.id, "stato", s.id)} style={{
+                                  flex: 1, padding: "6px 2px", borderRadius: 6, cursor: "pointer", textAlign: "center",
+                                  background: o.stato === s.id ? s.color + "20" : "transparent",
+                                  border: `1.5px solid ${o.stato === s.id ? s.color : T.bdr}`,
+                                }}>
+                                  <div style={{ fontSize: 14 }}>{s.icon}</div>
+                                  <div style={{ fontSize: 7, fontWeight: 700, color: o.stato === s.id ? s.color : T.sub }}>{s.label}</div>
+                                </div>
+                              ))}
+                            </div>
+                            {/* Conferma fornitore */}
+                            <div style={{ padding: 8, background: o.conferma?.firmata ? "#34c75910" : "#ff950010", borderRadius: 8, border: `1px solid ${o.conferma?.firmata ? "#34c759" : "#ff9500"}30`, marginBottom: 8 }}>
+                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as any, alignItems: "center" }}>
+                                <div onClick={() => updateOrdine(o.id, "conferma.ricevuta", !o.conferma?.ricevuta)} style={{ padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 9, fontWeight: 700, background: o.conferma?.ricevuta ? "#007aff20" : T.bg, color: o.conferma?.ricevuta ? "#007aff" : T.sub, border: `1px solid ${o.conferma?.ricevuta ? "#007aff" : T.bdr}` }}>
+                                  {o.conferma?.ricevuta ? "✅ Conferma ricevuta" : "📩 Ricevi conferma"}
+                                </div>
+                                {o.conferma?.ricevuta && (
+                                  <div onClick={() => updateOrdine(o.id, "conferma.verificata", !o.conferma?.verificata)} style={{ padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 9, fontWeight: 700, background: o.conferma?.verificata ? "#34c75920" : T.bg, color: o.conferma?.verificata ? "#34c759" : T.sub, border: `1px solid ${o.conferma?.verificata ? "#34c759" : T.bdr}` }}>
+                                    {o.conferma?.verificata ? "✅ Verificata OK" : "🔍 Verifica"}
+                                  </div>
+                                )}
+                                {o.conferma?.verificata && (
+                                  <div onClick={() => {
+                                    updateOrdine(o.id, "conferma.firmata", true);
+                                    updateOrdine(o.id, "conferma.dataFirma", new Date().toISOString().split("T")[0]);
+                                    updateOrdine(o.id, "stato", "confermato");
+                                    if (o.cmId) setFaseTo(o.cmId, "produzione"); // AUTO-ADVANCE
+                                  }} style={{ padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 9, fontWeight: 700, background: o.conferma?.firmata ? "#34c75920" : "#ff950020", color: o.conferma?.firmata ? "#34c759" : "#ff9500", border: `1px solid ${o.conferma?.firmata ? "#34c759" : "#ff9500"}` }}>
+                                    {o.conferma?.firmata ? `✅ Firmata ${o.conferma?.dataFirma || ""}` : "✍️ Firma conferma"}
+                                  </div>
+                                )}
+                                {o.conferma?.firmata && (
+                                  <div onClick={() => updateOrdine(o.id, "conferma.reinviata", true)} style={{ padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 9, fontWeight: 700, background: o.conferma?.reinviata ? "#34c75920" : "#5856d620", color: o.conferma?.reinviata ? "#34c759" : "#5856d6", border: `1px solid ${o.conferma?.reinviata ? "#34c759" : "#5856d6"}` }}>
+                                    {o.conferma?.reinviata ? "✅ Reinviata" : "📤 Reinvia al fornitore"}
+                                  </div>
+                                )}
+                              </div>
+                              {o.conferma?.ricevuta && (
+                                <textarea value={o.conferma?.differenze || ""} onChange={e => updateOrdine(o.id, "conferma.differenze", e.target.value)} placeholder="Note/differenze rispetto all'ordine originale..." rows={2} style={{ width: "100%", marginTop: 6, padding: 6, fontSize: 10, border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: "inherit", resize: "vertical" as any }} />
+                              )}
+                            </div>
+
+                            {/* === 4. CONSEGNA + PAGAMENTO === */}
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "#ff2d55", textTransform: "uppercase", marginBottom: 6 }}>4. Consegna & Pagamento</div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
+                              <div>
+                                <div style={{ fontSize: 8, color: T.sub, marginBottom: 2 }}>⏱ Settimane produzione</div>
+                                <input type="number" value={o.consegna?.settimane || ""} onChange={e => {
+                                  const sett = parseInt(e.target.value) || 0;
+                                  updateOrdine(o.id, "consegna.settimane", sett);
+                                  if (sett > 0) {
+                                    const prevista = new Date(o.dataOrdine);
+                                    prevista.setDate(prevista.getDate() + sett * 7);
+                                    updateOrdine(o.id, "consegna.prevista", prevista.toISOString().split("T")[0]);
+                                  }
+                                }} placeholder="0" style={{ width: "100%", padding: 6, fontSize: 11, border: `1px solid ${T.bdr}`, borderRadius: 6 }} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 8, color: T.sub, marginBottom: 2 }}>📅 Consegna prevista</div>
+                                <input type="date" value={o.consegna?.prevista || ""} onChange={e => updateOrdine(o.id, "consegna.prevista", e.target.value)} style={{ width: "100%", padding: 6, fontSize: 11, border: `1px solid ${T.bdr}`, borderRadius: 6 }} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 8, color: T.sub, marginBottom: 2 }}>🚛 Consegna effettiva</div>
+                                <input type="date" value={o.consegna?.effettiva || ""} onChange={e => {
+                                  updateOrdine(o.id, "consegna.effettiva", e.target.value);
+                                  if (e.target.value) updateOrdine(o.id, "stato", "consegnato");
+                                }} style={{ width: "100%", padding: 6, fontSize: 11, border: `1px solid ${T.bdr}`, borderRadius: 6 }} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 8, color: T.sub, marginBottom: 2 }}>💳 Termini pagamento</div>
+                                <select value={o.pagamento?.termini || "30gg_fm"} onChange={e => {
+                                  updateOrdine(o.id, "pagamento.termini", e.target.value);
+                                  updateOrdine(o.id, "pagamento.scadenza", calcolaScadenzaPagamento(o.dataOrdine, e.target.value));
+                                }} style={{ width: "100%", padding: 6, fontSize: 11, border: `1px solid ${T.bdr}`, borderRadius: 6, background: T.card }}>
+                                  <option value="anticipato">Anticipato</option>
+                                  <option value="30gg_fm">30gg FM</option>
+                                  <option value="60gg_fm">60gg FM</option>
+                                  <option value="90gg_fm">90gg FM</option>
+                                  <option value="ricevuta_merce">A ricevimento merce</option>
+                                </select>
+                              </div>
+                            </div>
+                            {/* Scadenza pagamento + stato */}
+                            <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8, padding: 8, background: o.pagamento?.pagato ? "#34c75910" : T.bg, borderRadius: 6, border: `1px solid ${T.bdr}` }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 9, color: T.sub }}>Scadenza: <b>{o.pagamento?.scadenza ? new Date(o.pagamento.scadenza).toLocaleDateString("it-IT") : "—"}</b></div>
+                                <div style={{ fontSize: 12, fontWeight: 800, color: T.text }}>€{fmt(o.pagamento?.importo || o.totaleIva || 0)}</div>
+                              </div>
+                              <div onClick={() => {
+                                updateOrdine(o.id, "pagamento.pagato", !o.pagamento?.pagato);
+                                if (!o.pagamento?.pagato) updateOrdine(o.id, "pagamento.dataPagamento", new Date().toISOString().split("T")[0]);
+                              }} style={{
+                                padding: "8px 14px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 10,
+                                background: o.pagamento?.pagato ? "#34c75920" : "#ff3b3020",
+                                color: o.pagamento?.pagato ? "#34c759" : "#ff3b30",
+                                border: `1.5px solid ${o.pagamento?.pagato ? "#34c759" : "#ff3b30"}`,
+                              }}>
+                                {o.pagamento?.pagato ? "✅ Pagato" : "⏳ Da pagare"}
+                              </div>
+                            </div>
+
+                            {/* === 5. AZIONI === */}
+                            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as any }}>
+                              <button onClick={() => generaOrdinePDF(o)} style={{ flex: 1, padding: 8, borderRadius: 8, border: `1.5px solid #007aff`, background: "#007aff15", color: "#007aff", fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>📄 PDF Ordine</button>
+                              {o.conferma?.firmata && <button onClick={() => generaConfermaFirmataPDF(o)} style={{ flex: 1, padding: 8, borderRadius: 8, border: `1.5px solid #34c759`, background: "#34c75915", color: "#34c759", fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>📄 PDF Conferma</button>}
+                              <button onClick={() => inviaOrdineFornitore(o, "email")} style={{ padding: 8, borderRadius: 8, border: `1.5px solid #5856d6`, background: "#5856d615", color: "#5856d6", fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>📧</button>
+                              <button onClick={() => inviaOrdineFornitore(o, "whatsapp")} style={{ padding: 8, borderRadius: 8, border: `1.5px solid #25d366`, background: "#25d36615", color: "#25d366", fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>💬</button>
+                              <button onClick={() => { if (confirm("Eliminare ordine?")) setOrdiniFornDB(prev => prev.filter(x => x.id !== o.id)); }} style={{ padding: 8, borderRadius: 8, border: `1.5px solid #ff3b30`, background: "#ff3b3015", color: "#ff3b30", fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>🗑</button>
+                            </div>
+
+                            {/* Riepilogo margine */}
+                            {(() => {
+                              const totPreventivo = calcolaTotaleCommessa(c);
+                              const margine = totPreventivo - (o.totale || 0);
+                              const marginePct = totPreventivo > 0 ? Math.round(margine / totPreventivo * 100) : 0;
+                              return o.totale > 0 ? (
+                                <div style={{ marginTop: 8, padding: 8, background: margine > 0 ? "#34c75910" : "#ff3b3010", borderRadius: 8, border: `1px solid ${margine > 0 ? "#34c759" : "#ff3b30"}30`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                  <span style={{ fontSize: 10, color: T.sub }}>Preventivo €{fmt(totPreventivo)} − Costo €{fmt(o.totale)}</span>
+                                  <span style={{ fontSize: 12, fontWeight: 800, color: margine > 0 ? "#34c759" : "#ff3b30" }}>Margine: €{fmt(margine)} ({marginePct}%)</span>
+                                </div>
+                              ) : null;
+                            })()}
+
+                            <textarea value={o.note || ""} onChange={e => updateOrdine(o.id, "note", e.target.value)} placeholder="Note ordine..." rows={2} style={{ width: "100%", marginTop: 8, padding: 6, fontSize: 10, border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: "inherit", resize: "vertical" as any }} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ fontSize: 10, color: T.sub, textAlign: "center", padding: 10 }}>
+                  Nessun ordine fornitore.<br />Premi "+ Nuovo Ordine" per creare un ordine con le righe della commessa.
+                </div>
+              )}
+            </div>
+
+            {/* === PIANIFICAZIONE MONTAGGIO === */}
+            <div style={{ marginTop: 10, background: T.bg, borderRadius: 10, padding: 10, border: `1px solid ${T.bdr}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase" }}>🔧 Montaggio</div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button onClick={() => {
+                    const m = creaMontaggio(c);
+                    setCalMontaggiTarget(m.id);
+                    setShowCalMontaggi(true);
+                  }} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid #30b0c7`, background: "#30b0c715", color: "#30b0c7", fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Pianifica</button>
+                  <button onClick={() => { setCalMontaggiTarget(null); setShowCalMontaggi(!showCalMontaggi); }} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${T.bdr}`, background: showCalMontaggi ? T.acc + "15" : "transparent", color: showCalMontaggi ? T.acc : T.sub, fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>📅 Calendario</button>
+                </div>
+              </div>
+
+              {/* Calendario visuale montaggi */}
+              {showCalMontaggi && (
+                <div style={{ marginBottom: 10 }}>
+                  {calMontaggiTarget && (
+                    <div style={{ fontSize: 10, color: T.acc, fontWeight: 600, marginBottom: 6, textAlign: "center" }}>
+                      👆 Clicca su uno slot libero per assegnare data e squadra
+                    </div>
+                  )}
+                  {renderCalendarioMontaggi(calMontaggiTarget || undefined)}
+                </div>
+              )}
+
+              {montaggiDB.filter(m => m.cmId === c.id).length > 0 ? (
+                <div>
+                  {montaggiDB.filter(m => m.cmId === c.id).map(m => {
+                    const sq = squadreDB.find(s => s.id === m.squadraId);
+                    return (
+                      <div key={m.id} style={{ padding: "8px 0", borderBottom: `1px solid ${T.bdr}` }}>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                          <select value={m.squadraId} onChange={e => setMontaggiDB(prev => prev.map(x => x.id === m.id ? { ...x, squadraId: e.target.value } : x))} style={{ ...S.select, fontSize: 11, flex: 1, padding: "6px" }}>
+                            {squadreDB.map(s => <option key={s.id} value={s.id}>{s.nome} ({s.membri.join(", ")})</option>)}
+                          </select>
+                          <select value={m.durata} onChange={e => setMontaggiDB(prev => prev.map(x => x.id === m.id ? { ...x, durata: e.target.value } : x))} style={{ ...S.select, fontSize: 11, width: 100, padding: "6px" }}>
+                            <option value="mezza">½ giornata</option>
+                            <option value="giornata">1 giornata</option>
+                            <option value="2giorni">2 giorni</option>
+                            <option value="3giorni">3 giorni</option>
+                          </select>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <input type="date" value={m.data} onChange={e => setMontaggiDB(prev => prev.map(x => x.id === m.id ? { ...x, data: e.target.value } : x))} style={{ flex: 1, padding: "6px", fontSize: 11, border: `1px solid ${T.bdr}`, borderRadius: 6 }} />
+                          <input type="time" value={m.oraInizio} onChange={e => setMontaggiDB(prev => prev.map(x => x.id === m.id ? { ...x, oraInizio: e.target.value } : x))} style={{ width: 80, padding: "6px", fontSize: 11, border: `1px solid ${T.bdr}`, borderRadius: 6 }} />
+                          <div onClick={() => {
+                            const upd = { ...m, stato: m.stato === "pianificato" ? "in_corso" : m.stato === "in_corso" ? "completato" : "pianificato" };
+                            setMontaggiDB(prev => prev.map(x => x.id === m.id ? upd : x));
+                          }} style={{ padding: "4px 8px", borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: "pointer",
+                            background: m.stato === "completato" ? "#34c75920" : m.stato === "in_corso" ? "#ff950020" : T.bg,
+                            color: m.stato === "completato" ? "#34c759" : m.stato === "in_corso" ? "#ff9500" : T.sub,
+                            border: `1px solid ${m.stato === "completato" ? "#34c759" : m.stato === "in_corso" ? "#ff9500" : T.bdr}`
+                          }}>
+                            {m.stato === "completato" ? "✅ Fatto" : m.stato === "in_corso" ? "🔧 In corso" : "📅 Pianif."}
+                          </div>
+                          <div onClick={() => { setCalMontaggiTarget(m.id); setShowCalMontaggi(true); }} style={{ fontSize: 12, cursor: "pointer", color: T.acc }}>📅</div>
+                          <div onClick={() => setMontaggiDB(prev => prev.filter(x => x.id !== m.id))} style={{ fontSize: 14, cursor: "pointer", color: T.red }}>🗑</div>
+                        </div>
+                        {sq && <div style={{ fontSize: 9, color: sq.colore, fontWeight: 600, marginTop: 4 }}>👷 {sq.nome}: {sq.membri.join(", ")}</div>}
+                        {m.data && <div style={{ fontSize: 9, color: T.sub, marginTop: 2 }}>📅 {new Date(m.data).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })} ore {m.oraInizio} · {m.durata === "mezza" ? "½ giornata" : m.durata === "2giorni" ? "2 giorni" : m.durata === "3giorni" ? "3 giorni" : "1 giornata"}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ fontSize: 10, color: T.sub, textAlign: "center", padding: 6 }}>Nessun montaggio pianificato</div>
+              )}
+            </div>
+
+            {/* === TRACKING CLIENTE === */}
+            {c.trackingStato && (
+              <div style={{ marginTop: 10, display: "flex", gap: 6 }}>
+                <button onClick={() => generaTrackingCliente(c)} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1.5px solid #5856d6`, background: "#5856d615", color: "#5856d6", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  📱 Pagina Tracking Cliente
+                </button>
+                <button onClick={() => {
+                  const msg = `Gentile ${c.cliente}, può seguire lo stato del suo ordine ${c.code} a questo link: [link pagina tracking]`;
+                  const tel = (c.telefono || "").replace(/\D/g, "");
+                  window.open(`https://wa.me/${tel.startsWith("39") ? tel : "39" + tel}?text=${encodeURIComponent(msg)}`, "_blank");
+                }} style={{ padding: "10px 14px", borderRadius: 10, border: `1.5px solid #25d366`, background: "#25d36615", color: "#25d366", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  💬
+                </button>
+              </div>
+            )}
+
+            {/* Dati fiscali cliente */}
+            <div style={{ marginTop: 10, background: T.bg, borderRadius: 10, padding: 10, border: `1px solid ${T.bdr}` }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>🏛 Dati fiscali cliente</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                {[
+                  ["cf", "Codice Fiscale", c.cf],
+                  ["piva", "P.IVA", c.piva],
+                  ["sdi", "Codice SDI", c.sdi],
+                  ["pec", "PEC", c.pec],
+                  ["email", "Email", c.email],
+                ].map(([field, label, val]) => (
+                  <div key={field}>
+                    <div style={{ fontSize: 8, color: T.sub, marginBottom: 1 }}>{label}</div>
+                    <input style={{ ...S.input, fontSize: 11, padding: "5px 8px", width: "100%", boxSizing: "border-box" }} placeholder={label} value={val || ""} onChange={e => { const upd = { ...c, [field]: e.target.value }; setCantieri(cs => cs.map(x => x.id === c.id ? upd : x)); setSelectedCM(upd); }} />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -6927,6 +13272,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
         {/* Content */}
         {tab === "home" && !selectedCM && !selectedMsg && renderHome()}
         {tab === "commesse" && renderCommesse()}
+        {tab === "clienti" && renderClienti()}
         {tab === "messaggi" && !selectedMsg && renderMessaggi()}
         {tab === "agenda" && renderAgenda()}
         {tab === "settings" && renderSettings()}
@@ -6935,6 +13281,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
         {/* FAB — Compose menu */}
         <style>{`
           @keyframes fabPulse { 0%,100% { box-shadow: 0 4px 20px rgba(0,122,255,0.4); } 50% { box-shadow: 0 4px 30px rgba(0,122,255,0.6); } }
+          @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         `}</style>
         {/* EVENT POPUP OVERLAY — Google Calendar style */}
         {selectedEvent && !selectedEvent._isTask && (tab === "agenda" || tab === "home") && (() => {
@@ -6958,19 +13305,13 @@ Fabio Cozza - Walter Cozza Serramenti` },
                   {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>{"👤"} {ev.persona}</span>}
                   {ev.addr && <span style={{ fontSize: 11, color: T.sub, background: T.blueLt, padding: "3px 8px", borderRadius: 6 }}>{"📍"} {ev.addr}</span>}
                   {ev.cm && <span style={S.badge(T.blueLt, T.blue)}>{"📁"} {ev.cm}</span>}
-                  <select defaultValue={ev.tipo || "appuntamento"} onChange={(e) => { setEvents(prev => prev.map(x => x.id === ev.id ? { ...x, tipo: e.target.value } : x)); setSelectedEvent({ ...ev, tipo: e.target.value }); }} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: `1px solid ${T.bdr}`, background: ev.tipo==="appuntamento"?T.blueLt:ev.tipo==="task"?T.accLt:T.redLt, color: ev.tipo==="appuntamento"?T.blue:ev.tipo==="task"?T.acc:T.red, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                    <option value="appuntamento">appuntamento</option>
-                    <option value="sopralluogo">sopralluogo</option>
-                    <option value="consegna">consegna</option>
-                    <option value="montaggio">montaggio</option>
-                    <option value="intervento">intervento</option>
-                    <option value="preventivo">preventivo</option>
-                    <option value="task">task</option>
+                  <select defaultValue={ev.tipo || "sopralluogo"} onChange={(e) => { setEvents(prev => prev.map(x => x.id === ev.id ? { ...x, tipo: e.target.value } : x)); setSelectedEvent({ ...ev, tipo: e.target.value }); }} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: `1px solid ${T.bdr}`, background: tipoEvColor(ev.tipo || "sopralluogo") + "18", color: tipoEvColor(ev.tipo || "sopralluogo"), fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                    {TIPI_EVENTO.map(t => <option key={t.id} value={t.id}>{t.l}</option>)}
                   </select>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 8 }}>
                   {ev.addr && <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(ev.addr))} style={{ padding: "12px 4px", borderRadius: 10, background: T.blueLt, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.blue }}>{"📍"} Mappa</div>}
-                  <div onClick={() => { const tel = cmObj?.telefono || contatti.find(c => c.nome === ev.persona)?.telefono; if (tel) window.open("tel:" + tel); }} style={{ padding: "12px 4px", borderRadius: 10, background: T.grnLt, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.grn }}>{"📞"} Chiama</div>
+                  <div onClick={() => { const tel = cmObj?.telefono || contatti.find(c => c.nome === ev.persona)?.telefono; if (tel) window.location.href="tel:" + tel; }} style={{ padding: "12px 4px", borderRadius: 10, background: T.grnLt, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.grn }}>{"📞"} Chiama</div>
                   <div onClick={() => { const cliente = cmObj ? `${cmObj.cliente} ${cmObj.cognome||""}`.trim() : (ev.persona || "Cliente"); const dataFmt = new Date(ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" }); setMailBody(`Gentile ${cliente},\n\nLe confermo l'appuntamento:\n\n${dataFmt}${ev.time ? " alle " + ev.time : ""}\n${ev.addr || ""}\n\n${ev.text}\n\nCordiali saluti,\nFabio Cozza`); setShowMailModal({ ev, cm: cmObj }); setSelectedEvent(null); }} style={{ padding: "12px 4px", borderRadius: 10, background: T.accLt, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.acc }}>{"✉️"} Mail</div>
                   <div onClick={() => { deleteEvent(ev.id); setSelectedEvent(null); }} style={{ padding: "12px 4px", borderRadius: 10, background: T.redLt, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.red }}>{"🗑️"} Elimina</div>
                 </div>
@@ -7160,7 +13501,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
                 <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Marca</label><input style={S.input} placeholder="es. Aluplast" value={settingsForm.marca || ""} onChange={e => setSettingsForm(f => ({ ...f, marca: e.target.value }))} /></div>
                 <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Sistema</label><input style={S.input} placeholder="es. Ideal 4000" value={settingsForm.sistema || ""} onChange={e => setSettingsForm(f => ({ ...f, sistema: e.target.value }))} /></div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                  <div style={{ flex: 1 }}><label style={S.fieldLabel}>€/mq</label><input style={S.input} type="number" placeholder="180" value={settingsForm.euroMq || ""} onChange={e => setSettingsForm(f => ({ ...f, euroMq: e.target.value }))} /></div>
+                  <div style={{ flex: 1 }}><label style={S.fieldLabel}>€/mq (fallback)</label><input style={S.input} type="number" placeholder="180" value={settingsForm.euroMq || ""} onChange={e => setSettingsForm(f => ({ ...f, euroMq: e.target.value }))} /></div>
                   <div style={{ flex: 1 }}><label style={S.fieldLabel}>Sovr. RAL %</label><input style={S.input} type="number" placeholder="12" value={settingsForm.sovRAL || ""} onChange={e => setSettingsForm(f => ({ ...f, sovRAL: e.target.value }))} /></div>
                   <div style={{ flex: 1 }}><label style={S.fieldLabel}>Sovr. Legno %</label><input style={S.input} type="number" placeholder="22" value={settingsForm.sovLegno || ""} onChange={e => setSettingsForm(f => ({ ...f, sovLegno: e.target.value }))} /></div>
                 </div>
@@ -7227,6 +13568,181 @@ Fabio Cozza - Walter Cozza Serramenti` },
             </div>
           </div>
         )}
+
+
+        {/* === MODULO PROBLEMI — MODAL CREAZIONE === */}
+        {showProblemaModal && selectedCM && (() => {
+          const c = selectedCM;
+          const TIPI_PROB = [
+            { id: "materiale", l: "📦 Materiale", c: "#FF9500" },
+            { id: "misure", l: "📏 Misure errate", c: "#5856d6" },
+            { id: "installazione", l: "🔧 Installazione", c: "#34c759" },
+            { id: "cliente", l: "👤 Cliente", c: "#007aff" },
+            { id: "fornitore", l: "🏭 Fornitore", c: "#FF6B00" },
+            { id: "qualita", l: "⚠️ Qualità", c: "#FF3B30" },
+            { id: "altro", l: "📋 Altro", c: "#8E8E93" },
+          ];
+          const PRIO = [
+            { id: "alta", l: "🔴 Alta", c: "#FF3B30" },
+            { id: "media", l: "🟠 Media", c: "#FF9500" },
+            { id: "bassa", l: "⚪ Bassa", c: "#8E8E93" },
+          ];
+          return (
+            <div style={S.modal} onClick={e => e.target === e.currentTarget && setShowProblemaModal(false)}>
+              <div style={{ ...S.modalInner, maxHeight: "85vh", overflow: "auto" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#FF3B30" }}>🚨 Segnala problema</div>
+                  <div onClick={() => setShowProblemaModal(false)} style={{ cursor: "pointer", fontSize: 20, color: T.sub }}>✕</div>
+                </div>
+                <div style={{ fontSize: 11, color: T.sub, marginBottom: 14, padding: "8px 12px", background: T.accLt, borderRadius: 8 }}>📁 {c.code} · {c.cliente} · Fase: <b>{c.fase}</b></div>
+
+                <label style={S.fieldLabel}>Titolo *</label>
+                <input style={S.input} placeholder="Es: Profilo arrivato danneggiato" value={problemaForm.titolo} onChange={e => setProblemaForm(f => ({ ...f, titolo: e.target.value }))} />
+
+                <label style={{ ...S.fieldLabel, marginTop: 12 }}>Tipo problema</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                  {TIPI_PROB.map(t => (
+                    <div key={t.id} onClick={() => setProblemaForm(f => ({ ...f, tipo: t.id }))} style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${problemaForm.tipo === t.id ? t.c : T.bdr}`, background: problemaForm.tipo === t.id ? t.c + "18" : "transparent", fontSize: 11, fontWeight: 600, color: problemaForm.tipo === t.id ? t.c : T.sub, cursor: "pointer" }}>
+                      {t.l}
+                    </div>
+                  ))}
+                </div>
+
+                <label style={S.fieldLabel}>Priorità</label>
+                <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                  {PRIO.map(p => (
+                    <div key={p.id} onClick={() => setProblemaForm(f => ({ ...f, priorita: p.id }))} style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1px solid ${problemaForm.priorita === p.id ? p.c : T.bdr}`, background: problemaForm.priorita === p.id ? p.c + "18" : "transparent", textAlign: "center", fontSize: 11, fontWeight: 700, color: problemaForm.priorita === p.id ? p.c : T.sub, cursor: "pointer" }}>
+                      {p.l}
+                    </div>
+                  ))}
+                </div>
+
+                <label style={S.fieldLabel}>Descrizione</label>
+                <textarea style={{ ...S.input, minHeight: 80, resize: "vertical" }} placeholder="Descrivi il problema nel dettaglio..." value={problemaForm.descrizione} onChange={e => setProblemaForm(f => ({ ...f, descrizione: e.target.value }))} />
+
+                <label style={{ ...S.fieldLabel, marginTop: 12 }}>Assegna a</label>
+                <select style={S.select || S.input} value={problemaForm.assegnato} onChange={e => setProblemaForm(f => ({ ...f, assegnato: e.target.value }))}>
+                  <option value="">— Nessuno —</option>
+                  {team.map(m => <option key={m.id} value={m.nome}>{m.nome} — {(m as any).ruolo}</option>)}
+                </select>
+
+                <button onClick={() => {
+                  if (!problemaForm.titolo.trim()) return;
+                  const np = {
+                    id: "P" + Date.now(),
+                    commessaId: c.id,
+                    commessaCode: c.code,
+                    cliente: c.cliente,
+                    fase: c.fase,
+                    tipo: problemaForm.tipo,
+                    priorita: problemaForm.priorita,
+                    stato: "aperto",
+                    titolo: problemaForm.titolo.trim(),
+                    descrizione: problemaForm.descrizione.trim(),
+                    segnalatoDa: team[0]?.nome || "Fabio",
+                    assegnatoA: problemaForm.assegnato,
+                    dataApertura: new Date().toISOString(),
+                    dataRisoluzione: null,
+                    noteRisoluzione: "",
+                  };
+                  setProblemi(prev => [np, ...prev]);
+                  setCantieri(cs => cs.map(x => x.id === c.id ? { ...x, log: [...(x.log || []), { chi: np.segnalatoDa, cosa: `🚨 Problema segnalato: ${np.titolo}`, quando: "Adesso", color: "#FF3B30" }] } : x));
+                  setSelectedCM(prev => ({ ...prev, log: [...(prev.log || []), { chi: np.segnalatoDa, cosa: `🚨 Problema segnalato: ${np.titolo}`, quando: "Adesso", color: "#FF3B30" }] }));
+                  setShowProblemaModal(false);
+                }} style={{ width: "100%", padding: "14px", borderRadius: 12, border: "none", background: "#FF3B30", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF, marginTop: 16 }}>
+                  🚨 Crea segnalazione
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* === MODULO PROBLEMI — VISTA LISTA === */}
+        {showProblemiView && (() => {
+          const cmFilter = selectedCM?.id;
+          const list = cmFilter ? problemi.filter(p => p.commessaId === cmFilter) : problemi;
+          const TIPI_PROB_MAP = { materiale: { l: "📦 Materiale", c: "#FF9500" }, misure: { l: "📏 Misure", c: "#5856d6" }, installazione: { l: "🔧 Install.", c: "#34c759" }, cliente: { l: "👤 Cliente", c: "#007aff" }, fornitore: { l: "🏭 Fornitore", c: "#FF6B00" }, qualita: { l: "⚠️ Qualità", c: "#FF3B30" }, altro: { l: "📋 Altro", c: "#8E8E93" } };
+          const STATO_MAP = { aperto: { l: "🔴 Aperto", c: "#FF3B30" }, in_corso: { l: "🟠 In corso", c: "#FF9500" }, risolto: { l: "✅ Risolto", c: "#34c759" } };
+          const aperti = list.filter(p => p.stato === "aperto").length;
+          const inCorso = list.filter(p => p.stato === "in_corso").length;
+          const risolti = list.filter(p => p.stato === "risolto").length;
+          return (
+            <div style={S.modal} onClick={e => e.target === e.currentTarget && setShowProblemiView(false)}>
+              <div style={{ ...S.modalInner, maxWidth: 500, maxHeight: "90vh", overflow: "auto" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.text }}>🚨 Problemi {cmFilter ? `· ${selectedCM.code}` : "— Tutti"}</div>
+                  <div onClick={() => setShowProblemiView(false)} style={{ cursor: "pointer", fontSize: 20, color: T.sub }}>✕</div>
+                </div>
+
+                {/* Contatori */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                  <div style={{ flex: 1, padding: "10px", borderRadius: 10, background: "#FF3B3010", textAlign: "center" }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: "#FF3B30" }}>{aperti}</div>
+                    <div style={{ fontSize: 10, color: "#FF3B30", fontWeight: 600 }}>Aperti</div>
+                  </div>
+                  <div style={{ flex: 1, padding: "10px", borderRadius: 10, background: "#FF950010", textAlign: "center" }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: "#FF9500" }}>{inCorso}</div>
+                    <div style={{ fontSize: 10, color: "#FF9500", fontWeight: 600 }}>In corso</div>
+                  </div>
+                  <div style={{ flex: 1, padding: "10px", borderRadius: 10, background: "#34c75910", textAlign: "center" }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: "#34c759" }}>{risolti}</div>
+                    <div style={{ fontSize: 10, color: "#34c759", fontWeight: 600 }}>Risolti</div>
+                  </div>
+                </div>
+
+                {list.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "28px 16px" }}>
+                    <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Nessun problema segnalato</div>
+                    <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>Ottimo lavoro!</div>
+                  </div>
+                ) : list.map(p => {
+                  const tp = TIPI_PROB_MAP[p.tipo] || TIPI_PROB_MAP.altro;
+                  const st = STATO_MAP[p.stato] || STATO_MAP.aperto;
+                  const prio = p.priorita === "alta" ? { l: "🔴", c: "#FF3B30" } : p.priorita === "media" ? { l: "🟠", c: "#FF9500" } : { l: "⚪", c: "#8E8E93" };
+                  return (
+                    <div key={p.id} style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: "12px 14px", marginBottom: 8, borderLeft: `3px solid ${st.c}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{prio.l} {p.titolo}</div>
+                          <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{p.commessaCode} · {p.cliente} · {p.fase}</div>
+                        </div>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: st.c + "18", color: st.c }}>{st.l}</span>
+                      </div>
+                      {p.descrizione && <div style={{ fontSize: 11, color: T.sub, marginBottom: 8, lineHeight: 1.5 }}>{p.descrizione}</div>}
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                        <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: tp.c + "18", color: tp.c, fontWeight: 600 }}>{tp.l}</span>
+                        {p.assegnatoA && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: T.purpleLt, color: T.purple, fontWeight: 600 }}>👤 {p.assegnatoA}</span>}
+                        <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: T.bg, color: T.sub }}>{new Date(p.dataApertura).toLocaleDateString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                      </div>
+                      {/* Azioni */}
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {p.stato === "aperto" && (
+                          <button onClick={() => setProblemi(prev => prev.map(x => x.id === p.id ? { ...x, stato: "in_corso" } : x))} style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1px solid #FF9500`, background: "#FF950010", color: "#FF9500", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>
+                            🟠 Prendi in carico
+                          </button>
+                        )}
+                        {p.stato === "in_corso" && (
+                          <button onClick={() => setProblemi(prev => prev.map(x => x.id === p.id ? { ...x, stato: "risolto", dataRisoluzione: new Date().toISOString() } : x))} style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1px solid #34c759`, background: "#34c75910", color: "#34c759", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>
+                            ✅ Risolvi
+                          </button>
+                        )}
+                        {p.stato === "risolto" && (
+                          <button onClick={() => setProblemi(prev => prev.map(x => x.id === p.id ? { ...x, stato: "aperto", dataRisoluzione: null } : x))} style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.bg, color: T.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>
+                            ↩ Riapri
+                          </button>
+                        )}
+                        <button onClick={() => { if (confirm("Eliminare questo problema?")) setProblemi(prev => prev.filter(x => x.id !== p.id)); }} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid #FF3B3030`, background: "#FF3B3008", color: "#FF3B30", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>
+                          🗑
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Tab Bar */}
         
@@ -7369,6 +13885,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
               { id: "home", ico: ICO.home, label: "Home" },
               { id: "agenda", ico: ICO.calendar, label: "Agenda" },
               { id: "commesse", ico: ICO.filter, label: "Commesse" },
+              { id: "clienti", ico: ICO.users, label: "Clienti" },
               { id: "messaggi", ico: ICO.chat, label: "Messaggi" },
               { id: "settings", ico: ICO.settings, label: "Impost." },
             ].map(t => (
@@ -7391,6 +13908,7 @@ Fabio Cozza - Walter Cozza Serramenti` },
         {renderModal()}
         {renderPreventivoModal()}
         {renderFirmaModal()}
+        {renderOnboarding()}
 
         {/* SEND COMMESSA MODAL */}
         {showSendModal && selectedCM && (
@@ -7456,9 +13974,9 @@ Fabio Cozza - Walter Cozza Serramenti` },
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={S.fieldLabel}>Tipo</label>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {[{ id: "appuntamento", l: "📅 Appuntamento", c: T.blue }, { id: "task", l: "✅ Task", c: T.orange }, { id: "sopr_riparazione", l: "🔩 Sopr. Riparazione", c: "#FF6B00" }, { id: "riparazione", l: "🛠 Riparazione", c: "#FF3B30" }, { id: "collaudo", l: "✔️ Collaudo", c: "#5856D6" }, { id: "garanzia", l: "🔒 Garanzia", c: "#8E8E93" }].map(t => (
-                    <div key={t.id} onClick={() => setNewEvent(ev => ({ ...ev, tipo: t.id }))} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: `1px solid ${newEvent.tipo === t.id ? t.c : T.bdr}`, background: newEvent.tipo === t.id ? t.c + "18" : "transparent", textAlign: "center", fontSize: 12, fontWeight: 600, color: newEvent.tipo === t.id ? t.c : T.sub, cursor: "pointer" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {[{ id: "task", l: "✅ Task", c: T.orange }, ...TIPI_EVENTO].map(t => (
+                    <div key={t.id} onClick={() => setNewEvent(ev => ({ ...ev, tipo: t.id }))} style={{ padding: "8px 10px", borderRadius: 8, border: `1px solid ${newEvent.tipo === t.id ? t.c : T.bdr}`, background: newEvent.tipo === t.id ? t.c + "18" : "transparent", textAlign: "center", fontSize: 11, fontWeight: 600, color: newEvent.tipo === t.id ? t.c : T.sub, cursor: "pointer" }}>
                       {t.l}
                     </div>
                   ))}
@@ -7891,7 +14409,251 @@ Fabio Cozza - Walter Cozza Serramenti` },
             </div>
           </div>
         )}
+      {/* === PAYWALL MODAL === */}
+      {showPaywall && (
+        <div onClick={() => setShowPaywall(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: T.card, borderRadius: 16, maxWidth: 360, width: "100%", overflow: "hidden" }}>
+            <div style={{ padding: "20px 20px 12px", textAlign: "center" as const }}>
+              <div style={{ fontSize: 40, marginBottom: 8 }}>💎</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 6 }}>Passa a un piano superiore</div>
+              <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.5 }}>{showPaywall}</div>
+            </div>
+            <div style={{ padding: "12px 20px 20px", display: "flex", flexDirection: "column" as const, gap: 8 }}>
+              <div onClick={() => { setShowPaywall(null); setSettingsTab("piano"); setTab("settings"); }}
+                style={{ padding: 12, borderRadius: 10, background: T.acc, textAlign: "center" as const, fontSize: 14, fontWeight: 700, color: "#fff", cursor: "pointer" }}>
+                Vedi piani disponibili
+              </div>
+              <div onClick={() => setShowPaywall(null)}
+                style={{ padding: 10, borderRadius: 8, textAlign: "center" as const, fontSize: 12, fontWeight: 600, color: T.sub, cursor: "pointer" }}>
+                Non ora
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* === 📥 INBOX DOCUMENTI — Modal globale === */}
+      {showInboxDoc && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+          <div style={{ background: T.card, borderRadius: "20px 20px 0 0", maxWidth: 500, width: "100%", maxHeight: "85vh", overflowY: "auto", padding: "20px 20px 30px" }}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: T.text }}>📥 Documento in Arrivo</div>
+              <div onClick={() => { setShowInboxDoc(false); setInboxResult(null); }} style={{ width: 30, height: 30, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>✕</div>
+            </div>
+
+            {/* Loading */}
+            {inboxResult?.stato === "caricamento" && (
+              <div style={{ textAlign: "center", padding: 30 }}>
+                <div style={{ fontSize: 36, animation: "spin 1s linear infinite", display: "inline-block" }}>📄</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginTop: 8 }}>Caricamento...</div>
+                <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>{inboxResult.file}</div>
+              </div>
+            )}
+
+            {/* AI Analysis */}
+            {inboxResult?.stato === "analisi" && (
+              <div style={{ textAlign: "center", padding: 30 }}>
+                <div style={{ fontSize: 36, animation: "spin 1s linear infinite", display: "inline-block" }}>🤖</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#af52de", marginTop: 8 }}>AI sta leggendo il documento...</div>
+                <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>Estraggo: totale, consegna, pagamento, articoli</div>
+              </div>
+            )}
+
+            {/* Results */}
+            {inboxResult?.stato === "completato" && (
+              <div>
+                {/* File info + classification */}
+                <div style={{ ...S.card, padding: 12, marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ fontSize: 28 }}>{inboxResult.tipo?.includes("pdf") ? "📄" : "📷"}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{inboxResult.file}</div>
+                    {inboxResult.fileUrl && <div onClick={() => window.open(inboxResult.fileUrl, "_blank")} style={{ fontSize: 10, color: "#007aff", cursor: "pointer", marginTop: 2 }}>🔗 Apri originale</div>}
+                  </div>
+                </div>
+
+                {/* AI Classification badge */}
+                {(() => {
+                  const tipoLabels: any = { firma: "✍️ Preventivo Firmato", conferma: "📄 Conferma Fornitore", fattura: "💰 Fattura", ricevuta: "🏦 Ricevuta Pagamento", foto: "📷 Foto Cantiere", sconosciuto: "❓ Documento" };
+                  const tipoColors: any = { firma: "#34c759", conferma: "#af52de", fattura: "#007aff", ricevuta: "#ff9500", foto: "#5856d6", sconosciuto: "#86868b" };
+                  const col = tipoColors[inboxResult.docTipo] || "#86868b";
+                  return (
+                    <div style={{ ...S.card, padding: 12, marginBottom: 12, background: col + "10", border: `2px solid ${col}30` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: col, textTransform: "uppercase" }}>🤖 MASTRO ha classificato:</span>
+                        <span style={{ fontSize: 10, color: T.sub }}>{inboxResult.confidence}% sicuro</span>
+                      </div>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: col }}>{tipoLabels[inboxResult.docTipo] || "Documento"}</div>
+                      {inboxResult.matchedCommessa && (
+                        <div style={{ fontSize: 12, color: T.text, marginTop: 4 }}>
+                          → <b>{inboxResult.matchedCommessa.code} — {inboxResult.matchedCommessa.cliente} {inboxResult.matchedCommessa.cognome || ""}</b>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Extracted data (for conferma) */}
+                {inboxResult.dati && (inboxResult.dati.fornitoreNome || inboxResult.dati.totale > 0 || inboxResult.dati.settimane > 0) && (
+                  <div style={{ ...S.card, padding: 12, marginBottom: 12, background: "#af52de08", border: `1px solid #af52de20` }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "#af52de", textTransform: "uppercase", marginBottom: 8 }}>🤖 Dati Estratti</div>
+                    {inboxResult.dati.fornitoreNome && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: T.sub }}>Fornitore</span><b>{inboxResult.dati.fornitoreNome}</b></div>}
+                    {inboxResult.dati.totale > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: T.sub }}>Totale</span><b style={{ color: "#af52de" }}>€{inboxResult.dati.totale.toLocaleString("it-IT", { minimumFractionDigits: 2 })}</b></div>}
+                    {inboxResult.dati.settimane > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: T.sub }}>Produzione</span><b>{inboxResult.dati.settimane} settimane</b></div>}
+                    {inboxResult.dati.dataConsegna && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: T.sub }}>Consegna</span><b>{new Date(inboxResult.dati.dataConsegna).toLocaleDateString("it-IT")}</b></div>}
+                  </div>
+                )}
+
+                {/* === CONFERMA type: assign to ordine === */}
+                {inboxResult.docTipo === "conferma" && inboxResult.matchedOrdine && (
+                  <div style={{ ...S.card, padding: 12, marginBottom: 12, background: "#34c75908", border: `2px solid #34c759` }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "#34c759", marginBottom: 6 }}>✅ ORDINE TROVATO</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{inboxResult.matchedCommessa?.code} — {inboxResult.matchedCommessa?.cliente}</div>
+                    <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{inboxResult.matchedOrdine.fornitore?.nome || "—"} · €{(inboxResult.matchedOrdine.totaleIva || 0).toLocaleString("it-IT")}</div>
+                    <button onClick={() => confermaInboxDoc(inboxResult.matchedOrdine.id)} style={{ width: "100%", marginTop: 10, padding: 14, borderRadius: 12, border: "none", background: "#34c759", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                      ✅ ASSEGNA A QUESTO ORDINE
+                    </button>
+                  </div>
+                )}
+                {inboxResult.docTipo === "conferma" && inboxResult.tuttiOrdini?.filter(o => o.id !== inboxResult.matchedOrdine?.id).length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>{inboxResult.matchedOrdine ? "Oppure scegli un altro ordine:" : "A quale ordine appartiene?"}</div>
+                    {inboxResult.tuttiOrdini.filter(o => o.id !== inboxResult.matchedOrdine?.id).map(o => {
+                      const cm = cantieri.find(c => c.id === o.cmId);
+                      return (
+                        <div key={o.id} onClick={() => confermaInboxDoc(o.id)} style={{ ...S.card, padding: "10px 12px", marginBottom: 6, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", border: `1px solid ${T.bdr}` }}>
+                          <div><div style={{ fontSize: 12, fontWeight: 700 }}>{cm?.code} — {cm?.cliente}</div><div style={{ fontSize: 10, color: T.sub }}>{o.fornitore?.nome || "—"}</div></div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: T.acc }}>€{(o.totaleIva || 0).toLocaleString("it-IT")}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* === FIRMA / RICEVUTA / FOTO type: assign to commessa === */}
+                {(inboxResult.docTipo === "firma" || inboxResult.docTipo === "ricevuta" || inboxResult.docTipo === "foto" || inboxResult.docTipo === "sconosciuto") && (
+                  <div>
+                    {inboxResult.matchedCommessa && (
+                      <div style={{ ...S.card, padding: 12, marginBottom: 12, background: "#34c75908", border: `2px solid #34c759` }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: "#34c759", marginBottom: 6 }}>✅ COMMESSA TROVATA</div>
+                        <div style={{ fontSize: 14, fontWeight: 700 }}>{inboxResult.matchedCommessa.code} — {inboxResult.matchedCommessa.cliente} {inboxResult.matchedCommessa.cognome || ""}</div>
+                        <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{inboxResult.matchedCommessa.indirizzo || "—"}</div>
+                        <button onClick={() => assegnaDocUniversale(inboxResult.matchedCommessa.id, inboxResult.docTipo)} style={{ width: "100%", marginTop: 10, padding: 14, borderRadius: 12, border: "none", background: "#34c759", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                          ✅ ASSEGNA QUI
+                        </button>
+                      </div>
+                    )}
+                    {/* All commesse for manual selection */}
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>
+                      {inboxResult.matchedCommessa ? "Oppure scegli un'altra commessa:" : "A quale commessa appartiene?"}
+                    </div>
+                    {(inboxResult.commesseAttive || cantieri).filter(cm => cm.id !== inboxResult.matchedCommessa?.id).map(cm => (
+                      <div key={cm.id} onClick={() => assegnaDocUniversale(cm.id, inboxResult.docTipo)} style={{ ...S.card, padding: "10px 12px", marginBottom: 6, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", border: `1px solid ${T.bdr}` }}>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700 }}>{cm.code} — {cm.cliente} {cm.cognome || ""}</div>
+                          <div style={{ fontSize: 10, color: T.sub }}>{cm.fase} · {cm.indirizzo || "—"}</div>
+                        </div>
+                        <span style={{ fontSize: 16 }}>→</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Change classification */}
+                <div style={{ marginTop: 12, padding: 10, borderRadius: 10, background: T.bg, textAlign: "center" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6 }}>Classificazione sbagliata? Scegli il tipo:</div>
+                  <div style={{ display: "flex", gap: 4, justifyContent: "center", flexWrap: "wrap" as any }}>
+                    {[
+                      { id: "firma", label: "✍️ Firma", col: "#34c759" },
+                      { id: "conferma", label: "📄 Conferma", col: "#af52de" },
+                      { id: "ricevuta", label: "🏦 Ricevuta", col: "#ff9500" },
+                      { id: "foto", label: "📷 Foto", col: "#5856d6" },
+                    ].map(t => (
+                      <span key={t.id} onClick={() => setInboxResult(prev => ({ ...prev, docTipo: t.id, confidence: 100 }))} style={{
+                        padding: "6px 10px", borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: "pointer",
+                        background: inboxResult.docTipo === t.id ? t.col : T.card,
+                        color: inboxResult.docTipo === t.id ? "#fff" : T.text,
+                        border: `1px solid ${inboxResult.docTipo === t.id ? t.col : T.bdr}`,
+                      }}>{t.label}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       </div>
+
+      {/* ===== DOCUMENT VIEWER MODAL ===== */}
+      {docViewer && (
+        <div onClick={() => setDocViewer(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: T.card, borderRadius: 16, width: "100%", maxWidth: 500, maxHeight: "80vh", overflow: "auto" }}>
+            {/* Header */}
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${T.bdr}`, display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 20 }}>📋</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: T.text }}>{docViewer.title}</div>
+                <div style={{ fontSize: 11, color: T.sub }}>{docViewer.docs.length} document{docViewer.docs.length !== 1 ? "i" : "o"}</div>
+              </div>
+              <span onClick={() => setDocViewer(null)} style={{ fontSize: 24, cursor: "pointer", color: T.sub, lineHeight: 1 }}>✕</span>
+            </div>
+            {/* Document list */}
+            <div style={{ padding: 12 }}>
+              {docViewer.docs.map((doc, di) => {
+                const tipoColors: any = { firma: "#34c759", fattura: "#007aff", ordine: "#ff9500", conferma: "#af52de", rilievo: "#5856d6", preventivo: "#ff2d55", montaggio: "#007aff", verbale: "#34c759" };
+                const col = tipoColors[doc.tipo] || T.acc;
+                return (
+                  <div key={di} style={{ padding: 14, marginBottom: 8, borderRadius: 12, border: `1px solid ${T.bdr}`, background: T.bg }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: col + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                        {doc.tipo === "firma" ? "✍️" : doc.tipo === "fattura" ? "💰" : doc.tipo === "ordine" ? "📦" : doc.tipo === "conferma" ? "📄" : doc.tipo === "rilievo" ? "📐" : doc.tipo === "preventivo" ? "📋" : doc.tipo === "montaggio" ? "🔧" : "📎"}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 2 }}>{doc.nome}</div>
+                        <div style={{ fontSize: 11, color: T.sub }}>{doc.detail || ""}</div>
+                        {doc.data && <div style={{ fontSize: 10, color: T.sub, marginTop: 2 }}>📅 {doc.data}</div>}
+                      </div>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: col, background: col + "15", padding: "2px 8px", borderRadius: 6, textTransform: "uppercase" as any }}>{doc.tipo}</span>
+                    </div>
+                    {/* Action buttons */}
+                    <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                      {doc.dataUrl ? (
+                        <a href={doc.dataUrl} download={doc.nome} style={{ flex: 1, padding: 8, borderRadius: 8, border: `1px solid ${col}`, background: col + "08", color: col, fontSize: 11, fontWeight: 700, cursor: "pointer", textAlign: "center", textDecoration: "none" }}>
+                          ⬇️ Scarica
+                        </a>
+                      ) : (
+                        <button onClick={() => { alert(`In produzione questo aprirà il file "${doc.nome}" da Supabase Storage.\n\nNella demo i documenti sono simulati.`); }} style={{ flex: 1, padding: 8, borderRadius: 8, border: `1px solid ${col}`, background: col + "08", color: col, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                          👁 Visualizza
+                        </button>
+                      )}
+                      <button onClick={() => {
+                        const tel = (selectedCM?.telefono || "").replace(/\D/g, "");
+                        window.open(`https://wa.me/${tel.startsWith("39") ? tel : "39" + tel}?text=${encodeURIComponent(`Ecco il documento: ${doc.nome}`)}`, "_blank");
+                      }} style={{ flex: 1, padding: 8, borderRadius: 8, border: `1px solid #25d366`, background: "#25d36608", color: "#25d366", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                        💬 WhatsApp
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* All attachments */}
+            {selectedCM && (selectedCM.allegati || []).length > 0 && (
+              <div style={{ padding: "0 12px 16px" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 6 }}>📎 TUTTI GLI ALLEGATI COMMESSA ({selectedCM.allegati.length})</div>
+                {(selectedCM.allegati || []).map((a: any, ai: number) => (
+                  <div key={ai} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: ai < selectedCM.allegati.length - 1 ? `1px solid ${T.bdr}` : "none" }}>
+                    <span style={{ fontSize: 14 }}>{a.tipo === "firma" ? "✍️" : a.tipo === "fattura" ? "💰" : a.tipo === "ordine" ? "📦" : "📎"}</span>
+                    <div style={{ flex: 1, fontSize: 11, color: T.text, fontWeight: 600 }}>{a.nome}</div>
+                    <span style={{ fontSize: 10, color: T.sub }}>{a.data}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
