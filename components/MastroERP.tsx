@@ -169,195 +169,109 @@ const AFASE = {
   chiusura:    { i: "✅", t: "Richiedi saldo finale",    c: "#30b0c7" },
 };
 
-/* == DATI DEMO == */
-// ═══ DEMO DATA — 4 clienti reali a stadi diversi del flusso ═══
+// ═══ 20 COMMESSE DEMO REALISTICHE ═══
 const CANTIERI_INIT = [
-  // CM-001: SOPRALLUOGO — appena creato, nessun rilievo → Centro Comando mostra Passo 1
+  // ═══ 1. SOPRALLUOGO — appena creato ═══
   {
     id: 1001, code: "S-0001", cliente: "Giuseppe", cognome: "Verdi", indirizzo: "Via Garibaldi 12, Rende (CS)",
     telefono: "347 555 1234", email: "giuseppe.verdi@email.it", fase: "sopralluogo",
     sistema: "Aluplast Ideal 4000", tipo: "nuova", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "2°",
-    note: "Appartamento secondo piano, 5 finestre da sostituire. Cliente vuole preventivo entro venerdì.",
+    note: "Appartamento secondo piano, 5 finestre da sostituire.",
     rilievi: [], allegati: [],
     creato: "25 feb", aggiornato: "25 feb",
     cf: "VRDGPP80A01D086Z", piva: "", sdi: "", pec: "",
     log: [{ chi: "Fabio", cosa: "creato la commessa", quando: "2 giorni fa", color: "#86868b" }],
   },
-  // CM-002: MISURE — ha rilievo + vani CON misure e sistema → Centro Comando mostra Passo 2 (prezzi calcolati) o Passo 3 (firma)
+  // ═══ 2. PREVENTIVO — misure fatte, deve firmare ═══
   {
     id: 1002, code: "S-0002", cliente: "Anna", cognome: "Bianchi", indirizzo: "Corso Mazzini 88, Cosenza (CS)",
     telefono: "339 888 5678", email: "anna.bianchi@gmail.com", fase: "preventivo",
     sistema: "Aluplast Ideal 4000", tipo: "nuova", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "1°",
-    note: "Ristrutturazione completa. IVA agevolata 10%. Vuole colore RAL 7016 esterno, bianco interno.",
+    note: "Ristrutturazione completa. IVA agevolata 10%.",
     prezzoMq: 180,
     rilievi: [{
       id: 2001, n: 1, data: "2026-02-20", ora: "09:30", rilevatore: "Fabio", tipo: "rilievo",
-      motivoModifica: "", note: "Tutti i vani accessibili. Muri in buono stato.", stato: "completato",
+      motivoModifica: "", note: "Tutti i vani accessibili.", stato: "completato",
       vani: [
-        {
-          id: 3001, nome: "Finestra 2A Soggiorno", tipo: "F2A", stanza: "Soggiorno", piano: "1°",
-          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1210, lCentro: 1200, lBasso: 1195, hSx: 1410, hCentro: 1400, hDx: 1405, d1: 1852, d2: 1849 },
-          foto: {}, note: "Esposta a sud", cassonetto: false,
-          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: true, l: 1200, h: 1400 } },
-        },
-        {
-          id: 3002, nome: "Portafinestra Camera", tipo: "PF2A", stanza: "Camera", piano: "1°",
-          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1405, lCentro: 1400, lBasso: 1398, hSx: 2210, hCentro: 2200, hDx: 2205, d1: 2610, d2: 2607 },
-          foto: {}, note: "Accesso balcone", cassonetto: false,
-          accessori: { tapparella: { attivo: true, l: 1400, h: 2200 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-        {
-          id: 3003, nome: "Vasistas Bagno", tipo: "VAS", stanza: "Bagno", piano: "1°",
-          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 605, lCentro: 600, lBasso: 598, hSx: 605, hCentro: 600, hDx: 602, d1: 850, d2: 848 },
-          foto: {}, note: "Vetro opaco", cassonetto: false,
-          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-        {
-          id: 3004, nome: "Scorrevole Salone", tipo: "SC2A", stanza: "Salone", piano: "1°",
-          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1810, lCentro: 1800, lBasso: 1795, hSx: 2210, hCentro: 2200, hDx: 2205, d1: 2843, d2: 2840 },
-          foto: {}, note: "Accesso terrazzo grande", cassonetto: false,
-          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: true, l: 1800, h: 2200 } },
-        },
+        { id: 3001, nome: "Finestra Soggiorno", tipo: "F2A", stanza: "Soggiorno", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 1210, lCentro: 1200, lBasso: 1195, hSx: 1410, hCentro: 1400, hDx: 1405, d1: 1852, d2: 1849 }, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: true, l: 1200, h: 1400 } } },
+        { id: 3002, nome: "Portafinestra Camera", tipo: "PF2A", stanza: "Camera", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 1405, lCentro: 1400, lBasso: 1398, hSx: 2210, hCentro: 2200, hDx: 2205, d1: 2610, d2: 2607 }, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: true, l: 1400, h: 2200 }, persiana: { attivo: false }, zanzariera: { attivo: false } } },
+        { id: 3003, nome: "Vasistas Bagno", tipo: "VAS", stanza: "Bagno", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 605, lCentro: 600, lBasso: 598, hSx: 605, hCentro: 600, hDx: 602, d1: 850, d2: 848 }, foto: {}, note: "Vetro opaco", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } },
+        { id: 3004, nome: "Scorrevole Salone", tipo: "SC2A", stanza: "Salone", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 1810, lCentro: 1800, lBasso: 1795, hSx: 2210, hCentro: 2200, hDx: 2205, d1: 2843, d2: 2840 }, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: true, l: 1800, h: 2200 } } },
       ],
     }],
-    allegati: [],
-    creato: "20 feb", aggiornato: "22 feb",
-    cf: "BNCNNA85C41D086Y", piva: "", sdi: "0000000", pec: "anna.bianchi@pec.it",
-    ivaPerc: 10,
-    log: [
-      { chi: "Fabio", cosa: "completato rilievo misure — 4 vani", quando: "5 giorni fa", color: "#5856d6" },
-      { chi: "Fabio", cosa: "creato la commessa", quando: "7 giorni fa", color: "#86868b" },
-    ],
+    allegati: [], creato: "20 feb", aggiornato: "22 feb",
+    cf: "BNCNNA85C41D086Y", piva: "", sdi: "0000000", pec: "anna.bianchi@pec.it", ivaPerc: 10,
+    log: [{ chi: "Fabio", cosa: "completato rilievo misure — 4 vani", quando: "5 giorni fa", color: "#5856d6" }],
   },
-  // CM-003: ORDINI — firmato + fatturato, deve ordinare al fornitore → Centro Comando mostra Passo 5
+  // ═══ 3. ORDINI — firmato, deve ordinare ═══
   {
     id: 1003, code: "S-0003", cliente: "Mario", cognome: "Rossi", indirizzo: "Via Roma 42, Cosenza (CS)",
-    telefono: "338 123 4567", email: "mario.rossi@libero.it", fase: "ordini",
-    sistema: "Aluplast Ideal 4000", tipo: "nuova", difficoltaSalita: "Media", mezzoSalita: "Scale interne", foroScale: "", pianoEdificio: "3°",
-    note: "8 finestre totali. Ristrutturazione integrale. Bonus 50% confermato.",
-    prezzoMq: 180,
-    firmaCliente: true, dataFirma: "2026-02-15",
-    firmaDocumento: { id: 9901, tipo: "firma", nome: "Preventivo_S-0003_firmato.pdf", data: "15/02/2026" },
-    allegati: [
-      { id: 9901, tipo: "firma", nome: "Preventivo_S-0003_firmato.pdf", data: "15/02/2026" },
-      { id: 9902, tipo: "fattura", nome: "Fattura_001_2026_acconto.pdf", data: "15/02/2026" },
-    ],
+    telefono: "320 111 4567", email: "mario.rossi@libero.it", fase: "ordini",
+    sistema: "Aluplast Ideal 7000", tipo: "nuova", difficoltaSalita: "media", mezzoSalita: "Argano", foroScale: "80×200", pianoEdificio: "3°",
+    note: "3° piano, serve argano. 4 finestre + portone.",
+    prezzoMq: 220, euro: 3520,
+    firmaCliente: true, dataFirma: "2026-02-10",
     rilievi: [{
-      id: 2002, n: 1, data: "2026-02-10", ora: "10:00", rilevatore: "Fabio", tipo: "rilievo",
-      motivoModifica: "", note: "Rilievo completo. Muri regolari.", stato: "completato",
-      vani: [
-        {
-          id: 3010, nome: "Finestra 2A Soggiorno", tipo: "F2A", stanza: "Soggiorno", piano: "3°",
-          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1205, lCentro: 1200, lBasso: 1198, hSx: 1410, hCentro: 1400, hDx: 1405, d1: 1852, d2: 1849 },
-          foto: {}, note: "", cassonetto: false,
-          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-        {
-          id: 3011, nome: "Finestra 2A Camera 1", tipo: "F2A", stanza: "Camera", piano: "3°",
-          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1005, lCentro: 1000, lBasso: 998, hSx: 1210, hCentro: 1200, hDx: 1205, d1: 1564, d2: 1561 },
-          foto: {}, note: "", cassonetto: false,
-          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-        {
-          id: 3012, nome: "Portafinestra Salone", tipo: "PF2A", stanza: "Salone", piano: "3°",
-          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1405, lCentro: 1400, lBasso: 1398, hSx: 2210, hCentro: 2200, hDx: 2205, d1: 2610, d2: 2607 },
-          foto: {}, note: "", cassonetto: false,
-          accessori: { tapparella: { attivo: true, l: 1400, h: 2200 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-        {
-          id: 3013, nome: "Vasistas Bagno", tipo: "VAS", stanza: "Bagno", piano: "3°",
-          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 605, lCentro: 600, lBasso: 600, hSx: 605, hCentro: 600, hDx: 600, d1: 849, d2: 849 },
-          foto: {}, note: "Vetro opaco", cassonetto: false,
-          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-      ],
-    }],
-    allegati: [],
-    creato: "10 feb", aggiornato: "15 feb",
-    cf: "RSSMRA75D15D086X", piva: "", sdi: "", pec: "",
-    ivaPerc: 10,
-    log: [
-      { chi: "Fabio", cosa: "fattura acconto emessa", quando: "12 giorni fa", color: "#5856d6" },
-      { chi: "Fabio", cosa: "cliente ha firmato", quando: "12 giorni fa", color: "#34c759" },
-      { chi: "Fabio", cosa: "preventivo inviato", quando: "14 giorni fa", color: "#ff9500" },
-      { chi: "Fabio", cosa: "completato rilievo — 4 vani", quando: "17 giorni fa", color: "#5856d6" },
-      { chi: "Fabio", cosa: "creato la commessa", quando: "17 giorni fa", color: "#86868b" },
-    ],
-  },
-  // CM-004: PRODUZIONE — tutto fatto fino a conferma AI, deve pianificare montaggio → Centro Comando Passo 7
-  {
-    id: 1004, code: "S-0004", cliente: "Laura", cognome: "Esposito", indirizzo: "Viale Trieste 5, Rende (CS)",
-    telefono: "340 999 8765", email: "laura.esposito@outlook.it", fase: "produzione",
-    sistema: "Aluplast Ideal 4000", tipo: "nuova", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "PT",
-    note: "Piano terra villa. 6 finestre + 1 portafinestra. Colore noce esterno.",
-    prezzoMq: 180,
-    firmaCliente: true, dataFirma: "2026-01-20",
-    firmaDocumento: { id: 9903, tipo: "firma", nome: "Preventivo_S-0004_firmato.pdf", data: "20/01/2026" },
-    rilievi: [{
-      id: 2003, n: 1, data: "2026-01-15", ora: "14:00", rilevatore: "Fabio", tipo: "rilievo",
+      id: 2003, n: 1, data: "2026-02-05", ora: "10:00", rilevatore: "Fabio", tipo: "rilievo",
       motivoModifica: "", note: "", stato: "completato",
       vani: [
-        {
-          id: 3020, nome: "Finestra 2A Cucina", tipo: "F2A", stanza: "Cucina", piano: "PT",
-          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "Noce", bicolore: true,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1205, lCentro: 1200, lBasso: 1198, hSx: 1410, hCentro: 1400, hDx: 1405, d1: 1852, d2: 1849 },
-          foto: {}, note: "", cassonetto: false,
-          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-        {
-          id: 3021, nome: "Portafinestra Soggiorno", tipo: "PF2A", stanza: "Soggiorno", piano: "PT",
-          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "Noce", bicolore: true,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1405, lCentro: 1400, lBasso: 1398, hSx: 2210, hCentro: 2200, hDx: 2205, d1: 2610, d2: 2607 },
-          foto: {}, note: "", cassonetto: false,
-          accessori: { tapparella: { attivo: true, l: 1400, h: 2200 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-        {
-          id: 3022, nome: "Finestra 1A Camera", tipo: "F1A", stanza: "Camera", piano: "PT",
-          sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "Noce", bicolore: true,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 805, lCentro: 800, lBasso: 798, hSx: 1210, hCentro: 1200, hDx: 1205, d1: 1443, d2: 1441 },
-          foto: {}, note: "", cassonetto: false,
-          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
+        { id: 3010, nome: "F1 Cucina", tipo: "F2A", stanza: "Cucina", piano: "3°", sistema: "Aluplast Ideal 7000", pezzi: 1, coloreInt: "Bianco", coloreEst: "Bianco", bicolore: false, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 1010, lCentro: 1000, lBasso: 995, hSx: 1210, hCentro: 1200, hDx: 1205, d1: 1562, d2: 1560 }, foto: {}, note: "", cassonetto: true, accessori: { tapparella: { attivo: true, l: 1000, h: 1200 }, persiana: { attivo: false }, zanzariera: { attivo: false } } },
+        { id: 3011, nome: "F2 Soggiorno", tipo: "F2A", stanza: "Soggiorno", piano: "3°", sistema: "Aluplast Ideal 7000", pezzi: 1, coloreInt: "Bianco", coloreEst: "Bianco", bicolore: false, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 1410, lCentro: 1400, lBasso: 1395, hSx: 1510, hCentro: 1500, hDx: 1505, d1: 2052, d2: 2050 }, foto: {}, note: "", cassonetto: true, accessori: { tapparella: { attivo: true, l: 1400, h: 1500 }, persiana: { attivo: false }, zanzariera: { attivo: true, l: 1400, h: 1500 } } },
+        { id: 3012, nome: "PF Camera", tipo: "PF2A", stanza: "Camera", piano: "3°", sistema: "Aluplast Ideal 7000", pezzi: 1, coloreInt: "Bianco", coloreEst: "Bianco", bicolore: false, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 1210, lCentro: 1200, lBasso: 1198, hSx: 2310, hCentro: 2300, hDx: 2305, d1: 2594, d2: 2592 }, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } },
+        { id: 3013, nome: "Portone Ingresso", tipo: "PORTONE", stanza: "Ingresso", piano: "3°", sistema: "Aluplast Ideal 7000", pezzi: 1, coloreInt: "Bianco", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 910, lCentro: 900, lBasso: 898, hSx: 2110, hCentro: 2100, hDx: 2105, d1: 2284, d2: 2282 }, foto: {}, note: "Blindato", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } },
       ],
     }],
-    allegati: [],
-    creato: "15 gen", aggiornato: "10 feb",
-    cf: "SPSLRA82E45D086W", piva: "", sdi: "", pec: "",
-    ivaPerc: 10,
+    allegati: [
+      { id: 9901, tipo: "firma", nome: "Preventivo_S-0003_firmato.pdf", data: "10/02/2026" },
+    ],
+    creato: "03 feb", aggiornato: "15 feb",
+    cf: "RSSMRA75B15D086X", piva: "", sdi: "", pec: "", ivaPerc: 10,
     log: [
-      { chi: "Fabio", cosa: "conferma fornitore approvata — AI ha estratto dati", quando: "17 giorni fa", color: "#af52de" },
-      { chi: "Fabio", cosa: "ordine inviato a Aluplast", quando: "25 giorni fa", color: "#ff2d55" },
-      { chi: "Fabio", cosa: "fattura acconto emessa", quando: "35 giorni fa", color: "#5856d6" },
-      { chi: "Fabio", cosa: "cliente ha firmato", quando: "38 giorni fa", color: "#34c759" },
-      { chi: "Fabio", cosa: "creato la commessa", quando: "43 giorni fa", color: "#86868b" },
+      { chi: "Fabio", cosa: "cliente ha firmato il preventivo", quando: "17 giorni fa", color: "#34c759" },
+      { chi: "Fabio", cosa: "completato rilievo misure — 4 vani", quando: "22 giorni fa", color: "#5856d6" },
     ],
   },
-  // CM-005: COMPLETATO — ciclo intero chiuso, montaggio fatto, saldo incassato
+  // ═══ 4. PRODUZIONE — ordinato, attesa materiale ═══
+  {
+    id: 1004, code: "S-0004", cliente: "Laura", cognome: "Esposito", indirizzo: "Viale Trieste 5, Rende (CS)",
+    telefono: "333 222 8888", email: "laura.esposito@yahoo.it", fase: "produzione",
+    sistema: "Aluplast Ideal 4000", tipo: "nuova", difficoltaSalita: "facile", mezzoSalita: "", foroScale: "", pianoEdificio: "PT",
+    note: "Piano terra villa, accesso facile dal giardino.",
+    prezzoMq: 180, euro: 2700,
+    firmaCliente: true, dataFirma: "2026-01-20",
+    rilievi: [{
+      id: 2004, n: 1, data: "2026-01-15", ora: "14:00", rilevatore: "Fabio", tipo: "rilievo",
+      motivoModifica: "", note: "Villa PT, 3 vani.", stato: "completato",
+      vani: [
+        { id: 3020, nome: "F Cucina Grande", tipo: "F2A", stanza: "Cucina", piano: "PT", sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "Bianco", coloreEst: "Bianco", bicolore: false, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 1610, lCentro: 1600, lBasso: 1595, hSx: 1210, hCentro: 1200, hDx: 1205, d1: 2000, d2: 1998 }, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: true, l: 1600, h: 1200 }, persiana: { attivo: false }, zanzariera: { attivo: true, l: 1600, h: 1200 } } },
+        { id: 3021, nome: "PF Soggiorno", tipo: "PF2A", stanza: "Soggiorno", piano: "PT", sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "Bianco", coloreEst: "Bianco", bicolore: false, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 1810, lCentro: 1800, lBasso: 1798, hSx: 2310, hCentro: 2300, hDx: 2305, d1: 2921, d2: 2919 }, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: true, l: 1800, h: 2300, tipo: "alluminio" }, zanzariera: { attivo: false } } },
+        { id: 3022, nome: "Vasistas Bagno", tipo: "VAS", stanza: "Bagno", piano: "PT", sistema: "Aluplast Ideal 4000", pezzi: 1, coloreInt: "Bianco", coloreEst: "Bianco", bicolore: false, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 605, lCentro: 600, lBasso: 598, hSx: 505, hCentro: 500, hDx: 502, d1: 781, d2: 780 }, foto: {}, note: "Vetro opaco", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } },
+      ],
+    }],
+    allegati: [
+      { id: 9902, tipo: "firma", nome: "Preventivo_S-0004_firmato.pdf", data: "20/01/2026" },
+      { id: 9903, tipo: "ordine", nome: "Ordine_Aluplast_S-0004.pdf", data: "22/01/2026" },
+      { id: 9904, tipo: "conferma", nome: "Conferma_Aluplast_8821.pdf", data: "25/01/2026" },
+    ],
+    creato: "10 gen", aggiornato: "25 gen",
+    cf: "SPSLRA90D55D086W", piva: "", sdi: "", pec: "", ivaPerc: 10,
+    praticaFiscale: "Detraz. 50%",
+    docIdentita: [
+      { id: "di1", tipo: "CI", nome: "CI_Laura_Esposito.jpg", data: "20/01/2026" },
+      { id: "di2", tipo: "CF", nome: "CF_Laura_Esposito.jpg", data: "20/01/2026" },
+    ],
+    log: [
+      { chi: "Fabio", cosa: "ricevuta conferma ordine Aluplast", quando: "1 mese fa", color: "#34c759" },
+      { chi: "Fabio", cosa: "inviato ordine ad Aluplast", quando: "1 mese fa", color: "#ff2d55" },
+    ],
+  },
+  // ═══ 5. CHIUSURA — completata con tutto ═══
   {
     id: 1005, code: "S-0005", cliente: "Salvatore", cognome: "De Luca", indirizzo: "Corso Italia 22, Cosenza (CS)",
     telefono: "329 456 7890", email: "s.deluca@gmail.com", fase: "chiusura",
     sistema: "Schüco CT70", tipo: "ristrutturazione", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "1°",
-    note: "Lavoro completato. Cliente soddisfatto, ha chiesto biglietto per passaparola.",
-    prezzoMq: 280,
+    note: "Lavoro completato. Cliente soddisfatto.",
+    prezzoMq: 280, euro: 1930,
     firmaCliente: true, dataFirma: "2025-12-10",
     firmaDocumento: { id: 9910, tipo: "firma", nome: "Preventivo_S-0005_firmato.pdf", data: "10/12/2025" },
     allegati: [
@@ -372,269 +286,177 @@ const CANTIERI_INIT = [
       id: 2005, n: 1, data: "2025-12-05", ora: "09:00", rilevatore: "Fabio", tipo: "rilievo",
       motivoModifica: "", note: "Appartamento ristrutturato, muri perfetti.", stato: "completato",
       vani: [
-        { id: 3050, nome: "Finestra 2A Soggiorno", tipo: "F2A", stanza: "Soggiorno", piano: "1°",
-          sistema: "Schüco CT70", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1410, lCentro: 1400, lBasso: 1398, hSx: 1610, hCentro: 1600, hDx: 1605, d1: 2125, d2: 2122 },
-          foto: {}, note: "", cassonetto: false,
-          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: true, l: 1400, h: 1600 } },
-        },
-        { id: 3051, nome: "Portafinestra Terrazzo", tipo: "PF2A", stanza: "Terrazzo", piano: "1°",
-          sistema: "Schüco CT70", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1605, lCentro: 1600, lBasso: 1598, hSx: 2410, hCentro: 2400, hDx: 2405, d1: 2884, d2: 2881 },
-          foto: {}, note: "Uscita terrazzo principale", cassonetto: false,
-          accessori: { tapparella: { attivo: true, l: 1600, h: 2400 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-        { id: 3052, nome: "Finestra 1A Bagno", tipo: "VAS", stanza: "Bagno", piano: "1°",
-          sistema: "Schüco CT70", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 7016", bicolore: true,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 605, lCentro: 600, lBasso: 598, hSx: 805, hCentro: 800, hDx: 802, d1: 1000, d2: 998 },
-          foto: {}, note: "Vetro opaco satinato", cassonetto: false,
-          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
+        { id: 3030, nome: "F Cucina", tipo: "F2A", stanza: "Cucina", piano: "1°", sistema: "Schüco CT70", pezzi: 1, coloreInt: "Bianco", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 1010, lCentro: 1000, lBasso: 998, hSx: 1210, hCentro: 1200, hDx: 1205, d1: 1562, d2: 1560 }, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } },
+        { id: 3031, nome: "PF Salone", tipo: "PF2A", stanza: "Salone", piano: "1°", sistema: "Schüco CT70", pezzi: 1, coloreInt: "Bianco", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 1410, lCentro: 1400, lBasso: 1398, hSx: 2310, hCentro: 2300, hDx: 2305, d1: 2694, d2: 2692 }, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } },
+        { id: 3032, nome: "VAS Bagno", tipo: "VAS", stanza: "Bagno", piano: "1°", sistema: "Schüco CT70", pezzi: 1, coloreInt: "Bianco", coloreEst: "RAL 7016", bicolore: true, coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "", misure: { lAlto: 605, lCentro: 600, lBasso: 598, hSx: 505, hCentro: 500, hDx: 502, d1: 781, d2: 780 }, foto: {}, note: "Vetro opaco", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } },
       ],
     }],
-    creato: "5 dic", aggiornato: "20 feb",
-    cf: "DLCSVT70M15D086V", piva: "", sdi: "", pec: "",
+    creato: "01 dic", aggiornato: "18 feb",
+    cf: "DLCSVT70H15D086V", piva: "", sdi: "", pec: "",
     ivaPerc: 10,
-    ck_vano_ok: true, ck_pulizia_ok: true, ck_cliente_ok: true, ck_foto_ok: true,
+    praticaFiscale: "Ecobonus 65%",
+    docIdentita: [
+      { id: "di3", tipo: "CI", nome: "CI_Salvatore_DeLuca_fronte.jpg", data: "10/12/2025" },
+      { id: "di4", tipo: "CI", nome: "CI_Salvatore_DeLuca_retro.jpg", data: "10/12/2025" },
+      { id: "di5", tipo: "CF", nome: "CF_Salvatore_DeLuca.jpg", data: "10/12/2025" },
+    ],
+    docFiscali: [
+      { id: "df1", nome: "ENEA_S-0005.pdf", data: "15/02/2026" },
+      { id: "df2", nome: "Asseverazione_tecnico.pdf", data: "16/02/2026" },
+      { id: "df3", nome: "Bonifico_parlante.pdf", data: "18/02/2026" },
+    ],
     log: [
-      { chi: "Fabio", cosa: "saldo incassato — commessa chiusa ✅", quando: "7 giorni fa", color: "#34c759" },
-      { chi: "Fabio", cosa: "montaggio completato — 2 giorni", quando: "9 giorni fa", color: "#5856d6" },
-      { chi: "Fabio", cosa: "materiale consegnato dal fornitore", quando: "20 giorni fa", color: "#af52de" },
-      { chi: "Fabio", cosa: "ordine confermato da Schüco", quando: "60 giorni fa", color: "#af52de" },
-      { chi: "Fabio", cosa: "ordine inviato a Schüco", quando: "65 giorni fa", color: "#ff2d55" },
-      { chi: "Fabio", cosa: "fattura acconto emessa", quando: "75 giorni fa", color: "#5856d6" },
-      { chi: "Fabio", cosa: "cliente ha firmato", quando: "78 giorni fa", color: "#34c759" },
-      { chi: "Fabio", cosa: "creato la commessa", quando: "84 giorni fa", color: "#86868b" },
+      { chi: "Fabio", cosa: "commessa completata e chiusa", quando: "9 giorni fa", color: "#34c759" },
+      { chi: "Fabio", cosa: "montaggio completato", quando: "10 giorni fa", color: "#007aff" },
+      { chi: "Fabio", cosa: "emessa fattura saldo", quando: "7 giorni fa", color: "#ff9500" },
     ],
   },
-  // CM-006: FATTURA — firmato ieri, deve fare fattura acconto
-  {
-    id: 1006, code: "S-0006", cliente: "Chiara", cognome: "Moretti", indirizzo: "Via Popilia 156, Cosenza (CS)",
-    telefono: "333 222 1111", email: "chiara.moretti@live.it", fase: "conferma",
-    sistema: "Rehau S80", tipo: "nuova", difficoltaSalita: "Facile", mezzoSalita: "", foroScale: "", pianoEdificio: "2°",
-    note: "Nuova costruzione, 7 finestre + 2 portefinestre. Consegna entro aprile.",
-    prezzoMq: 220,
-    firmaCliente: true, dataFirma: "2026-02-26",
-    firmaDocumento: { id: 9920, tipo: "firma", nome: "Preventivo_S-0006_firmato.pdf", data: "26/02/2026" },
-    allegati: [
-      { id: 9920, tipo: "firma", nome: "Preventivo_S-0006_firmato.pdf", data: "26/02/2026" },
-      { id: 9921, tipo: "fattura", nome: "Fattura_004_2026_acconto.pdf", data: "26/02/2026" },
-    ],
-    rilievi: [{
-      id: 2006, n: 1, data: "2026-02-22", ora: "11:00", rilevatore: "Fabio", tipo: "rilievo",
-      motivoModifica: "", note: "Nuova costruzione, fori regolarissimi.", stato: "completato",
-      vani: [
-        { id: 3060, nome: "Finestra 2A Soggiorno", tipo: "F2A", stanza: "Soggiorno", piano: "2°",
-          sistema: "Rehau S80", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1205, lCentro: 1200, lBasso: 1200, hSx: 1405, hCentro: 1400, hDx: 1400, d1: 1844, d2: 1844 },
-          foto: {}, note: "", cassonetto: false,
-          accessori: { tapparella: { attivo: true, l: 1200, h: 1400 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-        { id: 3061, nome: "Finestra 2A Camera 1", tipo: "F2A", stanza: "Camera 1", piano: "2°",
-          sistema: "Rehau S80", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1005, lCentro: 1000, lBasso: 1000, hSx: 1205, hCentro: 1200, hDx: 1200, d1: 1563, d2: 1563 },
-          foto: {}, note: "", cassonetto: false,
-          accessori: { tapparella: { attivo: true, l: 1000, h: 1200 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-        { id: 3062, nome: "Portafinestra Balcone", tipo: "PF2A", stanza: "Salone", piano: "2°",
-          sistema: "Rehau S80", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1405, lCentro: 1400, lBasso: 1400, hSx: 2305, hCentro: 2300, hDx: 2300, d1: 2694, d2: 2694 },
-          foto: {}, note: "", cassonetto: false,
-          accessori: { tapparella: { attivo: true, l: 1400, h: 2300 }, persiana: { attivo: false }, zanzariera: { attivo: true, l: 1400, h: 2300 } },
-        },
-        { id: 3063, nome: "Vasistas Bagno", tipo: "VAS", stanza: "Bagno", piano: "2°",
-          sistema: "Rehau S80", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 605, lCentro: 600, lBasso: 600, hSx: 605, hCentro: 600, hDx: 600, d1: 849, d2: 849 },
-          foto: {}, note: "Vetro opaco", cassonetto: false,
-          accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-        { id: 3064, nome: "Finestra 2A Camera 2", tipo: "F2A", stanza: "Camera 2", piano: "2°",
-          sistema: "Rehau S80", pezzi: 1, coloreInt: "RAL 9010", coloreEst: "RAL 9010", bicolore: false,
-          coloreAcc: "", vetro: "", telaio: "", coprifilo: "", lamiera: "",
-          misure: { lAlto: 1005, lCentro: 1000, lBasso: 1000, hSx: 1205, hCentro: 1200, hDx: 1200, d1: 1563, d2: 1563 },
-          foto: {}, note: "", cassonetto: false,
-          accessori: { tapparella: { attivo: true, l: 1000, h: 1200 }, persiana: { attivo: false }, zanzariera: { attivo: false } },
-        },
-      ],
-    }],
-    creato: "22 feb", aggiornato: "26 feb",
-    cf: "MRTCHR90B50D086U", piva: "", sdi: "0000000", pec: "chiara.moretti@pec.it",
-    ivaPerc: 22,
-    log: [
-      { chi: "Fabio", cosa: "fattura acconto 50% emessa", quando: "1 giorno fa", color: "#5856d6" },
-      { chi: "Fabio", cosa: "cliente ha firmato il preventivo", quando: "1 giorno fa", color: "#34c759" },
-      { chi: "Fabio", cosa: "preventivo inviato via WhatsApp", quando: "3 giorni fa", color: "#ff9500" },
-      { chi: "Fabio", cosa: "completato rilievo — 5 vani", quando: "5 giorni fa", color: "#5856d6" },
-      { chi: "Fabio", cosa: "creato la commessa", quando: "5 giorni fa", color: "#86868b" },
-    ],
-  },
+  // ═══ 6. POSA — pronto per montaggio ═══
+  { id: 1006, code: "S-0006", cliente: "Francesca", cognome: "Romano", indirizzo: "Via Popilia 156, Cosenza (CS)", telefono: "340 777 3333", email: "f.romano@outlook.it", fase: "posa", sistema: "Rehau Geneo", tipo: "nuova", difficoltaSalita: "facile", note: "Villa bifamiliare PT+1°, 8 vani totali.", prezzoMq: 250, euro: 6400, firmaCliente: true, dataFirma: "2026-01-05", rilievi: [{ id: 2006, n: 1, data: "2025-12-20", ora: "10:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3040, nome: "F1 Cucina PT", tipo: "F2A", stanza: "Cucina", piano: "PT", sistema: "Rehau Geneo", pezzi: 1, misure: { lAlto: 1210, lCentro: 1200, lBasso: 1195, hSx: 1010, hCentro: 1000, hDx: 1005 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }, { id: 3041, nome: "PF Soggiorno PT", tipo: "PF2A", stanza: "Soggiorno", piano: "PT", sistema: "Rehau Geneo", pezzi: 1, misure: { lAlto: 1810, lCentro: 1800, lBasso: 1798, hSx: 2310, hCentro: 2300, hDx: 2305 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: true }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9920, tipo: "firma", nome: "Preventivo_S-0006.pdf", data: "05/01/2026" }, { id: 9921, tipo: "ordine", nome: "Ordine_Rehau.pdf", data: "10/01/2026" }, { id: 9922, tipo: "conferma", nome: "Conferma_Rehau_9987.pdf", data: "14/01/2026" }], creato: "15 dic", aggiornato: "14 gen", cf: "RMNFNC88M41D086T", ivaPerc: 10, praticaFiscale: "Detraz. 50%", docIdentita: [{ id: "di6", tipo: "CI", nome: "CI_Romano_fronte.jpg", data: "05/01/2026" }, { id: "di7", tipo: "CF", nome: "CF_Romano.jpg", data: "05/01/2026" }], log: [{ chi: "Fabio", cosa: "materiale arrivato, programmare montaggio", quando: "2 sett fa", color: "#34c759" }] },
+  // ═══ 7-20 — commesse aggiuntive in vari stadi ═══
+  { id: 1007, code: "S-0007", cliente: "Marco", cognome: "Ferraro", indirizzo: "Via dei Mille 33, Rende (CS)", telefono: "335 444 9999", email: "m.ferraro@gmail.com", fase: "sopralluogo", sistema: "", tipo: "nuova", note: "Nuovo cliente da passaparola De Luca. 6 finestre.", rilievi: [], allegati: [], creato: "27 feb", aggiornato: "27 feb", log: [{ chi: "Fabio", cosa: "creato da passaparola", quando: "oggi", color: "#86868b" }] },
+  { id: 1008, code: "S-0008", cliente: "Lucia", cognome: "Greco", indirizzo: "Piazza XV Marzo 8, Cosenza (CS)", telefono: "328 111 2222", email: "lucia.greco@pec.it", fase: "misure", sistema: "Aluplast Ideal 8000", tipo: "nuova", difficoltaSalita: "difficile", mezzoSalita: "Autoscala", pianoEdificio: "5°", note: "5° piano, serve autoscala. Condominio storico.", prezzoMq: 200, rilievi: [{ id: 2008, n: 1, data: "2026-02-15", ora: "08:00", rilevatore: "Fabio", tipo: "rilievo", stato: "parziale", vani: [{ id: 3050, nome: "F1 Salone", tipo: "F2A", stanza: "Salone", piano: "5°", sistema: "Aluplast Ideal 8000", pezzi: 1, misure: { lAlto: 1010, lCentro: 1000, lBasso: 998, hSx: 1510, hCentro: 1500, hDx: 1505 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [], creato: "10 feb", aggiornato: "15 feb", cf: "GRCLCU92P65D086S", log: [{ chi: "Fabio", cosa: "rilievo parziale — tornare per 3 vani", quando: "12 giorni fa", color: "#ff9500" }] },
+  { id: 1009, code: "S-0009", cliente: "Roberto", cognome: "Mancini", indirizzo: "Contrada San Vito, Mendicino (CS)", telefono: "347 888 1111", email: "", fase: "produzione", sistema: "Aluplast Ideal 4000", tipo: "nuova", note: "Villa in campagna, 8 vani. Materiale in produzione.", prezzoMq: 180, euro: 5760, firmaCliente: true, dataFirma: "2026-01-25", rilievi: [{ id: 2009, n: 1, data: "2026-01-18", ora: "09:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3060, nome: "F1", tipo: "F2A", stanza: "Cucina", piano: "PT", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 1210, lCentro: 1200, lBasso: 1195, hSx: 1010, hCentro: 1000, hDx: 1005 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }, { id: 3061, nome: "F2", tipo: "F2A", stanza: "Camera", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 1010, lCentro: 1000, lBasso: 998, hSx: 1210, hCentro: 1200, hDx: 1205 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9930, tipo: "firma", nome: "Prev_S-0009_firmato.pdf", data: "25/01/2026" }, { id: 9931, tipo: "ordine", nome: "Ordine_Aluplast_S0009.pdf", data: "28/01/2026" }], creato: "15 gen", aggiornato: "28 gen", cf: "MNCRRT68S20D086R", ivaPerc: 10, log: [] },
+  { id: 1010, code: "S-0010", cliente: "Francesco", cognome: "Greco", indirizzo: "Via Calabria 77, Cosenza (CS)", telefono: "339 555 6666", email: "f.greco@gmail.com", fase: "posa", sistema: "Schüco AWS 75", tipo: "nuova", note: "Ufficio commerciale, 6 finestre grandi.", prezzoMq: 300, euro: 7200, firmaCliente: true, dataFirma: "2026-01-08", rilievi: [{ id: 2010, n: 1, data: "2025-12-15", ora: "14:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3070, nome: "F1 Ufficio", tipo: "F2A", stanza: "Ufficio 1", piano: "PT", sistema: "Schüco AWS 75", pezzi: 1, misure: { lAlto: 1810, lCentro: 1800, lBasso: 1798, hSx: 1610, hCentro: 1600, hDx: 1605 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9940, tipo: "firma", nome: "Prev_S-0010.pdf", data: "08/01/2026" }], creato: "10 dic", aggiornato: "20 feb", cf: "", piva: "03456789012", ivaPerc: 22, log: [] },
+  { id: 1011, code: "S-0011", cliente: "Lucia", cognome: "Ferraro", indirizzo: "Via Panebianco 200, Cosenza (CS)", telefono: "366 999 4444", email: "l.ferraro@alice.it", fase: "conferma", sistema: "Aluplast Ideal 4000", tipo: "nuova", note: "Preventivo da firmare. 2 vasistas bagno.", prezzoMq: 180, rilievi: [{ id: 2011, n: 1, data: "2026-02-22", ora: "11:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3080, nome: "VAS Bagno 1", tipo: "VAS", stanza: "Bagno", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 605, lCentro: 600, lBasso: 598, hSx: 505, hCentro: 500, hDx: 502 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }, { id: 3081, nome: "VAS Bagno 2", tipo: "VAS", stanza: "Bagno ospiti", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 505, lCentro: 500, lBasso: 498, hSx: 505, hCentro: 500, hDx: 502 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [], creato: "22 feb", aggiornato: "24 feb", log: [] },
+  // ═══ 12-16 — CHIUSE (archivio) ═══
+  { id: 1012, code: "S-0012", cliente: "Paolo", cognome: "Valentino", indirizzo: "Via Caloprese 15, Cosenza (CS)", telefono: "348 222 3333", fase: "chiusura", sistema: "Aluplast Ideal 4000", tipo: "nuova", note: "Completata. 3 finestre, nessun problema.", prezzoMq: 180, euro: 1620, firmaCliente: true, dataFirma: "2025-11-10", rilievi: [{ id: 2012, n: 1, data: "2025-11-01", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3090, nome: "F Cucina", tipo: "F2A", stanza: "Cucina", piano: "2°", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 1010, lCentro: 1000, lBasso: 998, hSx: 1010, hCentro: 1000, hDx: 1005 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9950, tipo: "firma", nome: "Prev_S-0012.pdf", data: "10/11/2025" }, { id: 9951, tipo: "fattura", nome: "Fattura_saldo_S-0012.pdf", data: "15/01/2026" }, { id: 9952, tipo: "verbale", nome: "Verbale_S-0012.pdf", data: "10/01/2026" }], creato: "25 ott", aggiornato: "15 gen", cf: "VLNPLA82D10D086Q", praticaFiscale: "IVA 10%", docIdentita: [{ id: "di10", tipo: "CI", nome: "CI_Valentino.jpg", data: "10/11/2025" }], log: [] },
+  { id: 1013, code: "S-0013", cliente: "Andrea", cognome: "Colombo", indirizzo: "Via degli Stadi 45, Rende (CS)", telefono: "320 444 5555", fase: "chiusura", sistema: "Rehau Geneo", tipo: "nuova", note: "Completata. 4 portefinestre.", prezzoMq: 250, euro: 4000, firmaCliente: true, dataFirma: "2025-10-20", rilievi: [{ id: 2013, n: 1, data: "2025-10-10", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3100, nome: "PF1", tipo: "PF2A", stanza: "Salone", piano: "PT", sistema: "Rehau Geneo", pezzi: 1, misure: { lAlto: 1410, lCentro: 1400, lBasso: 1398, hSx: 2310, hCentro: 2300, hDx: 2305 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9960, tipo: "firma", nome: "Prev_S-0013.pdf", data: "20/10/2025" }, { id: 9961, tipo: "fattura", nome: "Fattura_unica_S-0013.pdf", data: "20/12/2025" }], creato: "05 ott", aggiornato: "20 dic", praticaFiscale: "Ecobonus 65%", docIdentita: [{ id: "di11", tipo: "CI", nome: "CI_Colombo_f.jpg", data: "20/10/2025" }, { id: "di12", tipo: "CI", nome: "CI_Colombo_r.jpg", data: "20/10/2025" }, { id: "di13", tipo: "CF", nome: "CF_Colombo.jpg", data: "20/10/2025" }], docFiscali: [{ id: "df4", nome: "ENEA_S-0013.pdf", data: "10/01/2026" }, { id: "df5", nome: "Asseverazione.pdf", data: "12/01/2026" }], log: [] },
+  { id: 1014, code: "S-0014", cliente: "Teresa", cognome: "Catanzaro", indirizzo: "Via Firenze 9, Cosenza (CS)", telefono: "389 666 7777", fase: "chiusura", sistema: "Aluplast Ideal 7000", tipo: "nuova", note: "Appartamento 3° piano. Completata.", prezzoMq: 220, euro: 2640, firmaCliente: true, allegati: [{ id: 9970, tipo: "verbale", nome: "Verbale_S-0014.pdf", data: "05/02/2026" }], rilievi: [{ id: 2014, n: 1, data: "2025-12-01", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3110, nome: "F Camera", tipo: "F2A", stanza: "Camera", piano: "3°", sistema: "Aluplast Ideal 7000", pezzi: 1, misure: { lAlto: 1210, lCentro: 1200, lBasso: 1198, hSx: 1310, hCentro: 1300, hDx: 1305 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], creato: "25 nov", aggiornato: "05 feb", log: [] },
+  { id: 1015, code: "S-0015", cliente: "Vincenzo", cognome: "Pinto", indirizzo: "Contrada Donnici, Cosenza (CS)", telefono: "338 888 0000", fase: "chiusura", sistema: "Aluplast Ideal 4000", tipo: "nuova", note: "Villa campagna. 10 vani. Completata.", prezzoMq: 180, euro: 7200, firmaCliente: true, allegati: [{ id: 9980, tipo: "verbale", nome: "Verbale_S-0015.pdf", data: "20/01/2026" }], rilievi: [{ id: 2015, n: 1, data: "2025-09-15", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3120, nome: "F1", tipo: "F2A", stanza: "Cucina", piano: "PT", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 1010, lCentro: 1000, lBasso: 998, hSx: 1010, hCentro: 1000, hDx: 1005 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], creato: "10 set", aggiornato: "20 gen", praticaFiscale: "Superbonus", docIdentita: [{ id: "di14", tipo: "CI", nome: "CI_Pinto.jpg", data: "15/09/2025" }, { id: "di15", tipo: "CF", nome: "CF_Pinto.jpg", data: "15/09/2025" }], docFiscali: [{ id: "df6", nome: "APE_ante.pdf" }, { id: "df7", nome: "APE_post.pdf" }, { id: "df8", nome: "ENEA_trasmissione.pdf" }, { id: "df9", nome: "Visto_conformita.pdf" }], log: [] },
+  { id: 1016, code: "S-0016", cliente: "Giovanna", cognome: "Ferrara", indirizzo: "Viale Mancini 12, Cosenza (CS)", telefono: "333 111 2233", fase: "chiusura", sistema: "Schüco CT70", tipo: "ristrutturazione", note: "2 portefinestre salone. Completata.", prezzoMq: 280, euro: 2240, firmaCliente: true, allegati: [{ id: 9990, tipo: "verbale", nome: "Verbale_S-0016.pdf", data: "10/02/2026" }], rilievi: [{ id: 2016, n: 1, data: "2025-11-20", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3130, nome: "PF Salone", tipo: "PF2A", stanza: "Salone", piano: "2°", sistema: "Schüco CT70", pezzi: 1, misure: { lAlto: 1410, lCentro: 1400, lBasso: 1398, hSx: 2210, hCentro: 2200, hDx: 2205 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], creato: "15 nov", aggiornato: "10 feb", log: [] },
+  // ═══ 17-20 — ATTIVE (vari stadi) ═══
+  { id: 1017, code: "S-0017", cliente: "Carmela", cognome: "Aiello", indirizzo: "Via Marconi 55, Montalto Uffugo (CS)", telefono: "347 333 4455", fase: "sopralluogo", tipo: "riparazione", note: "Tapparella bloccata + guarnizioni da sostituire.", rilievi: [], allegati: [], creato: "26 feb", aggiornato: "26 feb", log: [{ chi: "Fabio", cosa: "richiesta riparazione ricevuta", quando: "ieri", color: "#ff9500" }] },
+  { id: 1018, code: "S-0018", cliente: "Antonio", cognome: "Scalia", indirizzo: "Corso Umberto 120, Cosenza (CS)", telefono: "320 555 8899", email: "a.scalia@studio.it", fase: "preventivo", sistema: "Schüco ASS 70", tipo: "nuova", note: "Studio legale, 4 finestre anti-rumore.", prezzoMq: 320, rilievi: [{ id: 2018, n: 1, data: "2026-02-24", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3140, nome: "F Studio", tipo: "F2A", stanza: "Studio", piano: "1°", sistema: "Schüco ASS 70", pezzi: 1, misure: { lAlto: 1610, lCentro: 1600, lBasso: 1598, hSx: 1410, hCentro: 1400, hDx: 1405 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [], creato: "20 feb", aggiornato: "24 feb", piva: "04567890123", ivaPerc: 22, log: [] },
+  { id: 1019, code: "S-0019", cliente: "Maria Rosa", cognome: "Pellegrini", indirizzo: "Via Casali 8, Castrolibero (CS)", telefono: "349 777 1122", fase: "ordini", sistema: "Aluplast Ideal 4000", tipo: "nuova", note: "Villetta, 5 finestre + 2 portefinestre.", prezzoMq: 180, euro: 4500, firmaCliente: true, dataFirma: "2026-02-18", rilievi: [{ id: 2019, n: 1, data: "2026-02-10", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3150, nome: "F1 Cucina", tipo: "F2A", stanza: "Cucina", piano: "PT", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 1210, lCentro: 1200, lBasso: 1195, hSx: 1010, hCentro: 1000, hDx: 1005 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9995, tipo: "firma", nome: "Prev_S-0019.pdf", data: "18/02/2026" }], creato: "05 feb", aggiornato: "18 feb", cf: "PLLMRS65R41D086P", praticaFiscale: "Detraz. 50%", docIdentita: [{ id: "di16", tipo: "CI", nome: "CI_Pellegrini.jpg", data: "18/02/2026" }, { id: "di17", tipo: "CF", nome: "CF_Pellegrini.jpg", data: "18/02/2026" }], log: [] },
+  { id: 1020, code: "S-0020", cliente: "Domenico", cognome: "Cosenza", indirizzo: "Via dei Normanni 30, Cosenza (CS)", telefono: "340 888 9900", email: "d.cosenza@gmail.com", fase: "sopralluogo", sistema: "", tipo: "nuova", note: "Condominio 12 appartamenti, sopralluogo esplorativo per offerta.", rilievi: [], allegati: [], creato: "27 feb", aggiornato: "27 feb", log: [{ chi: "Fabio", cosa: "primo contatto telefonico", quando: "oggi", color: "#86868b" }] },
 ];
+
 
 // Demo fatture
+// Demo fatture — matching 20 commesse
 const FATTURE_INIT = [
-  {
-    id: "fat_demo1", numero: 1, anno: 2026, data: "15/02/2026", dataISO: "2026-02-15", tipo: "acconto",
-    cmId: 1003, cmCode: "S-0003", cliente: "Mario", cognome: "Rossi",
-    indirizzo: "Via Roma 42, Cosenza", cf: "RSSMRA75D15D086X", piva: "", sdi: "", pec: "",
-    importo: 593, imponibile: 539, iva: 10, ivaAmt: 54, pagata: true, dataPagamento: "2026-02-18",
-    metodoPagamento: "Bonifico", scadenza: "2026-03-17", note: "Acconto 50% su ordine",
-  },
-  {
-    id: "fat_demo2", numero: 2, anno: 2026, data: "20/01/2026", dataISO: "2026-01-20", tipo: "acconto",
-    cmId: 1004, cmCode: "S-0004", cliente: "Laura", cognome: "Esposito",
-    indirizzo: "Viale Trieste 5, Rende", cf: "SPSLRA82E45D086W", piva: "", sdi: "", pec: "",
-    importo: 474, imponibile: 431, iva: 10, ivaAmt: 43, pagata: true, dataPagamento: "2026-01-25",
-    metodoPagamento: "Bonifico", scadenza: "2026-02-19", note: "Acconto 50% su ordine",
-  },
-  // CM-005 De Luca — acconto + saldo (tutto pagato)
-  {
-    id: "fat_demo3", numero: 3, anno: 2025, data: "12/12/2025", dataISO: "2025-12-12", tipo: "acconto",
-    cmId: 1005, cmCode: "S-0005", cliente: "Salvatore", cognome: "De Luca",
-    indirizzo: "Corso Italia 22, Cosenza", cf: "DLCSVT70M15D086V", piva: "", sdi: "", pec: "",
-    importo: 693, imponibile: 630, iva: 10, ivaAmt: 63, pagata: true, dataPagamento: "2025-12-15",
-    metodoPagamento: "Bonifico", scadenza: "2026-01-11", note: "Acconto 50%",
-  },
-  {
-    id: "fat_demo4", numero: 5, anno: 2026, data: "20/02/2026", dataISO: "2026-02-20", tipo: "saldo",
-    cmId: 1005, cmCode: "S-0005", cliente: "Salvatore", cognome: "De Luca",
-    indirizzo: "Corso Italia 22, Cosenza", cf: "DLCSVT70M15D086V", piva: "", sdi: "", pec: "",
-    importo: 693, imponibile: 630, iva: 10, ivaAmt: 63, pagata: true, dataPagamento: "2026-02-22",
-    metodoPagamento: "Bonifico", scadenza: "2026-03-22", note: "Saldo finale",
-  },
-  // CM-006 Moretti — acconto emesso ieri
-  {
-    id: "fat_demo5", numero: 4, anno: 2026, data: "26/02/2026", dataISO: "2026-02-26", tipo: "acconto",
-    cmId: 1006, cmCode: "S-0006", cliente: "Chiara", cognome: "Moretti",
-    indirizzo: "Via Popilia 156, Cosenza", cf: "MRTCHR90B50D086U", piva: "", sdi: "0000000", pec: "chiara.moretti@pec.it",
-    importo: 805, imponibile: 660, iva: 22, ivaAmt: 145, pagata: false, dataPagamento: "",
-    metodoPagamento: "", scadenza: "2026-03-28", note: "Acconto 50% — in attesa bonifico",
-  },
+  { id: "fat_1", numero: 1, anno: 2026, data: "15/02/2026", dataISO: "2026-02-15", tipo: "acconto", importo: 593, cliente: "Anna Bianchi", cmId: 1002, cmCode: "S-0002", pagata: false, scadenza: "2026-03-15" },
+  { id: "fat_2", numero: 2, anno: 2026, data: "10/02/2026", dataISO: "2026-02-10", tipo: "acconto", importo: 1056, cliente: "Mario Rossi", cmId: 1003, cmCode: "S-0003", pagata: true, dataPagamento: "2026-02-12", scadenza: "2026-03-10" },
+  { id: "fat_3", numero: 3, anno: 2025, data: "12/12/2025", dataISO: "2025-12-12", tipo: "acconto", importo: 695, cliente: "Salvatore De Luca", cmId: 1005, cmCode: "S-0005", pagata: true, dataPagamento: "2025-12-15", scadenza: "2026-01-12" },
+  { id: "fat_4", numero: 5, anno: 2026, data: "20/02/2026", dataISO: "2026-02-20", tipo: "saldo", importo: 1235.5, cliente: "Salvatore De Luca", cmId: 1005, cmCode: "S-0005", pagata: true, dataPagamento: "2026-02-22", scadenza: "2026-03-20" },
+  { id: "fat_5", numero: 4, anno: 2026, data: "22/01/2026", dataISO: "2026-01-22", tipo: "acconto", importo: 810, cliente: "Laura Esposito", cmId: 1004, cmCode: "S-0004", pagata: true, dataPagamento: "2026-01-25", scadenza: "2026-02-22" },
+  { id: "fat_6", numero: 6, anno: 2026, data: "08/01/2026", dataISO: "2026-01-08", tipo: "acconto", importo: 1920, cliente: "Francesca Romano", cmId: 1006, cmCode: "S-0006", pagata: true, dataPagamento: "2026-01-10", scadenza: "2026-02-08" },
+  { id: "fat_7", numero: 7, anno: 2026, data: "10/01/2026", dataISO: "2026-01-10", tipo: "acconto", importo: 1728, cliente: "Roberto Mancini", cmId: 1009, cmCode: "S-0009", pagata: true, dataPagamento: "2026-01-12", scadenza: "2026-02-10" },
+  { id: "fat_8", numero: 8, anno: 2026, data: "12/01/2026", dataISO: "2026-01-12", tipo: "acconto", importo: 2160, cliente: "Francesco Greco", cmId: 1010, cmCode: "S-0010", pagata: false, scadenza: "2026-02-28" },
+  { id: "fat_9", numero: 9, anno: 2025, data: "15/11/2025", dataISO: "2025-11-15", tipo: "unica", importo: 1782, cliente: "Paolo Valentino", cmId: 1012, cmCode: "S-0012", pagata: true, dataPagamento: "2025-12-15", scadenza: "2025-12-15" },
+  { id: "fat_10", numero: 10, anno: 2025, data: "20/12/2025", dataISO: "2025-12-20", tipo: "unica", importo: 4400, cliente: "Andrea Colombo", cmId: 1013, cmCode: "S-0013", pagata: true, dataPagamento: "2025-12-22", scadenza: "2026-01-20" },
+  { id: "fat_11", numero: 11, anno: 2025, data: "10/01/2026", dataISO: "2026-01-10", tipo: "unica", importo: 2904, cliente: "Teresa Catanzaro", cmId: 1014, cmCode: "S-0014", pagata: true, dataPagamento: "2026-01-12" },
+  { id: "fat_12", numero: 12, anno: 2026, data: "25/01/2026", dataISO: "2026-01-25", tipo: "unica", importo: 7920, cliente: "Vincenzo Pinto", cmId: 1015, cmCode: "S-0015", pagata: true, dataPagamento: "2026-01-28" },
+  { id: "fat_13", numero: 13, anno: 2026, data: "15/02/2026", dataISO: "2026-02-15", tipo: "unica", importo: 2464, cliente: "Giovanna Ferrara", cmId: 1016, cmCode: "S-0016", pagata: false, scadenza: "2026-03-15" },
+  { id: "fat_14", numero: 14, anno: 2026, data: "20/02/2026", dataISO: "2026-02-20", tipo: "acconto", importo: 1350, cliente: "Maria Rosa Pellegrini", cmId: 1019, cmCode: "S-0019", pagata: true, dataPagamento: "2026-02-22", scadenza: "2026-03-20" },
 ];
+
 
 // Demo ordini fornitore
+// Demo ordini fornitore — matching 20 commesse
 const ORDINI_INIT = [
-  // Ordine CM-003 — INVIATO, in attesa conferma → appare nell'inbox
-  {
-    id: "ord_demo_rossi", cmId: 1003, cmCode: "S-0003", cliente: "Mario Rossi",
-    numero: 2, anno: 2026, dataOrdine: "2026-02-18",
-    fornitore: { nome: "Aluplast Italia", email: "ordini@aluplast.it", tel: "0444 123456", piva: "IT01234560789", referente: "Marco Ferro" },
-    righe: [
-      { id: "r_r1", desc: "Finestra 2A — Soggiorno", misure: "1200×1400", qta: 1, prezzoUnit: 195, totale: 195, note: "" },
-      { id: "r_r2", desc: "Finestra 2A — Camera 1", misure: "1000×1200", qta: 1, prezzoUnit: 170, totale: 170, note: "" },
-      { id: "r_r3", desc: "Portafinestra 2A — Salone", misure: "1400×2200", qta: 1, prezzoUnit: 310, totale: 310, note: "+tapparella" },
-      { id: "r_r4", desc: "Vasistas — Bagno", misure: "600×600", qta: 1, prezzoUnit: 120, totale: 120, note: "Vetro opaco" },
-    ],
-    totale: 795, iva: 22, totaleIva: 970, sconto: 0,
-    stato: "inviato",
-    conferma: { ricevuta: false, dataRicezione: "", verificata: false, differenze: "", firmata: false, dataFirma: "", reinviata: false, dataReinvio: "" },
-    consegna: { prevista: "", settimane: 0, effettiva: "" },
-    pagamento: { termini: "", stato: "da_pagare" },
-  },
-  // Ordine CM-004 — CONFERMATO con dati AI estratti
-  {
-    id: "ord_demo1", cmId: 1004, cmCode: "S-0004", cliente: "Laura Esposito",
-    numero: 1, anno: 2026, dataOrdine: "2026-01-25",
-    fornitore: { nome: "Aluplast Italia", email: "ordini@aluplast.it", tel: "0444 123456", piva: "IT01234560789", referente: "Marco Ferro" },
-    righe: [
-      { id: "r_d1", desc: "Finestra 2A — Cucina", misure: "1200×1400", qta: 1, prezzoUnit: 210, totale: 210, note: "Noce est." },
-      { id: "r_d2", desc: "Portafinestra 2A — Soggiorno", misure: "1400×2200", qta: 1, prezzoUnit: 320, totale: 320, note: "Noce est. + tapparella" },
-      { id: "r_d3", desc: "Finestra 1A — Camera", misure: "800×1200", qta: 1, prezzoUnit: 140, totale: 140, note: "Noce est." },
-    ],
-    totale: 670, iva: 22, totaleIva: 817, sconto: 0,
-    stato: "confermato",
-    conferma: {
-      ricevuta: true, dataRicezione: "2026-02-01", verificata: true, differenze: "",
-      firmata: true, dataFirma: "2026-02-01", reinviata: false, dataReinvio: "",
-      nomeFile: "conferma_aluplast_S0004.pdf",
-      datiEstratti: { totale: 817, settimane: 6, dataConsegna: "2026-03-15", pagamento: "30gg_fm", fornitoreNome: "Aluplast Italia" },
-    },
-    consegna: { prevista: "2026-03-15", settimane: 6, effettiva: "" },
-    pagamento: { termini: "30gg_fm", stato: "da_pagare" },
-  },
-  // Ordine CM-005 De Luca — COMPLETATO e consegnato
-  {
-    id: "ord_demo_deluca", cmId: 1005, cmCode: "S-0005", cliente: "Salvatore De Luca",
-    numero: 3, anno: 2025, dataOrdine: "2025-12-13",
-    fornitore: { nome: "Schüco Italia", email: "ordini@schuco.it", tel: "02 98765432", piva: "IT09876540321", referente: "Sara Belli" },
-    righe: [
-      { id: "r_dl1", desc: "Finestra 2A — Soggiorno", misure: "1400×1600", qta: 1, prezzoUnit: 420, totale: 420, note: "RAL 7016 est." },
-      { id: "r_dl2", desc: "Portafinestra 2A — Terrazzo", misure: "1600×2400", qta: 1, prezzoUnit: 580, totale: 580, note: "RAL 7016 est. + tapparella" },
-      { id: "r_dl3", desc: "Vasistas — Bagno", misure: "600×800", qta: 1, prezzoUnit: 180, totale: 180, note: "Vetro satinato" },
-    ],
-    totale: 1180, iva: 10, totaleIva: 1298, sconto: 0,
-    stato: "consegnato",
-    conferma: {
-      ricevuta: true, dataRicezione: "2025-12-16", verificata: true, differenze: "",
-      firmata: true, dataFirma: "2025-12-16", reinviata: false, dataReinvio: "",
-      nomeFile: "conferma_schuco_S0005.pdf",
-      datiEstratti: { totale: 1298, settimane: 7, dataConsegna: "2026-02-10", pagamento: "30gg_fm", fornitoreNome: "Schüco Italia" },
-    },
-    consegna: { prevista: "2026-02-10", settimane: 7, effettiva: "2026-02-08" },
-    pagamento: { termini: "30gg_fm", stato: "pagato" },
-  },
+  { id: "ord_1", cmId: 1003, cmCode: "S-0003", cliente: "Mario Rossi", fornitore: { id: "f1", nome: "Aluplast Italia" }, totale: 1200, totaleIva: 1464, stato: "inviato", dataInvio: "2026-02-20", conferma: { ricevuta: false }, consegna: { settimane: 4, prevista: "2026-03-20" } },
+  { id: "ord_2", cmId: 1004, cmCode: "S-0004", cliente: "Laura Esposito", fornitore: { id: "f1", nome: "Aluplast Italia" }, totale: 970, totaleIva: 1183.4, stato: "confermato", dataInvio: "2026-01-22", conferma: { ricevuta: true, nomeFile: "Conferma_Aluplast_8821.pdf", dataRicezione: "2026-01-25" }, consegna: { settimane: 5, prevista: "2026-02-28" } },
+  { id: "ord_3", cmId: 1005, cmCode: "S-0005", cliente: "Salvatore De Luca", fornitore: { id: "f2", nome: "Schüco International" }, totale: 1298, totaleIva: 1583.56, stato: "consegnato", dataInvio: "2025-12-13", conferma: { ricevuta: true, nomeFile: "Conferma_Schuco_12345.pdf", dataRicezione: "2025-12-16" }, consegna: { settimane: 7, prevista: "2026-01-30" } },
+  { id: "ord_4", cmId: 1006, cmCode: "S-0006", cliente: "Francesca Romano", fornitore: { id: "f5", nome: "Rehau Italia" }, totale: 2100, totaleIva: 2562, stato: "consegnato", dataInvio: "2026-01-10", conferma: { ricevuta: true, nomeFile: "Conferma_Rehau_9987.pdf", dataRicezione: "2026-01-14" }, consegna: { settimane: 5, prevista: "2026-02-14" } },
+  { id: "ord_5", cmId: 1009, cmCode: "S-0009", cliente: "Roberto Mancini", fornitore: { id: "f1", nome: "Aluplast Italia" }, totale: 1850, totaleIva: 2257, stato: "confermato", dataInvio: "2026-01-28", conferma: { ricevuta: true, nomeFile: "Conferma_Aluplast_9102.pdf", dataRicezione: "2026-02-01" }, consegna: { settimane: 6, prevista: "2026-03-12" } },
+  { id: "ord_6", cmId: 1010, cmCode: "S-0010", cliente: "Francesco Greco", fornitore: { id: "f2", nome: "Schüco International" }, totale: 2800, totaleIva: 3416, stato: "consegnato", dataInvio: "2026-01-12", conferma: { ricevuta: true }, consegna: { settimane: 6, prevista: "2026-02-22" } },
+  { id: "ord_7", cmId: 1019, cmCode: "S-0019", cliente: "Maria Rosa Pellegrini", fornitore: { id: "f1", nome: "Aluplast Italia" }, totale: 1500, totaleIva: 1830, stato: "inviato", dataInvio: "2026-02-22", conferma: { ricevuta: false }, consegna: { settimane: 5, prevista: "2026-03-28" } },
 ];
+
 
 // Demo montaggi
+// Demo montaggi — matching 20 commesse
 const MONTAGGI_INIT = [
-  {
-    id: "m_demo1", cmId: 1004, cmCode: "S-0004", cliente: "Laura Esposito",
-    vani: 3, data: "2026-03-16", orario: "08:00", durata: "2g", giorni: 2,
-    squadraId: "sq1", stato: "programmato", note: "PT villa — accesso dal giardino. Materiale arriva il 15.",
-  },
-  // Demo montaggi per riempire il calendario
-  {
-    id: "m_demo2", cmId: 9901, cmCode: "S-0010", cliente: "Francesco Greco",
-    vani: 6, data: "2026-03-03", orario: "07:30", durata: "3g", giorni: 3,
-    squadraId: "sq1", stato: "programmato", note: "3° piano, 6 finestre + 2 portefinestre. Usa argano.",
-  },
-  {
-    id: "m_demo3", cmId: 9902, cmCode: "S-0011", cliente: "Lucia Ferraro",
-    vani: 2, data: "2026-03-06", orario: "08:00", durata: "0.5g", giorni: 0.5,
-    squadraId: "sq2", stato: "programmato", note: "Solo 2 vasistas bagno. Mezza giornata.",
-  },
-  {
-    id: "m_demo4", cmId: 9903, cmCode: "S-0012", cliente: "Roberto Mancini",
-    vani: 8, data: "2026-03-10", orario: "07:00", durata: "4g", giorni: 4,
-    squadraId: "sq1", stato: "programmato", note: "Villa 2 piani, 8 infissi + 2 portoni. Squadra rinforzata.",
-  },
-  {
-    id: "m_demo5", cmId: 1003, cmCode: "S-0003", cliente: "Mario Rossi",
-    vani: 4, data: "2026-03-20", orario: "08:00", durata: "2g", giorni: 2,
-    squadraId: "sq1", stato: "programmato", note: "3° piano, accesso scale. Serve argano.",
-  },
-  // CM-005 De Luca — COMPLETATO
-  {
-    id: "m_demo6", cmId: 1005, cmCode: "S-0005", cliente: "Salvatore De Luca",
-    vani: 3, data: "2026-02-17", orario: "08:00", durata: "2g", giorni: 2,
-    squadraId: "sq1", stato: "completato", note: "Completato senza problemi. Cliente soddisfatto.",
-  },
+  { id: "m_1", cmId: 1005, cmCode: "S-0005", cliente: "Salvatore De Luca", vani: 3, data: "2026-02-17", orario: "08:00", durata: "2g", giorni: 2, squadraId: "sq1", stato: "completato", note: "Completato senza problemi." },
+  { id: "m_2", cmId: 1006, cmCode: "S-0006", cliente: "Francesca Romano", vani: 8, data: "2026-03-03", orario: "07:30", durata: "3g", giorni: 3, squadraId: "sq1", stato: "programmato", note: "Villa bifamiliare, 2 piani." },
+  { id: "m_3", cmId: 1010, cmCode: "S-0010", cliente: "Francesco Greco", vani: 6, data: "2026-03-06", orario: "08:00", durata: "2g", giorni: 2, squadraId: "sq2", stato: "programmato", note: "Ufficio, 6 finestre grandi." },
+  { id: "m_4", cmId: 1009, cmCode: "S-0009", cliente: "Roberto Mancini", vani: 8, data: "2026-03-16", orario: "07:00", durata: "4g", giorni: 4, squadraId: "sq1", stato: "programmato", note: "Villa campagna, 8 infissi." },
+  { id: "m_5", cmId: 1003, cmCode: "S-0003", cliente: "Mario Rossi", vani: 4, data: "2026-03-24", orario: "08:00", durata: "2g", giorni: 2, squadraId: "sq1", stato: "programmato", note: "3° piano con argano." },
+  { id: "m_6", cmId: 1012, cmCode: "S-0012", cliente: "Paolo Valentino", vani: 3, data: "2026-01-08", orario: "08:00", durata: "1g", giorni: 1, squadraId: "sq2", stato: "completato", note: "3 finestre, completato." },
+  { id: "m_7", cmId: 1013, cmCode: "S-0013", cliente: "Andrea Colombo", vani: 4, data: "2025-12-15", orario: "08:00", durata: "2g", giorni: 2, squadraId: "sq1", stato: "completato", note: "4 portefinestre." },
+  { id: "m_8", cmId: 1014, cmCode: "S-0014", cliente: "Teresa Catanzaro", vani: 3, data: "2026-01-28", orario: "08:00", durata: "1.5g", giorni: 1.5, squadraId: "sq2", stato: "completato", note: "" },
+  { id: "m_9", cmId: 1015, cmCode: "S-0015", cliente: "Vincenzo Pinto", vani: 10, data: "2026-01-14", orario: "07:00", durata: "5g", giorni: 5, squadraId: "sq1", stato: "completato", note: "Villa 10 vani." },
+  { id: "m_10", cmId: 1016, cmCode: "S-0016", cliente: "Giovanna Ferrara", vani: 2, data: "2026-02-06", orario: "09:00", durata: "0.5g", giorni: 0.5, squadraId: "sq2", stato: "completato", note: "2 portefinestre." },
+  { id: "m_11", cmId: 1004, cmCode: "S-0004", cliente: "Laura Esposito", vani: 3, data: "2026-03-10", orario: "08:00", durata: "1.5g", giorni: 1.5, squadraId: "sq2", stato: "programmato", note: "Villa PT, accesso giardino." },
+  { id: "m_12", cmId: 1019, cmCode: "S-0019", cliente: "Maria Rosa Pellegrini", vani: 7, data: "2026-04-07", orario: "07:30", durata: "3g", giorni: 3, squadraId: "sq1", stato: "programmato", note: "Villetta, 5F+2PF." },
 ];
 
+
 const TASKS_INIT = [
-  { id: "t1", text: "Inviare preventivo Bianchi", done: false, priority: "alta", meta: "S-0002 · Scade venerdì", cmCode: "S-0002" },
-  { id: "t2", text: "Controllare misure Verdi prima del sopralluogo", done: false, priority: "media", meta: "S-0001 · Sopralluogo giovedì", cmCode: "S-0001" },
-  { id: "t3", text: "Chiamare Aluplast per conferma ordine Rossi", done: false, priority: "alta", meta: "S-0003 · Ordine inviato 18/02", cmCode: "S-0003" },
-  { id: "t4", text: "Verificare data consegna Esposito", done: true, priority: "media", meta: "S-0004 · Consegna 15 marzo", cmCode: "S-0004" },
+  { id: 1, text: "Chiamare Verdi per sopralluogo", meta: "Fissare data", time: "", priority: "alta", cm: "S-0001", date: "2026-02-28", persona: "Giuseppe Verdi", done: false, allegati: [] },
+  { id: 2, text: "Preparare preventivo Bianchi", meta: "4 vani, IVA 10%", time: "", priority: "alta", cm: "S-0002", date: "2026-02-28", persona: "Anna Bianchi", done: false, allegati: [] },
+  { id: 3, text: "Ordinare materiale Rossi", meta: "Aluplast Ideal 7000, 4 vani", time: "", priority: "media", cm: "S-0003", date: "2026-03-01", persona: "", done: false, allegati: [] },
+  { id: 4, text: "Controllare consegna Esposito", meta: "Prevista 28/02", time: "", priority: "media", cm: "S-0004", date: "2026-02-28", persona: "", done: false, allegati: [] },
+  { id: 5, text: "Programmare montaggio Romano", meta: "8 vani, 3 giorni", time: "", priority: "alta", cm: "S-0006", date: "2026-03-01", persona: "", done: false, allegati: [] },
+  { id: 6, text: "Tornare per misure Greco Lucia", meta: "3 vani mancanti", time: "", priority: "media", cm: "S-0008", date: "2026-03-03", persona: "Lucia Greco", done: false, allegati: [] },
+  { id: 7, text: "Richiedere autoscala per Greco", meta: "5° piano", time: "", priority: "alta", cm: "S-0008", date: "2026-03-02", persona: "", done: false, allegati: [] },
+  { id: 8, text: "Sopralluogo Ferraro passaparola", meta: "6 finestre", time: "", priority: "media", cm: "S-0007", date: "2026-03-04", persona: "Marco Ferraro", done: false, allegati: [] },
+  { id: 9, text: "Far firmare preventivo Scalia", meta: "Studio legale", time: "", priority: "alta", cm: "S-0018", date: "2026-03-01", persona: "Antonio Scalia", done: false, allegati: [] },
+  { id: 10, text: "Sopralluogo condominio Cosenza", meta: "12 appartamenti", time: "", priority: "media", cm: "S-0020", date: "2026-03-05", persona: "Domenico Cosenza", done: false, allegati: [] },
 ];
+
 
 
 // === AI INBOX — email in arrivo con classificazione AI ===
 const AI_INBOX_INIT = [];
 
-const MSGS_INIT = [];
+const MSGS_INIT = [
+  { id: "msg1", from: "Salvatore De Luca", preview: "Buongiorno, quando possiamo fissare il montaggio?", time: "09:15", date: "2025-12-12", cm: "S-0005", read: true, canale: "whatsapp",
+    thread: [{ who: "Salvatore De Luca", text: "Buongiorno, quando possiamo fissare il montaggio?", time: "09:15", date: "12/12", canale: "whatsapp" },
+             { who: "Tu", text: "Buongiorno Salvatore! Materiale arriva il 10 febbraio, montaggio previsto settimana del 17.", time: "09:22", date: "12/12", canale: "whatsapp" },
+             { who: "Salvatore De Luca", text: "Perfetto, grazie mille", time: "09:30", date: "12/12", canale: "whatsapp" }] },
+  { id: "msg2", from: "Anna Bianchi", preview: "Ho ricevuto il preventivo, vorrei procedere", time: "14:30", date: "2026-01-20", cm: "S-0002", read: true, canale: "email",
+    thread: [{ who: "Anna Bianchi", text: "Buongiorno, ho ricevuto il preventivo per le 4 finestre. Vorrei procedere con l'ordine. Possiamo fissare un appuntamento per la firma?", time: "14:30", date: "20/01", canale: "email" },
+             { who: "Tu", text: "Gentile Anna, perfetto! Le propongo giovedì prossimo alle 10:00 nel nostro showroom. Le confermo che il prezzo include IVA 10%.", time: "15:45", date: "20/01", canale: "email" }] },
+  { id: "msg3", from: "Mario Rossi", preview: "Confermo disponibilità per il sopralluogo", time: "11:00", date: "2026-02-10", cm: "S-0003", read: true, canale: "whatsapp",
+    thread: [{ who: "Tu", text: "Buongiorno Mario, il materiale è in produzione. Prevediamo consegna tra 3 settimane.", time: "10:45", date: "10/02", canale: "whatsapp" },
+             { who: "Mario Rossi", text: "Confermo disponibilità per il sopralluogo di venerdì", time: "11:00", date: "10/02", canale: "whatsapp" }] },
+  { id: "msg4", from: "Laura Esposito", preview: "Le finestre sono bellissime, grazie!", time: "16:20", date: "2026-02-20", cm: "S-0004", read: false, canale: "whatsapp",
+    thread: [{ who: "Laura Esposito", text: "Le finestre sono bellissime, grazie! Volevo chiedere informazioni sulla manutenzione.", time: "16:20", date: "20/02", canale: "whatsapp" }] },
+  { id: "msg5", from: "Francesca Romano", preview: "Conferma montaggio 3 marzo", time: "08:30", date: "2026-02-25", cm: "S-0006", read: false, canale: "sms",
+    thread: [{ who: "Tu", text: "Gentile Francesca, confermiamo il montaggio per lunedì 3 marzo. La squadra arriverà alle 8:00.", time: "08:30", date: "25/02", canale: "sms" },
+             { who: "Francesca Romano", text: "Perfetto, saremo presenti. Grazie", time: "09:10", date: "25/02", canale: "sms" }] },
+  { id: "msg6", from: "Paolo Valentino", preview: "Fattura ricevuta, pagamento effettuato", time: "10:00", date: "2025-11-18", cm: "S-0012", read: true, canale: "email",
+    thread: [{ who: "Tu", text: "Gentile Paolo, in allegato la fattura per i lavori completati. Cordiali saluti.", time: "09:00", date: "18/11", canale: "email" },
+             { who: "Paolo Valentino", text: "Fattura ricevuta, pagamento effettuato tramite bonifico. Grazie per l'ottimo lavoro!", time: "10:00", date: "18/11", canale: "email" }] },
+  { id: "msg7", from: "Andrea Colombo", preview: "Quando arriva il materiale Rehau?", time: "17:45", date: "2025-11-25", cm: "S-0013", read: true, canale: "whatsapp",
+    thread: [{ who: "Andrea Colombo", text: "Quando arriva il materiale Rehau?", time: "17:45", date: "25/11", canale: "whatsapp" },
+             { who: "Tu", text: "Il materiale è in consegna per il 2 dicembre. La terremo aggiornato.", time: "18:00", date: "25/11", canale: "whatsapp" },
+             { who: "Andrea Colombo", text: "Ottimo, grazie", time: "18:05", date: "25/11", canale: "whatsapp" }] },
+  { id: "msg8", from: "Vincenzo Pinto", preview: "Documentazione Superbonus completata", time: "11:30", date: "2026-01-10", cm: "S-0015", read: true, canale: "email",
+    thread: [{ who: "Tu", text: "Gentile Vincenzo, le comunichiamo che la documentazione Superbonus è stata completata e inviata all'ENEA.", time: "11:30", date: "10/01", canale: "email" },
+             { who: "Vincenzo Pinto", text: "Ricevuto, grazie per la gestione impeccabile della pratica.", time: "14:00", date: "10/01", canale: "email" }] },
+  { id: "msg9", from: "Roberto Mancini", preview: "Possiamo spostare il montaggio?", time: "07:45", date: "2026-02-28", cm: "S-0009", read: false, canale: "whatsapp",
+    thread: [{ who: "Roberto Mancini", text: "Buongiorno, è possibile spostare il montaggio di una settimana? Ho un imprevisto.", time: "07:45", date: "28/02", canale: "whatsapp" }] },
+  { id: "msg10", from: "Giuseppe Verdi", preview: "Richiesta sopralluogo nuove finestre", time: "15:00", date: "2026-02-26", cm: "S-0001", read: false, canale: "email",
+    thread: [{ who: "Giuseppe Verdi", text: "Buongiorno, vorrei richiedere un sopralluogo per la sostituzione di 6 finestre del mio appartamento. Quando sarebbe disponibile?", time: "15:00", date: "26/02", canale: "email" }] },
+];
 
 const TEAM_INIT = [
   { id: 1, nome: "", ruolo: "Titolare", compiti: "Gestione commesse, preventivi, rapporti clienti", colore: "#007aff" },
 ];
 
-const CONTATTI_INIT = [];
+const CONTATTI_INIT = [
+  { id: "ct1", nome: "Giuseppe", cognome: "Verdi", telefono: "347 555 1234", email: "giuseppe.verdi@email.it", indirizzo: "Via Garibaldi 12, Rende", tipo: "cliente", preferito: false },
+  { id: "ct2", nome: "Anna", cognome: "Bianchi", telefono: "339 888 5678", email: "anna.bianchi@gmail.com", indirizzo: "Corso Mazzini 88, Cosenza", tipo: "cliente", preferito: true },
+  { id: "ct3", nome: "Mario", cognome: "Rossi", telefono: "320 111 4567", email: "mario.rossi@libero.it", indirizzo: "Via Roma 42, Cosenza", tipo: "cliente", preferito: true },
+  { id: "ct4", nome: "Laura", cognome: "Esposito", telefono: "333 222 8888", email: "laura.esposito@yahoo.it", indirizzo: "Viale Trieste 5, Rende", tipo: "cliente", preferito: false },
+  { id: "ct5", nome: "Salvatore", cognome: "De Luca", telefono: "329 456 7890", email: "s.deluca@gmail.com", indirizzo: "Corso Italia 22, Cosenza", tipo: "cliente", preferito: true },
+  { id: "ct6", nome: "Francesca", cognome: "Romano", telefono: "340 777 3333", email: "f.romano@outlook.it", indirizzo: "Via Popilia 156, Cosenza", tipo: "cliente", preferito: false },
+  { id: "ct7", nome: "Marco", cognome: "Ferraro", telefono: "335 444 9999", email: "m.ferraro@gmail.com", indirizzo: "Via dei Mille 33, Rende", tipo: "cliente", preferito: false },
+  { id: "ct8", nome: "Roberto", cognome: "Mancini", telefono: "347 888 1111", email: "", indirizzo: "Contrada San Vito, Mendicino", tipo: "cliente", preferito: false },
+  { id: "ct9", nome: "Francesco", cognome: "Greco", telefono: "339 555 6666", email: "f.greco@gmail.com", indirizzo: "Via Calabria 77, Cosenza", tipo: "cliente", preferito: false },
+  { id: "ct10", nome: "Paolo", cognome: "Valentino", telefono: "348 222 3333", email: "", indirizzo: "Via Caloprese 15, Cosenza", tipo: "cliente", preferito: false },
+  { id: "ct11", nome: "Andrea", cognome: "Colombo", telefono: "320 444 5555", email: "", indirizzo: "Via degli Stadi 45, Rende", tipo: "cliente", preferito: false },
+  { id: "ct12", nome: "Maria Rosa", cognome: "Pellegrini", telefono: "349 777 1122", email: "", indirizzo: "Via Casali 8, Castrolibero", tipo: "cliente", preferito: false },
+  { id: "ct13", nome: "Domenico", cognome: "Cosenza", telefono: "340 888 9900", email: "d.cosenza@gmail.com", indirizzo: "Via dei Normanni 30, Cosenza", tipo: "cliente", preferito: false },
+  { id: "ct14", nome: "Antonio", cognome: "Scalia", telefono: "320 555 8899", email: "a.scalia@studio.it", indirizzo: "Corso Umberto 120, Cosenza", tipo: "cliente", preferito: false },
+  { id: "ct15", nome: "Marco", cognome: "Rossi", telefono: "+39 045 123456", email: "m.rossi@aluplast.it", azienda: "Aluplast Italia", tipo: "fornitore", preferito: true },
+  { id: "ct16", nome: "Luca", cognome: "Bianchi", telefono: "+39 335 7654321", email: "l.bianchi@schueco.com", azienda: "Schüco International", tipo: "fornitore", preferito: true },
+];
+
 
 const COLORI_INIT = [
   { id: 1, nome: "Bianco", code: "RAL 9010", hex: "#f5f5f0", tipo: "RAL" },
@@ -859,6 +681,8 @@ const TIPI_EVENTO = [
   { id: "riunione", l: "🤝 Riunione", c: "#8E8E93" },
   { id: "manutenzione", l: "🔩 Manutenzione", c: "#FF6B00" },
   { id: "altro", l: "📅 Altro", c: "#D08008" },
+  { id: "impegno", l: "📌 Impegno", c: "#636366" },
+  { id: "controllo", l: "🏗 Controllo cantiere", c: "#5856d6" },
 ];
 const tipoEvColor = (tipo) => {
   const t = TIPI_EVENTO.find(x => x.id === tipo);
@@ -970,6 +794,58 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   
   // Fatturazione
   const [fattureDB, setFattureDB] = useState<any[]>(FATTURE_INIT);
+
+  // ═══ FATTURE PASSIVE (ricevute da fornitori) ═══
+  const [fatturePassive, setFatturePassive] = useState<any[]>(() => {
+    try { const v = localStorage.getItem("mastro:fatturePassive"); return v ? JSON.parse(v) : []; } catch(e) { return []; }
+  });
+  const [showFatturaPassiva, setShowFatturaPassiva] = useState(false);
+  const [newFattPassiva, setNewFattPassiva] = useState({ fornitore: "", numero: "", data: "", importo: 0, iva: 22, descrizione: "", cmId: "", pagata: false, scadenza: "" });
+
+  // ═══ CONTABILITÀ ═══
+  const [showContabilita, setShowContabilita] = useState(false);
+  const [contabTab, setContabTab] = useState("panoramica");
+  const [contabMese, setContabMese] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; });
+
+  // ═══ CRONOLOGIA ═══
+  const [showCronologia, setShowCronologia] = useState(false);
+
+  // ═══ KIT ACCESSORI ═══
+  const [kitAccessori, setKitAccessori] = useState(() => {
+    try { const v = localStorage.getItem("mastro:kit"); return v ? JSON.parse(v) : [
+      { id: 1, nome: "Kit Standard", items: ["Maniglia", "Cerniere x2", "Guarnizione"], prezzo: 45 },
+      { id: 2, nome: "Kit Sicurezza", items: ["Maniglia con chiave", "Cerniere x3", "Defender", "Multipoint"], prezzo: 120 },
+      { id: 3, nome: "Kit Scorrevole", items: ["Binario", "Carrelli x2", "Chiusura soft", "Maniglia incasso"], prezzo: 180 },
+    ]; } catch(e) { return []; }
+  });
+
+  // ═══ FORNITORI PRO ═══
+  const [fornitori, setFornitori] = useState(() => {
+    try { const v = localStorage.getItem("mastro:fornitori"); if (v) { const p = JSON.parse(v); if (Array.isArray(p) && p.length > 0) return p; } } catch(e) {}
+    return [
+    { id: "f1", nome: "Aluplast Italia", ragioneSociale: "Aluplast Italia SRL", piva: "01234567890", cf: "", tipo: "Profili PVC", categoria: "profili", indirizzo: "Via Roma 10", cap: "37100", citta: "Verona", provincia: "VR", telefono: "+39 045 123456", cellulare: "", email: "ordini@aluplast.it", pec: "aluplast@pec.it", sito: "www.aluplast.it", referente: "Marco Rossi", telReferente: "+39 333 1234567", emailReferente: "m.rossi@aluplast.it", banca: "Unicredit", iban: "IT60X0542811101000000123456", pagamento: "60gg_fm", scontoBase: 35, tempoConsegna: 18, sistemiTrattati: "Ideal 4000, Ideal 7000, Ideal 8000", note: "Fornitore principale PVC", rating: 4.6, preferito: true, attivo: true },
+    { id: "f2", nome: "Schüco International", ragioneSociale: "Schüco International Italia SRL", piva: "09876543210", cf: "", tipo: "Profili Alluminio", categoria: "profili", indirizzo: "Via Milano 50", cap: "20100", citta: "Milano", provincia: "MI", telefono: "+39 02 654321", cellulare: "", email: "italia@schueco.com", pec: "schuco@pec.it", sito: "www.schueco.com", referente: "Luca Bianchi", telReferente: "+39 335 7654321", emailReferente: "l.bianchi@schueco.com", banca: "Intesa", iban: "", pagamento: "60gg_fm", scontoBase: 30, tempoConsegna: 22, sistemiTrattati: "AWS 75, ASS 70, ASS 77", note: "", rating: 4.8, preferito: true, attivo: true },
+    { id: "f3", nome: "Pilkington Italia", ragioneSociale: "Pilkington Italia SPA", piva: "", cf: "", tipo: "Vetri", categoria: "vetri", indirizzo: "", cap: "", citta: "Napoli", provincia: "NA", telefono: "+39 081 789012", cellulare: "", email: "ordini@pilkington.it", pec: "", sito: "", referente: "", telReferente: "", emailReferente: "", banca: "", iban: "", pagamento: "30gg_fm", scontoBase: 20, tempoConsegna: 12, sistemiTrattati: "", note: "", rating: 4.3, preferito: false, attivo: true },
+    { id: "f4", nome: "Roto Frank", ragioneSociale: "Roto Frank AG", piva: "", cf: "", tipo: "Ferramenta", categoria: "ferramenta", indirizzo: "", cap: "", citta: "Bolzano", provincia: "BZ", telefono: "+39 0471 345678", cellulare: "", email: "italia@roto-frank.com", pec: "", sito: "", referente: "", telReferente: "", emailReferente: "", banca: "", iban: "", pagamento: "30gg_fm", scontoBase: 25, tempoConsegna: 8, sistemiTrattati: "", note: "", rating: 4.5, preferito: false, attivo: true },
+  ]; });
+  const [showFornitoreDetail, setShowFornitoreDetail] = useState<any>(null);
+  const [showFornitoreForm, setShowFornitoreForm] = useState(false);
+  const [fornitoreEdit, setFornitoreEdit] = useState<any>(null);
+
+  // ═══ TEMI CUSTOM ═══
+  const [customThemes, setCustomThemes] = useState(() => {
+    try { const v = localStorage.getItem("mastro:customThemes"); return v ? JSON.parse(v) : []; } catch(e) { return []; }
+  });
+
+  // ═══ VOCE AI ═══
+  const [voiceActive, setVoiceActive] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(()=>{try{localStorage.setItem("mastro:fatturePassive",JSON.stringify(fatturePassive));}catch(e){}},[fatturePassive]);
+  useEffect(()=>{try{localStorage.setItem("mastro:fornitori",JSON.stringify(fornitori));}catch(e){}},[fornitori]);
+  useEffect(()=>{try{localStorage.setItem("mastro:kit",JSON.stringify(kitAccessori));}catch(e){}},[kitAccessori]);
+  useEffect(()=>{try{localStorage.setItem("mastro:customThemes",JSON.stringify(customThemes));}catch(e){}},[customThemes]);
   const [ordiniFornDB, setOrdiniFornDB] = useState<any[]>(ORDINI_INIT);
   const [showFatturaModal, setShowFatturaModal] = useState(false);
   const [fatturaEdit, setFatturaEdit] = useState<any>(null);
@@ -1003,6 +879,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [fattPerc, setFattPerc] = useState(50);
   const [montGiorni, setMontGiorni] = useState(1);
   const [docViewer, setDocViewer] = useState<{ docs: any[], title: string } | null>(null);
+  const [ccExpandStep, setCcExpandStep] = useState<string|null>(null);
   const [confSett, setConfSett] = useState(""); // settimane consegna input
   
   // Navigation
@@ -1061,6 +938,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   
   // Agenda
   const [agendaView, setAgendaView] = useState("mese"); // "giorno" | "settimana" | "mese"
+  const [agendaFilters, setAgendaFilters] = useState({ eventi: true, montaggi: true, consegne: true, scadenze: true, tasks: true });
+  const [homeExpand, setHomeExpand] = useState<Record<string, boolean>>({});
+  const [homeView, setHomeView] = useState<string|null>(null);
+  const [montView, setMontView] = useState("lista");
+  const [montExpandId, setMontExpandId] = useState<string|null>(null);
+  const [montCalDate, setMontCalDate] = useState(new Date());
+  const [dossierTab, setDossierTab] = useState("storia");
   const [cmFaseIdx, setCmFaseIdx] = useState(0); // filtro fase widget commesse dashboard
   const [cmView, setCmView] = useState<"card"|"list">("card"); // vista commesse: card grande | lista compatta
   const [fasePanelOpen, setFasePanelOpen] = useState<Record<string,boolean>>({}); // accordion checklist per fase
@@ -1078,10 +962,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     const t2 = new Date(t); t2.setDate(t2.getDate() + 2); const t2Str = t2.toISOString().split("T")[0];
     const t3 = new Date(t); t3.setDate(t3.getDate() + 3); const t3Str = t3.toISOString().split("T")[0];
     return [
-      { id: "ev1", date: td, time: "09:00", text: "Sopralluogo Verdi", persona: "Giuseppe Verdi", addr: "Via Garibaldi 12, Rende", cm: "S-0001", color: "#007aff", durata: 60 },
-      { id: "ev2", date: td, time: "15:00", text: "Telefonata Bianchi — preventivo", persona: "Anna Bianchi", addr: "", cm: "S-0002", color: "#ff9500", durata: 30 },
-      { id: "ev3", date: tmStr, time: "10:00", text: "Firma contratto Rossi", persona: "Mario Rossi", addr: "Via Roma 42, Cosenza", cm: "S-0003", color: "#34c759", durata: 45 },
-      { id: "ev4", date: t3Str, time: "08:30", text: "Consegna materiale Esposito", persona: "Laura Esposito", addr: "Viale Trieste 5, Rende", cm: "S-0004", color: "#af52de", durata: 120 },
+      { id: "ev1", date: td, time: "09:00", text: "Sopralluogo Verdi", tipo: "sopralluogo", persona: "Giuseppe Verdi", addr: "Via Garibaldi 12, Rende", cm: "S-0001", color: "#007aff", durata: 60 },
+      { id: "ev2", date: td, time: "15:00", text: "Telefonata Bianchi — preventivo", tipo: "controllo", persona: "Anna Bianchi", addr: "", cm: "S-0002", color: "#ff9500", durata: 30 },
+      { id: "ev3", date: tmStr, time: "10:00", text: "Firma contratto Rossi", tipo: "sopralluogo", persona: "Mario Rossi", addr: "Via Roma 42, Cosenza", cm: "S-0003", color: "#34c759", durata: 45 },
+      { id: "ev4", date: t3Str, time: "08:30", text: "Consegna materiale Esposito", tipo: "consegna", persona: "Laura Esposito", addr: "Viale Trieste 5, Rende", cm: "S-0004", color: "#af52de", durata: 120 },
     ];
   });
   
@@ -1199,7 +1083,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
   // == Persistence ==
   // DEMO VERSION — FORCE RESET on every new deploy
-  const DEMO_VER = "v46-saldo-fix-feb27";
+  const DEMO_VER = "v49-msgs-dossier";
   useEffect(()=>{
       const savedVer = localStorage.getItem("mastro:demoVer");
       if (savedVer !== DEMO_VER) {
@@ -1268,6 +1152,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   useEffect(()=>{try{localStorage.setItem("mastro:lamiere",JSON.stringify(lamiereDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"lamiere",lamiereDB);},[lamiereDB]);
   useEffect(()=>{try{localStorage.setItem("mastro:libreria",JSON.stringify(libreriaDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"libreria",libreriaDB);},[libreriaDB]);
   useEffect(()=>{try{localStorage.setItem("mastro:fatture",JSON.stringify(fattureDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"fatture",fattureDB);},[fattureDB]);
+
   useEffect(()=>{try{localStorage.setItem("mastro:ordiniForn",JSON.stringify(ordiniFornDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"ordiniForn",ordiniFornDB);},[ordiniFornDB]);
   useEffect(()=>{try{localStorage.setItem("mastro:squadre",JSON.stringify(squadreDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"squadre",squadreDB);},[squadreDB]);
   useEffect(()=>{try{localStorage.setItem("mastro:montaggi",JSON.stringify(montaggiDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"montaggi",montaggiDB);},[montaggiDB]);
@@ -1374,6 +1259,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const isDesktop = winW >= 1024;
 
   const goBack = () => {
+    if (homeView) { setHomeView(null); return; }
     if (showRiepilogo) { setShowRiepilogo(false); return; }
     if (selectedVano) { setSelectedVano(null); setVanoStep(0); return; }
     if (showNuovoRilievo) { setShowNuovoRilievo(false); return; }
@@ -1998,6 +1884,40 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     setNewEvent({ text: "", time: "", tipo: "sopralluogo", cm: "", persona: "", date: "", reminder: "", addr: "" });
     setShowNewEvent(false);
   };
+
+
+  // ═══ CONVERTI EVENTO ═══
+  const convertEvent = (evId, newTipo) => {
+    setEvents(prev => prev.map(e => e.id === evId ? { ...e, tipo: newTipo, color: tipoEvColor(newTipo) } : e));
+  };
+  const linkEventToCM = (evId, cmId) => {
+    setEvents(prev => prev.map(e => e.id === evId ? { ...e, cm: cmId } : e));
+  };
+
+  // ═══ FATTURE PASSIVE ═══
+  const creaFatturaPassiva = () => {
+    const fp = { ...newFattPassiva, id: "fp_" + Date.now(), importo: parseFloat(String(newFattPassiva.importo)) || 0, dataISO: newFattPassiva.data || new Date().toISOString().split("T")[0] };
+    setFatturePassive(prev => [...prev, fp]);
+    setNewFattPassiva({ fornitore: "", numero: "", data: "", importo: 0, iva: 22, descrizione: "", cmId: "", pagata: false, scadenza: "" });
+    setShowFatturaPassiva(false);
+  };
+
+  // ═══ VOCE AI ═══
+  const startVoice = () => {
+    if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) { alert("Browser non supporta riconoscimento vocale"); return; }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recog = new SR();
+    recog.continuous = true; recog.interimResults = true; recog.lang = "it-IT";
+    recog.onresult = (e: any) => {
+      let t = ""; for (let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
+      setVoiceTranscript(t);
+    };
+    recog.onerror = () => setVoiceActive(false);
+    recog.onend = () => setVoiceActive(false);
+    recog.start(); recognitionRef.current = recog; setVoiceActive(true);
+  };
+  const stopVoice = () => { recognitionRef.current?.stop(); setVoiceActive(false); };
+
 
   const sendCommessa = () => {
     setSendConfirm("sent");
@@ -2808,7 +2728,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         const convRate = cantieri.length > 0 ? Math.round(cmConf.length / cantieri.length * 100) : 0;
         return (
           <div key="dashboard">
-            <SectionHead id="dashboard" icon="📊" title="Dashboard" />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <SectionHead id="dashboard" icon="📊" title="Dashboard" />
+                <div onClick={() => setShowContabilita(true)} style={{ padding: "4px 10px", borderRadius: 6, background: T.accLt, color: T.acc, fontSize: 10, fontWeight: 700, cursor: "pointer", marginRight: 16 }}>💰 Contabilità →</div>
+              </div>
             {!collapsed["dashboard"] && (
               <div style={{ padding: "0 16px", marginBottom: 8 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
@@ -2845,92 +2768,332 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                     ))}
                   </div>
                 )}
-                {/* Ordini fornitore in arrivo */}
-                {ordiniFornDB.filter(o => o.stato !== "consegnato").length > 0 && (
-                  <div style={{ marginTop: 8, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>📦 Ordini fornitore</div>
-                    {ordiniFornDB.filter(o => o.stato !== "consegnato").sort((a, b) => (a.consegna?.prevista || "z").localeCompare(b.consegna?.prevista || "z")).slice(0, 5).map(o => {
-                      const st = ORDINE_STATI.find(s => s.id === o.stato) || ORDINE_STATI[0];
-                      const isLate = o.consegna?.prevista && new Date(o.consegna.prevista) < new Date();
-                      return (
-                        <div key={o.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${T.bdr}`, fontSize: 11 }}>
-                          <div>
-                            <span style={{ marginRight: 4 }}>{st.icon}</span>
-                            <b>{o.fornitore?.nome || "—"}</b>
-                            <span style={{ color: T.sub, marginLeft: 4 }}>{o.cmCode}</span>
-                          </div>
-                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                            {o.consegna?.prevista && <span style={{ fontSize: 9, color: isLate ? "#ff3b30" : T.sub, fontWeight: isLate ? 700 : 400 }}>{isLate ? "⚠️ " : ""}{new Date(o.consegna.prevista).toLocaleDateString("it-IT", { day: "numeric", month: "short" })}</span>}
-                            <span style={{ padding: "2px 6px", borderRadius: 4, fontSize: 8, fontWeight: 700, background: st.color + "20", color: st.color }}>{st.label}</span>
-                          </div>
+                {/* ═══ QUICK ACCESS CARDS ═══ */}
+                {(() => {
+                  const ordAtt = ordiniFornDB.filter(o => o.stato !== "consegnato");
+                  const montAtt = montaggiDB.filter(m => m.stato !== "completato");
+                  const fatAtt = fattureDB.filter(f => !f.pagata);
+                  const totFat = fatAtt.reduce((s,f) => s + f.importo, 0);
+                  const cards = [
+                    ordAtt.length > 0 && { key: "ordini", ico: "📦", title: "Ordini Fornitore", count: ordAtt.length, sub: ordAtt.filter(o => o.conferma?.ricevuta).length + " confermati", col: "#ff9500" },
+                    montAtt.length > 0 && { key: "montaggi", ico: "🔧", title: "Prossimi Montaggi", count: montAtt.length, sub: montAtt[0]?.data ? new Date(montAtt[0].data).toLocaleDateString("it-IT",{day:"numeric",month:"short"}) + " prossimo" : "", col: "#007aff" },
+                    fatAtt.length > 0 && { key: "fatture", ico: "⏳", title: "Fatture da Incassare", count: fatAtt.length, sub: "€" + totFat.toLocaleString("it-IT"), col: "#ff3b30" },
+                  ].filter(Boolean);
+                  if (cards.length === 0) return null;
+                  return (
+                    <div style={{ display: "grid", gridTemplateColumns: cards.length >= 3 ? "1fr 1fr 1fr" : cards.length === 2 ? "1fr 1fr" : "1fr", gap: 6, marginTop: 8 }}>
+                      {cards.map(cd => (
+                        <div key={cd.key} onClick={() => setHomeView(cd.key)}
+                          style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "12px 10px", cursor: "pointer", textAlign: "center", transition: "all .15s" }}>
+                          <div style={{ fontSize: 22 }}>{cd.ico}</div>
+                          <div style={{ fontSize: 20, fontWeight: 900, color: cd.col, marginTop: 2 }}>{cd.count}</div>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: T.text, marginTop: 1 }}>{cd.title}</div>
+                          <div style={{ fontSize: 8, color: T.sub }}>{cd.sub}</div>
                         </div>
-                      );
-                    })}
-                    {ordiniFornDB.filter(o => o.stato !== "consegnato" && !o.conferma?.firmata && o.conferma?.ricevuta).length > 0 && (
-                      <div style={{ marginTop: 6, fontSize: 9, color: "#ff9500", fontWeight: 700 }}>⚠️ {ordiniFornDB.filter(o => !o.conferma?.firmata && o.conferma?.ricevuta).length} conferme da firmare</div>
-                    )}
-                  </div>
-                )}
-
-                {/* Montaggi prossimi */}
-                {montaggiDB.filter(m => m.stato !== "completato").length > 0 && (
-                  <div style={{ marginTop: 8, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>🔧 Prossimi montaggi</div>
-                    {montaggiDB.filter(m => m.stato !== "completato").sort((a, b) => (a.data || "z").localeCompare(b.data || "z")).slice(0, 5).map(m => {
-                      const sq = squadreDB.find(s => s.id === m.squadraId);
-                      return (
-                        <div key={m.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${T.bdr}`, fontSize: 11 }}>
-                          <span style={{ color: T.text }}>
-                            {m.data ? new Date(m.data).toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" }) : "—"}{" "}
-                            <span style={{ color: sq?.colore || T.sub, fontWeight: 600 }}>{sq?.nome || "—"}</span>
-                          </span>
-                          <span style={{ color: T.text, fontWeight: 600 }}>{m.cliente} <span style={{ color: T.sub, fontSize: 9 }}>{m.vaniCount}v</span></span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {/* Consegne fornitore in arrivo */}
-                {ordiniFornDB.filter(o => o.dataConsegnaPrev && o.stato !== "consegnato").length > 0 && (
-                  <div style={{ marginTop: 8, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>🚛 Consegne in arrivo</div>
-                    {ordiniFornDB.filter(o => o.dataConsegnaPrev && o.stato !== "consegnato").sort((a, b) => (a.dataConsegnaPrev || "z").localeCompare(b.dataConsegnaPrev || "z")).slice(0, 5).map(o => {
-                      const isLate = o.dataConsegnaPrev < new Date().toISOString().split("T")[0];
-                      const cm = cantieri.find(cc => cc.id === o.cmId);
-                      return (
-                        <div key={o.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${T.bdr}`, fontSize: 11 }}>
-                          <span style={{ color: isLate ? "#ff3b30" : T.text }}>
-                            {isLate ? "⚠️ " : ""}
-                            {new Date(o.dataConsegnaPrev).toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" })}{" "}
-                            <span style={{ color: "#ff9500", fontWeight: 600 }}>{o.fornitore}</span>
-                          </span>
-                          <span style={{ color: T.text, fontWeight: 600 }}>{cm?.cliente || "—"}{o.costo > 0 && <span style={{ color: T.sub, fontSize: 9 }}> €{o.costo.toLocaleString("it-IT")}</span>}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {/* Scadenzario fatture */}
-                {fattureDB.filter(f => !f.pagata).length > 0 && (
-                  <div style={{ marginTop: 8, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: "10px 12px" }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>⏳ Fatture da incassare</div>
-                    {fattureDB.filter(f => !f.pagata).sort((a, b) => (a.scadenza || "z").localeCompare(b.scadenza || "z")).map(f => {
-                      const scaduta = f.scadenza < new Date().toISOString().split("T")[0];
-                      return (
-                        <div key={f.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${T.bdr}`, fontSize: 11 }}>
-                          <span style={{ color: scaduta ? "#ff3b30" : T.text }}>{scaduta ? "⚠️ " : ""}{f.cliente} <span style={{ color: T.sub, fontSize: 9 }}>N.{f.numero}</span></span>
-                          <span style={{ fontWeight: 700, color: scaduta ? "#ff3b30" : T.text }}>€{f.importo.toLocaleString("it-IT")}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
         );
       })(),
     };
+
+    // ═══ PAGINE DEDICATE — Ordini / Montaggi / Fatture ═══
+    if (homeView) {
+      const backBtn = <div onClick={() => setHomeView(null)} style={{ cursor:"pointer", padding:4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>;
+      
+      if (homeView === "ordini") {
+        const allOrd = ordiniFornDB.sort((a,b) => (a.consegna?.prevista||"z").localeCompare(b.consegna?.prevista||"z"));
+        return (
+          <div style={{ paddingBottom: 80 }}>
+            <div style={S.header}>
+              {backBtn}
+              <div style={{ flex:1 }}><div style={S.headerTitle}>📦 Ordini Fornitore</div><div style={S.headerSub}>{allOrd.length} totali · {allOrd.filter(o=>o.stato!=="consegnato").length} attivi</div></div>
+            </div>
+            <div style={{ padding:"0 16px" }}>
+              {allOrd.map(o => {
+                const st = ORDINE_STATI.find(s => s.id === o.stato) || ORDINE_STATI[0];
+                const isLate = o.consegna?.prevista && new Date(o.consegna.prevista) < new Date();
+                const cm = cantieri.find(cc => cc.id === o.cmId);
+                return (
+                  <div key={o.id} onClick={() => { if(cm) { setSelectedCM(cm); setHomeView(null); setTab("commesse"); } }}
+                    style={{ background:T.card, borderRadius:12, border:"1px solid "+T.bdr, padding:"12px 14px", marginBottom:8, cursor:"pointer",
+                      borderLeft:"4px solid "+st.color }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{st.icon} {o.fornitore?.nome||"—"}</div>
+                        <div style={{ fontSize:11, color:T.sub }}>{o.cmCode} · {cm?.cliente||""} {cm?.cognome||""}</div>
+                      </div>
+                      <span style={{ padding:"3px 8px", borderRadius:6, fontSize:9, fontWeight:700, background:st.color+"18", color:st.color }}>{st.label}</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginTop:6, fontSize:11 }}>
+                      <span style={{ color:T.sub }}>Totale: <b style={{ color:T.text }}>€{(o.totaleIva||o.totale||0).toLocaleString("it-IT")}</b></span>
+                      {o.consegna?.prevista && <span style={{ color:isLate?"#ff3b30":T.sub, fontWeight:isLate?700:400 }}>{isLate?"⚠️ ":""}Consegna: {new Date(o.consegna.prevista).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</span>}
+                    </div>
+                    {o.conferma?.ricevuta && <div style={{ fontSize:10, color:"#34c759", marginTop:4 }}>✅ Conferma ricevuta{o.conferma.dataRicezione ? " il "+o.conferma.dataRicezione : ""}</div>}
+                  </div>
+                );
+              })}
+              {allOrd.length === 0 && <div style={{ textAlign:"center", padding:30, color:T.sub }}>Nessun ordine</div>}
+            </div>
+          </div>
+        );
+      }
+
+      if (homeView === "montaggi") {
+        const allMont = montaggiDB.sort((a,b) => {
+          if(a.stato==="completato" && b.stato!=="completato") return 1;
+          if(a.stato!=="completato" && b.stato==="completato") return -1;
+          return (a.data||"z").localeCompare(b.data||"z");
+        });
+        const daFare = allMont.filter(m => m.stato !== "completato").length;
+
+        // Calendar helpers
+        const mcd = montCalDate;
+        const mcdY = mcd.getFullYear(), mcdM = mcd.getMonth();
+        const daysInMonth = new Date(mcdY, mcdM + 1, 0).getDate();
+        const firstDow = (new Date(mcdY, mcdM, 1).getDay() + 6) % 7; // Mon=0
+        const montByDate: Record<string, typeof allMont> = {};
+        allMont.forEach(m => { if (m.data) { (montByDate[m.data] = montByDate[m.data] || []).push(m); } });
+        const todayStr = new Date().toISOString().split("T")[0];
+
+        // Week view
+        const weekStart = new Date(mcd);
+        weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+        const weekDays: Date[] = [];
+        for (let i = 0; i < 7; i++) { const d = new Date(weekStart); d.setDate(d.getDate() + i); weekDays.push(d); }
+
+        // Render a montaggio card
+        const renderMontCard = (m: any, expanded: boolean) => {
+          const sq = squadreDB.find(s => s.id === m.squadraId);
+          const cm = cantieri.find(cc => cc.id === m.cmId);
+          const done = m.stato === "completato";
+          const isExp = expanded;
+          return (
+            <div key={m.id} style={{ background:T.card, borderRadius:12, border:"1px solid "+T.bdr, marginBottom:8,
+              borderLeft:"4px solid "+(done?"#34c759":"#007aff"), opacity:done?0.7:1 }}>
+              <div onClick={() => setMontExpandId(isExp ? null : m.id)}
+                style={{ padding:"12px 14px", cursor:"pointer" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{done?"✅":"🔧"} {m.cliente}</div>
+                    <div style={{ fontSize:11, color:T.sub }}>{m.cmCode} · {m.vani||"?"} vani · {m.durata||""}</div>
+                  </div>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:done?"#34c759":"#007aff" }}>{m.data ? new Date(m.data).toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"}) : "—"}</div>
+                    {sq && <div style={{ fontSize:10, color:sq.colore||T.sub, fontWeight:600 }}>{sq.nome}</div>}
+                  </div>
+                </div>
+              </div>
+              {isExp && (
+                <div style={{ padding:"0 14px 14px", borderTop:"1px solid "+T.bdr }}>
+                  {/* Detail grid */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginTop:10 }}>
+                    <div style={{ padding:8, borderRadius:8, background:T.bg }}>
+                      <div style={{ fontSize:8, color:T.sub, fontWeight:700 }}>CLIENTE</div>
+                      <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{m.cliente}</div>
+                      {cm?.indirizzo && <div style={{ fontSize:10, color:T.sub }}>📍 {cm.indirizzo}</div>}
+                      {cm?.telefono && <div onClick={(e) => { e.stopPropagation(); window.location.href="tel:"+cm.telefono; }} style={{ fontSize:10, color:T.acc, cursor:"pointer", marginTop:2 }}>📞 {cm.telefono}</div>}
+                    </div>
+                    <div style={{ padding:8, borderRadius:8, background:T.bg }}>
+                      <div style={{ fontSize:8, color:T.sub, fontWeight:700 }}>PROGRAMMAZIONE</div>
+                      <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{m.data ? new Date(m.data).toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"}) : "Da programmare"}</div>
+                      <div style={{ fontSize:10, color:T.sub }}>Ore: {m.orario||"—"} · Durata: {m.durata||m.giorni+"g"||"—"}</div>
+                    </div>
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginTop:6 }}>
+                    <div style={{ padding:8, borderRadius:8, background:T.bg }}>
+                      <div style={{ fontSize:8, color:T.sub, fontWeight:700 }}>SQUADRA</div>
+                      <div style={{ fontSize:12, fontWeight:700, color:sq?.colore||T.text }}>{sq?.nome||"Da assegnare"}</div>
+                      <div style={{ fontSize:10, color:T.sub }}>{m.vani||"?"} vani</div>
+                    </div>
+                    <div style={{ padding:8, borderRadius:8, background:done?"#34c75910":"#007aff10" }}>
+                      <div style={{ fontSize:8, color:T.sub, fontWeight:700 }}>STATO</div>
+                      <div style={{ fontSize:12, fontWeight:700, color:done?"#34c759":"#007aff" }}>{done?"✅ Completato":"⏳ "+m.stato}</div>
+                    </div>
+                  </div>
+                  {m.note && <div style={{ marginTop:8, padding:8, borderRadius:8, background:"#ff950008", border:"1px solid #ff950020" }}>
+                    <div style={{ fontSize:8, color:"#ff9500", fontWeight:700 }}>NOTE</div>
+                    <div style={{ fontSize:11, color:T.text }}>{m.note}</div>
+                  </div>}
+                  {cm && <div onClick={(e) => { e.stopPropagation(); setSelectedCM(cm); setHomeView(null); setTab("commesse"); }}
+                    style={{ marginTop:8, padding:10, borderRadius:8, background:T.acc+"10", textAlign:"center", fontSize:11, fontWeight:700, color:T.acc, cursor:"pointer", border:"1px solid "+T.acc+"30" }}>
+                    📁 Apri commessa {cm.code}
+                  </div>}
+                </div>
+              )}
+            </div>
+          );
+        };
+
+        return (
+          <div style={{ paddingBottom: 80 }}>
+            <div style={S.header}>
+              {backBtn}
+              <div style={{ flex:1 }}><div style={S.headerTitle}>🔧 Montaggi</div><div style={S.headerSub}>{allMont.length} totali · {daFare} da fare</div></div>
+            </div>
+            {/* View switcher */}
+            <div style={{ display:"flex", gap:2, padding:"0 16px 8px" }}>
+              {[{id:"lista",l:"📋 Lista"},{id:"mese",l:"📅 Mese"},{id:"settimana",l:"📆 Settimana"},{id:"giorno",l:"📌 Giorno"}].map(v => (
+                <div key={v.id} onClick={() => setMontView(v.id)}
+                  style={{ flex:1, padding:"7px 4px", borderRadius:8, textAlign:"center", fontSize:10, fontWeight:700, cursor:"pointer",
+                    background:montView===v.id?"#007aff15":T.bg, color:montView===v.id?"#007aff":T.sub,
+                    border:"1.5px solid "+(montView===v.id?"#007aff":T.bdr) }}>{v.l}</div>
+              ))}
+            </div>
+
+            {/* ═══ LISTA ═══ */}
+            {montView === "lista" && (
+              <div style={{ padding:"0 16px" }}>
+                {allMont.map(m => renderMontCard(m, montExpandId === m.id))}
+                {allMont.length === 0 && <div style={{ textAlign:"center", padding:30, color:T.sub }}>Nessun montaggio</div>}
+              </div>
+            )}
+
+            {/* ═══ MESE ═══ */}
+            {montView === "mese" && (
+              <div style={{ padding:"0 16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                  <div onClick={() => setMontCalDate(new Date(mcdY, mcdM-1, 1))} style={{ padding:"6px 12px", cursor:"pointer", fontSize:16 }}>◀</div>
+                  <div style={{ fontSize:14, fontWeight:800, color:T.text }}>{mcd.toLocaleDateString("it-IT",{month:"long",year:"numeric"})}</div>
+                  <div onClick={() => setMontCalDate(new Date(mcdY, mcdM+1, 1))} style={{ padding:"6px 12px", cursor:"pointer", fontSize:16 }}>▶</div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2 }}>
+                  {["Lu","Ma","Me","Gi","Ve","Sa","Do"].map(d => <div key={d} style={{ textAlign:"center", fontSize:9, fontWeight:700, color:T.sub, padding:4 }}>{d}</div>)}
+                  {Array.from({length: firstDow}).map((_,i) => <div key={"e"+i}/>)}
+                  {Array.from({length: daysInMonth}).map((_,i) => {
+                    const day = i + 1;
+                    const dateStr = `${mcdY}-${String(mcdM+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+                    const monts = montByDate[dateStr] || [];
+                    const isToday = dateStr === todayStr;
+                    return (
+                      <div key={day} onClick={() => { if(monts.length > 0) { setMontCalDate(new Date(dateStr)); setMontView("giorno"); } }}
+                        style={{ minHeight:40, padding:3, borderRadius:6, background:monts.length>0?"#007aff08":isToday?"#ff950008":"transparent",
+                          border:isToday?"1.5px solid #ff9500":"1px solid "+T.bdr+"40", cursor:monts.length>0?"pointer":"default", position:"relative" as const }}>
+                        <div style={{ fontSize:10, fontWeight:isToday?800:600, color:isToday?"#ff9500":T.text, textAlign:"center" }}>{day}</div>
+                        {monts.map((m,mi) => {
+                          const sq = squadreDB.find(s => s.id === m.squadraId);
+                          const done = m.stato === "completato";
+                          return <div key={mi} style={{ fontSize:7, fontWeight:700, padding:"1px 3px", borderRadius:3, marginTop:1,
+                            background:done?"#34c75920":"#007aff20", color:done?"#34c759":"#007aff", overflow:"hidden", whiteSpace:"nowrap" as const, textOverflow:"ellipsis" }}>
+                            {m.cliente?.split(" ")[0]}
+                          </div>;
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ═══ SETTIMANA ═══ */}
+            {montView === "settimana" && (
+              <div style={{ padding:"0 16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                  <div onClick={() => { const d = new Date(montCalDate); d.setDate(d.getDate()-7); setMontCalDate(d); }} style={{ padding:"6px 12px", cursor:"pointer", fontSize:16 }}>◀</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:T.text }}>
+                    {weekDays[0].toLocaleDateString("it-IT",{day:"numeric",month:"short"})} — {weekDays[6].toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}
+                  </div>
+                  <div onClick={() => { const d = new Date(montCalDate); d.setDate(d.getDate()+7); setMontCalDate(d); }} style={{ padding:"6px 12px", cursor:"pointer", fontSize:16 }}>▶</div>
+                </div>
+                {weekDays.map(wd => {
+                  const dateStr = wd.toISOString().split("T")[0];
+                  const monts = montByDate[dateStr] || [];
+                  const isToday = dateStr === todayStr;
+                  const isSun = wd.getDay() === 0;
+                  return (
+                    <div key={dateStr} style={{ marginBottom:6, borderRadius:10, border:"1px solid "+(isToday?"#ff9500":T.bdr), background:isToday?"#ff950005":isSun?T.bg+"80":"transparent", overflow:"hidden" }}>
+                      <div style={{ padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center",
+                        background:isToday?"#ff950010":"transparent", borderBottom:monts.length>0?"1px solid "+T.bdr:"none" }}>
+                        <div style={{ fontSize:12, fontWeight:isToday?800:600, color:isToday?"#ff9500":isSun?T.sub:T.text }}>
+                          {wd.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"short"})}
+                        </div>
+                        {monts.length > 0 && <span style={{ fontSize:9, fontWeight:700, color:"#007aff", background:"#007aff12", padding:"2px 6px", borderRadius:4 }}>{monts.length} mont.</span>}
+                      </div>
+                      {monts.map(m => renderMontCard(m, montExpandId === m.id))}
+                      {monts.length === 0 && <div style={{ padding:"4px 12px 8px", fontSize:10, color:T.sub }}>—</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ═══ GIORNO ═══ */}
+            {montView === "giorno" && (
+              <div style={{ padding:"0 16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                  <div onClick={() => { const d = new Date(montCalDate); d.setDate(d.getDate()-1); setMontCalDate(d); }} style={{ padding:"6px 12px", cursor:"pointer", fontSize:16 }}>◀</div>
+                  <div style={{ fontSize:14, fontWeight:800, color:T.text }}>
+                    {montCalDate.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
+                  </div>
+                  <div onClick={() => { const d = new Date(montCalDate); d.setDate(d.getDate()+1); setMontCalDate(d); }} style={{ padding:"6px 12px", cursor:"pointer", fontSize:16 }}>▶</div>
+                </div>
+                <div onClick={() => setMontCalDate(new Date())} style={{ textAlign:"center", fontSize:10, color:T.acc, cursor:"pointer", marginBottom:8, fontWeight:700 }}>📌 Oggi</div>
+                {(() => {
+                  const dateStr = montCalDate.toISOString().split("T")[0];
+                  const monts = montByDate[dateStr] || [];
+                  if (monts.length === 0) return <div style={{ textAlign:"center", padding:30, color:T.sub }}>Nessun montaggio per questa data</div>;
+                  return monts.map(m => renderMontCard(m, montExpandId === m.id));
+                })()}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      if (homeView === "fatture") {
+        const allFat = fattureDB.sort((a,b) => (a.pagata===b.pagata ? (a.scadenza||"z").localeCompare(b.scadenza||"z") : a.pagata ? 1 : -1));
+        const totInc = allFat.filter(f=>f.pagata).reduce((s,f)=>s+f.importo,0);
+        const totDaInc = allFat.filter(f=>!f.pagata).reduce((s,f)=>s+f.importo,0);
+        return (
+          <div style={{ paddingBottom: 80 }}>
+            <div style={S.header}>
+              {backBtn}
+              <div style={{ flex:1 }}><div style={S.headerTitle}>📄 Fatture</div><div style={S.headerSub}>{allFat.length} totali · €{totInc.toLocaleString("it-IT")} incassato · €{totDaInc.toLocaleString("it-IT")} da incassare</div></div>
+            </div>
+            <div style={{ padding:"0 16px" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+                <div style={{ padding:12, borderRadius:10, background:"#34c75910", textAlign:"center", border:"1px solid #34c75930" }}>
+                  <div style={{ fontSize:8, fontWeight:700, color:"#34c759" }}>INCASSATO</div>
+                  <div style={{ fontSize:18, fontWeight:900, color:"#34c759" }}>€{totInc.toLocaleString("it-IT")}</div>
+                </div>
+                <div style={{ padding:12, borderRadius:10, background:"#ff3b3010", textAlign:"center", border:"1px solid #ff3b3030" }}>
+                  <div style={{ fontSize:8, fontWeight:700, color:"#ff3b30" }}>DA INCASSARE</div>
+                  <div style={{ fontSize:18, fontWeight:900, color:"#ff3b30" }}>€{totDaInc.toLocaleString("it-IT")}</div>
+                </div>
+              </div>
+              {allFat.map(f => {
+                const scaduta = !f.pagata && f.scadenza && f.scadenza < new Date().toISOString().split("T")[0];
+                const cm = cantieri.find(cc => cc.id === f.cmId);
+                return (
+                  <div key={f.id} onClick={() => { if(cm) { setSelectedCM(cm); setHomeView(null); setTab("commesse"); } }}
+                    style={{ background:T.card, borderRadius:12, border:"1px solid "+T.bdr, padding:"12px 14px", marginBottom:8, cursor:"pointer",
+                      borderLeft:"4px solid "+(f.pagata?"#34c759":scaduta?"#ff3b30":"#ff9500"), opacity:f.pagata?0.7:1 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{f.pagata?"✅":"📄"} {f.cliente}</div>
+                        <div style={{ fontSize:11, color:T.sub }}>N.{f.numero}/{f.anno} · {f.tipo} · {f.cmCode}</div>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:15, fontWeight:900, color:f.pagata?"#34c759":scaduta?"#ff3b30":T.text }}>€{f.importo.toLocaleString("it-IT")}</div>
+                        {f.scadenza && !f.pagata && <div style={{ fontSize:9, color:scaduta?"#ff3b30":"#ff9500", fontWeight:600 }}>{scaduta?"⚠️ Scaduta":"Scad."} {new Date(f.scadenza).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</div>}
+                        {f.pagata && <div style={{ fontSize:9, color:"#34c759" }}>Pagata{f.dataPagamento?" il "+f.dataPagamento:""}</div>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {allFat.length === 0 && <div style={{ textAlign:"center", padding:30, color:T.sub }}>Nessuna fattura</div>}
+            </div>
+          </div>
+        );
+      }
+
+      setHomeView(null);
+    }
 
     return (
       <div style={{ paddingBottom: 80 }}>
@@ -3334,6 +3497,453 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       );
     };
 
+    // ═══ COMMESSA CHIUSA → DOSSIER COMPLETO ═══
+    if (c.fase === "chiusura") {
+      const allVD = getVaniAttivi(c);
+      const fattD = fattureDB.filter(f => f.cmId === c.id);
+      const ordD = (ordiniFornDB || []).filter(o => o.cmId === c.id);
+      const montD = (montaggiDB || []).filter(m => m.cmId === c.id);
+      const totPD = allVD.reduce((s, v) => s + calcolaVanoPrezzo(v, c), 0) + (c.vociLibere || []).reduce((s, vl) => s + ((vl.importo || 0) * (vl.qta || 1)), 0);
+      const ivaP = c.ivaPerc || 10;
+      const totID = totPD * (1 + ivaP / 100);
+      const incD = fattD.filter(f => f.pagata).reduce((s, f) => s + f.importo, 0);
+      const costD = ordD.reduce((s, o) => s + (o.totaleIva || o.totale || 0), 0);
+      const restD = totID - incD;
+      const fD = (n: number) => "€" + n.toLocaleString("it-IT", { minimumFractionDigits: 2 });
+      // dossierTab is defined at component top level
+
+      // Timeline events
+      const timeline: Array<{data:string;iso:string;ico:string;titolo:string;desc:string;col:string;ora?:string}> = [];
+      timeline.push({ data: c.creato || "", iso: "0000", ico: "📁", titolo: "Commessa creata", desc: c.code + " · " + c.cliente + " " + (c.cognome||""), col: "#86868b", ora: "09:00" });
+      (c.rilievi||[]).forEach(r => timeline.push({ data: r.data || "", iso: r.data || "", ico: "📐", titolo: "Rilievo #" + r.n + " — " + (r.tipo||"rilievo"), desc: (r.vani||[]).length + " vani · " + (r.rilevatore||"Fabio"), col: "#5856d6", ora: r.ora || "10:00" }));
+      if(c.firmaCliente) timeline.push({ data: c.dataFirma || "", iso: c.dataFirma || "", ico: "✍️", titolo: "Preventivo firmato", desc: "Importo: " + fD(totID) + " (IVA " + ivaP + "%)", col: "#34c759", ora: "11:00" });
+      ordD.forEach(o => timeline.push({ data: o.dataInvio || "", iso: o.dataInvio || "", ico: "📦", titolo: "Ordine " + (o.fornitore?.nome||""), desc: fD(o.totaleIva||o.totale||0) + " · " + (o.conferma?.ricevuta ? "Confermato" : o.stato), col: "#ff9500", ora: "09:30" }));
+      ordD.filter(o => o.conferma?.ricevuta && o.conferma?.dataRicezione).forEach(o => timeline.push({ data: o.conferma.dataRicezione, iso: o.conferma.dataRicezione, ico: "✅", titolo: "Conferma ricevuta " + (o.fornitore?.nome||""), desc: o.conferma.nomeFile || "", col: "#34c759", ora: "14:00" }));
+      montD.forEach(m => timeline.push({ data: m.data || "", iso: m.data || "", ico: "🔧", titolo: "Montaggio", desc: (m.vani||"?") + " vani · " + ((squadreDB||[]).find(s=>s.id===m.squadraId)?.nome||"") + " · " + m.stato, col: "#007aff", ora: m.orario || "08:00" }));
+      fattD.forEach(f => timeline.push({ data: f.dataISO || f.data || "", iso: f.dataISO || "", ico: "📄", titolo: "Fattura N." + f.numero + "/" + f.anno + " — " + f.tipo, desc: fD(f.importo) + (f.pagata ? " · ✅ Pagata" : " · ⏳ Da incassare"), col: f.pagata ? "#34c759" : "#ff3b30", ora: "10:00" }));
+      // Messaggi e email collegati alla commessa
+      const chIcoD = { email: "📧", whatsapp: "💬", sms: "📱", telegram: "✈️" };
+      const chColD = { email: "#5856d6", whatsapp: "#25d366", sms: "#ff9500", telegram: "#0088cc" };
+      const msgsCm = msgs.filter(m => m.cm === c.code);
+      msgsCm.forEach(m => {
+        (m.thread || []).forEach(t => {
+          timeline.push({ data: t.date || m.date || "", iso: m.date || "", ico: chIcoD[t.canale || m.canale] || "💬", titolo: (t.who === "Tu" ? "Inviato a " + m.from : "Ricevuto da " + m.from) + " · " + (t.canale || m.canale), desc: t.text?.substring(0, 80) + (t.text?.length > 80 ? "..." : ""), col: chColD[t.canale || m.canale] || "#86868b", ora: t.time || m.time || "" });
+        });
+      });
+      (c.log||[]).forEach(l => timeline.push({ data: l.quando || "", iso: "", ico: "📝", titolo: l.cosa, desc: l.chi || "", col: l.color || "#86868b", ora: l.ora || "" }));
+      timeline.sort((a,b) => (a.iso||"").localeCompare(b.iso||""));
+
+      // Foto from rilievi
+      const fotoVani: Array<{vano:string;stanza:string;tipo:string;url:string}> = [];
+      allVD.forEach(v => {
+        if(v.foto) Object.values(v.foto).forEach((url: any) => { if(url && typeof url === "string") fotoVani.push({ vano: v.nome||v.tipo, stanza: v.stanza||"", tipo: v.tipo, url }); });
+      });
+
+      // Print report
+      const stampaReport = () => {
+        const w = window.open("", "_blank");
+        if(!w) return;
+        const vaniHTML = allVD.map(v => {
+          const m = v.misure || {};
+          return `<tr><td>${v.nome||v.tipo}</td><td>${v.stanza||""}</td><td>${v.tipo}</td><td>${v.sistema||c.sistema||""}</td><td>${m.lCentro||"—"}×${m.hCentro||"—"}</td><td>${fD(calcolaVanoPrezzo(v,c))}</td></tr>`;
+        }).join("");
+        const fatHTML = fattD.map(f => `<tr><td>N.${f.numero}/${f.anno}</td><td>${f.tipo}</td><td>${fD(f.importo)}</td><td>${f.pagata?"✅ Pagata":"⏳ Da incassare"}</td><td>${f.data||""}</td></tr>`).join("");
+        const ordHTML = ordD.map(o => `<tr><td>${o.fornitore?.nome||""}</td><td>${fD(o.totaleIva||o.totale||0)}</td><td>${o.stato}</td><td>${o.consegna?.prevista||""}</td></tr>`).join("");
+        const timeHTML = timeline.map(t => `<tr><td>${t.data}${t.ora ? "<br><small>" + t.ora + "</small>" : ""}</td><td>${t.ico} ${t.titolo}</td><td>${t.desc}</td></tr>`).join("");
+        const msgHTML = msgsCm.length > 0 ? msgsCm.map(m => {
+          const threads = (m.thread||[]).map(t => `<div style="margin:4px 0;padding:6px 10px;border-radius:8px;background:${t.who==="Tu"?"#e8f5e9":"#f5f5f5"};font-size:11px"><b>${t.who}</b> · ${t.date} ${t.time}<br>${t.text}</div>`).join("");
+          return `<div style="margin-bottom:12px;border:1px solid #ddd;border-radius:8px;overflow:hidden"><div style="padding:8px 12px;background:#f8f8f8;border-bottom:1px solid #ddd"><b>${m.from}</b> · ${m.canale} · ${(m.thread||[]).length} msg</div><div style="padding:8px 12px">${threads}</div></div>`;
+        }).join("") : "";
+        w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dossier ${c.code}</title>
+<style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#1a1a1c}
+h1{color:#34c759;border-bottom:3px solid #34c759;padding-bottom:8px}h2{color:#555;margin-top:24px;border-bottom:1px solid #ddd;padding-bottom:4px}
+table{width:100%;border-collapse:collapse;margin:8px 0}th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;font-size:12px}
+th{background:#f5f5f5;font-weight:700}.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:12px 0}
+.kpi{background:#f8f8f8;padding:12px;border-radius:8px;text-align:center}.kpi b{font-size:18px;display:block}
+.green{color:#34c759}.red{color:#ff3b30}.orange{color:#ff9500}
+@media print{body{padding:0}h1{font-size:18px}}</style></head><body>
+<h1>📋 DOSSIER COMMESSA ${c.code}</h1>
+<p><b>Cliente:</b> ${c.cliente} ${c.cognome||""}<br>
+<b>Indirizzo:</b> ${c.indirizzo||""}<br>
+<b>Telefono:</b> ${c.telefono||""} · <b>Email:</b> ${c.email||""}<br>
+<b>CF:</b> ${c.cf||""} · <b>P.IVA:</b> ${c.piva||""}<br>
+<b>Sistema:</b> ${c.sistema||""} · <b>Tipo:</b> ${c.tipo||""}<br>
+<b>Pratica Fiscale:</b> ${c.praticaFiscale||"Nessuna"}</p>
+<h2>💰 Riepilogo Economico</h2>
+<div class="grid">
+<div class="kpi"><small>PREVENTIVO</small><b>${fD(totID)}</b></div>
+<div class="kpi"><small>INCASSATO</small><b class="green">${fD(incD)}</b></div>
+<div class="kpi"><small>MARGINE</small><b class="${(incD-costD)>=0?"green":"red"}">${fD(incD-costD)}</b></div>
+</div>
+<p>Imponibile: ${fD(totPD)} · IVA ${ivaP}% · Totale: ${fD(totID)}<br>
+Costi fornitori: ${fD(costD)} · Margine: ${fD(incD-costD)} (${totPD>0?Math.round((incD-costD)/totPD*100):0}%)</p>
+<h2>📐 Vani (${allVD.length})</h2>
+<table><tr><th>Nome</th><th>Stanza</th><th>Tipo</th><th>Sistema</th><th>L×H mm</th><th>Prezzo</th></tr>${vaniHTML}</table>
+<h2>📄 Fatture (${fattD.length})</h2>
+<table><tr><th>Numero</th><th>Tipo</th><th>Importo</th><th>Stato</th><th>Data</th></tr>${fatHTML}</table>
+<h2>📦 Ordini (${ordD.length})</h2>
+<table><tr><th>Fornitore</th><th>Importo</th><th>Stato</th><th>Consegna</th></tr>${ordHTML}</table>
+<h2>📅 Timeline</h2>
+<table><tr><th>Data/Ora</th><th>Evento</th><th>Dettaglio</th></tr>${timeHTML}</table>
+${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazioni)</h2>" + msgHTML : ""}
+<hr><p style="font-size:10px;color:#999">Generato da MASTRO ERP · Walter Cozza Serramenti SRL · ${new Date().toLocaleDateString("it-IT")}</p>
+</body></html>`);
+        w.document.close();
+        setTimeout(() => w.print(), 500);
+      };
+
+      return (
+        <div style={{ paddingBottom: 80 }}>
+          {/* Header */}
+          <div style={S.header}>
+            <div onClick={() => { setSelectedCM(null); setSelectedRilievo(null); }} style={{ cursor:"pointer", padding:4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
+            <div style={{ flex:1 }}>
+              <div style={S.headerTitle}>{c.code} · {c.cliente} {c.cognome||""}</div>
+              <div style={S.headerSub}>{c.indirizzo}</div>
+            </div>
+            <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+              <div onClick={stampaReport} style={{ padding:"6px 12px", borderRadius:8, background:"#007aff", color:"#fff", fontSize:10, fontWeight:700, cursor:"pointer" }}>🖨 Stampa</div>
+              <span style={{ padding:"6px 12px", borderRadius:9, background:"#34c75918", color:"#34c759", fontSize:11, fontWeight:800, border:"1.5px solid #34c759" }}>✅ ARCHIVIATA</span>
+            </div>
+          </div>
+
+          {/* Banner verde */}
+          <div style={{ margin:"0 16px 8px", background:"#34c759", borderRadius:14, padding:"16px 18px", display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ fontSize:28 }}>📋</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:18, fontWeight:900, color:"#fff" }}>DOSSIER COMMESSA</div>
+              <div style={{ fontSize:12, color:"#ffffffcc" }}>{c.code} · Completata · {allVD.length} vani · {fD(totID)}</div>
+            </div>
+          </div>
+
+          {/* Tab navigation */}
+          <div style={{ display:"flex", gap:2, padding:"0 16px 8px" }}>
+            {[
+              { id:"storia", l:"📅 Storia", col:"#5856d6" },
+              { id:"economico", l:"💰 Economico", col:"#34c759" },
+              { id:"vani", l:"📐 Vani", col:"#007aff" },
+              { id:"documenti", l:"📁 Documenti", col:"#ff9500" },
+            ].map(t => (
+              <div key={t.id} onClick={() => setDossierTab(t.id)}
+                style={{ flex:1, padding:"8px 4px", borderRadius:8, textAlign:"center", fontSize:10, fontWeight:700, cursor:"pointer",
+                  background: dossierTab === t.id ? t.col + "15" : T.bg,
+                  color: dossierTab === t.id ? t.col : T.sub,
+                  border: "1.5px solid " + (dossierTab === t.id ? t.col : T.bdr),
+                }}>{t.l}</div>
+            ))}
+          </div>
+
+          {/* ═══ TAB: STORIA (Timeline) ═══ */}
+          {dossierTab === "storia" && (
+            <div style={{ padding:"0 16px" }}>
+              {/* Cliente card */}
+              <div style={{ background:T.card, borderRadius:12, border:"1px solid "+T.bdr, padding:14, marginBottom:10 }}>
+                <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", marginBottom:6 }}>👤 DATI CLIENTE</div>
+                <div style={{ fontSize:14, fontWeight:700, color:T.text }}>{c.cliente} {c.cognome||""}</div>
+                {c.indirizzo && <div style={{ fontSize:12, color:T.sub, marginTop:2 }}>📍 {c.indirizzo}</div>}
+                <div style={{ display:"flex", gap:12, marginTop:6, flexWrap:"wrap" as const }}>
+                  {c.telefono && <span onClick={() => window.location.href="tel:"+c.telefono} style={{ fontSize:11, color:T.acc, cursor:"pointer" }}>📞 {c.telefono}</span>}
+                  {c.email && <span style={{ fontSize:11, color:T.acc }}>✉️ {c.email}</span>}
+                </div>
+                <div style={{ display:"flex", gap:12, marginTop:4, flexWrap:"wrap" as const }}>
+                  {c.cf && <span style={{ fontSize:10, color:T.sub }}>CF: {c.cf}</span>}
+                  {c.piva && <span style={{ fontSize:10, color:T.sub }}>P.IVA: {c.piva}</span>}
+                  {c.pec && <span style={{ fontSize:10, color:T.sub }}>PEC: {c.pec}</span>}
+                  {c.sdi && <span style={{ fontSize:10, color:T.sub }}>SDI: {c.sdi}</span>}
+                </div>
+                <div style={{ display:"flex", gap:6, marginTop:6, flexWrap:"wrap" as const }}>
+                  {c.sistema && <span style={S.badge(T.blueLt, T.blue)}>{c.sistema}</span>}
+                  {c.tipo && <span style={S.badge(T.grnLt, T.grn)}>{c.tipo}</span>}
+                  {c.praticaFiscale && <span style={S.badge("#ff950018", "#ff9500")}>🏛 {c.praticaFiscale}</span>}
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", marginBottom:8 }}>📅 TIMELINE COMPLETA ({timeline.length} eventi)</div>
+              {timeline.map((ev, i) => (
+                <div key={i} style={{ display:"flex", gap:10, marginBottom:2 }}>
+                  <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", width:24 }}>
+                    <div style={{ width:24, height:24, borderRadius:12, background:ev.col+"18", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, flexShrink:0 }}>{ev.ico}</div>
+                    {i < timeline.length - 1 && <div style={{ width:2, flex:1, background:T.bdr, marginTop:2 }}/>}
+                  </div>
+                  <div style={{ flex:1, paddingBottom:12 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:T.text, flex:1 }}>{ev.titolo}</div>
+                      <div style={{ fontSize:9, color:ev.col, fontWeight:600, textAlign:"right" as const, flexShrink:0, marginLeft:8 }}>
+                        {ev.data}{ev.ora ? " · " + ev.ora : ""}
+                      </div>
+                    </div>
+                    <div style={{ fontSize:10, color:T.sub, marginTop:1 }}>{ev.desc}</div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Note */}
+              {c.note && (
+                <div style={{ background:T.card, borderRadius:12, border:"1px solid "+T.bdr, padding:14, marginTop:8 }}>
+                  <div style={{ fontSize:10, fontWeight:800, color:T.sub, marginBottom:4 }}>📝 NOTE</div>
+                  <div style={{ fontSize:12, color:T.text, whiteSpace:"pre-wrap" as const }}>{c.note}</div>
+                </div>
+              )}
+
+              {/* Messaggi collegati */}
+              {msgsCm.length > 0 && (
+                <div style={{ marginTop:12 }}>
+                  <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", marginBottom:8 }}>💬 COMUNICAZIONI ({msgsCm.length} conversazioni · {msgsCm.reduce((s,m) => s + (m.thread?.length||0), 0)} messaggi)</div>
+                  {msgsCm.map(m => {
+                    const chIcoM = { email: "📧", whatsapp: "💬", sms: "📱", telegram: "✈️" };
+                    const chColM = { email: "#5856d6", whatsapp: "#25d366", sms: "#ff9500", telegram: "#0088cc" };
+                    const mcol = chColM[m.canale] || "#86868b";
+                    return (
+                      <div key={m.id} style={{ background:T.card, borderRadius:12, border:"1px solid "+T.bdr, marginBottom:8, overflow:"hidden" }}>
+                        <div style={{ padding:"10px 14px", borderBottom:"1px solid "+T.bdr, display:"flex", alignItems:"center", gap:10, background:mcol+"06" }}>
+                          <div style={{ width:32, height:32, borderRadius:"50%", background:mcol+"18", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 }}>{chIcoM[m.canale]||"💬"}</div>
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{m.from}</div>
+                            <div style={{ fontSize:9, color:T.sub }}>{m.canale} · {m.date||""} · {(m.thread||[]).length} messaggi</div>
+                          </div>
+                        </div>
+                        <div style={{ padding:"8px 14px" }}>
+                          {(m.thread||[]).map((t, ti) => {
+                            const isMe = t.who === "Tu";
+                            return (
+                              <div key={ti} style={{ display:"flex", justifyContent:isMe?"flex-end":"flex-start", marginBottom:4 }}>
+                                <div style={{ maxWidth:"85%", padding:"8px 12px", borderRadius:isMe?"12px 12px 4px 12px":"12px 12px 12px 4px",
+                                  background:isMe?mcol+"15":T.bg, fontSize:11, color:T.text }}>
+                                  <div style={{ fontSize:9, fontWeight:700, color:isMe?mcol:T.sub, marginBottom:2 }}>{t.who} · {t.date} {t.time}</div>
+                                  {t.text}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ TAB: ECONOMICO ═══ */}
+          {dossierTab === "economico" && (
+            <div style={{ padding:"0 16px" }}>
+              {/* KPI */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:12 }}>
+                {[{l:"PREVENTIVO",v:fD(totID),cl:T.text},{l:"INCASSATO",v:fD(incD),cl:"#34c759"},{l:"MARGINE",v:fD(incD-costD),cl:(incD-costD)>=0?"#34c759":"#ff3b30"}].map((k,i) => (
+                  <div key={i} style={{ padding:12, borderRadius:10, background:T.card, textAlign:"center", border:"1px solid "+T.bdr }}>
+                    <div style={{ fontSize:8, color:T.sub, fontWeight:700 }}>{k.l}</div>
+                    <div style={{ fontSize:18, fontWeight:900, color:k.cl }}>{k.v}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Detail */}
+              <div style={{ background:T.card, borderRadius:12, border:"1px solid "+T.bdr, padding:14, marginBottom:10 }}>
+                <div style={{ fontSize:10, fontWeight:800, color:T.sub, marginBottom:8 }}>DETTAGLIO</div>
+                {[
+                  { l: "Imponibile", v: fD(totPD) },
+                  { l: "IVA " + ivaP + "%", v: fD(totID - totPD) },
+                  { l: "Totale preventivo", v: fD(totID), bold: true },
+                  { l: "Costi fornitori", v: fD(costD), cl: "#ff9500" },
+                  { l: "Margine lordo", v: fD(incD - costD), cl: (incD-costD) >= 0 ? "#34c759" : "#ff3b30", bold: true },
+                  { l: "% Margine", v: totPD > 0 ? Math.round((incD-costD)/totPD*100) + "%" : "—" },
+                ].map((r, i) => (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", borderBottom: "1px solid " + T.bdr + "30", fontSize:12 }}>
+                    <span style={{ color:T.sub, fontWeight: r.bold ? 700 : 400 }}>{r.l}</span>
+                    <span style={{ color: r.cl || T.text, fontWeight: r.bold ? 800 : 600 }}>{r.v}</span>
+                  </div>
+                ))}
+              </div>
+              {restD > 0 && <div style={{ background:"#ff950010", borderRadius:12, border:"1px solid #ff950030", padding:14, textAlign:"center", marginBottom:10 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:"#ff9500" }}>⚠️ RESTA DA INCASSARE</div>
+                <div style={{ fontSize:22, fontWeight:900, color:"#ff9500" }}>{fD(restD)}</div>
+              </div>}
+              {/* Fatture */}
+              <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", marginBottom:6 }}>📄 FATTURE ({fattD.length})</div>
+              {fattD.map(f => (
+                <div key={f.id} style={{ background:T.card, borderRadius:10, border:"1px solid "+T.bdr, padding:"10px 12px", marginBottom:6, borderLeft:"4px solid "+(f.pagata?"#34c759":"#ff3b30") }}>
+                  <div style={{ display:"flex", justifyContent:"space-between" }}>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:700, color:T.text }}>N.{f.numero}/{f.anno} — {f.tipo}</div>
+                      <div style={{ fontSize:10, color:T.sub }}>{f.data} · {f.cliente}</div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontSize:14, fontWeight:900, color:f.pagata?"#34c759":"#ff3b30" }}>{fD(f.importo)}</div>
+                      <div style={{ fontSize:9, color:f.pagata?"#34c759":"#ff9500" }}>{f.pagata?"✅ Pagata"+(f.dataPagamento?" "+f.dataPagamento:""):"⏳ Scad. "+(f.scadenza||"")}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {/* Ordini */}
+              <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", marginBottom:6, marginTop:10 }}>📦 ORDINI FORNITORI ({ordD.length})</div>
+              {ordD.map(o => {
+                const st = ORDINE_STATI.find(s => s.id === o.stato) || ORDINE_STATI[0];
+                return (
+                  <div key={o.id} style={{ background:T.card, borderRadius:10, border:"1px solid "+T.bdr, padding:"10px 12px", marginBottom:6, borderLeft:"4px solid "+st.color }}>
+                    <div style={{ display:"flex", justifyContent:"space-between" }}>
+                      <div>
+                        <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{st.icon} {o.fornitore?.nome||""}</div>
+                        <div style={{ fontSize:10, color:T.sub }}>Inviato: {o.dataInvio||""} · Consegna: {o.consegna?.prevista||"—"}</div>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:14, fontWeight:900, color:T.text }}>{fD(o.totaleIva||o.totale||0)}</div>
+                        <span style={{ fontSize:8, fontWeight:700, padding:"2px 6px", borderRadius:4, background:st.color+"18", color:st.color }}>{st.label}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ═══ TAB: VANI ═══ */}
+          {dossierTab === "vani" && (
+            <div style={{ padding:"0 16px" }}>
+              <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", marginBottom:8 }}>📐 VANI RILEVATI ({allVD.length})</div>
+              {(c.rilievi||[]).map(r => (
+                <div key={r.id}>
+                  <div onClick={() => setSelectedRilievo(r)} style={{ fontSize:11, fontWeight:700, color:"#5856d6", marginBottom:6, cursor:"pointer" }}>
+                    📐 Rilievo #{r.n} — {r.data} · {r.rilevatore||"Fabio"} · {(r.vani||[]).length} vani
+                  </div>
+                  {(r.vani||[]).map(v => {
+                    const m = v.misure || {};
+                    const prezzo = calcolaVanoPrezzo(v, c);
+                    return (
+                      <div key={v.id} style={{ background:T.card, borderRadius:12, border:"1px solid "+T.bdr, padding:12, marginBottom:8 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                          <div>
+                            <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{v.nome || v.tipo}</div>
+                            <div style={{ fontSize:10, color:T.sub }}>{v.stanza||""} · {v.piano||""} · {v.tipo} · {v.sistema||c.sistema||""}</div>
+                          </div>
+                          <div style={{ textAlign:"right" }}>
+                            <div style={{ fontSize:13, fontWeight:900, color:T.acc }}>{fD(prezzo)}</div>
+                            <div style={{ fontSize:9, color:T.sub }}>{m.lCentro||"—"}×{m.hCentro||"—"} mm</div>
+                          </div>
+                        </div>
+                        {/* Colors */}
+                        <div style={{ display:"flex", gap:6, marginTop:6, flexWrap:"wrap" as const }}>
+                          {v.coloreInt && <span style={{ fontSize:9, padding:"2px 6px", borderRadius:4, background:T.bg, color:T.sub }}>Int: {v.coloreInt}</span>}
+                          {v.coloreEst && <span style={{ fontSize:9, padding:"2px 6px", borderRadius:4, background:T.bg, color:T.sub }}>Est: {v.coloreEst}</span>}
+                          {v.bicolore && <span style={{ fontSize:9, padding:"2px 6px", borderRadius:4, background:"#af52de18", color:"#af52de" }}>Bicolore</span>}
+                        </div>
+                        {/* Accessories */}
+                        <div style={{ display:"flex", gap:4, marginTop:4, flexWrap:"wrap" as const }}>
+                          {v.accessori?.tapparella?.attivo && <span style={{ fontSize:9, padding:"2px 6px", borderRadius:4, background:"#007aff12", color:"#007aff" }}>🪟 Tapparella</span>}
+                          {v.accessori?.persiana?.attivo && <span style={{ fontSize:9, padding:"2px 6px", borderRadius:4, background:"#ff950012", color:"#ff9500" }}>🚪 Persiana</span>}
+                          {v.accessori?.zanzariera?.attivo && <span style={{ fontSize:9, padding:"2px 6px", borderRadius:4, background:"#34c75912", color:"#34c759" }}>🦟 Zanzariera</span>}
+                          {v.cassonetto && <span style={{ fontSize:9, padding:"2px 6px", borderRadius:4, background:"#86868b12", color:"#86868b" }}>📦 Cassonetto</span>}
+                        </div>
+                        {/* Measures detail */}
+                        {Object.keys(m).length > 0 && (
+                          <div style={{ marginTop:6, padding:8, borderRadius:8, background:T.bg, display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:4 }}>
+                            {[{l:"L alto",v:m.lAlto},{l:"L centro",v:m.lCentro},{l:"L basso",v:m.lBasso},{l:"H sx",v:m.hSx},{l:"H centro",v:m.hCentro},{l:"H dx",v:m.hDx},{l:"D1",v:m.d1},{l:"D2",v:m.d2}].map((mi,idx) => mi.v ? (
+                              <div key={idx} style={{ textAlign:"center" }}>
+                                <div style={{ fontSize:7, color:T.sub }}>{mi.l}</div>
+                                <div style={{ fontSize:10, fontWeight:700, color:T.text }}>{mi.v}</div>
+                              </div>
+                            ) : null)}
+                          </div>
+                        )}
+                        {v.note && <div style={{ fontSize:10, color:T.sub, marginTop:4, fontStyle:"italic" }}>{v.note}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ═══ TAB: DOCUMENTI ═══ */}
+          {dossierTab === "documenti" && (
+            <div style={{ padding:"0 16px" }}>
+              {/* Pratica Fiscale */}
+              {c.praticaFiscale && (
+                <div style={{ background:"#ff950010", borderRadius:12, border:"1px solid #ff950030", padding:14, marginBottom:10 }}>
+                  <div style={{ fontSize:12, fontWeight:800, color:"#ff9500" }}>🏛 Pratica Fiscale: {c.praticaFiscale}</div>
+                  {(c.docFiscali||[]).map((d: any, i: number) => (
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 0", borderBottom:"1px solid #ff950020" }}>
+                      <span style={{ fontSize:14 }}>📑</span>
+                      <div><div style={{ fontSize:11, fontWeight:700, color:T.text }}>{typeof d === "string" ? d : d.nome}</div>{d.data && <div style={{ fontSize:9, color:T.sub }}>{d.data}</div>}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Doc identita */}
+              {(c.docIdentita||[]).length > 0 && (
+                <div style={{ background:"#5856d610", borderRadius:12, border:"1px solid #5856d630", padding:14, marginBottom:10 }}>
+                  <div style={{ fontSize:12, fontWeight:800, color:"#5856d6", marginBottom:6 }}>🪪 Documenti di Riconoscimento</div>
+                  {(c.docIdentita||[]).map((d: any, i: number) => (
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid #5856d620" }}>
+                      <div style={{ width:36, height:36, borderRadius:8, background:"#5856d618", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>{d.tipo==="CI"?"🪪":"💳"}</div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{d.tipo==="CI"?"Carta d'Identità":"Codice Fiscale"}</div>
+                        <div style={{ fontSize:10, color:T.sub }}>{d.nome} · {d.data||""}</div>
+                      </div>
+                      {d.dataUrl && <img src={d.dataUrl} style={{ width:48, height:48, borderRadius:6, objectFit:"cover" as const }} />}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Allegati */}
+              <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", marginBottom:6 }}>📎 ALLEGATI ({(c.allegati||[]).length})</div>
+              {(c.allegati||[]).map((a: any, i: number) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid "+T.bdr+"20" }}>
+                  <div style={{ width:32, height:32, borderRadius:8, background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 }}>
+                    {a.tipo==="firma"?"✍️":a.tipo==="fattura"?"📄":a.tipo==="ordine"?"📦":a.tipo==="conferma"?"✅":a.tipo==="verbale"?"📋":"📎"}
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{a.nome}</div>
+                    <div style={{ fontSize:10, color:T.sub }}>{a.tipo||"allegato"} · {a.data||""}</div>
+                  </div>
+                </div>
+              ))}
+              {(c.allegati||[]).length === 0 && <div style={{ fontSize:11, color:T.sub, textAlign:"center", padding:16 }}>Nessun allegato</div>}
+              {/* Foto Vani */}
+              {fotoVani.length > 0 && (
+                <div style={{ marginTop:12 }}>
+                  <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", marginBottom:6 }}>📷 FOTO VANI ({fotoVani.length})</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6 }}>
+                    {fotoVani.map((f, i) => (
+                      <div key={i} style={{ borderRadius:8, overflow:"hidden", border:"1px solid "+T.bdr }}>
+                        <img src={f.url} style={{ width:"100%", height:80, objectFit:"cover" as const }} />
+                        <div style={{ padding:"3px 6px", fontSize:8, color:T.sub }}>{f.vano}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Montaggi */}
+          {montD.length > 0 && (
+            <div style={{ padding:"8px 16px" }}>
+              <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", marginBottom:6 }}>🔧 MONTAGGI ({montD.length})</div>
+              {montD.map(m => { const sq=(squadreDB||[]).find(s=>s.id===m.squadraId); return (
+                <div key={m.id} style={{ background:T.card, borderRadius:10, border:"1px solid "+T.bdr, padding:"10px 12px", marginBottom:6 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between" }}>
+                    <div><div style={{ fontSize:12, fontWeight:700, color:T.text }}>{m.data||"—"} · {sq?.nome||""}</div><div style={{ fontSize:10, color:T.sub }}>{m.vani||"?"} vani · {m.durata||""}</div></div>
+                    <span style={{ fontSize:10, fontWeight:700, color:m.stato==="completato"?"#34c759":"#007aff" }}>{m.stato==="completato"?"✅ Completato":m.stato}</span>
+                  </div>
+                  {m.note && <div style={{ fontSize:10, color:T.sub, marginTop:3 }}>{m.note}</div>}
+                </div>
+              );})}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div style={{ padding:"12px 16px", display:"flex", gap:8, justifyContent:"center" }}>
+            <div onClick={stampaReport} style={{ padding:"10px 20px", borderRadius:10, background:"#007aff", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer" }}>🖨 Stampa Report Completo</div>
+            <div onClick={() => { setCantieri(cs => cs.map(cm => cm.id===c.id?{...cm,fase:"posa"}:cm)); setSelectedCM(p => ({...p,fase:"posa"})); }}
+              style={{ padding:"10px 20px", borderRadius:10, background:"#ff950018", color:"#ff9500", fontSize:12, fontWeight:700, cursor:"pointer", border:"1px solid #ff950040" }}>↩ Riapri</div>
+          </div>
+          <div style={{ padding:"8px 16px", textAlign:"center" }}>
+            <span onClick={() => deleteCommessa(c.id)} style={{ fontSize:11, color:T.sub2||T.sub, cursor:"pointer", textDecoration:"underline" }}>Elimina commessa</span>
+          </div>
+        </div>
+      );
+    }
+
     // == LISTA RILIEVI ==
     const tipoColor = { rilievo: T.blue, definitiva: T.grn, modifica: T.orange };
     const tipoIco   = { rilievo: "📐", definitiva: "✅", modifica: "🔧" };
@@ -3348,10 +3958,14 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             <div style={S.headerTitle}>{c.code} · {c.cliente} {c.cognome || ""}</div>
             <div style={S.headerSub}>{c.indirizzo}</div>
           </div>
+          {c.fase === "chiusura" ? (
+            <span style={{ padding: "6px 14px", borderRadius: 9, background: "#34c75918", color: "#34c759", fontSize: 11, fontWeight: 800, border: "1.5px solid #34c759" }}>✅ ARCHIVIATA</span>
+          ) : (
           <div onClick={() => setShowNuovoRilievo(true)}
             style={{ padding: "7px 14px", borderRadius: 9, background: T.acc, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
             + Rilievo
           </div>
+          )}
         </div>
 
         {/* Info badges */}
@@ -3367,10 +3981,96 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         </div>
 
 
+        {/* ═══ DOSSIER COMMESSA CHIUSA ═══ */}
+        {c.fase === "chiusura" && (() => {
+          const rilievi = c.rilievi || [];
+          const allVani = getVaniAttivi(c);
+          const fattCm = fattureDB.filter(f => f.cmId === c.id);
+          const ordCm = (ordiniFornDB || []).filter(o => o.cmId === c.id);
+          const montCm = (montaggiDB || []).filter(m => m.cmId === c.id);
+          const totPrev = allVani.reduce((s, v) => s + calcolaVanoPrezzo(v, c), 0) + (c.vociLibere || []).reduce((s, vl) => s + ((vl.importo || 0) * (vl.qta || 1)), 0);
+          const totIvaD = totPrev * (1 + (c.ivaPerc || 10) / 100);
+          const incassato = fattCm.filter(f => f.pagata).reduce((s, f) => s + f.importo, 0);
+          const costoForn = ordCm.reduce((s, o) => s + (o.totaleIva || o.totale || 0), 0);
+          const fmtE = (n: number) => "€" + n.toLocaleString("it-IT", { minimumFractionDigits: 2 });
+          const docs: Array<{ico:string;nome:string;detail:string;col:string}> = [];
+          rilievi.forEach(r => docs.push({ ico: "📏", nome: `Rilievo #${r.n} — ${r.tipo || "rilievo"}`, detail: `${(r.vani || []).length} vani · ${r.data || ""}`, col: T.blue }));
+          if (c.firmaCliente) docs.push({ ico: "✍️", nome: "Preventivo Firmato", detail: c.dataFirma || "", col: T.grn });
+          fattCm.forEach(f => docs.push({ ico: "📄", nome: `Fattura N.${f.numero}/${f.anno} — ${f.tipo}`, detail: `${fmtE(f.importo)} · ${f.pagata ? "✅ Pagata" : "⏳ Da incassare"}`, col: f.pagata ? T.grn : T.red }));
+          ordCm.forEach(o => docs.push({ ico: "📦", nome: `Ordine ${o.fornitore?.nome || ""}`, detail: `${fmtE(o.totaleIva || o.totale || 0)} · ${o.conferma?.ricevuta ? "✅ Confermato" : "⏳"}`, col: T.purple }));
+          montCm.forEach(m => { const sq = (squadreDB || []).find(s => s.id === m.squadraId); docs.push({ ico: "🔧", nome: `Montaggio ${m.data || ""}`, detail: `${sq?.nome || ""} · ${m.stato === "completato" ? "✅ Completato" : m.stato}`, col: "#007aff" }); });
+          if (c.praticaFiscale) docs.push({ ico: "🏛", nome: `Pratica Fiscale: ${c.praticaFiscale}`, detail: `${(c.docFiscali || []).length} documenti`, col: T.orange });
+          (c.docIdentita || []).forEach(d => docs.push({ ico: d.tipo === "CI" ? "🪪" : "💳", nome: d.tipo === "CI" ? "Carta d'Identità" : "Codice Fiscale", detail: `${d.nome} · ${d.data || ""}`, col: "#5856d6" }));
+          (c.docFiscali || []).forEach(d => docs.push({ ico: "📑", nome: d.nome, detail: d.data || "", col: T.orange }));
+          (c.allegati || []).forEach(a => docs.push({ ico: a.tipo === "firma" ? "✍️" : a.tipo === "fattura" ? "📄" : a.tipo === "ordine" ? "📦" : a.tipo === "conferma" ? "✅" : a.tipo === "verbale" ? "📋" : "📎", nome: a.nome, detail: a.data || "", col: "#86868b" }));
+          
+          return <div style={{ margin: "0 16px 12px", background: "linear-gradient(135deg, #34c75908, #34c75912)", borderRadius: 16, border: "2px solid #34c759", overflow: "hidden" }}>
+            {/* Banner */}
+            <div style={{ background: "#34c759", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ fontSize: 24 }}>📋</div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: "#fff" }}>DOSSIER COMMESSA</div>
+                <div style={{ fontSize: 11, color: "#ffffffcc" }}>{c.code} · {c.cliente} {c.cognome || ""} · Completata</div>
+              </div>
+            </div>
+            
+            {/* Dati Cliente */}
+            <div style={{ padding: "12px 16px", borderBottom: "1px solid #34c75920" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6 }}>👤 CLIENTE</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{c.cliente} {c.cognome || ""}</div>
+              {c.indirizzo && <div style={{ fontSize: 11, color: T.sub }}>📍 {c.indirizzo}</div>}
+              <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
+                {c.telefono && <span style={{ fontSize: 11, color: T.acc }}>📞 {c.telefono}</span>}
+                {c.email && <span style={{ fontSize: 11, color: T.acc }}>✉️ {c.email}</span>}
+                {c.cf && <span style={{ fontSize: 11, color: T.sub }}>CF: {c.cf}</span>}
+              </div>
+            </div>
+            
+            {/* Riepilogo Economico */}
+            <div style={{ padding: "12px 16px", borderBottom: "1px solid #34c75920" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 8 }}>💰 RIEPILOGO ECONOMICO</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+                <div style={{ padding: 8, borderRadius: 8, background: "#fff", textAlign: "center" }}>
+                  <div style={{ fontSize: 7, color: T.sub, fontWeight: 700 }}>PREVENTIVO</div>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: T.text }}>{fmtE(totIvaD)}</div>
+                </div>
+                <div style={{ padding: 8, borderRadius: 8, background: "#fff", textAlign: "center" }}>
+                  <div style={{ fontSize: 7, color: T.sub, fontWeight: 700 }}>INCASSATO</div>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: T.grn }}>{fmtE(incassato)}</div>
+                </div>
+                <div style={{ padding: 8, borderRadius: 8, background: "#fff", textAlign: "center" }}>
+                  <div style={{ fontSize: 7, color: T.sub, fontWeight: 700 }}>MARGINE</div>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: (incassato - costoForn) >= 0 ? T.grn : T.red }}>{fmtE(incassato - costoForn)}</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Tutti i Documenti */}
+            <div style={{ padding: "12px 16px" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 8 }}>📁 DOCUMENTI E ATTIVITÀ ({docs.length})</div>
+              {docs.map((d, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", padding: "8px 0", borderBottom: i < docs.length - 1 ? "1px solid #34c75915" : "none" }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: d.col + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>{d.ico}</div>
+                  <div style={{ flex: 1, marginLeft: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{d.nome}</div>
+                    <div style={{ fontSize: 9, color: T.sub }}>{d.detail}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Riapri */}
+            <div style={{ padding: "8px 16px 12px", textAlign: "center" }}>
+              <div onClick={() => { setCantieri(cs => cs.map(cm => cm.id === c.id ? {...cm, fase: "posa"} : cm)); setSelectedCM(p => ({...p, fase: "posa"})); }}
+                style={{ fontSize: 11, color: "#ff9500", cursor: "pointer", textDecoration: "underline" }}>↩ Riapri commessa</div>
+            </div>
+          </div>;
+        })()}
+
         {/* ═══════════════════════════════════════════════════ */}
         {/* ═══ CENTRO COMANDO v4 — TIMELINE COMPLETA ═══════ */}
         {/* ═══════════════════════════════════════════════════ */}
-        {(() => {
+        {c.fase !== "chiusura" && (() => {
           const vani = getVaniAttivi(c);
           const rilievi = c.rilievi || [];
           const hasRilievi = rilievi.length > 0;
@@ -3462,55 +4162,66 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   const isFuture = !step.done && !isCurrent;
                   const borderColor = step.done ? "#34c759" : isCurrent ? T.acc : T.bg;
 
+                  // Collect docs for this step
+                  const stepDocs: any[] = [];
+                  if (step.id === "rilievo") { rilievi.forEach(r => stepDocs.push({ nome: `Rilievo #${r.n} — ${r.data}`, tipo: "rilievo", data: r.data, detail: `${(r.vani||[]).length} vani · ${r.rilevatore||"Fabio"}` })); }
+                  else if (step.id === "misure") { stepDocs.push({ nome: `Preventivo ${c.code}`, tipo: "preventivo", detail: `${vaniConPrezzo.length} vani · €${fmt(totPreventivo)}` }); }
+                  else if (step.id === "firma") { stepDocs.push({ nome: "Preventivo firmato", tipo: "firma", data: c.dataFirma||"—", detail: `€${fmt(totIva)} IVA incl.` }); (c.allegati||[]).filter(a => a.tipo === "firma").forEach(a => stepDocs.push({ nome: a.nome, tipo: a.tipo, data: a.data, detail: "" })); }
+                  else if (step.id === "fattura") { fattureCommessa.forEach(f => stepDocs.push({ nome: `Fattura N.${f.numero}/${f.anno} — ${f.tipo}`, tipo: "fattura", data: f.data, detail: `€${fmt(f.importo)} · ${f.pagata?"✅ Pagata":"⏳ In attesa"}` })); }
+                  else if (step.id === "ordine") { ordiniCommessa.forEach(o => stepDocs.push({ nome: `Ordine ${o.fornitore?.nome||""}`, tipo: "ordine", data: o.dataInvio, detail: `€${fmt(o.totaleIva||0)} · ${o.stato}` })); }
+                  else if (step.id === "conferma") { ordiniCommessa.filter(o => o.conferma?.ricevuta).forEach(o => stepDocs.push({ nome: o.conferma?.nomeFile||`Conferma ${o.fornitore?.nome}`, tipo: "conferma", data: o.conferma?.dataRicezione, detail: `${o.consegna?.settimane||"?"} sett.` })); }
+                  else if (step.id === "montaggio") { montaggiCommessa.forEach(m => stepDocs.push({ nome: `Montaggio ${m.data?new Date(m.data).toLocaleDateString("it-IT"):"—"}`, tipo: "montaggio", data: m.data, detail: `${squadreDB.find(s=>s.id===m.squadraId)?.nome||"—"} · ${m.stato}` })); }
+                  else if (step.id === "saldo") { fattureCommessa.filter(f => f.tipo==="saldo"||f.tipo==="unica").forEach(f => stepDocs.push({ nome: `Fattura ${f.numero}/${f.anno}`, tipo: "fattura", data: f.data, detail: `€${fmt(f.importo)} · ${f.pagata?"✅ Pagata":"⏳"}` })); }
+                  // Generic allegati
+                  (c.allegati||[]).filter(a => a.tipo === step.id && !stepDocs.find(d => d.nome === a.nome)).forEach(a => stepDocs.push({ ...a, detail: a.data||"" }));
+                  const isExpanded = ccExpandStep === step.id;
+
                   return (
                     <div key={step.id} style={{
                       padding: isCurrent ? "14px 14px 16px" : "10px 14px",
                       borderLeft: `4px solid ${borderColor}`,
                       borderBottom: idx < steps.length - 1 ? `1px solid ${T.bg}` : "none",
-                      background: isCurrent ? `${T.acc}06` : "transparent",
+                      background: isExpanded ? "#34c75908" : isCurrent ? `${T.acc}06` : "transparent",
                       opacity: isFuture ? 0.4 : 1,
-                    }}>
+                      cursor: step.done ? "pointer" : "default",
+                    }}
+                    onClick={() => { if (step.done && stepDocs.length > 0) setCcExpandStep(isExpanded ? null : step.id); }}
+                    >
                       {/* Step header */}
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ fontSize: isCurrent ? 18 : 14 }}>{step.icon}</span>
                         <span style={{ fontSize: isCurrent ? 14 : 12, fontWeight: 700, color: T.text, flex: 1 }}>{step.label}</span>
-                        {step.done && (() => {
-                          // Collect documents for this step
-                          const stepDocs: any[] = [];
-                          if (step.id === "rilievo") {
-                            rilievi.forEach(r => stepDocs.push({ nome: `Rilievo #${r.n} — ${r.data}`, tipo: "rilievo", data: r.data, detail: `${(r.vani || []).length} vani · ${r.rilevatore || "Fabio"}` }));
-                          } else if (step.id === "misure") {
-                            stepDocs.push({ nome: `Preventivo ${c.code}`, tipo: "preventivo", data: c.dataFirma || "—", detail: `${vaniConPrezzo.length} vani · €${fmt(totPreventivo)}` });
-                          } else if (step.id === "firma") {
-                            if (c.firmaDocumento) stepDocs.push({ ...c.firmaDocumento, detail: `Firmato il ${c.dataFirma || "—"} · €${fmt(totIva)}` });
-                            else stepDocs.push({ nome: "Firma cliente", tipo: "firma", data: c.dataFirma || "—", detail: `€${fmt(totIva)} IVA incl.` });
-                          } else if (step.id === "fattura") {
-                            fattureCommessa.forEach(f => stepDocs.push({ nome: `Fattura ${f.numero}/${f.anno} — ${f.tipo}`, tipo: "fattura", data: f.data, detail: `€${fmt(f.importo)} · ${f.pagata ? "✅ Pagata " + (f.dataPagamento || "") : "⏳ In attesa"}` }));
-                          } else if (step.id === "ordine") {
-                            ordiniCommessa.forEach(o => stepDocs.push({ nome: `Ordine ${o.numero}/${o.anno} — ${o.fornitore?.nome || ""}`, tipo: "ordine", data: o.dataOrdine, detail: `${o.righe?.length || 0} righe · €${fmt(o.totaleIva || 0)} · ${o.stato}` }));
-                          } else if (step.id === "conferma") {
-                            ordiniCommessa.filter(o => o.conferma?.ricevuta).forEach(o => stepDocs.push({ nome: o.conferma?.nomeFile || `Conferma ${o.fornitore?.nome}`, tipo: "conferma", data: o.conferma?.dataRicezione, detail: `${o.consegna?.settimane || "?"} sett. · consegna ${o.consegna?.prevista ? new Date(o.consegna.prevista).toLocaleDateString("it-IT") : "—"}` }));
-                          } else if (step.id === "montaggio") {
-                            montaggiCommessa.forEach(m => stepDocs.push({ nome: `Montaggio ${m.data ? new Date(m.data).toLocaleDateString("it-IT") : "—"}`, tipo: "montaggio", data: m.data, detail: `${m.giorni || 1}g · ${squadreDB.find(s => s.id === m.squadraId)?.nome || "—"} · ${m.stato}` }));
-                          } else if (step.id === "saldo") {
-                            fattureCommessa.filter(f => f.tipo === "saldo").forEach(f => stepDocs.push({ nome: `Fattura saldo ${f.numero}/${f.anno}`, tipo: "fattura", data: f.data, detail: `€${fmt(f.importo)} · ${f.pagata ? "✅ Pagata" : "⏳"}` }));
-                          }
-                          // Also add generic allegati matching this step type
-                          (c.allegati || []).filter(a => a.tipo === step.id).forEach(a => {
-                            if (!stepDocs.find(d => d.nome === a.nome)) stepDocs.push({ ...a, detail: a.data || "" });
-                          });
-                          return (
-                            <span onClick={(e) => { e.stopPropagation(); if (stepDocs.length > 0) setDocViewer({ docs: stepDocs, title: `${step.label} — ${c.cliente} ${c.cognome || ""}` }); }} style={{ fontSize: 10, fontWeight: 700, color: "#34c759", background: "#34c75912", padding: "2px 8px", borderRadius: 6, cursor: stepDocs.length > 0 ? "pointer" : "default" }}>
+                        {step.done && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: "#34c759", background: "#34c75912", padding: "2px 8px", borderRadius: 6 }}>
                               ✅ Fatto {stepDocs.length > 0 && <span style={{ fontSize: 8 }}>📎{stepDocs.length}</span>}
                             </span>
-                          );
-                        })()}
+                        )}
                         {isCurrent && <span style={{ fontSize: 10, fontWeight: 700, color: T.acc, background: `${T.acc}15`, padding: "2px 8px", borderRadius: 6 }}>👉 DA FARE</span>}
                       </div>
 
                       {/* Done detail */}
                       {step.done && step.detail && (
                         <div style={{ fontSize: 10, color: T.sub, marginTop: 3, marginLeft: 26 }}>{step.detail}</div>
+                      )}
+
+                      {/* ═══ DOCUMENTI ESPANSI ═══ */}
+                      {isExpanded && stepDocs.length > 0 && (
+                        <div style={{ marginTop: 8, marginLeft: 26, background: T.card, borderRadius: 10, border: "1px solid #34c75930", overflow: "hidden" }}>
+                          <div style={{ padding: "8px 12px", background: "#34c75910", borderBottom: "1px solid #34c75920" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: "#34c759" }}>📎 DOCUMENTI — {step.label.toUpperCase()}</div>
+                          </div>
+                          {stepDocs.map((doc, di) => (
+                            <div key={di} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: di < stepDocs.length-1 ? "1px solid " + T.bdr + "30" : "none" }}>
+                              <div style={{ width: 32, height: 32, borderRadius: 8, background: "#34c75912", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
+                                {doc.tipo === "rilievo" ? "📐" : doc.tipo === "preventivo" ? "📝" : doc.tipo === "firma" ? "✍️" : doc.tipo === "fattura" ? "📄" : doc.tipo === "ordine" ? "📦" : doc.tipo === "conferma" ? "✅" : doc.tipo === "montaggio" ? "🔧" : "📎"}
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{doc.nome}</div>
+                                <div style={{ fontSize: 10, color: T.sub }}>{doc.detail}{doc.data ? " · " + doc.data : ""}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
 
                       {/* ========== CURRENT STEP ACTIONS ========== */}
@@ -4224,6 +4935,49 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                       </div>
                     );
                   })}
+                  {/* ═══ DOCUMENTI IDENTITÀ ═══ */}
+                  <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid " + T.bdr }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6 }}>🪪 Documenti di riconoscimento:</div>
+                    {(c.docIdentita || []).map((doc, i) => (
+                      <div key={doc.id || i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid " + T.bdr + "15" }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 8, background: "#5856d618", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
+                          {doc.tipo === "CI" ? "🪪" : "💳"}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: T.text }}>{doc.tipo === "CI" ? "Carta d'Identità" : "Codice Fiscale"}</div>
+                          <div style={{ fontSize: 9, color: T.sub }}>{doc.nome} · {doc.data || ""}</div>
+                        </div>
+                        <div onClick={() => {
+                          const newDI = (c.docIdentita || []).filter((_, idx) => idx !== i);
+                          setCantieri(cs => cs.map(cm => cm.id === c.id ? { ...cm, docIdentita: newDI } : cm));
+                          setSelectedCM(prev => ({ ...prev, docIdentita: newDI }));
+                        }} style={{ cursor: "pointer", fontSize: 10, color: "#ff3b30" }}>✕</div>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                      {[
+                        { tipo: "CI", l: "📷 Scansiona CI", col: "#5856d6" },
+                        { tipo: "CF", l: "📷 Scansiona CF", col: "#007aff" },
+                      ].map(btn => (
+                        <label key={btn.tipo} style={{ flex: 1, padding: "8px 6px", borderRadius: 8, border: "1.5px dashed " + btn.col + "60", background: btn.col + "08", textAlign: "center", fontSize: 10, fontWeight: 700, color: btn.col, cursor: "pointer" }}>
+                          {btn.l}
+                          <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={e => {
+                            const file = e.target.files?.[0]; if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              const newDoc = { id: "di_" + Date.now(), tipo: btn.tipo, nome: file.name, data: new Date().toLocaleDateString("it-IT"), dataUrl: reader.result };
+                              const newDI = [...(c.docIdentita || []), newDoc];
+                              setCantieri(cs => cs.map(cm => cm.id === c.id ? { ...cm, docIdentita: newDI } : cm));
+                              setSelectedCM(prev => ({ ...prev, docIdentita: newDI }));
+                            };
+                            reader.readAsDataURL(file);
+                            e.target.value = "";
+                          }} />
+                        </label>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 8, color: T.sub, marginTop: 3, textAlign: "center" }}>Obbligatori per pratiche fiscali con detrazione/bonus</div>
+                  </div>
                   <button onClick={() => {
                     const tipoL = c.praticaFiscale === "iva10" ? "IVA Agevolata 10%" : c.praticaFiscale === "detrazione50" ? "Detrazione 50%" : c.praticaFiscale === "ecobonus65" ? "Ecobonus 65%" : "Superbonus";
                     const txt = [
@@ -4264,6 +5018,17 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
             </div>
           );
         })()}
+
+        {/* ═══ CHIUDI COMMESSA — visibile ═══ */}
+        {c.fase !== "chiusura" && (
+          <div style={{ margin: "16px 16px 8px", padding: 14, borderRadius: 12, background: "linear-gradient(135deg, #34c75915, #34c75908)", border: "2px solid #34c759", textAlign: "center" }}>
+            <button onClick={() => { if(confirm("Chiudi commessa " + c.code + "? Puoi riaprirla dopo.")) setFaseTo(c.id, "chiusura"); }}
+              style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: FF, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              🎉 CHIUDI COMMESSA
+            </button>
+            <div style={{ fontSize: 9, color: "#34c759", marginTop: 4 }}>Segna la commessa come completata</div>
+          </div>
+        )}
 
         {/* Tab: Rilievi | Report */}
         <div style={{ display: "flex", borderBottom: `1px solid ${T.bdr}`, margin: "0 0 4px 0" }}>
@@ -5382,9 +6147,16 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           </>
         )}
 
-        {/* Elimina — bottom, small */}
-        <div style={{ padding: "16px", textAlign: "center" }}>
-          <span onClick={() => deleteCommessa(c.id)} style={{ fontSize: 11, color: T.sub2, cursor: "pointer", textDecoration: "underline" }}>🗝‘ Elimina commessa</span>
+        {/* Chiudi + Elimina */}
+        <div style={{ padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          {c.fase !== "chiusura" && (
+            <button onClick={() => { if(confirm("Chiudi commessa " + c.code + "?")) setFaseTo(c.id, "chiusura"); }}
+              style={{ padding: "10px 24px", borderRadius: 10, border: "2px solid #34c759", background: "#34c75912", color: "#34c759", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+              ✅ Chiudi Commessa
+            </button>
+          )}
+          {c.fase === "chiusura" && <div style={{ fontSize: 12, fontWeight: 700, color: T.grn }}>✅ Commessa chiusa</div>}
+          <span onClick={() => deleteCommessa(c.id)} style={{ fontSize: 11, color: T.sub2, cursor: "pointer", textDecoration: "underline" }}>Elimina commessa</span>
         </div>
       </div>
     );
@@ -6387,6 +7159,22 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           </div>
         </div>
 
+        {/* ═══ VOCE AI SOPRALLUOGO ═══ */}
+        <div style={{ display: "flex", justifyContent: "center", margin: "8px 16px" }}>
+          <div onClick={voiceActive ? stopVoice : startVoice}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 20, background: voiceActive ? "#ff3b30" : T.accLt, border: `1px solid ${voiceActive ? "#ff3b30" : T.bdr}`, cursor: "pointer" }}>
+            <span style={{ fontSize: 16 }}>{voiceActive ? "\u23F9" : "\uD83C\uDFA4"}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: voiceActive ? "#fff" : T.acc }}>
+              {voiceActive ? "Dettatura attiva..." : "Dettatura vocale"}
+            </span>
+          </div>
+        </div>
+        {voiceTranscript && (
+          <div style={{ margin: "0 16px 8px", padding: "8px 12px", borderRadius: 8, background: T.accLt, border: `1px solid ${T.bdr}`, fontSize: 11, color: T.text }}>
+            <span style={{ fontSize: 9, fontWeight: 700, color: T.acc }}>Trascrizione: </span>{voiceTranscript}
+          </div>
+        )}
+
         {/* == INFO VANO — fisarmoniche (solo step 0) == */}
         {vanoStep === 0 && (() => {
           const updateV = (field, val) => {
@@ -6740,7 +7528,147 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           {/* === STEP 0: MISURE (larghezze + altezze + diagonali) === */}
           {vanoStep === 0 && (
             <>
-              {/* LARGHEZZE */}
+              {/* ═══ MISURE OUTDOOR: Tende / Pergole ═══ */}
+              {(() => {
+                const outdoorCodes = ["TDBR","TDCAD","TDCAP","TDVER","TDRUL","TDPERG","TDZIP","TDVELA","VENEZIA","TDS","TDR","TVE","PBC","PGA","PGF","TCA","TCB","ZTE"];
+                if (!outdoorCodes.includes(v.tipo)) return null;
+                const isPergola = ["TDPERG","PBC","PGA","PGF"].includes(v.tipo);
+                const isBracci = ["TDBR","TCB","TCA","TDCAP"].includes(v.tipo);
+                const isVela = v.tipo === "TDVELA";
+                return (
+                  <div style={{ marginBottom:16 }}>
+                    <div style={{ padding:"10px 14px", borderRadius:10, background:"#ff950010", border:"1px solid #ff950030", marginBottom:12 }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:"#ff9500" }}>☀️ Misure {isPergola ? "Pergola" : isBracci ? "Tenda a bracci" : isVela ? "Vela ombreggiante" : "Tenda/Schermatura"}</div>
+                      <div style={{ fontSize:10, color:T.sub, marginTop:2 }}>{isPergola ? "Larghezza × Profondità × Altezza colonne" : isBracci ? "Larghezza telo × Sporgenza (aggetto)" : "Larghezza × Altezza (caduta)"}</div>
+                    </div>
+
+                    {/* LARGHEZZA — sempre presente */}
+                    <div style={{ fontSize:11, fontWeight:800, color:"#507aff", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>📏 Larghezza</div>
+                    {bInput("Larghezza mm", "lCentro")}
+
+                    {/* ALTEZZA/DROP — sempre presente */}
+                    <div style={{ fontSize:11, fontWeight:800, color:"#34c759", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, marginTop:12 }}>📐 {isPergola ? "Altezza colonne" : "Altezza / Drop"}</div>
+                    {bInput(isPergola ? "Altezza colonne mm" : "Altezza (caduta) mm", "hCentro")}
+
+                    {/* PROFONDITA/SPORGENZA — pergole e bracci */}
+                    {(isPergola || isBracci) && (<>
+                      <div style={{ fontSize:11, fontWeight:800, color:"#ff9500", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, marginTop:12 }}>↕️ {isPergola ? "Profondità" : "Sporgenza (Aggetto)"}</div>
+                      {bInput(isPergola ? "Profondità mm" : "Sporgenza/Aggetto mm", "sporgenza")}
+                    </>)}
+
+                    {/* VELA: 3 lati */}
+                    {isVela && (<>
+                      <div style={{ fontSize:11, fontWeight:800, color:"#ff9500", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, marginTop:12 }}>📐 Lati vela</div>
+                      {bInput("Lato 2 mm", "lAlto")}
+                      {bInput("Lato 3 mm", "lBasso")}
+                    </>)}
+
+                    {/* PERGOLA: extra fields */}
+                    {isPergola && (<>
+                      <div style={{ fontSize:11, fontWeight:800, color:"#5856d6", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, marginTop:16, borderTop:"1px solid "+T.bdr, paddingTop:12 }}>🏗 Configurazione Pergola</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+                        <div>
+                          <div style={{ fontSize:9, fontWeight:700, color:T.sub, marginBottom:2 }}>N° MODULI</div>
+                          <input style={S.input} type="number" placeholder="1" value={v.nModuli||""} onChange={e => updateV("nModuli", parseInt(e.target.value)||1)}/>
+                        </div>
+                        <div>
+                          <div style={{ fontSize:9, fontWeight:700, color:T.sub, marginBottom:2 }}>TIPO LAMA</div>
+                          <select style={S.select} value={v.tipoLama||""} onChange={e => updateV("tipoLama", e.target.value)}>
+                            <option value="">— Tipo —</option>
+                            <option value="orientabile">Orientabile</option>
+                            <option value="retrattile">Retrattile</option>
+                            <option value="impacchettabile">Impacchettabile</option>
+                            <option value="fissa">Fissa</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                        <div>
+                          <div style={{ fontSize:9, fontWeight:700, color:T.sub, marginBottom:2 }}>STRUTTURA</div>
+                          <select style={S.select} value={v.struttura||""} onChange={e => updateV("struttura", e.target.value)}>
+                            <option value="">— Struttura —</option>
+                            <option value="alluminio">Alluminio</option>
+                            <option value="acciaio">Acciaio</option>
+                            <option value="legno">Legno</option>
+                          </select>
+                        </div>
+                        <div>
+                          <div style={{ fontSize:9, fontWeight:700, color:T.sub, marginBottom:2 }}>TIPO</div>
+                          <select style={S.select} value={v.tipoPergola||""} onChange={e => updateV("tipoPergola", e.target.value)}>
+                            <option value="">— Tipo —</option>
+                            <option value="addossata">Addossata a muro</option>
+                            <option value="freestanding">Autoportante</option>
+                          </select>
+                        </div>
+                      </div>
+                    </>)}
+
+                    {/* COMUNE: montaggio + motorizzazione */}
+                    <div style={{ fontSize:11, fontWeight:800, color:"#86868b", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, marginTop:16, borderTop:"1px solid "+T.bdr, paddingTop:12 }}>⚙️ Installazione</div>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+                      <div>
+                        <div style={{ fontSize:9, fontWeight:700, color:T.sub, marginBottom:2 }}>MONTAGGIO</div>
+                        <select style={S.select} value={v.montaggio||""} onChange={e => updateV("montaggio", e.target.value)}>
+                          <option value="">— Montaggio —</option>
+                          <option value="parete">A parete</option>
+                          <option value="soffitto">A soffitto</option>
+                          <option value="nicchia">In nicchia</option>
+                          <option value="pavimento">A pavimento</option>
+                        </select>
+                      </div>
+                      <div>
+                        <div style={{ fontSize:9, fontWeight:700, color:T.sub, marginBottom:2 }}>ORIENTAMENTO</div>
+                        <select style={S.select} value={v.orientamento||""} onChange={e => updateV("orientamento", e.target.value)}>
+                          <option value="">— Orientamento —</option>
+                          <option value="nord">Nord</option>
+                          <option value="sud">Sud</option>
+                          <option value="est">Est</option>
+                          <option value="ovest">Ovest</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                      <div>
+                        <div style={{ fontSize:9, fontWeight:700, color:T.sub, marginBottom:2 }}>MOTORIZZAZIONE</div>
+                        <select style={S.select} value={v.motorizzazione||""} onChange={e => updateV("motorizzazione", e.target.value)}>
+                          <option value="">— Motorizzazione —</option>
+                          <option value="manuale">Manuale</option>
+                          <option value="motore">Motore tubolare</option>
+                          <option value="motore_radio">Motore + radiocomando</option>
+                          <option value="domotica">Domotica/smart</option>
+                          <option value="sensore_vento">Con sensore vento</option>
+                          <option value="sensore_sole">Con sensore sole</option>
+                        </select>
+                      </div>
+                      <div>
+                        <div style={{ fontSize:9, fontWeight:700, color:T.sub, marginBottom:2 }}>TESSUTO/MATERIALE</div>
+                        <input style={S.input} placeholder="es. Acrilico 300g" value={v.tessuto||""} onChange={e => updateV("tessuto", e.target.value)}/>
+                      </div>
+                    </div>
+
+                    {/* Altezza montaggio da terra */}
+                    <div style={{ marginTop:8 }}>
+                      {bInput("Altezza montaggio da terra mm", "hMontaggio")}
+                    </div>
+
+                    {/* Riepilogo visivo */}
+                    {m.lCentro > 0 && m.hCentro > 0 && (
+                      <div style={{ marginTop:12, padding:12, borderRadius:10, background:T.card, border:"1px solid "+T.bdr, textAlign:"center" }}>
+                        <div style={{ fontSize:10, color:T.sub, fontWeight:700, marginBottom:4 }}>📐 RIEPILOGO</div>
+                        <div style={{ fontSize:16, fontWeight:900, color:T.text }}>
+                          {m.lCentro} × {m.hCentro} {(m.sporgenza||isPergola) ? " × " + (m.sporgenza||"—") : ""} mm
+                        </div>
+                        <div style={{ fontSize:11, color:T.sub }}>
+                          {((m.lCentro/1000) * (isPergola ? (m.sporgenza||m.hCentro)/1000 : m.hCentro/1000)).toFixed(2)} m²
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* ═══ MISURE STANDARD: Serramenti (8 punti) ═══ */}
+              {!["TDBR","TDCAD","TDCAP","TDVER","TDRUL","TDPERG","TDZIP","TDVELA","VENEZIA","TDS","TDR","TVE","PBC","PGA","PGF","TCA","TCB","ZTE"].includes(v.tipo) && (<>
               <div style={{ fontSize: 11, fontWeight: 800, color: "#507aff", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>📏 Larghezze</div>
               {bInput("Larghezza ALTO", "lAlto")}
               {m.lAlto > 0 && !m.lCentro && !m.lBasso && (
@@ -6777,7 +7705,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
                   <div style={{ fontSize: 12, fontWeight: 700, color: "#2e7d32" }}>✅ In squadra — differenza: {fSq}mm</div>
                 </div>
               )}
-            </>
+            </>)}
+          </>
           )}
 
           {/* === STEP 1: DETTAGLI (accordion) === */}
@@ -7914,9 +8843,32 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
   const renderAgenda = () => {
     const dateStr = (d) => d.toISOString().split("T")[0];
-    // Merge events + tasks with dates
+    // Merge events + tasks + montaggi + consegne
     const tasksWithDate = tasks.filter(t => t.date).map(t => ({ ...t, _isTask: true, color: t.priority === "alta" ? "#FF3B30" : t.priority === "media" ? "#FF9500" : "#8E8E93" }));
-    const allItems = [...events, ...tasksWithDate];
+    const montaggiItems = (montaggiDB || []).filter(m => m.data).map(m => {
+      const sq = (squadreDB || []).find(s => s.id === m.squadraId);
+      return { id: "mag_" + m.id, date: m.data, time: m.orario || "08:00", text: "🔧 Montaggio " + (m.cliente || ""), persona: m.cliente || "", cm: m.cmCode || "", color: "#007aff", durata: (m.giorni || 1) * 480, _isMontaggio: true, _stato: m.stato, _squadra: sq?.nome || "", _vani: m.vani || 0 };
+    });
+    const consegneItems = (ordiniFornDB || []).filter(o => o.consegna?.prevista && o.stato !== "consegnato").map(o => ({
+      id: "cons_" + o.id, date: o.consegna.prevista, time: "09:00", text: "🚚 Consegna " + (o.fornitore?.nome || ""), persona: o.fornitore?.nome || "", cm: o.cmCode || "", color: "#af52de", durata: 60, _isConsegna: true
+    }));
+    const scadenzeItems = [
+      ...(fattureDB || []).filter(f => !f.pagata && f.scadenza).map(f => ({
+        id: "scad_e_" + f.id, date: f.scadenza, time: "", text: "📤 Incasso " + f.cliente, persona: f.cliente, cm: f.cmCode || "", color: "#34c759", _isScadenza: true, _importo: f.importo, _tipo: "incasso"
+      })),
+      ...(fatturePassive || []).filter(f => !f.pagata && f.scadenza).map(f => ({
+        id: "scad_p_" + f.id, date: f.scadenza, time: "", text: "📥 Pagamento " + (f.fornitore || ""), persona: f.fornitore || "", cm: "", color: "#ff9500", _isScadenza: true, _importo: f.importo || 0, _tipo: "pagamento"
+      })),
+    ];
+    const allItemsRaw = [...events, ...tasksWithDate, ...montaggiItems, ...consegneItems, ...scadenzeItems];
+    const allItems = allItemsRaw.filter(it => {
+      if (it._isTask && !agendaFilters.tasks) return false;
+      if (it._isMontaggio && !agendaFilters.montaggi) return false;
+      if (it._isConsegna && !agendaFilters.consegne) return false;
+      if (it._isScadenza && !agendaFilters.scadenze) return false;
+      if (!it._isTask && !it._isMontaggio && !it._isConsegna && !it._isScadenza && !agendaFilters.eventi) return false;
+      return true;
+    });
     const dayEvents = allItems.filter(e => e.date === dateStr(selDate)).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
     const weekStart = new Date(selDate); weekStart.setDate(selDate.getDate() - selDate.getDay() + 1);
     const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
@@ -7960,12 +8912,18 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     }).filter(e => e.minutiAlEvento > 0).sort((a,b) => a.minutiAlEvento - b.minutiAlEvento);
 
     const renderEventCard = (ev) => (
-      <div key={ev.id} style={{ ...S.card, margin: "0 0 8px", opacity: ev._isTask && ev.done ? 0.5 : 1 }} onClick={() => !ev._isTask && setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)}>
+      <div key={ev.id} style={{ ...S.card, margin: "0 0 8px", opacity: ev._isTask && ev.done ? 0.5 : 1, borderLeft: (ev._isMontaggio || ev._isConsegna || ev._isScadenza) ? "4px solid " + ev.color : "none" }} onClick={() => !ev._isTask && !ev._isMontaggio && !ev._isConsegna && !ev._isScadenza && setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)}>
         <div style={{ ...S.cardInner, display: "flex", gap: 10 }}>
           {ev._isTask ? (
             <div onClick={(e) => { e.stopPropagation(); toggleTask(ev.id); }} style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${ev.done ? T.grn : T.bdr}`, background: ev.done ? T.grn : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginTop: 2 }}>
               {ev.done && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
             </div>
+          ) : ev._isMontaggio ? (
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#007aff15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🔧</div>
+          ) : ev._isConsegna ? (
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#af52de15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🚚</div>
+          ) : ev._isScadenza ? (
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: (ev._tipo === "incasso" ? "#34c759" : "#ff9500") + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{ev._tipo === "incasso" ? "📤" : "📥"}</div>
           ) : (
             <div style={{ width: 3, borderRadius: 2, background: ev.color, flexShrink: 0 }} />
           )}
@@ -7973,10 +8931,13 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, textDecoration: ev._isTask && ev.done ? "line-through" : "none" }}>{ev.text}</div>
             {ev._isTask && ev.meta && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>📝 {ev.meta}</div>}
-            {!ev._isTask && ev.addr && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>📍 {ev.addr}</div>}
+            {!ev._isTask && !ev._isMontaggio && !ev._isConsegna && !ev._isScadenza && ev.addr && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>📍 {ev.addr}</div>}
+            {ev._isMontaggio && <div style={{ fontSize: 10, color: T.sub, marginTop: 2 }}>{ev._squadra} · {ev._vani} vani · {ev._stato === "completato" ? "✅ Completato" : ev._stato === "in_corso" ? "🔄 In corso" : "📋 Programmato"}</div>}
+            {ev._isConsegna && <div style={{ fontSize: 10, color: T.sub, marginTop: 2 }}>Materiale per {ev.cm}</div>}
+            {ev._isScadenza && <div style={{ fontSize: 10, color: T.sub, marginTop: 2 }}>{ev._tipo === "incasso" ? "Da incassare" : "Da pagare"}: <b style={{ color: ev.color }}>€{(ev._importo || 0).toLocaleString("it-IT")}</b></div>}
             <div style={{ display: "flex", gap: 4, marginTop: 3, flexWrap: "wrap" }}>
               {ev.cm && <span onClick={(e) => { e.stopPropagation(); const cm = cantieri.find(c => c.code === ev.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); } }} style={{ ...S.badge(T.accLt, T.acc), cursor: "pointer" }}>{ev.cm}</span>}
-              {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>{ev.persona}</span>}
+              {ev.persona && !ev._isMontaggio && !ev._isConsegna && <span style={S.badge(T.purpleLt, T.purple)}>{ev.persona}</span>}
               {ev._isTask && <span style={S.badge(ev.priority === "alta" ? "#FF3B3018" : ev.priority === "media" ? "#FF950018" : "#8E8E9318", ev.priority === "alta" ? "#FF3B30" : ev.priority === "media" ? "#FF9500" : "#8E8E93")}>task · {ev.priority}</span>}
               {!ev._isTask && ev.reminder && <span style={S.badge(ev.reminderSent ? T.grnLt : "#FF950015", ev.reminderSent ? T.grn : "#FF9500")}>{ev.reminderSent ? "✓ Reminder inviato" : `⏰ ${ev.reminder}`}</span>}
               {!ev._isTask && <span style={S.badge(tipoEvColor(ev.tipo) + "18", tipoEvColor(ev.tipo))}>{(TIPI_EVENTO.find(t=>t.id===ev.tipo)||{l:ev.tipo}).l}</span>}
@@ -8071,6 +9032,26 @@ Walter Cozza Serramenti`;
               {v}
             </div>
           ))}
+        </div>
+
+        {/* ═══ FILTRI AGENDA ═══ */}
+        <div style={{ display: "flex", gap: 4, padding: "6px 16px", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+          {[
+            { id: "eventi", ico: "📍", l: "Sopralluoghi", col: "#007aff" },
+            { id: "montaggi", ico: "🔧", l: "Montaggi", col: "#5856d6" },
+            { id: "consegne", ico: "🚚", l: "Consegne", col: "#af52de" },
+            { id: "scadenze", ico: "💰", l: "Pagamenti", col: "#ff9500" },
+            { id: "tasks", ico: "✅", l: "Task", col: "#8e8e93" },
+          ].map(f => {
+            const active = agendaFilters[f.id];
+            return <div key={f.id} onClick={() => setAgendaFilters(p => ({...p, [f.id]: !p[f.id]}))}
+              style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+                background: active ? f.col + "18" : T.bg, color: active ? f.col : T.sub + "80",
+                border: "1.5px solid " + (active ? f.col + "60" : T.bdr), opacity: active ? 1 : 0.5,
+                transition: "all 0.15s ease" }}>
+              <span>{f.ico}</span> {f.l}
+            </div>;
+          })}
         </div>
 
         {/* Nav arrows */}
@@ -8667,6 +9648,426 @@ Grazie per il suo messaggio.
   };
 
   /* == SETTINGS TAB == */
+
+  // ═══ CONTABILITÀ PRO ═══
+  const renderContabilita = () => {
+    const today = new Date();
+    const [cY, cM] = contabMese.split("-").map(Number);
+    const daysInMonth = new Date(cY, cM, 0).getDate();
+    const firstDow = (new Date(cY, cM - 1, 1).getDay() + 6) % 7; // Mon=0
+    const meseLbl = new Date(cY, cM - 1).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+    
+    // All invoices
+    const allEmesse = fattureDB || [];
+    const allRicevute = fatturePassive || [];
+    
+    // Monthly filter
+    const meseEmesse = allEmesse.filter(f => (f.dataISO || "").startsWith(contabMese));
+    const meseRicevute = allRicevute.filter(f => (f.dataISO || f.data || "").startsWith(contabMese));
+    
+    // Totals
+    const totEmesso = allEmesse.reduce((s, f) => s + (f.importo || 0), 0);
+    const totIncassato = allEmesse.filter(f => f.pagata).reduce((s, f) => s + (f.importo || 0), 0);
+    const totDaIncassare = allEmesse.filter(f => !f.pagata).reduce((s, f) => s + (f.importo || 0), 0);
+    const totCosti = allRicevute.reduce((s, f) => s + (f.importo || 0), 0);
+    const totPagati = allRicevute.filter(f => f.pagata).reduce((s, f) => s + (f.importo || 0), 0);
+    const totDaPagare = allRicevute.filter(f => !f.pagata).reduce((s, f) => s + (f.importo || 0), 0);
+    const margine = totIncassato - totPagati;
+    
+    // Mese totals
+    const meseEmTot = meseEmesse.reduce((s, f) => s + (f.importo || 0), 0);
+    const meseRicTot = meseRicevute.reduce((s, f) => s + (f.importo || 0), 0);
+    
+    // Scadenze per giorno del mese (calendar dots)
+    const scadenzeMap: Record<number, Array<{tipo:string;importo:number;nome:string}>> = {};
+    allEmesse.filter(f => !f.pagata && f.scadenza && f.scadenza.startsWith(contabMese)).forEach(f => {
+      const d = parseInt(f.scadenza.split("-")[2]);
+      if (!scadenzeMap[d]) scadenzeMap[d] = [];
+      scadenzeMap[d].push({ tipo: "incasso", importo: f.importo, nome: f.cliente });
+    });
+    allRicevute.filter(f => !f.pagata && f.scadenza && f.scadenza.startsWith(contabMese)).forEach(f => {
+      const d = parseInt(f.scadenza.split("-")[2]);
+      if (!scadenzeMap[d]) scadenzeMap[d] = [];
+      scadenzeMap[d].push({ tipo: "pagamento", importo: f.importo || 0, nome: f.fornitore || "" });
+    });
+    
+    // Monthly bar data (last 6 months)
+    const barData: Array<{lbl:string;emesso:number;costi:number}> = [];
+    for (let i = 5; i >= 0; i--) {
+      const bd = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const key = `${bd.getFullYear()}-${String(bd.getMonth()+1).padStart(2,"0")}`;
+      const lbl = bd.toLocaleDateString("it-IT", { month: "short" });
+      const em = allEmesse.filter(f => (f.dataISO || "").startsWith(key)).reduce((s, f) => s + (f.importo || 0), 0);
+      const co = allRicevute.filter(f => (f.dataISO || f.data || "").startsWith(key)).reduce((s, f) => s + (f.importo || 0), 0);
+      barData.push({ lbl, emesso: em, costi: co });
+    }
+    const barMax = Math.max(...barData.map(b => Math.max(b.emesso, b.costi)), 1);
+    
+    const prevMese = () => { const d = new Date(cY, cM - 2, 1); setContabMese(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`); };
+    const nextMese = () => { const d = new Date(cY, cM, 1); setContabMese(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`); };
+    
+    const fmt = (n: number) => "€" + n.toLocaleString("it-IT", { minimumFractionDigits: 0 });
+    
+    return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 10002, background: T.bg, overflow: "auto" }}>
+      {/* HEADER */}
+      <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", background: T.card, borderBottom: "1px solid " + T.bdr, position: "sticky", top: 0, zIndex: 10 }}>
+        <div onClick={() => setShowContabilita(false)} style={{ cursor: "pointer", color: T.acc, fontWeight: 700, fontSize: 14 }}>← Indietro</div>
+        <div style={{ flex: 1, textAlign: "center", fontSize: 16, fontWeight: 800, color: T.text }}>💰 Contabilità</div>
+        <div style={{ width: 60 }} />
+      </div>
+      
+      {/* TABS */}
+      <div style={{ display: "flex", margin: "8px 16px", borderRadius: 8, border: "1px solid " + T.bdr, overflow: "hidden" }}>
+        {[{ id: "panoramica", l: "📊 Panoramica" }, { id: "emesse", l: "📤 Emesse" }, { id: "ricevute", l: "📥 Ricevute" }, { id: "calendario", l: "📅 Calendario" }, { id: "sdi", l: "🏛 SDI" }].map(t => (
+          <div key={t.id} onClick={() => setContabTab(t.id)} style={{ flex: 1, padding: "8px 2px", textAlign: "center", fontSize: 9, fontWeight: 700, background: contabTab === t.id ? T.acc : T.card, color: contabTab === t.id ? "#fff" : T.sub, cursor: "pointer" }}>{t.l}</div>
+        ))}
+      </div>
+      
+      <div style={{ padding: "0 16px 100px" }}>
+      
+      {/* ═══ PANORAMICA ═══ */}
+      {contabTab === "panoramica" && <>
+        {/* KPI Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 12 }}>
+          <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 7, color: T.sub, textTransform: "uppercase" as const, fontWeight: 700, letterSpacing: 0.5 }}>FATTURATO</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: T.text }}>{fmt(totEmesso)}</div>
+          </div>
+          <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 7, color: T.sub, textTransform: "uppercase" as const, fontWeight: 700, letterSpacing: 0.5 }}>INCASSATO</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: T.grn }}>{fmt(totIncassato)}</div>
+          </div>
+          <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 7, color: T.sub, textTransform: "uppercase" as const, fontWeight: 700, letterSpacing: 0.5 }}>DA INCASSARE</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: T.red }}>{fmt(totDaIncassare)}</div>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 16 }}>
+          <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 7, color: T.sub, textTransform: "uppercase" as const, fontWeight: 700, letterSpacing: 0.5 }}>COSTI</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: T.orange }}>{fmt(totCosti)}</div>
+          </div>
+          <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 7, color: T.sub, textTransform: "uppercase" as const, fontWeight: 700, letterSpacing: 0.5 }}>DA PAGARE</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: "#ff6b00" }}>{fmt(totDaPagare)}</div>
+          </div>
+          <div style={{ background: T.card, borderRadius: T.r, border: "2px solid " + (margine >= 0 ? T.grn : T.red), padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 7, color: T.sub, textTransform: "uppercase" as const, fontWeight: 700, letterSpacing: 0.5 }}>MARGINE</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: margine >= 0 ? T.grn : T.red }}>{fmt(margine)}</div>
+          </div>
+        </div>
+        
+        {/* BAR CHART - Last 6 months */}
+        <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 12 }}>📊 Andamento 6 mesi</div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 100 }}>
+            {barData.map((b, i) => (
+              <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 2 }}>
+                <div style={{ width: "100%", display: "flex", gap: 2, alignItems: "flex-end", justifyContent: "center", height: 80 }}>
+                  <div style={{ width: "40%", height: Math.max(2, (b.emesso / barMax) * 80), background: T.acc, borderRadius: "3px 3px 0 0", transition: "height 0.3s" }} />
+                  <div style={{ width: "40%", height: Math.max(2, (b.costi / barMax) * 80), background: T.orange, borderRadius: "3px 3px 0 0", transition: "height 0.3s" }} />
+                </div>
+                <div style={{ fontSize: 8, color: T.sub, fontWeight: 600, textTransform: "uppercase" as const }}>{b.lbl}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: T.acc }} /><span style={{ fontSize: 9, color: T.sub }}>Fatturato</span></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: T.orange }} /><span style={{ fontSize: 9, color: T.sub }}>Costi</span></div>
+          </div>
+        </div>
+        
+        {/* SCADENZE PROSSIME */}
+        <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>⏰ Prossime scadenze</div>
+          {[...allEmesse.filter(f => !f.pagata && f.scadenza).map(f => ({ ...f, dir: "incasso" as const })), 
+            ...allRicevute.filter(f => !f.pagata && f.scadenza).map(f => ({ ...f, dir: "pagamento" as const }))]
+            .sort((a, b) => (a.scadenza || "z").localeCompare(b.scadenza || "z")).slice(0, 6).map((f, i) => {
+              const isLate = (f.scadenza || "") < today.toISOString().split("T")[0];
+              const days = Math.ceil((new Date(f.scadenza || "").getTime() - today.getTime()) / 86400000);
+              return <div key={i} style={{ display: "flex", alignItems: "center", padding: "8px 0", borderBottom: i < 5 ? "1px solid " + T.bg : "none" }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: isLate ? T.redLt : f.dir === "incasso" ? T.grnLt : T.orangeLt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
+                  {isLate ? "🔴" : f.dir === "incasso" ? "📤" : "📥"}
+                </div>
+                <div style={{ flex: 1, marginLeft: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{(f as any).fornitore || f.cliente}</div>
+                  <div style={{ fontSize: 9, color: isLate ? T.red : T.sub }}>
+                    {isLate ? `Scaduta da ${Math.abs(days)} gg` : days === 0 ? "Scade oggi!" : `Tra ${days} gg`} · {new Date(f.scadenza || "").toLocaleDateString("it-IT")}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: isLate ? T.red : T.text }}>{fmt(f.importo || 0)}</div>
+                  <div style={{ fontSize: 8, color: f.dir === "incasso" ? T.grn : T.orange, fontWeight: 700 }}>{f.dir === "incasso" ? "INCASSO" : "PAGAMENTO"}</div>
+                </div>
+              </div>;
+            })}
+          {allEmesse.filter(f => !f.pagata && f.scadenza).length + allRicevute.filter(f => !f.pagata && f.scadenza).length === 0 && (
+            <div style={{ textAlign: "center", padding: 16, color: T.sub, fontSize: 12 }}>✅ Nessuna scadenza in sospeso</div>
+          )}
+        </div>
+        
+        {/* RIEPILOGO MESE */}
+        <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div onClick={prevMese} style={{ cursor: "pointer", fontSize: 16, color: T.acc }}>◀</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.text, textTransform: "capitalize" as const }}>{meseLbl}</div>
+            <div onClick={nextMese} style={{ cursor: "pointer", fontSize: 16, color: T.acc }}>▶</div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={{ padding: 10, borderRadius: 8, background: T.accLt, textAlign: "center" }}>
+              <div style={{ fontSize: 8, color: T.sub, fontWeight: 700 }}>EMESSO</div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: T.acc }}>{fmt(meseEmTot)}</div>
+              <div style={{ fontSize: 9, color: T.sub }}>{meseEmesse.length} fatture</div>
+            </div>
+            <div style={{ padding: 10, borderRadius: 8, background: T.orangeLt, textAlign: "center" }}>
+              <div style={{ fontSize: 8, color: T.sub, fontWeight: 700 }}>COSTI</div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: T.orange }}>{fmt(meseRicTot)}</div>
+              <div style={{ fontSize: 9, color: T.sub }}>{meseRicevute.length} fatture</div>
+            </div>
+          </div>
+        </div>
+      </>}
+      
+      {/* ═══ EMESSE ═══ */}
+      {contabTab === "emesse" && <>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Fatture emesse ({allEmesse.length})</div>
+          <div style={{ display: "flex", gap: 4 }}>
+            <span style={{ fontSize: 9, padding: "3px 8px", borderRadius: 4, background: T.grnLt, color: T.grn, fontWeight: 700 }}>✅ {allEmesse.filter(f=>f.pagata).length}</span>
+            <span style={{ fontSize: 9, padding: "3px 8px", borderRadius: 4, background: T.redLt, color: T.red, fontWeight: 700 }}>⏳ {allEmesse.filter(f=>!f.pagata).length}</span>
+          </div>
+        </div>
+        {allEmesse.sort((a, b) => b.numero - a.numero).map(f => (
+          <div key={f.id} style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 12, marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>N. {f.numero}/{f.anno}</div>
+                <div style={{ fontSize: 10, color: T.sub }}>{f.cliente} · {f.cmCode}</div>
+                <div style={{ display: "flex", gap: 4, marginTop: 3 }}>
+                  <span style={{ fontSize: 8, padding: "1px 6px", borderRadius: 3, background: f.tipo === "saldo" ? T.grnLt : f.tipo === "acconto" ? T.orangeLt : T.accLt, color: f.tipo === "saldo" ? T.grn : f.tipo === "acconto" ? T.orange : T.acc, fontWeight: 700 }}>{f.tipo?.toUpperCase()}</span>
+                  <span style={{ fontSize: 8, color: T.sub }}>{f.dataISO}</span>
+                  {f.scadenza && <span style={{ fontSize: 8, color: f.scadenza < today.toISOString().split("T")[0] && !f.pagata ? T.red : T.sub }}>Scade: {new Date(f.scadenza).toLocaleDateString("it-IT")}</span>}
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: f.pagata ? T.grn : T.red }}>{fmt(f.importo)}</div>
+                <span onClick={() => setFattureDB(prev => prev.map(ff => ff.id === f.id ? { ...ff, pagata: !ff.pagata, dataPagamento: !ff.pagata ? today.toISOString().split("T")[0] : null } : ff))} 
+                  style={{ fontSize: 9, padding: "3px 8px", borderRadius: 6, background: f.pagata ? T.grnLt : T.redLt, color: f.pagata ? T.grn : T.red, fontWeight: 700, cursor: "pointer" }}>
+                  {f.pagata ? "✅ Incassata" : "⏳ Da incassare"}
+                </span>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <div onClick={() => generaFatturaPDF(f)} style={{ flex: 1, padding: 7, borderRadius: 6, background: T.accLt, color: T.acc, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>📄 PDF</div>
+              <div onClick={() => generaXmlSDI(f)} style={{ flex: 1, padding: 7, borderRadius: 6, background: T.purpleLt, color: T.purple, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>🏛 XML SDI</div>
+              <div onClick={() => { const cm = cantieri.find(c => c.code === f.cmCode); if(cm) { setSelectedCM(cm); setShowContabilita(false); setTab("commesse"); }}} style={{ flex: 1, padding: 7, borderRadius: 6, background: T.bg, color: T.sub, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer", border: "1px solid " + T.bdr }}>📁 Commessa</div>
+            </div>
+          </div>
+        ))}
+      </>}
+      
+      {/* ═══ RICEVUTE ═══ */}
+      {contabTab === "ricevute" && <>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Fatture fornitori ({allRicevute.length})</div>
+          <div onClick={() => setShowFatturaPassiva(true)} style={{ padding: "6px 14px", borderRadius: 8, background: T.acc, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Nuova</div>
+        </div>
+        {allRicevute.length === 0 && <div style={{ textAlign: "center", padding: 32, color: T.sub }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📥</div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Nessuna fattura ricevuta</div>
+          <div style={{ fontSize: 11 }}>Clicca "+ Nuova" per registrare una fattura fornitore</div>
+        </div>}
+        {allRicevute.map(f => (
+          <div key={f.id} style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 12, marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>{f.fornitore}</div>
+                <div style={{ fontSize: 10, color: T.sub }}>N. {f.numero} · {f.data || f.dataISO}</div>
+                {f.descrizione && <div style={{ fontSize: 9, color: T.sub, marginTop: 2 }}>{f.descrizione}</div>}
+                {f.scadenza && <div style={{ fontSize: 9, color: f.scadenza < today.toISOString().split("T")[0] && !f.pagata ? T.red : T.sub, marginTop: 2 }}>
+                  {f.scadenza < today.toISOString().split("T")[0] && !f.pagata ? "🔴 " : ""}Scadenza: {new Date(f.scadenza).toLocaleDateString("it-IT")}
+                </div>}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: T.orange }}>{fmt(f.importo || 0)}</div>
+                <span onClick={() => setFatturePassive(prev => prev.map(ff => ff.id === f.id ? { ...ff, pagata: !ff.pagata } : ff))} 
+                  style={{ fontSize: 9, padding: "3px 8px", borderRadius: 6, background: f.pagata ? T.grnLt : T.orangeLt, color: f.pagata ? T.grn : T.orange, fontWeight: 700, cursor: "pointer" }}>
+                  {f.pagata ? "✅ Pagata" : "⏳ Da pagare"}
+                </span>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+              {f.cmId && <div onClick={() => { const cm = cantieri.find(c => c.id === f.cmId); if(cm) { setSelectedCM(cm); setShowContabilita(false); setTab("commesse"); }}} style={{ flex: 1, padding: 6, borderRadius: 6, background: T.accLt, color: T.acc, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>📁 Commessa</div>}
+              <div onClick={() => setFatturePassive(prev => prev.filter(ff => ff.id !== f.id))} style={{ padding: "6px 12px", borderRadius: 6, background: T.redLt, color: T.red, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>🗑</div>
+            </div>
+          </div>
+        ))}
+        {showFatturaPassiva && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={e => { if(e.target === e.currentTarget) setShowFatturaPassiva(false); }}>
+            <div style={{ background: T.card, borderRadius: 16, padding: 20, width: "90%", maxWidth: 420 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 14 }}>📥 Registra fattura fornitore</div>
+              {[{k:"fornitore",l:"Fornitore",t:"text"},{k:"numero",l:"N. Fattura",t:"text"},{k:"data",l:"Data",t:"date"},{k:"importo",l:"Importo €",t:"number"},{k:"descrizione",l:"Descrizione",t:"text"},{k:"scadenza",l:"Scadenza",t:"date"}].map(f => (
+                <div key={f.k} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 2 }}>{f.l}</div>
+                  <input type={f.t} value={(newFattPassiva as any)[f.k]} onChange={e => setNewFattPassiva(p => ({ ...p, [f.k]: e.target.value }))}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid " + T.bdr, background: T.bg, color: T.text, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box" as const }} />
+                </div>
+              ))}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 2 }}>Commessa (opzionale)</div>
+                <select value={newFattPassiva.cmId} onChange={e => setNewFattPassiva(p => ({ ...p, cmId: e.target.value }))} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid " + T.bdr, background: T.bg, color: T.text, fontSize: 13, fontFamily: "inherit" }}>
+                  <option value="">— Nessuna —</option>
+                  {cantieri.map(c => <option key={c.id} value={c.id}>{c.code} · {c.cliente}</option>)}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <button onClick={() => setShowFatturaPassiva(false)} style={{ flex: 1, padding: 12, borderRadius: 10, border: "1px solid " + T.bdr, background: T.bg, color: T.sub, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Annulla</button>
+                <button onClick={creaFatturaPassiva} style={{ flex: 2, padding: 12, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>💾 Registra</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>}
+      
+      {/* ═══ CALENDARIO COMPLETO ═══ */}
+      {contabTab === "calendario" && (() => {
+        // Gather ALL events for calendar: scadenze + montaggi + events + consegne
+        const calMap: Record<number, Array<{tipo:string;ico:string;col:string;label:string;importo?:number;detail?:string}>> = {};
+        const addCal = (day: number, item: any) => { if (!calMap[day]) calMap[day] = []; calMap[day].push(item); };
+        
+        // Scadenze fatture
+        allEmesse.filter(f => !f.pagata && f.scadenza && f.scadenza.startsWith(contabMese)).forEach(f => {
+          const d = parseInt(f.scadenza.split("-")[2]);
+          addCal(d, { tipo: "incasso", ico: "📤", col: T.grn, label: f.cliente, importo: f.importo, detail: "Da incassare" });
+        });
+        allRicevute.filter(f => !f.pagata && f.scadenza && f.scadenza.startsWith(contabMese)).forEach(f => {
+          const d = parseInt(f.scadenza.split("-")[2]);
+          addCal(d, { tipo: "pagamento", ico: "📥", col: T.orange, label: f.fornitore || "", importo: f.importo || 0, detail: "Da pagare" });
+        });
+        // Montaggi
+        (montaggiDB || []).filter(m => m.data && m.data.startsWith(contabMese)).forEach(m => {
+          const d = parseInt(m.data.split("-")[2]);
+          const cm = cantieri.find(c => c.id === m.cmId);
+          const sq = (squadreDB || []).find(s => s.id === m.squadraId);
+          addCal(d, { tipo: "montaggio", ico: "🔧", col: "#007aff", label: cm?.cliente || "Montaggio", detail: sq?.nome || "" });
+        });
+        // Consegne previste ordini
+        (ordiniFornDB || []).filter(o => o.consegna?.prevista && o.consegna.prevista.startsWith(contabMese) && o.stato !== "consegnato").forEach(o => {
+          const d = parseInt(o.consegna.prevista.split("-")[2]);
+          addCal(d, { tipo: "consegna", ico: "🚚", col: "#af52de", label: o.fornitore?.nome || "Consegna", detail: o.cmCode || "" });
+        });
+        // Events/appuntamenti
+        (events || []).filter(ev => ev.date && ev.date.startsWith(contabMese)).forEach(ev => {
+          const d = parseInt(ev.date.split("-")[2]);
+          const tipoIco: Record<string,string> = { sopralluogo: "📍", posa: "🔧", controllo: "🔍", consegna: "🚚", misure: "📏", altro: "📌" };
+          const tipoCol: Record<string,string> = { sopralluogo: "#007aff", posa: "#34c759", controllo: "#ff9500", consegna: "#af52de", misure: "#5856d6", altro: "#86868b" };
+          addCal(d, { tipo: ev.tipo || "altro", ico: tipoIco[ev.tipo] || "📌", col: tipoCol[ev.tipo] || "#86868b", label: ev.persona || ev.text?.slice(0, 20) || "Evento", detail: ev.time || "" });
+        });
+        
+        return <>
+        {/* Month nav */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "10px 16px" }}>
+          <div onClick={prevMese} style={{ cursor: "pointer", fontSize: 18, color: T.acc, fontWeight: 700 }}>◀</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: T.text, textTransform: "capitalize" as const }}>{meseLbl}</div>
+          <div onClick={nextMese} style={{ cursor: "pointer", fontSize: 18, color: T.acc, fontWeight: 700 }}>▶</div>
+        </div>
+        
+        {/* Calendar grid */}
+        <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 6, marginBottom: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+            {["LUN","MAR","MER","GIO","VEN","SAB","DOM"].map(d => (
+              <div key={d} style={{ textAlign: "center", fontSize: 8, fontWeight: 700, color: T.sub, padding: 4 }}>{d}</div>
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+            {Array.from({ length: firstDow }, (_, i) => <div key={"e"+i} />)}
+            {Array.from({ length: daysInMonth }, (_, i) => {
+              const day = i + 1;
+              const dateStr = contabMese + "-" + String(day).padStart(2, "0");
+              const isToday = dateStr === today.toISOString().split("T")[0];
+              const items = calMap[day] || [];
+              const hasMoney = items.some(it => it.tipo === "incasso" || it.tipo === "pagamento");
+              const hasMontaggio = items.some(it => it.tipo === "montaggio");
+              const hasConsegna = items.some(it => it.tipo === "consegna");
+              const hasEvento = items.some(it => !["incasso","pagamento","montaggio","consegna"].includes(it.tipo));
+              const bgColor = isToday ? T.accLt : items.length > 0 ? (hasMontaggio ? "#007aff08" : hasMoney ? T.grnLt : hasConsegna ? "#af52de08" : "#f5f5f5") : "transparent";
+              return <div key={day} style={{ 
+                padding: "3px 1px", borderRadius: 6, minHeight: 44, textAlign: "center",
+                background: bgColor,
+                border: isToday ? "2px solid " + T.acc : items.length > 0 ? "1px solid " + T.bdr : "1px solid transparent",
+              }}>
+                <div style={{ fontSize: 11, fontWeight: isToday ? 900 : 600, color: isToday ? T.acc : T.text }}>{day}</div>
+                {items.length > 0 && <div style={{ display: "flex", justifyContent: "center", gap: 1, marginTop: 2, flexWrap: "wrap" as any }}>
+                  {items.slice(0, 4).map((it, ii) => <div key={ii} style={{ width: 6, height: 6, borderRadius: "50%", background: it.col }} title={it.label} />)}
+                  {items.length > 4 && <div style={{ fontSize: 6, color: T.sub, fontWeight: 700 }}>+{items.length - 4}</div>}
+                </div>}
+                {hasMoney && <div style={{ fontSize: 6, fontWeight: 700, color: T.grn, marginTop: 1 }}>{fmt(items.filter(it => it.tipo === "incasso").reduce((s, x) => s + (x.importo || 0), 0))}</div>}
+              </div>;
+            })}
+          </div>
+        </div>
+        
+        {/* Legend */}
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 12, flexWrap: "wrap" as any }}>
+          {[{c:T.grn,l:"Incasso"},{c:T.orange,l:"Pagamento"},{c:"#007aff",l:"Montaggio"},{c:"#af52de",l:"Consegna"},{c:"#5856d6",l:"Evento"}].map(x => (
+            <div key={x.l} style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 7, height: 7, borderRadius: "50%", background: x.c }} /><span style={{ fontSize: 8, color: T.sub }}>{x.l}</span></div>
+          ))}
+        </div>
+        
+        {/* LISTA GIORNO PER GIORNO */}
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 8 }}>📅 Dettaglio {meseLbl}</div>
+        {Object.keys(calMap).sort((a, b) => Number(a) - Number(b)).map(dayStr => {
+          const day = Number(dayStr);
+          const items = calMap[day];
+          const dateStr = contabMese + "-" + String(day).padStart(2, "0");
+          const isLate = dateStr < today.toISOString().split("T")[0];
+          const dayLbl = new Date(cY, cM - 1, day).toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" });
+          return <div key={dayStr} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 4, textTransform: "capitalize" as const }}>{dayLbl}</div>
+            {items.map((it, si) => (
+              <div key={si} style={{ display: "flex", alignItems: "center", padding: "8px 10px", background: T.card, borderRadius: 8, border: "1px solid " + (isLate && (it.tipo === "incasso" || it.tipo === "pagamento") ? T.red + "60" : T.bdr), marginBottom: 3 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: it.col + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>{it.ico}</div>
+                <div style={{ flex: 1, marginLeft: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{it.label}</div>
+                  <div style={{ fontSize: 9, color: T.sub }}>{it.detail}</div>
+                </div>
+                {it.importo && it.importo > 0 && <div style={{ fontSize: 13, fontWeight: 900, color: isLate && it.tipo === "incasso" ? T.red : it.col }}>{fmt(it.importo)}</div>}
+              </div>
+            ))}
+          </div>;
+        })}
+        {Object.keys(calMap).length === 0 && <div style={{ textAlign: "center", padding: 32, color: T.sub }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📅</div>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>Nessun evento questo mese</div>
+        </div>}
+        </>;
+      })()}
+      
+      {/* ═══ SDI ═══ */}
+      {contabTab === "sdi" && <>
+        <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 4 }}>🏛 Fatturazione Elettronica</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>Genera XML FatturaPA 1.2 per il Sistema di Interscambio (SDI).</div>
+          <div style={{ fontSize: 9, color: T.sub }}>Formato: FPR12 · Regime: RF01 · I file possono essere caricati su AdE, Aruba, Fatture in Cloud.</div>
+        </div>
+        {allEmesse.map(f => (
+          <div key={f.id} style={{ display: "flex", alignItems: "center", padding: "10px 12px", background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, marginBottom: 6 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>N. {f.numero}/{f.anno} — {f.cliente}</div>
+              <div style={{ fontSize: 9, color: T.sub }}>{f.tipo} · {f.dataISO} · {fmt(f.importo)}</div>
+            </div>
+            <div onClick={() => generaXmlSDI(f)} style={{ padding: "8px 14px", borderRadius: 8, background: T.purpleLt, color: T.purple, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>📥 XML</div>
+          </div>
+        ))}
+      </>}
+      
+      </div>
+    </div>
+    );
+  };
+
+
   const renderSettings = () => (
     <div style={{ paddingBottom: 80 }}>
       <div style={S.header}>
@@ -8683,7 +10084,7 @@ Grazie per il suo messaggio.
       {/* Settings sub-tabs — scrollable */}
       <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "8px 16px 12px", borderRadius: 8, border: `1px solid ${T.bdr}` }}>
         <div style={{ display: "flex", minWidth: "max-content" }}>
-          {[{ id: "settore", l: "🎯 Settore" }, { id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "piano", l: "💎 Piano" }, { id: "team", l: "👥 Team" }, { id: "squadre", l: "🔧 Squadre" }, { id: "fatture", l: "💰 Fatture" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "controtelaio", l: "🔲 Controtelaio" }, { id: "tapparella", l: "⬇ Tapparella" }, { id: "persiana", l: "🏠 Persiana" }, { id: "zanzariera", l: "🦟 Zanzariera" }, { id: "cassonetto", l: "🧊 Cassonetto" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "libreria", l: "📦 Libreria" }, { id: "importa", l: "📥 Importa" }, { id: "guida", l: "📖 Guida" }].map(t => (
+          {[{ id: "settore", l: "🎯 Settore" }, { id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "piano", l: "💎 Piano" }, { id: "team", l: "👥 Team" }, { id: "squadre", l: "🔧 Squadre" }, { id: "fatture", l: "💰 Fatture" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "controtelaio", l: "🔲 Controtelaio" }, { id: "tapparella", l: "⬇ Tapparella" }, { id: "persiana", l: "🏠 Persiana" }, { id: "zanzariera", l: "🦟 Zanzariera" }, { id: "cassonetto", l: "🧊 Cassonetto" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "libreria", l: "📦 Libreria" }, { id: "importa", l: "📥 Importa" }, { id: "guida", l: "📖 Guida" }, { id: "kit", l: "🔧 Kit" }, { id: "marketplace", l: "🏪 Fornitori" }, { id: "temi", l: "🎨 Temi" }].map(t => (
             <div key={t.id} onClick={() => setSettingsTab(t.id)} style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 600, background: settingsTab === t.id ? T.acc : T.card, color: settingsTab === t.id ? "#fff" : T.sub, cursor: "pointer", whiteSpace: "nowrap" }}>
               {t.l}
             </div>
@@ -9596,6 +10997,238 @@ Grazie per il suo messaggio.
           </>
         )}
 
+        
+        {settingsTab === "kit" && <div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}><div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Kit Accessori</div>
+            <div onClick={() => setKitAccessori(p => [...p, { id: Date.now(), nome: "Nuovo Kit", items: [], prezzo: 0 }])} style={{ padding: "6px 12px", borderRadius: 8, background: T.acc, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Kit</div></div>
+          {kitAccessori.map((kit, ki) => <div key={kit.id} style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 12, marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <input value={kit.nome} onChange={e => setKitAccessori(p => p.map((k,i) => i===ki ? {...k, nome: e.target.value} : k))} style={{ fontSize: 13, fontWeight: 700, color: T.text, background: "transparent", border: "none", outline: "none", flex: 1 }} />
+              <span style={{ fontSize: 13, fontWeight: 800, color: T.grn }}>€{kit.prezzo}</span>
+            </div>
+            {kit.items.map((item, ii) => <div key={ii} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
+              <input value={item} onChange={e => { const ni=[...kit.items]; ni[ii]=e.target.value; setKitAccessori(p => p.map((k,i) => i===ki ? {...k, items: ni} : k)); }} style={{ flex: 1, fontSize: 11, color: T.text, background: T.bg, border: "1px solid " + T.bdr, borderRadius: 6, padding: "3px 6px" }} />
+              <span onClick={() => setKitAccessori(p => p.map((k,i) => i===ki ? {...k, items: kit.items.filter((_,j)=>j!==ii)} : k))} style={{ color: T.red, cursor: "pointer", fontSize: 10 }}>✕</span>
+            </div>)}
+            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+              <span onClick={() => setKitAccessori(p => p.map((k,i) => i===ki ? {...k, items: [...kit.items, "Nuovo"]} : k))} style={{ fontSize: 10, color: T.acc, cursor: "pointer" }}>+ comp.</span>
+              <input type="number" value={kit.prezzo} onChange={e => setKitAccessori(p => p.map((k,i) => i===ki ? {...k, prezzo: parseFloat(e.target.value)||0} : k))} style={{ width: 60, fontSize: 10, color: T.text, background: T.bg, border: "1px solid " + T.bdr, borderRadius: 6, padding: "2px 6px" }} />
+            </div>
+          </div>)}
+        </div>}
+
+        {settingsTab === "marketplace" && <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>🏪 Anagrafica Fornitori</div>
+            <div onClick={() => { setFornitoreEdit({ id: "f_" + Date.now(), nome: "", ragioneSociale: "", piva: "", cf: "", tipo: "", categoria: "profili", indirizzo: "", cap: "", citta: "", provincia: "", telefono: "", cellulare: "", email: "", pec: "", sito: "", referente: "", telReferente: "", emailReferente: "", banca: "", iban: "", pagamento: "30gg_fm", scontoBase: 0, tempoConsegna: 14, sistemiTrattati: "", note: "", rating: 0, preferito: false, attivo: true }); setShowFornitoreForm(true); }}
+              style={{ padding: "8px 16px", borderRadius: 8, background: T.acc, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+ Nuovo</div>
+          </div>
+          {/* Filtri categoria */}
+          <div style={{ display: "flex", gap: 4, marginBottom: 10, overflowX: "auto", paddingBottom: 4 }}>
+            {[{id:"tutti",l:"Tutti"},{id:"profili",l:"🏗 Profili"},{id:"vetri",l:"🪟 Vetri"},{id:"ferramenta",l:"🔩 Ferramenta"},{id:"accessori",l:"⚙️ Accessori"},{id:"altro",l:"📦 Altro"}].map(c => (
+              <span key={c.id} onClick={() => setSettingsForm(f => ({...f, _filtroForn: c.id}))} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", cursor: "pointer", background: (settingsForm._filtroForn || "tutti") === c.id ? T.accLt : T.bg, color: (settingsForm._filtroForn || "tutti") === c.id ? T.acc : T.sub, border: "1px solid " + ((settingsForm._filtroForn || "tutti") === c.id ? T.acc + "40" : T.bdr) }}>{c.l}</span>
+            ))}
+          </div>
+          {fornitori.filter(f => !settingsForm._filtroForn || settingsForm._filtroForn === "tutti" || f.categoria === settingsForm._filtroForn).map(f => (
+            <div key={f.id} onClick={() => setShowFornitoreDetail(f)} style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 12, marginBottom: 8, cursor: "pointer" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>{f.preferito ? "⭐ " : ""}{f.nome}</div>
+                  <div style={{ fontSize: 10, color: T.sub }}>{f.ragioneSociale || f.tipo}</div>
+                  <div style={{ display: "flex", gap: 4, marginTop: 4, flexWrap: "wrap" as any }}>
+                    <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.accLt, color: T.acc, fontWeight: 700 }}>{f.categoria || f.tipo}</span>
+                    <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.orangeLt, color: T.orange, fontWeight: 700 }}>⏱ {f.tempoConsegna || "?"} gg</span>
+                    <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.purpleLt, color: T.purple, fontWeight: 700 }}>💳 {f.pagamento?.replace("_"," ") || "?"}</span>
+                    {f.scontoBase > 0 && <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.grnLt, color: T.grn, fontWeight: 700 }}>-{f.scontoBase}%</span>}
+                  </div>
+                </div>
+                {f.citta && <div style={{ fontSize: 10, color: T.sub, textAlign: "right" }}>{f.citta} ({f.provincia})</div>}
+              </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                <div onClick={(e) => { e.stopPropagation(); window.open("tel:" + (f.telefono || f.cellulare)); }} style={{ flex: 1, padding: 6, borderRadius: 6, background: T.grnLt, color: T.grn, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>📞 Chiama</div>
+                <div onClick={(e) => { e.stopPropagation(); window.open("mailto:" + f.email); }} style={{ flex: 1, padding: 6, borderRadius: 6, background: T.accLt, color: T.acc, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>✉️ Email</div>
+                {f.pec && <div onClick={(e) => { e.stopPropagation(); window.open("mailto:" + f.pec); }} style={{ flex: 1, padding: 6, borderRadius: 6, background: T.purpleLt, color: T.purple, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>📧 PEC</div>}
+              </div>
+            </div>
+          ))}
+          
+          {/* FORNITORE DETAIL OVERLAY */}
+          {showFornitoreDetail && (() => {
+            const f = showFornitoreDetail;
+            const ordiniF = (ordiniFornDB || []).filter(o => (o.fornitore?.nome || "").toLowerCase().includes(f.nome.toLowerCase()));
+            const PAGAMENTI: Record<string,string> = { "anticipato": "Anticipato", "30gg_fm": "30 gg FM", "60gg_fm": "60 gg FM", "90gg_fm": "90 gg FM", "riba_30": "RiBa 30 gg", "riba_60": "RiBa 60 gg", "ricevuta_merce": "Alla consegna" };
+            return <div style={{ position: "fixed", inset: 0, zIndex: 10003, background: T.bg, overflow: "auto" }}>
+              <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", background: T.card, borderBottom: "1px solid " + T.bdr, position: "sticky", top: 0, zIndex: 5 }}>
+                <div onClick={() => setShowFornitoreDetail(null)} style={{ cursor: "pointer", color: T.acc, fontWeight: 700, fontSize: 14 }}>← Indietro</div>
+                <div style={{ flex: 1, textAlign: "center", fontSize: 14, fontWeight: 800, color: T.text }}>{f.nome}</div>
+                <div onClick={() => { setFornitoreEdit({...f}); setShowFornitoreForm(true); setShowFornitoreDetail(null); }} style={{ cursor: "pointer", color: T.acc, fontWeight: 700, fontSize: 12 }}>✏️ Modifica</div>
+              </div>
+              <div style={{ padding: 16 }}>
+                {/* DATI AZIENDA */}
+                <div style={{ background: T.card, borderRadius: 12, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>🏢 DATI AZIENDA</div>
+                  {f.ragioneSociale && <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 4 }}>{f.ragioneSociale}</div>}
+                  {f.piva && <div style={{ fontSize: 11, color: T.sub }}>P.IVA: <b>{f.piva}</b></div>}
+                  {f.cf && <div style={{ fontSize: 11, color: T.sub }}>CF: {f.cf}</div>}
+                  {f.indirizzo && <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>📍 {f.indirizzo}, {f.cap} {f.citta} ({f.provincia})</div>}
+                  {f.sito && <div onClick={() => window.open("https://" + f.sito.replace("https://","").replace("http://",""))} style={{ fontSize: 11, color: T.acc, cursor: "pointer", marginTop: 2 }}>🌐 {f.sito}</div>}
+                </div>
+                {/* CONTATTI */}
+                <div style={{ background: T.card, borderRadius: 12, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>📞 CONTATTI</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                    {f.telefono && <div onClick={() => window.open("tel:" + f.telefono)} style={{ padding: 10, borderRadius: 8, background: T.grnLt, textAlign: "center", cursor: "pointer" }}><div style={{ fontSize: 16 }}>📞</div><div style={{ fontSize: 10, fontWeight: 700, color: T.grn }}>{f.telefono}</div><div style={{ fontSize: 8, color: T.sub }}>Ufficio</div></div>}
+                    {f.cellulare && <div onClick={() => window.open("tel:" + f.cellulare)} style={{ padding: 10, borderRadius: 8, background: T.grnLt, textAlign: "center", cursor: "pointer" }}><div style={{ fontSize: 16 }}>📱</div><div style={{ fontSize: 10, fontWeight: 700, color: T.grn }}>{f.cellulare}</div><div style={{ fontSize: 8, color: T.sub }}>Cellulare</div></div>}
+                    {f.email && <div onClick={() => window.open("mailto:" + f.email)} style={{ padding: 10, borderRadius: 8, background: T.accLt, textAlign: "center", cursor: "pointer" }}><div style={{ fontSize: 16 }}>✉️</div><div style={{ fontSize: 10, fontWeight: 700, color: T.acc, wordBreak: "break-all" }}>{f.email}</div></div>}
+                    {f.pec && <div onClick={() => window.open("mailto:" + f.pec)} style={{ padding: 10, borderRadius: 8, background: T.purpleLt, textAlign: "center", cursor: "pointer" }}><div style={{ fontSize: 16 }}>📧</div><div style={{ fontSize: 10, fontWeight: 700, color: T.purple, wordBreak: "break-all" }}>{f.pec}</div><div style={{ fontSize: 8, color: T.sub }}>PEC</div></div>}
+                  </div>
+                  {f.referente && <div style={{ marginTop: 8, padding: 10, borderRadius: 8, background: T.bg }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.text }}>👤 Referente: {f.referente}</div>
+                    {f.telReferente && <div style={{ fontSize: 10, color: T.sub }}>{f.telReferente}</div>}
+                    {f.emailReferente && <div style={{ fontSize: 10, color: T.acc }}>{f.emailReferente}</div>}
+                  </div>}
+                </div>
+                {/* CONDIZIONI COMMERCIALI */}
+                <div style={{ background: T.card, borderRadius: 12, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>💰 CONDIZIONI COMMERCIALI</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div style={{ padding: 10, borderRadius: 8, background: T.orangeLt, textAlign: "center" }}><div style={{ fontSize: 8, fontWeight: 700, color: T.sub }}>PAGAMENTO</div><div style={{ fontSize: 12, fontWeight: 900, color: T.orange }}>{PAGAMENTI[f.pagamento] || f.pagamento}</div></div>
+                    <div style={{ padding: 10, borderRadius: 8, background: T.grnLt, textAlign: "center" }}><div style={{ fontSize: 8, fontWeight: 700, color: T.sub }}>SCONTO BASE</div><div style={{ fontSize: 12, fontWeight: 900, color: T.grn }}>{f.scontoBase}%</div></div>
+                    <div style={{ padding: 10, borderRadius: 8, background: T.accLt, textAlign: "center" }}><div style={{ fontSize: 8, fontWeight: 700, color: T.sub }}>TEMPI CONSEGNA</div><div style={{ fontSize: 12, fontWeight: 900, color: T.acc }}>{f.tempoConsegna} gg</div></div>
+                    {f.rating > 0 && <div style={{ padding: 10, borderRadius: 8, background: T.bg, textAlign: "center" }}><div style={{ fontSize: 8, fontWeight: 700, color: T.sub }}>RATING</div><div style={{ fontSize: 12, fontWeight: 900, color: T.text }}>⭐ {f.rating}</div></div>}
+                  </div>
+                  {f.banca && <div style={{ marginTop: 8, padding: 8, borderRadius: 8, background: T.bg }}><div style={{ fontSize: 10, color: T.sub }}>🏦 {f.banca}</div>{f.iban && <div style={{ fontSize: 10, color: T.text, fontFamily: "'JetBrains Mono', monospace", letterSpacing: 0.5 }}>{f.iban}</div>}</div>}
+                </div>
+                {/* PRODOTTI */}
+                {f.sistemiTrattati && <div style={{ background: T.card, borderRadius: 12, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 6 }}>📦 SISTEMI/PRODOTTI</div>
+                  <div style={{ fontSize: 12, color: T.text, lineHeight: 1.6 }}>{f.sistemiTrattati}</div>
+                </div>}
+                {/* STORICO ORDINI */}
+                <div style={{ background: T.card, borderRadius: 12, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>📋 STORICO ORDINI ({ordiniF.length})</div>
+                  {ordiniF.length === 0 ? <div style={{ fontSize: 11, color: T.sub, textAlign: "center", padding: 12 }}>Nessun ordine</div> :
+                    ordiniF.slice(0, 5).map(o => <div key={o.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid " + T.bdr + "30" }}>
+                      <div style={{ fontSize: 11, color: T.text }}>{o.cmCode || "—"}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: T.text }}>€{(o.totale || 0).toLocaleString("it-IT")}</div>
+                    </div>)
+                  }
+                </div>
+                {f.note && <div style={{ background: T.card, borderRadius: 12, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 4 }}>📝 NOTE</div>
+                  <div style={{ fontSize: 12, color: T.text }}>{f.note}</div>
+                </div>}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div onClick={() => setFornitori(p => p.map(ff => ff.id === f.id ? {...ff, preferito: !ff.preferito} : ff))} style={{ flex: 1, padding: 12, borderRadius: 10, background: f.preferito ? T.orangeLt : T.bg, border: "1px solid " + (f.preferito ? T.orange : T.bdr), color: f.preferito ? T.orange : T.sub, fontSize: 12, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>{f.preferito ? "★ Preferito" : "☆ Preferito"}</div>
+                  <div onClick={() => { if(confirm("Eliminare " + f.nome + "?")) { setFornitori(p => p.filter(ff => ff.id !== f.id)); setShowFornitoreDetail(null); }}} style={{ padding: "12px 16px", borderRadius: 10, background: T.redLt, color: T.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑</div>
+                </div>
+              </div>
+            </div>;
+          })()}
+          
+          {/* FORNITORE FORM OVERLAY */}
+          {showFornitoreForm && fornitoreEdit && (() => {
+            const PAGAMENTI_OPT = [
+              { id: "anticipato", l: "Anticipato" }, { id: "30gg_fm", l: "30 gg FM" }, { id: "60gg_fm", l: "60 gg FM" },
+              { id: "90gg_fm", l: "90 gg FM" }, { id: "riba_30", l: "RiBa 30 gg" }, { id: "riba_60", l: "RiBa 60 gg" }, { id: "ricevuta_merce", l: "Alla consegna" }
+            ];
+            const CATEGORIE = [
+              { id: "profili", l: "🏗 Profili" }, { id: "vetri", l: "🪟 Vetri" }, { id: "ferramenta", l: "🔩 Ferramenta" },
+              { id: "accessori", l: "⚙️ Accessori" }, { id: "guarnizioni", l: "🔧 Guarnizioni" }, { id: "altro", l: "📦 Altro" }
+            ];
+            const upd = (k: string, v: any) => setFornitoreEdit((p: any) => ({...p, [k]: v}));
+            const fldStyle = { width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid " + T.bdr, background: T.bg, color: T.text, fontSize: 12, fontFamily: "inherit", boxSizing: "border-box" as const };
+            const lblStyle = { fontSize: 9, fontWeight: 700, color: T.sub, marginBottom: 2, textTransform: "uppercase" as const };
+            return <div style={{ position: "fixed", inset: 0, zIndex: 10004, background: T.bg, overflow: "auto" }}>
+              <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", background: T.card, borderBottom: "1px solid " + T.bdr, position: "sticky", top: 0, zIndex: 5 }}>
+                <div onClick={() => { setShowFornitoreForm(false); setFornitoreEdit(null); }} style={{ cursor: "pointer", color: T.red, fontWeight: 700, fontSize: 13 }}>✕ Annulla</div>
+                <div style={{ flex: 1, textAlign: "center", fontSize: 14, fontWeight: 800, color: T.text }}>{fornitori.find(f => f.id === fornitoreEdit.id) ? "Modifica" : "Nuovo"} Fornitore</div>
+                <div onClick={() => {
+                  const existing = fornitori.find(f => f.id === fornitoreEdit.id);
+                  if (existing) setFornitori(p => p.map(f => f.id === fornitoreEdit.id ? fornitoreEdit : f));
+                  else setFornitori(p => [...p, fornitoreEdit]);
+                  setShowFornitoreForm(false); setFornitoreEdit(null);
+                }} style={{ cursor: "pointer", color: T.acc, fontWeight: 800, fontSize: 13 }}>💾 Salva</div>
+              </div>
+              <div style={{ padding: 16 }}>
+                {/* SEZIONE AZIENDA */}
+                <div style={{ fontSize: 11, fontWeight: 800, color: T.acc, marginBottom: 8, marginTop: 4 }}>🏢 DATI AZIENDA</div>
+                <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+                  <div><div style={lblStyle}>Nome (breve)</div><input style={fldStyle} value={fornitoreEdit.nome} onChange={e => upd("nome", e.target.value)} placeholder="es. Aluplast" /></div>
+                  <div><div style={lblStyle}>Ragione Sociale</div><input style={fldStyle} value={fornitoreEdit.ragioneSociale} onChange={e => upd("ragioneSociale", e.target.value)} placeholder="es. Aluplast Italia SRL" /></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div><div style={lblStyle}>P.IVA</div><input style={fldStyle} value={fornitoreEdit.piva} onChange={e => upd("piva", e.target.value)} placeholder="01234567890" /></div>
+                    <div><div style={lblStyle}>Codice Fiscale</div><input style={fldStyle} value={fornitoreEdit.cf} onChange={e => upd("cf", e.target.value)} /></div>
+                  </div>
+                  <div><div style={lblStyle}>Indirizzo</div><input style={fldStyle} value={fornitoreEdit.indirizzo} onChange={e => upd("indirizzo", e.target.value)} /></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 60px", gap: 8 }}>
+                    <div><div style={lblStyle}>CAP</div><input style={fldStyle} value={fornitoreEdit.cap} onChange={e => upd("cap", e.target.value)} /></div>
+                    <div><div style={lblStyle}>Città</div><input style={fldStyle} value={fornitoreEdit.citta} onChange={e => upd("citta", e.target.value)} /></div>
+                    <div><div style={lblStyle}>Prov.</div><input style={fldStyle} value={fornitoreEdit.provincia} onChange={e => upd("provincia", e.target.value)} maxLength={2} /></div>
+                  </div>
+                  <div><div style={lblStyle}>Sito Web</div><input style={fldStyle} value={fornitoreEdit.sito} onChange={e => upd("sito", e.target.value)} placeholder="www.fornitore.it" /></div>
+                  <div><div style={lblStyle}>Categoria</div>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as any }}>
+                      {CATEGORIE.map(c => <span key={c.id} onClick={() => upd("categoria", c.id)} style={{ padding: "6px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", background: fornitoreEdit.categoria === c.id ? T.accLt : T.bg, color: fornitoreEdit.categoria === c.id ? T.acc : T.sub, border: "1px solid " + (fornitoreEdit.categoria === c.id ? T.acc + "40" : T.bdr) }}>{c.l}</span>)}
+                    </div>
+                  </div>
+                </div>
+                {/* SEZIONE CONTATTI */}
+                <div style={{ fontSize: 11, fontWeight: 800, color: T.acc, marginBottom: 8 }}>📞 CONTATTI</div>
+                <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div><div style={lblStyle}>Telefono</div><input style={fldStyle} value={fornitoreEdit.telefono} onChange={e => upd("telefono", e.target.value)} type="tel" /></div>
+                    <div><div style={lblStyle}>Cellulare</div><input style={fldStyle} value={fornitoreEdit.cellulare} onChange={e => upd("cellulare", e.target.value)} type="tel" /></div>
+                  </div>
+                  <div><div style={lblStyle}>Email</div><input style={fldStyle} value={fornitoreEdit.email} onChange={e => upd("email", e.target.value)} type="email" /></div>
+                  <div><div style={lblStyle}>PEC</div><input style={fldStyle} value={fornitoreEdit.pec} onChange={e => upd("pec", e.target.value)} type="email" placeholder="fornitore@pec.it" /></div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: T.sub, marginTop: 4 }}>👤 REFERENTE COMMERCIALE</div>
+                  <div><div style={lblStyle}>Nome Referente</div><input style={fldStyle} value={fornitoreEdit.referente} onChange={e => upd("referente", e.target.value)} /></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div><div style={lblStyle}>Tel. Referente</div><input style={fldStyle} value={fornitoreEdit.telReferente} onChange={e => upd("telReferente", e.target.value)} type="tel" /></div>
+                    <div><div style={lblStyle}>Email Referente</div><input style={fldStyle} value={fornitoreEdit.emailReferente} onChange={e => upd("emailReferente", e.target.value)} type="email" /></div>
+                  </div>
+                </div>
+                {/* SEZIONE COMMERCIALE */}
+                <div style={{ fontSize: 11, fontWeight: 800, color: T.acc, marginBottom: 8 }}>💰 CONDIZIONI COMMERCIALI</div>
+                <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+                  <div><div style={lblStyle}>Modalità Pagamento</div>
+                    <select value={fornitoreEdit.pagamento} onChange={e => upd("pagamento", e.target.value)} style={{...fldStyle}}>
+                      {PAGAMENTI_OPT.map(p => <option key={p.id} value={p.id}>{p.l}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div><div style={lblStyle}>Sconto Base %</div><input style={fldStyle} type="number" value={fornitoreEdit.scontoBase} onChange={e => upd("scontoBase", parseFloat(e.target.value) || 0)} /></div>
+                    <div><div style={lblStyle}>Tempi Consegna (gg)</div><input style={fldStyle} type="number" value={fornitoreEdit.tempoConsegna} onChange={e => upd("tempoConsegna", parseInt(e.target.value) || 0)} /></div>
+                  </div>
+                  <div><div style={lblStyle}>Banca</div><input style={fldStyle} value={fornitoreEdit.banca} onChange={e => upd("banca", e.target.value)} /></div>
+                  <div><div style={lblStyle}>IBAN</div><input style={fldStyle} value={fornitoreEdit.iban} onChange={e => upd("iban", e.target.value)} placeholder="IT..." /></div>
+                </div>
+                {/* SEZIONE PRODOTTI */}
+                <div style={{ fontSize: 11, fontWeight: 800, color: T.acc, marginBottom: 8 }}>📦 PRODOTTI E NOTE</div>
+                <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+                  <div><div style={lblStyle}>Sistemi/Prodotti Trattati</div><textarea style={{...fldStyle, minHeight: 60, resize: "vertical" as any}} value={fornitoreEdit.sistemiTrattati} onChange={e => upd("sistemiTrattati", e.target.value)} placeholder="es. Ideal 4000, Ideal 7000..." /></div>
+                  <div><div style={lblStyle}>Note</div><textarea style={{...fldStyle, minHeight: 60, resize: "vertical" as any}} value={fornitoreEdit.note} onChange={e => upd("note", e.target.value)} /></div>
+                </div>
+              </div>
+            </div>;
+          })()}
+        </div>}
+
+        {settingsTab === "temi" && <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Temi</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            {Object.entries(THEMES).map(([k, v]: [string, any]) => (
+              <div key={k} onClick={() => setTheme(k)} style={{ background: v.card, borderRadius: T.r, border: "2px solid " + (theme === k ? v.acc : v.bdr), padding: 12, cursor: "pointer", textAlign: "center" }}>
+                <div style={{ fontSize: 20, marginBottom: 4 }}>{v.emoji}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: v.text }}>{v.name}</div>
+                {theme === k && <div style={{ fontSize: 9, color: v.acc, fontWeight: 700, marginTop: 2 }}>ATTIVO</div>}
+              </div>
+            ))}
+          </div>
+        </div>}
+
+
         {settingsTab === "guida" && (
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {/* Header */}
@@ -9649,7 +11282,7 @@ Grazie per il suo messaggio.
                   <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Dai un nome al vano (es. "Cucina", "Salone") e scegli la stanza</div>
                 </div>
-                <div style={{fontSize:11,color:T.sub,marginTop:4,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Tipologie rapide:</b> F1A = 1 anta, F2A = 2 ante, PF = portafinestra, SC = scorrevole, VAS = vasistas</div>
+                <div style={{fontSize:11,color:T.sub,marginTop:4,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Tipologie rapide:</b> F1A = 1 anta, F2A = 2 ante, PF = portafinestra, SC = scorrevole, VAS = vasistas, TDBR = tenda bracci, TDPERG = pergola</div>
               </div>
             </div>
 
@@ -10740,10 +12373,38 @@ Fabio Cozza - Walter Cozza Serramenti` },
 
                     <div style={{ marginBottom:14, padding:"14px", background:T.card, borderRadius:12, border:`1.5px solid ${T.bdr}` }}>
                       <div style={{ fontSize:10, fontWeight:800, color:T.sub, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>👤 Dati cliente *</div>
-                      <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+                      <div style={{ display:"flex", gap:8, marginBottom:0 }}>
                         <input style={{...S.input,flex:1}} placeholder="Nome" value={newCM.cliente} onChange={e=>setNewCM(c=>({...c,cliente:e.target.value}))}/>
                         <input style={{...S.input,flex:1}} placeholder="Cognome" value={newCM.cognome||""} onChange={e=>setNewCM(c=>({...c,cognome:e.target.value}))}/>
                       </div>
+                      {/* Autocomplete rubrica - INLINE (non absolute per non essere tagliato dal modal overflow) */}
+                      {newCM.cliente.length >= 2 && (() => {
+                        const q = newCM.cliente.toLowerCase();
+                        const matches = contatti.filter(ct => ct.nome?.toLowerCase().includes(q) || (ct.cognome || "").toLowerCase().includes(q) || (ct.azienda || "").toLowerCase().includes(q)).slice(0, 5);
+                        const cmMatches = cantieri.filter(cm => cm.cliente?.toLowerCase().includes(q) || (cm.cognome || "").toLowerCase().includes(q)).slice(0, 3);
+                        const allSugg = [
+                          ...matches.map(ct => ({ tipo: "rubrica", nome: ct.nome, cognome: ct.cognome || "", tel: ct.telefono || "", email: ct.email || "", indirizzo: ct.indirizzo || "", ico: "📒" })),
+                          ...cmMatches.map(cm => ({ tipo: "commessa", nome: cm.cliente, cognome: cm.cognome || "", tel: cm.telefono || "", email: cm.email || "", indirizzo: cm.indirizzo || "", ico: "📁" }))
+                        ];
+                        const seen = new Set();
+                        const unique = allSugg.filter(s => { const k = (s.nome+s.cognome).toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+                        if (unique.length === 0) return null;
+                        return <div style={{ background:"#fff", border:"1.5px solid " + T.acc + "40", borderRadius:10, marginBottom:8, overflow:"hidden" }}>
+                          <div style={{ padding:"6px 10px", fontSize:9, fontWeight:700, color:T.acc, background:T.acc+"08", borderBottom:"1px solid " + T.acc + "20" }}>📒 Seleziona dalla rubrica ({unique.length})</div>
+                          {unique.map((s, i) => (
+                            <div key={i} onClick={() => setNewCM(c => ({...c, cliente: s.nome, cognome: s.cognome, telefono: s.tel, email: s.email, indirizzo: s.indirizzo || c.indirizzo }))}
+                              style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px", cursor:"pointer", borderBottom: i < unique.length -1 ? "1px solid " + T.bdr + "40" : "none" }}>
+                              <div style={{ fontSize:16 }}>{s.ico}</div>
+                              <div style={{ flex:1 }}>
+                                <div style={{ fontSize:12, fontWeight:700, color:T.text }}>{s.nome} {s.cognome}</div>
+                                <div style={{ fontSize:9, color:T.sub }}>{s.tel && ("📞 " + s.tel)} {s.email && (" ✉️ " + s.email)}</div>
+                                {s.indirizzo && <div style={{ fontSize:9, color:T.sub }}>📍 {s.indirizzo}</div>}
+                              </div>
+                              <span style={{ fontSize:8, padding:"2px 6px", borderRadius:4, background: s.tipo === "rubrica" ? "#af52de15" : T.accLt, color: s.tipo === "rubrica" ? "#af52de" : T.acc, fontWeight:700 }}>{s.tipo === "rubrica" ? "RUBRICA" : "COMMESSA"}</span>
+                            </div>
+                          ))}
+                        </div>;
+                      })()}
                       <input style={{...S.input,marginBottom:8}} placeholder="Indirizzo lavori (Via, CAP, Città)" value={newCM.indirizzo} onChange={e=>setNewCM(c=>({...c,indirizzo:e.target.value}))}/>
                       <div style={{ display:"flex", gap:8 }}>
                         <input style={{...S.input,flex:1}} placeholder="Telefono" inputMode="tel" value={newCM.telefono} onChange={e=>setNewCM(c=>({...c,telefono:e.target.value}))}/>
@@ -10872,7 +12533,9 @@ Fabio Cozza - Walter Cozza Serramenti` },
     const totalMq = vaniPDF.reduce((s,v)=>s+calcolaVanoPDF(v).mq, 0);
     const az = aziendaInfo;
     const fmt = (n: number) => n.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const TIPI_LABEL: Record<string,string> = { F1A:"Finestra 1 anta", F2A:"Finestra 2 ante", PF1A:"Portafinestra 1 anta", PF2A:"Portafinestra 2 ante", SC2A:"Scorrevole 2 ante", SC4A:"Scorrevole 4 ante", VAS:"Vasistas", FIS:"Fisso", PB:"Porta blindata", PI:"Porta interna" };
+    const TIPI_LABEL: Record<string,string> = { F1A:"Finestra 1 anta", F2A:"Finestra 2 ante", PF1A:"Portafinestra 1 anta", PF2A:"Portafinestra 2 ante", SC2A:"Scorrevole 2 ante", SC4A:"Scorrevole 4 ante", VAS:"Vasistas", FIS:"Fisso", PB:"Porta blindata", PI:"Porta interna", PORTONE:"Portone", TDBR:"Tenda a bracci", TDCAD:"Tenda a caduta", TDCAP:"Cappottina", TDVER:"Tenda verticale", TDRUL:"Tenda a rullo", TDPERG:"Pergola bioclimatica", TDZIP:"Tenda ZIP/Screen", TDVELA:"Vela ombreggiante", VENEZIA:"Veneziana", TDS:"Tenda da sole", TDR:"Tenda a rullo", TVE:"Tenda veranda", PBC:"Pergola bioclimatica", PGA:"Pergola addossata", PGF:"Pergola freestanding", TCA:"Tenda a cappottina", TCB:"Tenda a bracci", ZTE:"Zanzariera tenda" };
+    const TIPI_OUTDOOR = ["TDBR","TDCAD","TDCAP","TDVER","TDRUL","TDPERG","TDZIP","TDVELA","VENEZIA","TDS","TDR","TVE","PBC","PGA","PGF","TCA","TCB","ZTE"];
+    const isOutdoor = (tipo: string) => TIPI_OUTDOOR.includes(tipo);
 
     // SVG technical drawing per tipo - IMPROVED
     const drawSVG = (tipo: string, w: number, h: number) => {
@@ -11526,6 +13189,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
   const [extractingPDF, setExtractingPDF] = useState(false); // loading AI extraction
   const [showInboxDoc, setShowInboxDoc] = useState(false); // global document inbox
   const [inboxResult, setInboxResult] = useState<any>(null); // extracted data from inbox
+
+
 
   // Crea nuovo ordine fornitore da commessa
   const creaOrdineFornitore = (c, fornitoreNome = "") => {
@@ -12208,60 +13873,25 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
 
   // === AI PDF EXTRACTION — Claude legge QUALSIASI PDF ===
   const estraiDatiPDF = async (file: File): Promise<any> => {
-    // METODO 1: Supabase Edge Function + Claude API (funziona con TUTTO)
+    const extracted: any = { nomeFile: file.name };
+    
+    // Estrazione locale robusta — funziona anche offline
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      const supabaseUrl = (supabase as any).supabaseUrl || "";
-      
-      const resp = await fetch(`${supabaseUrl}/functions/v1/extract-pdf`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${session?.access_token || ""}`,
-        },
-        body: formData,
+      const text = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string || "");
+        reader.onerror = () => resolve("");
+        reader.readAsText(file);
+        setTimeout(() => resolve(""), 3000); // 3s max
       });
       
-      if (resp.ok) {
-        const result = await resp.json();
-        if (result.success && result.data) {
-          const d = result.data;
-          const extracted: any = {};
-          if (d.totale) extracted.totale = d.totale;
-          if (d.imponibile) extracted.imponibile = d.imponibile;
-          if (d.settimane) extracted.settimane = d.settimane;
-          if (d.data_consegna) extracted.dataConsegna = d.data_consegna;
-          if (d.termini_pagamento) extracted.pagamento = d.termini_pagamento;
-          if (d.fornitore_nome) extracted.fornitoreNome = d.fornitore_nome;
-          if (d.numero_ordine) extracted.numeroOrdine = d.numero_ordine;
-          if (d.righe) extracted.righe = d.righe;
-          if (d.note) extracted.note = d.note;
-          return extracted;
-        }
-      }
-    } catch (e) { console.warn("Edge Function non disponibile, uso fallback locale:", e); }
-
-    // METODO 2: Fallback — estrazione testo locale (PDF text-based)
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const text = reader.result as string;
-        const extracted: any = {};
-
+      if (text && text.length > 20) {
         // Totale
-        const totMatch = text.match(/(?:TOTALE|Totale\s*(?:Documento|Ordine|Generale)?|Tot\.?\s*€?)\s*[€:]?\s*([\d.,]+)/i);
-        if (totMatch) {
-          const val = parseFloat(totMatch[1].replace(/\./g, "").replace(",", "."));
-          if (val > 0 && val < 1000000) extracted.totale = val;
-        }
+        const totMatch = text.match(/(?:TOTALE|Totale\s*(?:Documento|Ordine|Generale)?|Tot\.?\s*\u20ac?)\s*[\u20ac:]?\s*([\d.,]+)/i);
+        if (totMatch) { const val = parseFloat(totMatch[1].replace(/\./g, "").replace(",", ".")); if (val > 0 && val < 1000000) extracted.totale = val; }
         // Imponibile
-        const impMatch = text.match(/(?:Imponibile|Subtotale|Sub\s*tot)\s*[€:]?\s*([\d.,]+)/i);
-        if (impMatch) {
-          const val = parseFloat(impMatch[1].replace(/\./g, "").replace(",", "."));
-          if (val > 0) extracted.imponibile = val;
-        }
+        const impMatch = text.match(/(?:Imponibile|Subtotale|Sub\s*tot)\s*[\u20ac:]?\s*([\d.,]+)/i);
+        if (impMatch) { const val = parseFloat(impMatch[1].replace(/\./g, "").replace(",", ".")); if (val > 0) extracted.imponibile = val; }
         // Settimane
         const settMatch = text.match(/(\d{1,2})\s*(?:settiman[ea]|sett\.?|weeks?)/i);
         if (settMatch) extracted.settimane = parseInt(settMatch[1]);
@@ -12269,26 +13899,29 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         if (giorniMatch) extracted.settimane = Math.ceil(parseInt(giorniMatch[1]) / 5);
         // Data consegna
         const consMatch = text.match(/(?:consegna|delivery|spedizione)\s*(?:prevista)?:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
-        if (consMatch) {
-          const parts = consMatch[1].split(/[\/\-]/);
-          if (parts.length === 3) {
-            const y = parts[2].length === 2 ? "20" + parts[2] : parts[2];
-            extracted.dataConsegna = `${y}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
-          }
-        }
+        if (consMatch) { const parts = consMatch[1].split(/[\/\-]/); if (parts.length === 3) { const y = parts[2].length === 2 ? "20" + parts[2] : parts[2]; extracted.dataConsegna = y + "-" + parts[1].padStart(2, "0") + "-" + parts[0].padStart(2, "0"); } }
+        // Fornitore
+        const fornMatch = text.match(/(?:Da|From|Fornitore|Ragione\s*Sociale)[:\s]+([^\n]{3,50})/i);
+        if (fornMatch) extracted.fornitoreNome = fornMatch[1].trim();
         // Pagamento
         const pagMatch = text.match(/(\d{2,3})\s*(?:gg|giorni)\s*(?:FM|D\.?F\.?|f\.?m\.?)?/i);
-        if (pagMatch) {
-          const days = parseInt(pagMatch[1]);
-          extracted.pagamento = days <= 30 ? "30gg_fm" : days <= 60 ? "60gg_fm" : "90gg_fm";
-        }
+        if (pagMatch) { const days = parseInt(pagMatch[1]); extracted.pagamento = days <= 30 ? "30gg_fm" : days <= 60 ? "60gg_fm" : "90gg_fm"; }
         if (text.match(/anticip/i)) extracted.pagamento = "anticipato";
-        if (text.match(/ricevimento\s*merce/i)) extracted.pagamento = "ricevuta_merce";
-
-        resolve(extracted);
-      };
-      reader.readAsText(file);
-    });
+        
+        extracted.text = text.slice(0, 2000); // keep snippet for classification
+      }
+    } catch (e) { console.warn("Estrazione fallback:", e); }
+    
+    // Per immagini, estrai info dal nome file
+    if (file.type.startsWith("image/")) {
+      const fname = file.name.toLowerCase();
+      if (fname.match(/conferma|order/i)) extracted.fornitoreNome = "Da conferma";
+      if (fname.match(/fattura|invoice/i)) extracted.totale = extracted.totale || 0;
+      // Crea URL locale per preview
+      try { extracted.previewUrl = URL.createObjectURL(file); } catch(e) {}
+    }
+    
+    return extracted;
   };
 
   // === 📥 INBOX UNIVERSALE — Classifica qualsiasi documento ===
@@ -12306,28 +13939,34 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       let extractedData: any = {};
 
       try {
+        // Crea URL locale per il file (funziona sempre, anche offline)
+        try { fileUrl = URL.createObjectURL(file); } catch(e) {}
+        
+        // Prova upload Supabase (se disponibile)
         try {
           if (typeof supabase !== "undefined" && supabase?.storage) {
-            const fileName = `inbox_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+            const fileName = "inbox_" + Date.now() + "_" + file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
             const result: any = await Promise.race([
-              supabase.storage.from("conferme-fornitore").upload(`docs/${fileName}`, file, { contentType: file.type, upsert: true }),
-              new Promise((_, rej) => setTimeout(() => rej("timeout"), 5000)),
+              supabase.storage.from("conferme-fornitore").upload("docs/" + fileName, file, { contentType: file.type, upsert: true }),
+              new Promise((_, rej) => setTimeout(() => rej("timeout"), 3000)),
             ]).catch(() => null);
             if (result && !result.error) {
-              const { data: urlData } = supabase.storage.from("conferme-fornitore").getPublicUrl(`docs/${fileName}`);
-              fileUrl = urlData?.publicUrl || "";
+              const { data: urlData } = supabase.storage.from("conferme-fornitore").getPublicUrl("docs/" + fileName);
+              if (urlData?.publicUrl) fileUrl = urlData.publicUrl;
             }
           }
-        } catch (err) { /* skip upload */ }
+        } catch (err) { /* skip — local URL works fine */ }
 
-        setInboxResult(prev => ({ ...prev, stato: "analisi" }));
+        setInboxResult((prev: any) => ({ ...prev, stato: "analisi" }));
+        
+        // Estrai dati dal file (max 4 secondi)
         try {
           extractedData = await Promise.race([
             estraiDatiPDF(file),
-            new Promise((_, rej) => setTimeout(() => rej("timeout"), 8000)),
+            new Promise((_, rej) => setTimeout(() => rej("timeout"), 4000)),
           ]).catch(() => ({ nomeFile: file.name }));
         } catch (err) { extractedData = { nomeFile: file.name }; }
-      } catch (err) { console.warn("Inbox error:", err); }
+      } catch (err) { console.warn("Inbox error:", err); extractedData = { nomeFile: file.name }; }
 
       // === CLASSIFICAZIONE UNIVERSALE ===
       const fname = file.name.toLowerCase();
@@ -12583,6 +14222,62 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     window.open(url, "_blank");
     return url;
   };
+
+  // ═══ FATTURAZIONE ELETTRONICA XML SDI ═══
+  const generaXmlSDI = (fat) => {
+    const az = aziendaDB;
+    const progressivo = String(fat.numero).padStart(5, "0") + "_" + fat.anno;
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente><IdPaese>IT</IdPaese><IdCodice>` + (az.piva || "00000000000") + `</IdCodice></IdTrasmittente>
+      <ProgressivoInvio>` + progressivo + `</ProgressivoInvio>
+      <FormatoTrasmissione>FPR12</FormatoTrasmissione>
+      <CodiceDestinatario>` + (fat.sdi || "0000000") + `</CodiceDestinatario>
+    </DatiTrasmissione>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <IdFiscaleIVA><IdPaese>IT</IdPaese><IdCodice>` + (az.piva || "") + `</IdCodice></IdFiscaleIVA>
+        <Anagrafica><Denominazione>` + (az.ragioneSociale || "MASTRO SRL") + `</Denominazione></Anagrafica>
+        <RegimeFiscale>RF01</RegimeFiscale>
+      </DatiAnagrafici>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <Anagrafica><Denominazione>` + fat.cliente + ` ` + (fat.cognome || "") + `</Denominazione></Anagrafica>
+      </DatiAnagrafici>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD01</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>` + (fat.dataISO || new Date().toISOString().split("T")[0]) + `</Data>
+        <Numero>` + fat.numero + `/` + fat.anno + `</Numero>
+        <ImportoTotaleDocumento>` + fat.importo.toFixed(2) + `</ImportoTotaleDocumento>
+      </DatiGeneraliDocumento>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Fornitura e posa serramenti (Rif. ` + fat.cmCode + `)</Descrizione>
+        <Quantita>1.00</Quantita>
+        <PrezzoUnitario>` + fat.imponibile.toFixed(2) + `</PrezzoUnitario>
+        <PrezzoTotale>` + fat.imponibile.toFixed(2) + `</PrezzoTotale>
+        <AliquotaIVA>` + fat.iva.toFixed(2) + `</AliquotaIVA>
+      </DettaglioLinee>
+    </DatiBeniServizi>
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>`;
+    const blob = new Blob([xml], { type: "application/xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url;
+    a.download = "IT" + (az.piva || "00000000000") + "_" + progressivo + ".xml";
+    a.click(); URL.revokeObjectURL(url);
+  };
+
 
   // === ONBOARDING MODAL "COSA VENDI?" ===
   const renderOnboarding = () => {
@@ -13404,7 +15099,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
           const chCol = { email: T.blue, whatsapp: "#25d366", sms: T.orange, telegram: "#0088cc" };
           const [replyChannel, setReplyChannelX] = [selectedMsg._replyChannel || selectedMsg.canale, (ch) => setSelectedMsg(p => ({...p, _replyChannel: ch}))];
           return (
-          <div style={{ position: "fixed", inset: 0, background: T.bg, zIndex: 100, display: "flex", flexDirection: "column" }}>
+          <div style={{ position: "fixed", inset: 0, background: T.bg, zIndex: 150, display: "flex", flexDirection: "column" }}>
             <div style={{ padding: "12px 16px", background: T.card, borderBottom: `1px solid ${T.bdr}`, display: "flex", alignItems: "center", gap: 10 }}>
               <div onClick={() => { setSelectedMsg(null); setReplyText(""); }} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
               <div style={{ flex: 1 }}>
@@ -13441,7 +15136,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                   </div>
                 ))}
               </div>
-              <div style={{ padding: "8px 16px 10px", display: "flex", gap: 8, alignItems: "center" }}>
+              <div style={{ padding: "8px 16px 20px", display: "flex", gap: 8, alignItems: "center" }}>
                 <div style={{ display: "flex", gap: 4 }}>
                   <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>📎</div>
                   <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>🎤</div>
@@ -14432,7 +16127,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         </div>
       )}
       {/* === 📥 INBOX DOCUMENTI — Modal globale === */}
-      {showInboxDoc && (
+      {showContabilita && renderContabilita()}
+        {showInboxDoc && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
           <div style={{ background: T.card, borderRadius: "20px 20px 0 0", maxWidth: 500, width: "100%", maxHeight: "85vh", overflowY: "auto", padding: "20px 20px 30px" }}>
@@ -14639,7 +16335,23 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               })}
             </div>
             {/* All attachments */}
-            {selectedCM && (selectedCM.allegati || []).length > 0 && (
+            
+                {/* ═══ CRONOLOGIA ═══ */}
+                <div style={{ marginTop: 12 }}>
+                  <div onClick={() => setShowCronologia(!showCronologia)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "8px 0" }}>
+                    <span style={{ fontSize: 11 }}>📜</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: T.text }}>Cronologia ({(c.log || []).length})</span>
+                    <span style={{ marginLeft: "auto", fontSize: 10, color: T.sub }}>{showCronologia ? "▲" : "▼"}</span>
+                  </div>
+                  {showCronologia && (c.log || []).slice().reverse().map((l, i) => (
+                    <div key={i} style={{ display: "flex", gap: 8, padding: "5px 0", borderBottom: `1px solid ${T.bg}`, fontSize: 11 }}>
+                      <div style={{ width: 5, height: 5, borderRadius: "50%", background: l.color || T.acc, marginTop: 5, flexShrink: 0 }} />
+                      <div><b>{l.chi}</b> {l.cosa} <span style={{ color: T.sub, fontSize: 9 }}>{l.quando}</span></div>
+                    </div>
+                  ))}
+                </div>
+
+                {selectedCM && (selectedCM.allegati || []).length > 0 && (
               <div style={{ padding: "0 12px 16px" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 6 }}>📎 TUTTI GLI ALLEGATI COMMESSA ({selectedCM.allegati.length})</div>
                 {(selectedCM.allegati || []).map((a: any, ai: number) => (
