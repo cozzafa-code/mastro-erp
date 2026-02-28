@@ -1118,7 +1118,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
         return;
       }
       const savedVer = localStorage.getItem("mastro:demoVer");
-      if (savedVer !== DEMO_VER) {
+      if (false && savedVer !== DEMO_VER) {
         // FORCE RESET — version changed or first load
         console.log("🔄 MASTRO: Reset demo →", DEMO_VER);
         Object.keys(localStorage).filter(k => k.startsWith("mastro:")).forEach(k => {
@@ -8741,6 +8741,50 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
   const [newCliente, setNewCliente] = useState({ nome: "", cognome: "", tipo: "cliente", telefono: "", email: "", indirizzo: "", piva: "", note: "" });
   const [selectedCliente, setSelectedCliente] = useState<any>(null);
 
+
+  // === PERSISTENZA LOCALSTORAGE ===
+  const STORAGE_KEY = "mastro_erp_data";
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const d = JSON.parse(saved);
+        if (d.contatti) setContatti(d.contatti);
+        if (d.cantieri) setCantieri(d.cantieri);
+        if (d.events) setEvents(d.events);
+        if (d.fattureDB) setFattureDB(d.fattureDB);
+        if (d.pipelineDB) setPipelineDB(d.pipelineDB);
+        if (d.team) setTeam(d.team);
+        if (d.tasks) setTasks(d.tasks);
+        if (d.problemi) setProblemi(d.problemi);
+        if (d.squadreDB) setSquadreDB(d.squadreDB);
+        if (d.montaggiDB) setMontaggiDB(d.montaggiDB);
+        if (d.aziendaInfo) setAziendaInfo(d.aziendaInfo);
+        if (d.sogliaDays !== undefined) setSogliaDays(d.sogliaDays);
+        if (d.theme) setTheme(d.theme);
+        console.log("MASTRO: dati caricati da localStorage");
+      }
+    } catch (e) { console.warn("Errore caricamento:", e); }
+    setDataLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          contatti, cantieri, events, fattureDB, pipelineDB,
+          team, tasks, problemi, squadreDB, montaggiDB,
+          aziendaInfo, sogliaDays, theme,
+          _savedAt: new Date().toISOString()
+        }));
+      } catch (e) { console.warn("Errore salvataggio:", e); }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [dataLoaded, contatti, cantieri, events, fattureDB, pipelineDB, team, tasks, problemi, squadreDB, montaggiDB, aziendaInfo, sogliaDays, theme]);
+
   const renderClienti = () => {
     const filters = [
       { id: "tutti", l: "Tutti", c: T.acc },
@@ -11476,7 +11520,7 @@ Grazie per il suo messaggio.
         
             <div onClick={()=>{ let nome; try{nome=window.prompt("Nome nuova fase:");}catch(e){} if(nome?.trim()) setPipelineDB(db=>[...db.slice(0,-1),{id:"custom_"+Date.now(),nome:nome.trim(),ico:"⭐",color:"#8e8e93",attiva:true,custom:true},...db.slice(-1)]); }}
               style={{...S.card,marginTop:4,textAlign:"center",padding:"10px",cursor:"pointer",color:T.acc,fontSize:13,fontWeight:700}}>+ Aggiungi fase personalizzata</div>
-            <div onClick={()=>{if((()=>{try{return window.confirm("Ripristinare le fasi predefinite?");}catch(e){return false;}})())setPipelineDB(PIPELINE_DEFAULT);}}
+            <div onClick={()=>{ if(!confirm("ATTENZIONE: Sei sicuro di voler ripristinare tutti i dati?")) return; if(!confirm("ULTIMA CONFERMA: Tutti i dati torneranno ai dati demo. Confermi?")) return; localStorage.removeItem("mastro_erp_data"); if((()=>{try{return window.confirm("Ripristinare le fasi predefinite?");}catch(e){return false;}})())setPipelineDB(PIPELINE_DEFAULT);}}
               style={{textAlign:"center",padding:"10px 0 4px",fontSize:11,color:T.sub,cursor:"pointer"}}>Ripristina predefinita</div>
           </>
         )}
