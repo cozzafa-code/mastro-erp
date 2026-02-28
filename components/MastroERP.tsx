@@ -5542,7 +5542,7 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
           const hasSaldoCC = fattCC.some(f => f.tipo === "saldo");
           const saldoPagCC = fattCC.find(f => f.tipo === "saldo")?.pagata;
           const unicaPagCC = fattCC.find(f => f.tipo === "unica")?.pagata;
-          const tuttoCC = (hasSaldoCC && saldoPagCC) || (fattCC.some(f => f.tipo === "unica") && unicaPagCC) || (cm.fase === "chiusura" && incassatoCC >= totIvaCC) || (incassatoCC >= totIvaCC && fattCC.length > 0 && fattCC.every(f => f.pagata));
+          const tuttoCC = (hasSaldoCC && saldoPagCC) || (fattCC.some(f => f.tipo === "unica") && unicaPagCC) || (c.fase === "chiusura" && incassatoCC >= totIvaCC) || (incassatoCC >= totIvaCC && fattCC.length > 0 && fattCC.every(f => f.pagata));
           const incassatoCC = fattCC.filter(f => f.pagata).reduce((s, f) => s + (f.importo || 0), 0);
           const fmtCC = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2 }) : "0,00";
 
@@ -5743,8 +5743,8 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
                             <div style={{ display: "flex", gap: 8 }}>
                               <button onClick={() => setCcConfirm(null)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, color: T.sub, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Annulla</button>
                               <button onClick={() => {
-                                setFattureDB(prev => prev.map(f => f.cmId === cm.id && !f.pagata ? { ...f, pagata: true, dataPagamento: new Date().toISOString().split("T")[0], metodoPagamento: "Bonifico" } : f));
-                                setFaseTo(cm.id, "chiusura");
+                                setFattureDB(prev => prev.map(f => f.cmId === c.id && !f.pagata ? { ...f, pagata: true, dataPagamento: new Date().toISOString().split("T")[0], metodoPagamento: "Bonifico" } : f));
+                                setFaseTo(c.id, "chiusura");
                                 setCcConfirm(null); setCcDone("🎉 Commessa chiusa!"); setTimeout(() => setCcDone(null), 3000);
                               }} style={{ flex: 2, padding: 11, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✅ CONFERMO INCASSO</button>
                             </div>
@@ -5753,7 +5753,7 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
                       )}
                       {/* Phase 3: All paid, just close */}
                       {!saldoFatCC && restoCC <= 0 && (
-                        <button onClick={() => { setFaseTo(cm.id, "chiusura"); setCcDone("🎉 Commessa chiusa!"); setTimeout(() => setCcDone(null), 3000); }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>🎉 CHIUDI COMMESSA →</button>
+                        <button onClick={() => { setFaseTo(c.id, "chiusura"); setCcDone("🎉 Commessa chiusa!"); setTimeout(() => setCcDone(null), 3000); }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>🎉 CHIUDI COMMESSA →</button>
                       )}
                     </div>
                     );
