@@ -893,6 +893,8 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [searchQ, setSearchQ] = useState("");
   const [showModal, setShowModal] = useState(null); // 'task' | 'commessa' | 'vano' | null
   const [settingsTab, setSettingsTab] = useState("generali");
+  const [expandedPipelinePhase, setExpandedPipelinePhase] = useState(null);
+  const [pipelinePhaseTab, setPipelinePhaseTab] = useState("email");
   const [showRiepilogo, setShowRiepilogo] = useState(false);
   const [riepilogoSending, setRiepilogoSending] = useState(false);
 
@@ -954,6 +956,10 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   const [showMailModal, setShowMailModal] = useState<{ev: any, cm: any} | null>(null);
+  const [showEmailComposer, setShowEmailComposer] = useState<any>(null); // {cm, tipo}
+  const [emailDest, setEmailDest] = useState("");
+  const [emailOggetto, setEmailOggetto] = useState("");
+  const [emailCorpo, setEmailCorpo] = useState("");
   const [mailBody, setMailBody] = useState("");
   const [newEvent, setNewEvent] = useState({ text: "", time: "", tipo: "sopralluogo", cm: "", persona: "", date: "", reminder: "", addr: "" });
   const [events, setEvents] = useState(() => {
@@ -1051,14 +1057,23 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [composeMsg, setComposeMsg] = useState({ to: "", text: "", canale: "whatsapp", cm: "" });
   const [fabOpen, setFabOpen] = useState(false);
   const [contatti, setContatti] = useState(CONTATTI_INIT);
-  const [msgSubTab, setMsgSubTab] = useState("chat"); // "chat" | "rubrica" | "ai"
+  const [msgSubTab, setMsgSubTab] = useState("chat"); // "chat" | "rubrica" | "ai" | "email"
   const [aiInbox, setAiInbox] = useState(AI_INBOX_INIT);
   const [selectedAiMsg, setSelectedAiMsg] = useState(null);
+  // Gmail integration
+  const [gmailStatus, setGmailStatus] = useState<{connected:boolean, email?:string}>({ connected: false });
+  const [gmailMessages, setGmailMessages] = useState<any[]>([]);
+  const [gmailLoading, setGmailLoading] = useState(false);
+  const [gmailNextPage, setGmailNextPage] = useState<string|null>(null);
+  const [gmailSelected, setGmailSelected] = useState<any>(null);
+  const [gmailReply, setGmailReply] = useState("");
+  const [gmailSending, setGmailSending] = useState(false);
+  const [gmailSearch, setGmailSearch] = useState("");
   const [rubricaSearch, setRubricaSearch] = useState("");
   const [rubricaFilter, setRubricaFilter] = useState("tutti"); // tutti/preferiti/team/clienti/fornitori
   const [globalSearch, setGlobalSearch] = useState("");
   // New commessa form
-  const [newCM, setNewCM] = useState({ cliente: "", indirizzo: "", telefono: "", sistema: "", tipo: "nuova", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "", note: "" });
+  const [newCM, setNewCM] = useState<any>({ cliente: "", indirizzo: "", telefono: "", email: "", sistema: "", tipo: "nuova", difficoltaSalita: "", mezzoSalita: "", foroScale: "", pianoEdificio: "", note: "" });
   const [ripSearch, setRipSearch] = useState("");
   const [ripCMSel, setRipCMSel] = useState(null);
   const [ripProblema, setRipProblema] = useState("");
@@ -1083,8 +1098,25 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 
   // == Persistence ==
   // DEMO VERSION — FORCE RESET on every new deploy
-  const DEMO_VER = "v49-msgs-dossier";
+  const DEMO_VER = "v50-gmail-email";
   useEffect(()=>{
+      // Check if user chose "clean slate" — skip demo data
+      const cleanSlate = localStorage.getItem("mastro:cleanSlate");
+      if (cleanSlate === "true") {
+        // User wants empty data — load from localStorage (which has empty arrays)
+        try{const _v=localStorage.getItem("mastro:cantieri");if(_v){setCantieri(JSON.parse(_v));}}catch(e){}
+        try{const _v=localStorage.getItem("mastro:tasks");if(_v){setTasks(JSON.parse(_v));}}catch(e){}
+        try{const _v=localStorage.getItem("mastro:events");if(_v){setEvents(JSON.parse(_v));}}catch(e){}
+        try{const _v=localStorage.getItem("mastro:fatture");if(_v){setFattureDB(JSON.parse(_v));}}catch(e){}
+        try{const _v=localStorage.getItem("mastro:ordiniForn");if(_v){setOrdiniFornDB(JSON.parse(_v));}}catch(e){}
+        try{const _v=localStorage.getItem("mastro:montaggi");if(_v){setMontaggiDB(JSON.parse(_v));}}catch(e){}
+        try{const _v=localStorage.getItem("mastro:msgs");if(_v){setMsgs(JSON.parse(_v));}}catch(e){}
+        try{const _v=localStorage.getItem("mastro:contatti");if(_v){setContatti(JSON.parse(_v));}}catch(e){}
+        try{const _v=localStorage.getItem("mastro:pipeline");if(_v){setPipeline(JSON.parse(_v));}}catch(e){}
+        try{const _v=localStorage.getItem("mastro:problemi");if(_v){setProblemi(JSON.parse(_v));}}catch(e){}
+        localStorage.setItem("mastro:demoVer", DEMO_VER);
+        return;
+      }
       const savedVer = localStorage.getItem("mastro:demoVer");
       if (savedVer !== DEMO_VER) {
         // FORCE RESET — version changed or first load
@@ -1255,6 +1287,82 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     if(!d) return 0;
     return Math.floor((oggi0 - d) / 86400000);
   };
+
+  // === GMAIL INTEGRATION ===
+  const gmailCheckStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/gmail/status");
+      const data = await res.json();
+      setGmailStatus(data);
+      if (data.connected) gmailFetchMessages();
+    } catch {}
+  }, []);
+
+  const gmailFetchMessages = useCallback(async (query?: string, page?: string) => {
+    setGmailLoading(true);
+    try {
+      let url = "/api/gmail/messages?max=20";
+      if (query) url += `&q=${encodeURIComponent(query)}`;
+      if (page) url += `&page=${page}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.messages) {
+        if (page) setGmailMessages(prev => [...prev, ...data.messages]);
+        else setGmailMessages(data.messages);
+        setGmailNextPage(data.nextPage);
+      }
+    } catch {}
+    setGmailLoading(false);
+  }, []);
+
+  const gmailSendReply = useCallback(async (to: string, subject: string, body: string, threadId?: string) => {
+    setGmailSending(true);
+    try {
+      const res = await fetch("/api/gmail/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to, subject: subject.startsWith("Re:") ? subject : `Re: ${subject}`, body, threadId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGmailReply("");
+        alert("✅ Email inviata!");
+        gmailFetchMessages();
+      } else {
+        alert("❌ Errore: " + (data.error || "invio fallito"));
+      }
+    } catch { alert("❌ Errore di rete"); }
+    setGmailSending(false);
+  }, []);
+
+  const gmailMatchCommessa = useCallback((email: any) => {
+    if (!email) return null;
+    const fromLower = (email.from || "").toLowerCase();
+    const subLower = (email.subject || "").toLowerCase();
+    const bodyLower = (email.body || "").substring(0, 500).toLowerCase();
+    const all = fromLower + " " + subLower + " " + bodyLower;
+    // Match by commessa code (S-XXXX)
+    const codeMatch = all.match(/s-\d{4}/i);
+    if (codeMatch) {
+      const cm = cantieri.find(c => c.code.toLowerCase() === codeMatch[0].toLowerCase());
+      if (cm) return cm;
+    }
+    // Match by client email
+    for (const cm of cantieri) {
+      if (cm.email && fromLower.includes(cm.email.toLowerCase())) return cm;
+    }
+    // Match by client name
+    for (const cm of cantieri) {
+      const nome = (cm.cliente || "").toLowerCase();
+      const cognome = (cm.cognome || "").toLowerCase();
+      if (nome.length > 2 && (fromLower.includes(nome) || subLower.includes(nome))) return cm;
+      if (cognome.length > 2 && (fromLower.includes(cognome) || subLower.includes(cognome))) return cm;
+    }
+    return null;
+  }, [cantieri]);
+
+  // Check Gmail on mount
+  useEffect(() => { gmailCheckStatus(); }, []);
   const isTablet = winW >= 768;
   const isDesktop = winW >= 1024;
 
@@ -4620,6 +4728,48 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
                               {/* Note */}
                               <div style={{ marginBottom: 10 }}>
                                 <input placeholder="Note (opzionale)" value={montFormData.note} onChange={e => setMontFormData(p => ({ ...p, note: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, fontSize: 12, fontFamily: "inherit", boxSizing: "border-box" }} />
+                              </div>
+
+                              {/* === CONTESTO SQUADRE — cosa fanno le squadre === */}
+                              <div style={{ marginBottom: 10, background: T.card, borderRadius: 10, padding: 10, border: `1px solid ${T.bdr}` }}>
+                                <div style={{ fontSize: 9, fontWeight: 800, color: T.sub, textTransform: "uppercase", marginBottom: 6, letterSpacing: "0.5px" }}>📋 Impegni squadre — prossime 4 settimane</div>
+                                {squadreDB.map(sq => {
+                                  const sqMont = montaggiAll.filter(m => m.squadraId === sq.id && m.data >= oggi.toISOString().split("T")[0] && m.stato !== "completato").sort((a,b) => a.data.localeCompare(b.data));
+                                  const isSel = montFormData.squadraId === sq.id;
+                                  return (
+                                    <div key={sq.id} style={{ marginBottom: 6, padding: "6px 8px", borderRadius: 8, background: isSel ? T.acc + "08" : "transparent", border: isSel ? `1px solid ${T.acc}30` : `1px solid transparent` }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: sqMont.length > 0 ? 4 : 0 }}>
+                                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: sq.colore || T.acc, flexShrink: 0 }} />
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: isSel ? T.acc : T.text, flex: 1 }}>{sq.nome}</div>
+                                        <div style={{ fontSize: 9, color: T.sub, fontWeight: 600 }}>{sqMont.length === 0 ? "✅ Libera" : `${sqMont.length} lavori`}</div>
+                                      </div>
+                                      {sqMont.map((m, mi) => {
+                                        const d = new Date(m.data);
+                                        const conflitto = montFormData.data && (() => {
+                                          for (let i = 0; i < Math.ceil(montGiorni); i++) {
+                                            const selD = new Date(montFormData.data); selD.setDate(selD.getDate() + i);
+                                            for (let j = 0; j < Math.ceil(m.giorni || 1); j++) {
+                                              const mD = new Date(m.data); mD.setDate(mD.getDate() + j);
+                                              if (selD.toISOString().split("T")[0] === mD.toISOString().split("T")[0]) return true;
+                                            }
+                                          }
+                                          return false;
+                                        })();
+                                        return (
+                                          <div key={mi} style={{ display: "flex", gap: 6, alignItems: "center", padding: "2px 0 2px 14px", fontSize: 10 }}>
+                                            <span style={{ fontWeight: 700, color: conflitto && isSel ? "#ff3b30" : T.sub, minWidth: 38 }}>
+                                              {d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
+                                            </span>
+                                            <span style={{ color: conflitto && isSel ? "#ff3b30" : T.text, flex: 1 }}>
+                                              {m.cliente} · {m.giorni||1}g · {m.vani||"?"}v
+                                            </span>
+                                            {conflitto && isSel && <span style={{ fontSize: 8, fontWeight: 800, color: "#ff3b30", background: "#ff3b3015", padding: "1px 5px", borderRadius: 4 }}>⚠️ CONFLITTO</span>}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })}
                               </div>
 
                               {/* Summary */}
@@ -9390,7 +9540,8 @@ Walter Cozza Serramenti`;
         <div style={{ display: "flex", margin: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, overflow: "hidden" }}>
           {[
             { id: "chat", l: "💬 Chat", count: unread },
-            { id: "ai", l: "🤖 AI Inbox", count: aiInbox.filter(m => !m.read).length },
+            { id: "email", l: "✉️ Email", count: gmailMessages.filter(m => m.unread).length },
+            { id: "ai", l: "🤖 AI", count: aiInbox.filter(m => !m.read).length },
             { id: "rubrica", l: "📒 Rubrica", count: 0 }
           ].map(st => (
             <div key={st.id} onClick={() => setMsgSubTab(st.id)} style={{ flex: 1, padding: "10px 4px", textAlign: "center", fontSize: 12, fontWeight: 700, cursor: "pointer", background: msgSubTab === st.id ? T.acc : T.card, color: msgSubTab === st.id ? "#fff" : T.sub, transition: "all 0.2s", position: "relative" }}>
@@ -9451,6 +9602,192 @@ Walter Cozza Serramenti`;
               </div>
             )}
           </div>
+        </>)}
+
+        {/* == EMAIL TAB == */}
+        {msgSubTab === "email" && (<>
+          {!gmailStatus.connected ? (
+            <div style={{ margin: "20px 16px", textAlign: "center" }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>✉️</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 8 }}>Collega la tua email</div>
+              <div style={{ fontSize: 12, color: T.sub, marginBottom: 20, lineHeight: 1.6 }}>
+                Collegando Gmail, riceverai le email dei clienti e fornitori direttamente nell'Inbox di MASTRO.
+                Le email vengono automaticamente associate alle commesse.
+              </div>
+              <div onClick={() => window.location.href = "/api/gmail/auth"} style={{ display: "inline-block", padding: "14px 32px", borderRadius: 12, background: "#ea4335", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+                <span style={{ marginRight: 8 }}>📧</span> Collega Gmail
+              </div>
+              <div style={{ fontSize: 10, color: T.sub, marginTop: 12 }}>Supporta Gmail e Google Workspace. I dati restano sul tuo dispositivo.</div>
+            </div>
+          ) : gmailSelected ? (
+            /* === EMAIL DETAIL VIEW === */
+            <div style={{ padding: "0 16px" }}>
+              <div onClick={() => { setGmailSelected(null); setGmailReply(""); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 0", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 700 }}>
+                ← Torna alla inbox
+              </div>
+              {/* Email header */}
+              <div style={{ background: T.card, borderRadius: 12, padding: 14, marginBottom: 10, border: `1px solid ${T.bdr}` }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 6 }}>{gmailSelected.subject || "(senza oggetto)"}</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{gmailSelected.from?.replace(/<.*>/, "").trim()}</div>
+                    <div style={{ fontSize: 10, color: T.sub }}>{gmailSelected.from?.match(/<(.+)>/)?.[1] || gmailSelected.from}</div>
+                  </div>
+                  <div style={{ fontSize: 10, color: T.sub }}>{new Date(gmailSelected.timestamp).toLocaleDateString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                </div>
+                {/* Commessa match */}
+                {(() => { const match = gmailMatchCommessa(gmailSelected); return match ? (
+                  <div onClick={() => { setSelectedCM(match); setTab("commesse"); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 8, background: T.acc + "10", border: `1px solid ${T.acc}30`, cursor: "pointer", marginTop: 4 }}>
+                    <span style={{ fontSize: 12 }}>📁</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: T.acc }}>{match.code} — {match.cliente} {match.cognome || ""}</span>
+                  </div>
+                ) : null; })()}
+                {/* Attachments */}
+                {gmailSelected.attachments?.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, marginBottom: 4 }}>📎 ALLEGATI ({gmailSelected.attachments.length})</div>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      {gmailSelected.attachments.map((a, i) => (
+                        <div key={i} style={{ padding: "4px 8px", borderRadius: 6, background: T.bg, border: `1px solid ${T.bdr}`, fontSize: 10, color: T.text }}>
+                          {a.filename.endsWith(".pdf") ? "📄" : a.filename.match(/\.(jpg|png|jpeg)$/i) ? "🖼" : "📎"} {a.filename}
+                          <span style={{ fontSize: 8, color: T.sub, marginLeft: 4 }}>{Math.round(a.size/1024)}KB</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* Email body */}
+              <div style={{ background: T.card, borderRadius: 12, padding: 14, marginBottom: 10, border: `1px solid ${T.bdr}`, fontSize: 12, color: T.text, lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: 300, overflowY: "auto" }}>
+                {gmailSelected.body || gmailSelected.snippet || "(nessun contenuto)"}
+              </div>
+              {/* Quick actions */}
+              <div style={{ background: T.card, borderRadius: 12, padding: 12, marginBottom: 10, border: `1px solid ${T.bdr}` }}>
+                <div style={{ fontSize: 9, fontWeight: 800, color: T.sub, textTransform: "uppercase", marginBottom: 8 }}>⚡ Azioni rapide</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {/* Link a commessa esistente */}
+                  {(() => { const match = gmailMatchCommessa(gmailSelected); return match ? (
+                    <div onClick={() => { setSelectedCM(match); setTab("commesse"); }} style={{ padding: "8px 14px", borderRadius: 8, background: T.acc + "15", color: T.acc, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>📁 Apri {match.code}</div>
+                  ) : null; })()}
+                  {/* Crea nuova commessa */}
+                  <div onClick={() => {
+                    const fromName = (gmailSelected.from || "").replace(/<.*>/, "").trim();
+                    const fromEmail = gmailSelected.from?.match(/<(.+)>/)?.[1] || gmailSelected.from || "";
+                    setNewCM(p => ({ ...p, cliente: fromName, email: fromEmail, note: "Da email: " + (gmailSelected.subject || "") }));
+                    setShowModal("commessa");
+                    setGmailSelected(null);
+                    setTab("commesse");
+                  }} style={{ padding: "8px 14px", borderRadius: 8, background: "#34c75915", color: "#34c759", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                    📋 Nuova commessa
+                  </div>
+                  {/* Crea evento/appuntamento */}
+                  <div onClick={() => {
+                    const fromName = (gmailSelected.from || "").replace(/<.*>/, "").trim();
+                    setNewEvent({ text: gmailSelected.subject || "Appuntamento", persona: fromName, date: new Date().toISOString().split("T")[0], time: "09:00", tipo: "sopralluogo", addr: "", reminder: "", cm: "" });
+                    setShowNewEvent(true);
+                    setGmailSelected(null);
+                    setTab("agenda");
+                  }} style={{ padding: "8px 14px", borderRadius: 8, background: "#5856d615", color: "#5856d6", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                    📅 Crea evento
+                  </div>
+                  {/* Crea task */}
+                  <div onClick={() => {
+                    const fromName = (gmailSelected.from || "").replace(/<.*>/, "").trim();
+                    setNewTask({ text: "Rispondere a " + fromName + ": " + (gmailSelected.subject || ""), date: new Date().toISOString().split("T")[0], priority: "media", cm: "", meta: "", time: "", persona: fromName });
+                    setShowModal("task");
+                    setTab("agenda");
+                    setGmailSelected(null);
+                  }} style={{ padding: "8px 14px", borderRadius: 8, background: "#ff950015", color: "#ff9500", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                    ✅ Crea task
+                  </div>
+                  {/* Aggiungi a rubrica */}
+                  <div onClick={() => {
+                    const fromName = (gmailSelected.from || "").replace(/<.*>/, "").trim();
+                    const fromEmail = gmailSelected.from?.match(/<(.+)>/)?.[1] || gmailSelected.from || "";
+                    const exists = contatti.find(c => c.email?.toLowerCase() === fromEmail.toLowerCase());
+                    if (exists) { alert("Già in rubrica: " + exists.nome); return; }
+                    const parts = fromName.split(" ");
+                    setContatti(prev => [...prev, { id: Date.now(), nome: parts[0] || fromName, cognome: parts.slice(1).join(" ") || "", email: fromEmail, telefono: "", tipo: "cliente", preferito: false }]);
+                    alert("✅ " + fromName + " aggiunto alla rubrica!");
+                  }} style={{ padding: "8px 14px", borderRadius: 8, background: "#af52de15", color: "#af52de", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                    📒 Rubrica
+                  </div>
+                  {/* Copia email */}
+                  <div onClick={() => { const fromEmail = gmailSelected.from?.match(/<(.+)>/)?.[1] || gmailSelected.from; navigator.clipboard?.writeText(fromEmail); alert("Email copiata!"); }} style={{ padding: "8px 14px", borderRadius: 8, background: T.bg, color: T.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${T.bdr}` }}>📋 Copia email</div>
+                  {/* Seleziona tutto il testo */}
+                  <div onClick={() => { navigator.clipboard?.writeText(gmailSelected.body || gmailSelected.snippet || ""); alert("Testo email copiato!"); }} style={{ padding: "8px 14px", borderRadius: 8, background: T.bg, color: T.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${T.bdr}` }}>📄 Copia testo</div>
+                </div>
+              </div>
+              {/* Reply */}
+              <div style={{ background: T.card, borderRadius: 12, padding: 12, border: `1px solid ${T.bdr}` }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6 }}>↩️ RISPONDI</div>
+                <textarea value={gmailReply} onChange={e => setGmailReply(e.target.value)} rows={4} placeholder="Scrivi la risposta..."
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.bg, fontSize: 12, color: T.text, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box" as any, lineHeight: 1.5 }} />
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <button disabled={!gmailReply.trim() || gmailSending} onClick={() => {
+                    const to = gmailSelected.from?.match(/<(.+)>/)?.[1] || gmailSelected.from;
+                    gmailSendReply(to, gmailSelected.subject, gmailReply, gmailSelected.threadId);
+                  }} style={{ flex: 1, padding: 12, borderRadius: 10, border: "none", background: gmailReply.trim() ? "#007aff" : T.bdr, color: "#fff", fontSize: 13, fontWeight: 700, cursor: gmailReply.trim() ? "pointer" : "default", fontFamily: "inherit", opacity: gmailSending ? 0.6 : 1 }}>
+                    {gmailSending ? "Invio..." : "✉️ Invia risposta"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* === EMAIL LIST VIEW === */
+            <div style={{ padding: "0 16px" }}>
+              {/* Connected status + search */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
+                  <span style={{ fontSize: 14 }}>🔍</span>
+                  <input value={gmailSearch} onChange={e => setGmailSearch(e.target.value)} onKeyDown={e => { if (e.key === "Enter") gmailFetchMessages(gmailSearch); }}
+                    placeholder="Cerca email..." style={{ flex: 1, border: "none", background: "transparent", fontSize: 12, color: T.text, outline: "none", fontFamily: FF }} />
+                  {gmailSearch && <div onClick={() => { setGmailSearch(""); gmailFetchMessages(); }} style={{ cursor: "pointer", fontSize: 14, color: T.sub }}>✕</div>}
+                </div>
+                <div onClick={() => gmailFetchMessages(gmailSearch)} style={{ padding: "8px 12px", borderRadius: 10, background: T.acc, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                  🔄
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <div style={{ fontSize: 10, color: T.sub }}>📧 {gmailStatus.email} · {gmailMessages.length} email</div>
+                <div onClick={async () => { if(confirm("Disconnettere Gmail?")) { await fetch("/api/gmail/disconnect", { method: "POST" }); setGmailStatus({ connected: false }); setGmailMessages([]); }}} style={{ fontSize: 10, color: T.red, cursor: "pointer" }}>Disconnetti</div>
+              </div>
+
+              {gmailLoading && gmailMessages.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: T.sub }}>⏳ Caricamento email...</div>
+              ) : gmailMessages.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: T.sub }}>Nessuna email trovata</div>
+              ) : (
+                <>
+                  {gmailMessages.map(m => {
+                    const match = gmailMatchCommessa(m);
+                    const fromName = m.from?.replace(/<.*>/, "").trim() || "—";
+                    const fromShort = fromName.length > 25 ? fromName.substring(0, 25) + "…" : fromName;
+                    return (
+                      <div key={m.id} onClick={() => setGmailSelected(m)} style={{ padding: "10px 12px", background: T.card, borderRadius: 10, border: `1px solid ${m.unread ? T.acc + "40" : T.bdr}`, marginBottom: 6, cursor: "pointer", borderLeft: m.unread ? `3px solid ${T.acc}` : "none" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 3 }}>
+                          <div style={{ fontSize: 12, fontWeight: m.unread ? 800 : 600, color: T.text, flex: 1 }}>{fromShort}</div>
+                          <div style={{ fontSize: 9, color: T.sub, flexShrink: 0, marginLeft: 8 }}>{new Date(m.timestamp).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}</div>
+                        </div>
+                        <div style={{ fontSize: 11, fontWeight: m.unread ? 700 : 400, color: T.text, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as any }}>{m.subject || "(senza oggetto)"}</div>
+                        <div style={{ fontSize: 10, color: T.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as any }}>{m.snippet}</div>
+                        <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                          {match && <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.acc + "15", color: T.acc, fontWeight: 700 }}>📁 {match.code}</span>}
+                          {m.attachments?.length > 0 && <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.bg, color: T.sub, fontWeight: 700 }}>📎 {m.attachments.length}</span>}
+                          {m.unread && <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.acc + "15", color: T.acc, fontWeight: 700 }}>NUOVA</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {gmailNextPage && (
+                    <div onClick={() => gmailFetchMessages(gmailSearch, gmailNextPage)} style={{ textAlign: "center", padding: 12, color: T.acc, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      {gmailLoading ? "⏳ Caricamento..." : "📥 Carica altre email"}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </>)}
 
         {/* == AI INBOX TAB == */}
@@ -10402,70 +10739,144 @@ Grazie per il suo messaggio.
                 {/* Griglia prezzi */}
                 <div style={{ marginBottom: 8, padding: 8, borderRadius: 8, background: T.bg, border: `1px dashed ${T.bdr}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase" }}>Griglia prezzi L×H {s.griglia?.length > 0 ? `(${s.griglia.length})` : ""}</div>
-                    <div style={{ display: "flex", gap: 4 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase" }}>Griglia prezzi L×H {s.griglia?.length > 0 ? `(${s.griglia.length} prezzi)` : ""}</div>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                       <label style={{ padding: "3px 8px", borderRadius: 4, background: T.acc + "15", color: T.acc, fontSize: 9, fontWeight: 600, cursor: "pointer" }}>
-                        📄 Carica CSV
-                        <input type="file" accept=".csv,.txt,.xlsx" style={{ display: "none" }} onChange={e => {
+                        📄 CSV / TXT
+                        <input type="file" accept=".csv,.txt" style={{ display: "none" }} onChange={e => {
                           const file = e.target.files?.[0]; if (!file) return;
                           const reader = new FileReader();
                           reader.onload = ev => {
                             const text = ev.target?.result as string;
                             const lines = text.split(/\r?\n/).filter(l => l.trim());
                             const newGrid: any[] = [];
-                            lines.forEach(line => {
-                              const parts = line.split(/[,;\t]/).map(p => p.trim().replace(",","."));
+                            // Skip header line if it contains letters
+                            const start = /[a-zA-Z]/.test(lines[0] || "") ? 1 : 0;
+                            for (let i = start; i < lines.length; i++) {
+                              const line = lines[i];
+                              // Split by ; , or tab
+                              const parts = line.split(/[;\t,]/).map(p => p.trim());
                               if (parts.length >= 3) {
-                                const l = parseInt(parts[0]); const h = parseInt(parts[1]); const p = parseFloat(parts[2]);
-                                if (l > 0 && h > 0 && p > 0) newGrid.push({ l, h, prezzo: p });
+                                // Handle Italian format: "1.200" or "1200" for mm, "350,50" or "350.50" for price
+                                const parseMM = (v: string) => parseInt(v.replace(/\./g, "").replace(",", "."));
+                                const parsePrice = (v: string) => {
+                                  // If has both . and , : "1.350,50" → remove dots, comma→dot
+                                  if (v.includes(".") && v.includes(",")) return parseFloat(v.replace(/\./g, "").replace(",", "."));
+                                  // If only comma: "350,50" → comma→dot
+                                  if (v.includes(",")) return parseFloat(v.replace(",", "."));
+                                  return parseFloat(v);
+                                };
+                                const l = parseMM(parts[0]); const h = parseMM(parts[1]); const p = parsePrice(parts[2]);
+                                if (l > 0 && h > 0 && p > 0) newGrid.push({ l, h, prezzo: Math.round(p * 100) / 100 });
                               }
-                            });
+                            }
                             if (newGrid.length > 0) {
+                              newGrid.sort((a,b) => a.l - b.l || a.h - b.h);
                               setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: newGrid } : x));
                               alert(`✅ ${newGrid.length} prezzi importati!`);
                             } else {
-                              alert("⚠️ Nessun prezzo trovato. Formato: L;H;Prezzo (una riga per combinazione)");
+                              alert("⚠️ Nessun prezzo trovato.\n\nFormato accettato:\nLarghezza;Altezza;Prezzo\n1000;1200;350\n1200;1400;420,50");
                             }
                           };
                           reader.readAsText(file);
                         }} />
                       </label>
                       <div onClick={() => {
+                        const txt = prompt("Incolla da Excel (L;H;Prezzo, una riga per combinazione):\n\nEsempio:\n1000;1200;350\n1200;1400;420");
+                        if (!txt) return;
+                        const lines = txt.split(/\r?\n/).filter(l => l.trim());
+                        const newGrid: any[] = [...(s.griglia || [])];
+                        let added = 0;
+                        lines.forEach(line => {
+                          const parts = line.split(/[;\t,]/).map(p => p.trim());
+                          if (parts.length >= 3) {
+                            const l = parseInt(parts[0].replace(/\./g,"")); 
+                            const h = parseInt(parts[1].replace(/\./g,""));
+                            let pv = parts[2]; if (pv.includes(".") && pv.includes(",")) pv = pv.replace(/\./g,""); pv = pv.replace(",",".");
+                            const p = parseFloat(pv);
+                            if (l > 0 && h > 0 && p > 0) { newGrid.push({ l, h, prezzo: Math.round(p*100)/100 }); added++; }
+                          }
+                        });
+                        if (added > 0) {
+                          newGrid.sort((a,b) => a.l - b.l || a.h - b.h);
+                          setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: newGrid } : x));
+                          alert(`✅ ${added} prezzi aggiunti!`);
+                        }
+                      }} style={{ padding: "3px 8px", borderRadius: 4, background: "#5856d615", color: "#5856d6", fontSize: 9, fontWeight: 600, cursor: "pointer" }}>📋 Incolla</div>
+                      <div onClick={() => {
                         const l = prompt("Larghezza (mm):", "1000");
                         const h = prompt("Altezza (mm):", "1200");
                         const p = prompt("Prezzo €:", "300");
-                        if (l && h && p && parseInt(l) > 0 && parseInt(h) > 0 && parseFloat(p) > 0) {
-                          setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: [...(x.griglia||[]), { l: parseInt(l), h: parseInt(h), prezzo: parseFloat(p) }].sort((a,b) => a.l - b.l || a.h - b.h) } : x));
+                        if (l && h && p && parseInt(l) > 0 && parseInt(h) > 0 && parseFloat(p.replace(",",".")) > 0) {
+                          setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: [...(x.griglia||[]), { l: parseInt(l), h: parseInt(h), prezzo: parseFloat(p.replace(",",".")) }].sort((a,b) => a.l - b.l || a.h - b.h) } : x));
                         }
                       }} style={{ padding: "3px 8px", borderRadius: 4, background: T.grn + "15", color: T.grn, fontSize: 9, fontWeight: 600, cursor: "pointer" }}>+ Aggiungi</div>
+                      {s.griglia?.length > 0 && <div onClick={() => {
+                        const csv = "Larghezza;Altezza;Prezzo\n" + s.griglia.map(g => `${g.l};${g.h};${g.prezzo}`).join("\n");
+                        const blob = new Blob([csv], { type: "text/csv" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a"); a.href = url; a.download = `listino_${s.nome.replace(/\s/g,"_")}.csv`; a.click();
+                      }} style={{ padding: "3px 8px", borderRadius: 4, background: "#ff950015", color: "#ff9500", fontSize: 9, fontWeight: 600, cursor: "pointer" }}>📥 Esporta</div>}
                     </div>
                   </div>
-                  {s.griglia?.length > 0 ? (
+                  {s.griglia?.length > 0 ? (() => {
+                    // Build matrix view: unique L values as columns, H as rows
+                    const uniqueL = [...new Set(s.griglia.map(g => g.l))].sort((a,b) => a - b);
+                    const uniqueH = [...new Set(s.griglia.map(g => g.h))].sort((a,b) => a - b);
+                    const showMatrix = uniqueL.length > 1 && uniqueH.length > 1 && uniqueL.length <= 12;
+                    return (
                     <div>
-                      <div style={{ fontSize: 9, color: T.sub, marginBottom: 3, fontStyle: "italic" }}>Il prezzo viene preso dalla combinazione L×H più vicina (per eccesso). Se la finestra è più grande della griglia, usa l'ultimo prezzo.</div>
-                      <div style={{ maxHeight: 120, overflowY: "auto", borderRadius: 4, border: `1px solid ${T.bdr}` }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9 }}>
-                          <thead><tr style={{ background: T.bg, position: "sticky", top: 0 }}>
-                            <th style={{ padding: "3px 6px", textAlign: "left", fontWeight: 700, color: T.sub }}>L (mm)</th>
-                            <th style={{ padding: "3px 6px", textAlign: "left", fontWeight: 700, color: T.sub }}>H (mm)</th>
-                            <th style={{ padding: "3px 6px", textAlign: "right", fontWeight: 700, color: T.sub }}>Prezzo €</th>
-                            <th style={{ width: 20 }}></th>
-                          </tr></thead>
-                          <tbody>{s.griglia.map((g, gi) => (
-                            <tr key={gi} style={{ borderTop: `1px solid ${T.bdr}20` }}>
-                              <td style={{ padding: "2px 6px" }}>{g.l}</td>
-                              <td style={{ padding: "2px 6px" }}>{g.h}</td>
-                              <td style={{ padding: "2px 6px", textAlign: "right", fontWeight: 700, color: T.grn }}>€{g.prezzo}</td>
-                              <td style={{ padding: "2px 4px", cursor: "pointer", color: T.red, textAlign: "center" }} onClick={() => {
-                                setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: x.griglia.filter((_, i) => i !== gi) } : x));
-                              }}>✕</td>
-                            </tr>
-                          ))}</tbody>
-                        </table>
+                      <div style={{ fontSize: 9, color: T.sub, marginBottom: 3, fontStyle: "italic" }}>
+                        Il prezzo viene preso dalla combinazione L×H più vicina (per eccesso). {s.griglia.length} combinazioni · {uniqueL.length}L × {uniqueH.length}H
                       </div>
-                      <div onClick={() => { if(confirm("Cancellare tutta la griglia?")) setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: [] } : x)); }} style={{ fontSize: 9, color: T.red, cursor: "pointer", textAlign: "right", marginTop: 4 }}>🗑 Svuota griglia</div>
-                    </div>
-                  ) : (
+                      {showMatrix ? (
+                        <div style={{ overflowX: "auto", borderRadius: 4, border: `1px solid ${T.bdr}` }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9 }}>
+                            <thead><tr style={{ background: T.bg }}>
+                              <th style={{ padding: "3px 4px", fontWeight: 700, color: T.sub, position: "sticky", left: 0, background: T.bg, borderRight: `1px solid ${T.bdr}`, fontSize: 8 }}>L→<br/>H↓</th>
+                              {uniqueL.map(l => <th key={l} style={{ padding: "3px 4px", fontWeight: 700, color: T.acc, textAlign: "center", fontSize: 8, minWidth: 40 }}>{l}</th>)}
+                            </tr></thead>
+                            <tbody>{uniqueH.map(h => (
+                              <tr key={h} style={{ borderTop: `1px solid ${T.bdr}15` }}>
+                                <td style={{ padding: "2px 4px", fontWeight: 700, color: T.acc, position: "sticky", left: 0, background: T.card, borderRight: `1px solid ${T.bdr}`, fontSize: 8 }}>{h}</td>
+                                {uniqueL.map(l => {
+                                  const g = s.griglia.find(x => x.l === l && x.h === h);
+                                  return <td key={l} style={{ padding: "2px 4px", textAlign: "center", fontWeight: g ? 700 : 400, color: g ? T.grn : T.bdr, fontSize: 8 }}>
+                                    {g ? `€${g.prezzo}` : "—"}
+                                  </td>;
+                                })}
+                              </tr>
+                            ))}</tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div style={{ maxHeight: 150, overflowY: "auto", borderRadius: 4, border: `1px solid ${T.bdr}` }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9 }}>
+                            <thead><tr style={{ background: T.bg, position: "sticky", top: 0 }}>
+                              <th style={{ padding: "3px 6px", textAlign: "left", fontWeight: 700, color: T.sub }}>L (mm)</th>
+                              <th style={{ padding: "3px 6px", textAlign: "left", fontWeight: 700, color: T.sub }}>H (mm)</th>
+                              <th style={{ padding: "3px 6px", textAlign: "right", fontWeight: 700, color: T.sub }}>Prezzo €</th>
+                              <th style={{ width: 20 }}></th>
+                            </tr></thead>
+                            <tbody>{s.griglia.map((g, gi) => (
+                              <tr key={gi} style={{ borderTop: `1px solid ${T.bdr}20` }}>
+                                <td style={{ padding: "2px 6px" }}>{g.l}</td>
+                                <td style={{ padding: "2px 6px" }}>{g.h}</td>
+                                <td style={{ padding: "2px 6px", textAlign: "right", fontWeight: 700, color: T.grn }}>€{g.prezzo}</td>
+                                <td style={{ padding: "2px 4px", cursor: "pointer", color: T.red, textAlign: "center" }} onClick={() => {
+                                  setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: x.griglia.filter((_, i) => i !== gi) } : x));
+                                }}>✕</td>
+                              </tr>
+                            ))}</tbody>
+                          </table>
+                        </div>
+                      )}
+                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                        <div style={{ fontSize: 8, color: T.sub }}>Min: €{Math.min(...s.griglia.map(g=>g.prezzo))} · Max: €{Math.max(...s.griglia.map(g=>g.prezzo))}</div>
+                        <div onClick={() => { if(confirm("Cancellare tutta la griglia?")) setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: [] } : x)); }} style={{ fontSize: 9, color: T.red, cursor: "pointer" }}>🗑 Svuota</div>
+                      </div>
+                    </div>);
+                  })() : (
                     <div style={{ fontSize: 10, color: T.sub, fontStyle: "italic" }}>Nessuna griglia inserita — il prezzo viene calcolato a €/mq.<br/>Puoi caricare il listino del fornitore (CSV: Larghezza;Altezza;Prezzo per riga) oppure aggiungere i prezzi a mano.</div>
                   )}
                 </div>
@@ -10892,26 +11303,177 @@ Grazie per il suo messaggio.
 
         {settingsTab === "pipeline" && (
           <>
-            <div style={{fontSize:12,color:T.sub,padding:"0 4px 10px",lineHeight:1.5}}>Personalizza il flusso di lavoro. Disattiva le fasi che non usi, rinominale o riordinale.</div>
-            {pipelineDB.map((p, i) => (
-              <div key={p.id} style={{...S.card, marginBottom:6, opacity: p.attiva===false ? 0.45 : 1}}>
-                <div style={{display:"flex", alignItems:"center", gap:8, padding:"10px 12px"}}>
-                  <div style={{display:"flex",flexDirection:"column",gap:1}}>
-                    <div onClick={()=>{ if(i===0) return; const a=[...pipelineDB]; [a[i-1],a[i]]=[a[i],a[i-1]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===0?"default":"pointer",color:i===0?T.bdr:T.sub,lineHeight:1}}>▲</div>
-                    <div onClick={()=>{ if(i===pipelineDB.length-1) return; const a=[...pipelineDB]; [a[i],a[i+1]]=[a[i+1],a[i]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===pipelineDB.length-1?"default":"pointer",color:i===pipelineDB.length-1?T.bdr:T.sub,lineHeight:1}}>▼</div>
-                  </div>
-                  <span style={{fontSize:20,flexShrink:0}}>{p.ico}</span>
-                  <input value={p.nome} onChange={e=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,nome:e.target.value}:x))}
-                    style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:700,color:T.text,fontFamily:FF,outline:"none",padding:0}}/>
-                  <div style={{width:12,height:12,borderRadius:"50%",background:p.color,flexShrink:0}}/>
-                  <div onClick={()=>{ if(p.id==="chiusura") return; setPipelineDB(db=>db.map((x,j)=>j===i?{...x,attiva:x.attiva===false?true:false}:x)); }}
-                    style={{width:36,height:20,borderRadius:10,background:p.attiva===false?T.bdr:T.grn,cursor:p.id==="chiusura"?"default":"pointer",transition:"background 0.2s",position:"relative",flexShrink:0}}>
-                    <div style={{position:"absolute",top:2,left:p.attiva===false?2:18,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
-                  </div>
-                  {p.custom && <div onClick={()=>setPipelineDB(db=>db.filter((_,j)=>j!==i))} style={{fontSize:12,cursor:"pointer",color:T.red}}>✕</div>}
+            <div style={{fontSize:12,color:T.sub,padding:"0 4px 10px",lineHeight:1.5}}>Personalizza il flusso di lavoro. Ogni fase controlla <b style={{color:T.acc}}>ERP + Messaggi + Montaggi</b> automaticamente.</div>
+            
+            {/* LEGENDA ECOSISTEMA */}
+            <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+              {[{e:"📋",l:"ERP",c:"#007aff"},{e:"📧",l:"Messaggi",c:"#34c759"},{e:"🔧",l:"Montaggi",c:"#ff9500"},{e:"⚡",l:"Automazioni",c:"#af52de"}].map(b=>(
+                <div key={b.l} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:20,background:b.c+"15",border:`1px solid ${b.c}30`}}>
+                  <span style={{fontSize:10}}>{b.e}</span><span style={{fontSize:10,fontWeight:700,color:b.c}}>{b.l}</span>
                 </div>
+              ))}
+            </div>
+        
+            {pipelineDB.map((p, i) => {
+              const isExp = expandedPipelinePhase === p.id;
+              const pTab = pipelinePhaseTab || "email";
+              return (
+              <div key={p.id} style={{marginBottom:8, opacity: p.attiva===false ? 0.45 : 1}}>
+                <div style={{...S.card, marginBottom:0, borderRadius: isExp ? "10px 10px 0 0" : undefined}}>
+                  <div style={{display:"flex", alignItems:"center", gap:8, padding:"10px 12px"}}>
+                    <div style={{display:"flex",flexDirection:"column",gap:1}}>
+                      <div onClick={()=>{ if(i===0) return; const a=[...pipelineDB]; [a[i-1],a[i]]=[a[i],a[i-1]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===0?"default":"pointer",color:i===0?T.bdr:T.sub,lineHeight:1}}>▲</div>
+                      <div onClick={()=>{ if(i===pipelineDB.length-1) return; const a=[...pipelineDB]; [a[i],a[i+1]]=[a[i+1],a[i]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===pipelineDB.length-1?"default":"pointer",color:i===pipelineDB.length-1?T.bdr:T.sub,lineHeight:1}}>▼</div>
+                    </div>
+                    <span style={{fontSize:20,flexShrink:0}}>{p.ico}</span>
+                    <input value={p.nome} onChange={e=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,nome:e.target.value}:x))}
+                      style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:700,color:T.text,fontFamily:FF,outline:"none",padding:0}}/>
+                    <div style={{width:12,height:12,borderRadius:"50%",background:p.color,flexShrink:0}}/>
+                    <div onClick={()=>{ if(p.id==="chiusura") return; setPipelineDB(db=>db.map((x,j)=>j===i?{...x,attiva:x.attiva===false?true:false}:x)); }}
+                      style={{width:36,height:20,borderRadius:10,background:p.attiva===false?T.bdr:T.grn,cursor:p.id==="chiusura"?"default":"pointer",transition:"background 0.2s",position:"relative",flexShrink:0}}>
+                      <div style={{position:"absolute",top:2,left:p.attiva===false?2:18,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
+                    </div>
+                    {p.custom && <div onClick={()=>setPipelineDB(db=>db.filter((_,j)=>j!==i))} style={{fontSize:12,cursor:"pointer",color:T.red}}>✕</div>}
+                    <div onClick={()=>{setExpandedPipelinePhase(isExp?null:p.id);setPipelinePhaseTab("email");}} style={{fontSize:16,cursor:"pointer",color:isExp?T.acc:T.sub,transition:"transform 0.2s",transform:isExp?"rotate(180deg)":"rotate(0deg)",lineHeight:1}}>▾</div>
+                  </div>
+                  {!isExp && (p.emailTemplate || (p.checklistMontaggio||[]).length>0 || (p.automazioni||[]).length>0) && (
+                    <div style={{display:"flex",gap:4,padding:"0 12px 8px",flexWrap:"wrap"}}>
+                      {p.emailTemplate && <span style={{fontSize:8,padding:"2px 6px",borderRadius:10,background:"#34c75915",color:"#34c759",fontWeight:700}}>📧 Email</span>}
+                      {(p.checklistMontaggio||[]).length>0 && <span style={{fontSize:8,padding:"2px 6px",borderRadius:10,background:"#ff950015",color:"#ff9500",fontWeight:700}}>✅ {p.checklistMontaggio.length} check</span>}
+                      {(p.automazioni||[]).length>0 && <span style={{fontSize:8,padding:"2px 6px",borderRadius:10,background:"#af52de15",color:"#af52de",fontWeight:700}}>⚡ {p.automazioni.length} auto</span>}
+                    </div>
+                  )}
+                </div>
+        
+                {isExp && (
+                  <div style={{background:T.card,border:`1px solid ${T.bdr}`,borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"hidden"}}>
+                    <div style={{display:"flex",borderBottom:`1px solid ${T.bdr}`}}>
+                      {[{id:"email",l:"📧 Email",c:"#34c759"},{id:"checklist",l:"✅ Checklist",c:"#ff9500"},{id:"auto",l:"⚡ Auto",c:"#af52de"},{id:"gate",l:"🚪 Gate",c:"#007aff"}].map(tab=>(
+                        <div key={tab.id} onClick={()=>setPipelinePhaseTab(tab.id)}
+                          style={{flex:1,padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:700,cursor:"pointer",
+                            color:pTab===tab.id?tab.c:T.sub,borderBottom:pTab===tab.id?`2px solid ${tab.c}`:"2px solid transparent",
+                            background:pTab===tab.id?tab.c+"08":"transparent"}}>{tab.l}</div>
+                      ))}
+                    </div>
+                    <div style={{padding:12}}>
+        
+                      {/* EMAIL TAB */}
+                      {pTab==="email" && (<div>
+                        <div style={{fontSize:11,color:T.sub,marginBottom:8}}>Template email automatica quando la commessa entra in questa fase.</div>
+                        <div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:4}}>OGGETTO</div>
+                        <input value={p.emailTemplate?.oggetto||""} placeholder={`es: Conferma ${p.nome} - ${"{{"}cliente${"}}"}  `}
+                          onChange={e=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,emailTemplate:{...(x.emailTemplate||{}),oggetto:e.target.value}}:x))}
+                          style={{...S.input,width:"100%",fontSize:12,marginBottom:8,boxSizing:"border-box"}} />
+                        <div style={{fontSize:9,fontWeight:700,color:T.sub,marginBottom:4}}>CORPO</div>
+                        <textarea value={p.emailTemplate?.corpo||""} placeholder="Gentile cliente,..."
+                          onChange={e=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,emailTemplate:{...(x.emailTemplate||{}),corpo:e.target.value}}:x))}
+                          style={{...S.input,width:"100%",minHeight:80,fontSize:11,lineHeight:1.5,boxSizing:"border-box",resize:"vertical"}} />
+                        <div style={{display:"flex",gap:8,marginTop:8,alignItems:"center",flexWrap:"wrap"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:4}}>
+                            <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,emailTemplate:{...(x.emailTemplate||{}),attiva:!(x.emailTemplate?.attiva)}}:x))}
+                              style={{width:32,height:18,borderRadius:9,background:p.emailTemplate?.attiva?T.grn:T.bdr,cursor:"pointer",position:"relative"}}>
+                              <div style={{position:"absolute",top:2,left:p.emailTemplate?.attiva?16:2,width:14,height:14,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
+                            </div>
+                            <span style={{fontSize:10,color:p.emailTemplate?.attiva?"#34c759":T.sub,fontWeight:600}}>Invio auto</span>
+                          </div>
+                          <select value={p.emailTemplate?.destinatario||"cliente"}
+                            onChange={e=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,emailTemplate:{...(x.emailTemplate||{}),destinatario:e.target.value}}:x))}
+                            style={{...S.input,fontSize:10,padding:"3px 6px"}}>
+                            <option value="cliente">Al cliente</option>
+                            <option value="team">Al team</option>
+                            <option value="entrambi">Entrambi</option>
+                          </select>
+                        </div>
+                      </div>)}
+        
+                      {/* CHECKLIST TAB */}
+                      {pTab==="checklist" && (<div>
+                        <div style={{fontSize:11,color:T.sub,marginBottom:8}}>Checklist per montatori. Visibile in MASTRO MONTAGGI.</div>
+                        {(p.checklistMontaggio||[]).map((item,ci)=>(
+                          <div key={ci} style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
+                            <span style={{fontSize:11,color:T.sub,width:18,textAlign:"center"}}>{ci+1}.</span>
+                            <input value={item} onChange={e=>{const nl=[...(p.checklistMontaggio||[])];nl[ci]=e.target.value;setPipelineDB(db=>db.map((x,j)=>j===i?{...x,checklistMontaggio:nl}:x));}}
+                              style={{...S.input,flex:1,fontSize:11,boxSizing:"border-box"}} placeholder="es: Verificare dimensioni vano..." />
+                            <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,checklistMontaggio:(x.checklistMontaggio||[]).filter((_,k)=>k!==ci)}:x))} style={{fontSize:12,cursor:"pointer",color:T.red}}>✕</div>
+                          </div>
+                        ))}
+                        <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,checklistMontaggio:[...(x.checklistMontaggio||[]),""]}:x))}
+                          style={{padding:"8px",borderRadius:8,border:`1px dashed ${T.acc}`,textAlign:"center",cursor:"pointer",color:T.acc,fontSize:11,fontWeight:600}}>+ Aggiungi voce</div>
+                        {(p.checklistMontaggio||[]).length>0 && (
+                          <div style={{display:"flex",alignItems:"center",gap:4,marginTop:8}}>
+                            <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,checklistObbligatoria:!x.checklistObbligatoria}:x))}
+                              style={{width:32,height:18,borderRadius:9,background:p.checklistObbligatoria?T.grn:T.bdr,cursor:"pointer",position:"relative"}}>
+                              <div style={{position:"absolute",top:2,left:p.checklistObbligatoria?16:2,width:14,height:14,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
+                            </div>
+                            <span style={{fontSize:10,color:p.checklistObbligatoria?"#34c759":T.sub,fontWeight:600}}>Obbligatoria (blocca avanzamento)</span>
+                          </div>
+                        )}
+                      </div>)}
+        
+                      {/* AUTOMAZIONI TAB */}
+                      {pTab==="auto" && (<div>
+                        <div style={{fontSize:11,color:T.sub,marginBottom:8}}>Azioni automatiche all'ingresso in questa fase.</div>
+                        {(p.automazioni||[]).map((auto,ai)=>(
+                          <div key={ai} style={{display:"flex",gap:6,alignItems:"center",marginBottom:6,background:T.bg,borderRadius:8,padding:"6px 8px"}}>
+                            <select value={auto.tipo} onChange={e=>{const na=[...(p.automazioni||[])];na[ai]={...na[ai],tipo:e.target.value};setPipelineDB(db=>db.map((x,j)=>j===i?{...x,automazioni:na}:x));}}
+                              style={{...S.input,fontSize:10,padding:"3px 6px",flex:1}}>
+                              <option value="notifica_team">Notifica team</option>
+                              <option value="notifica_cliente">Notifica cliente</option>
+                              <option value="assegna_squadra">Assegna squadra</option>
+                              <option value="crea_task">Crea task</option>
+                              <option value="genera_pdf">Genera PDF</option>
+                              <option value="verifica_magazzino">Verifica magazzino</option>
+                              <option value="prenota_consegna">Prenota consegna</option>
+                              <option value="richiedi_acconto">Richiedi acconto</option>
+                              <option value="invia_enea">Pratica ENEA</option>
+                              <option value="follow_up">Follow-up</option>
+                            </select>
+                            <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,automazioni:(x.automazioni||[]).filter((_,k)=>k!==ai)}:x))} style={{fontSize:12,cursor:"pointer",color:T.red}}>✕</div>
+                          </div>
+                        ))}
+                        <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,automazioni:[...(x.automazioni||[]),{tipo:"notifica_team",attiva:true}]}:x))}
+                          style={{padding:"8px",borderRadius:8,border:`1px dashed ${T.acc}`,textAlign:"center",cursor:"pointer",color:T.acc,fontSize:11,fontWeight:600}}>+ Aggiungi automazione</div>
+                      </div>)}
+        
+                      {/* GATE TAB */}
+                      {pTab==="gate" && (<div>
+                        <div style={{fontSize:11,color:T.sub,marginBottom:8}}>Requisiti per avanzare a questa fase.</div>
+                        {(p.gateRequisiti||[]).map((req,ri)=>(
+                          <div key={ri} style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
+                            <select value={req.tipo} onChange={e=>{const nr=[...(p.gateRequisiti||[])];nr[ri]={...nr[ri],tipo:e.target.value};setPipelineDB(db=>db.map((x,j)=>j===i?{...x,gateRequisiti:nr}:x));}}
+                              style={{...S.input,fontSize:10,padding:"3px 6px",flex:1}}>
+                              <option value="preventivo_approvato">Preventivo approvato</option>
+                              <option value="acconto_ricevuto">Acconto ricevuto</option>
+                              <option value="misure_confermate">Misure confermate</option>
+                              <option value="materiali_ordinati">Materiali ordinati</option>
+                              <option value="materiali_arrivati">Materiali arrivati</option>
+                              <option value="squadra_assegnata">Squadra assegnata</option>
+                              <option value="data_montaggio">Data montaggio fissata</option>
+                              <option value="documenti_ok">Documenti completi</option>
+                              <option value="checklist_completa">Checklist completata</option>
+                              <option value="firma_cliente">Firma cliente</option>
+                            </select>
+                            <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,gateRequisiti:(x.gateRequisiti||[]).filter((_,k)=>k!==ri)}:x))} style={{fontSize:12,cursor:"pointer",color:T.red}}>✕</div>
+                          </div>
+                        ))}
+                        <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,gateRequisiti:[...(x.gateRequisiti||[]),{tipo:"preventivo_approvato"}]}:x))}
+                          style={{padding:"8px",borderRadius:8,border:`1px dashed ${T.acc}`,textAlign:"center",cursor:"pointer",color:T.acc,fontSize:11,fontWeight:600}}>+ Aggiungi requisito</div>
+                        <div style={{display:"flex",alignItems:"center",gap:4,marginTop:8}}>
+                          <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,gateBloccante:!x.gateBloccante}:x))}
+                            style={{width:32,height:18,borderRadius:9,background:p.gateBloccante?"#ff3b30":T.bdr,cursor:"pointer",position:"relative"}}>
+                            <div style={{position:"absolute",top:2,left:p.gateBloccante?16:2,width:14,height:14,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
+                          </div>
+                          <span style={{fontSize:10,color:p.gateBloccante?"#ff3b30":T.sub,fontWeight:600}}>Gate bloccante</span>
+                        </div>
+                      </div>)}
+        
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
+        
             <div onClick={()=>{ let nome; try{nome=window.prompt("Nome nuova fase:");}catch(e){} if(nome?.trim()) setPipelineDB(db=>[...db.slice(0,-1),{id:"custom_"+Date.now(),nome:nome.trim(),ico:"⭐",color:"#8e8e93",attiva:true,custom:true},...db.slice(-1)]); }}
               style={{...S.card,marginTop:4,textAlign:"center",padding:"10px",cursor:"pointer",color:T.acc,fontSize:13,fontWeight:700}}>+ Aggiungi fase personalizzata</div>
             <div onClick={()=>{if((()=>{try{return window.confirm("Ripristinare le fasi predefinite?");}catch(e){return false;}})())setPipelineDB(PIPELINE_DEFAULT);}}
@@ -11845,12 +12407,41 @@ Grazie per il suo messaggio.
               try { localStorage.removeItem("mastro:" + k); } catch(e) {}
             });
             localStorage.removeItem("mastro:demoVer");
+            localStorage.removeItem("mastro:cleanSlate");
             window.location.reload();
           }} style={{
             width: "100%", padding: 12, borderRadius: 10, border: "2px solid #ff3b30",
             background: "#fff", color: "#ff3b30", fontSize: 13, fontWeight: 800,
             cursor: "pointer", fontFamily: "inherit",
           }}>🔄 RICARICA DATI DEMO (4 clienti)</button>
+
+          <button onClick={() => {
+            if (!confirm("⚠️ ATTENZIONE: Cancellare TUTTI i dati demo e partire da zero?\n\nCommesse, contatti, fatture, eventi, task — tutto verrà cancellato.\n\nI dati reali che hai inserito saranno persi.")) return;
+            // Clear all data
+            setCantieri([]);
+            setFattureDB([]);
+            setOrdiniFornDB([]);
+            setMontaggiDB([]);
+            setMsgs([]);
+            setContatti([]);
+            setEvents([]);
+            setTasks([]);
+            setAiInbox([]);
+            setPipeline([]);
+            setProblemi([]);
+            // Save empty to localStorage + set cleanSlate flag
+            ["cantieri","tasks","events","fatture","ordiniForn","montaggi","contatti","pipeline","msgs","problemi","fatturePassive","fornitori"].forEach(k => {
+              try { localStorage.setItem("mastro:" + k, "[]"); } catch(e) {}
+            });
+            localStorage.setItem("mastro:cleanSlate", "true");
+            localStorage.setItem("mastro:demoVer", "v50-gmail-email");
+            alert("✅ Dati puliti! MASTRO è pronto per i tuoi dati reali.");
+            window.location.reload();
+          }} style={{
+            width: "100%", padding: 12, borderRadius: 10, border: "2px solid #34c759",
+            background: "#fff", color: "#34c759", fontSize: 13, fontWeight: 800,
+            cursor: "pointer", fontFamily: "inherit", marginTop: 8,
+          }}>🧹 PULISCI TUTTO — Parti da zero</button>
         </div>
 
       </div>
@@ -11992,6 +12583,85 @@ Fabio Cozza - Walter Cozza Serramenti` },
                       style={{ padding:"12px 14px", borderRadius:10, background:T.bg, border:`1px solid ${T.bdr}`, color:T.sub, cursor:"pointer", fontSize:13, fontWeight:600 }}>
                       📋 Copia
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* === EMAIL COMPOSER MODAL === */}
+          {showEmailComposer && (
+            <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end", justifyContent:"center" }}
+              onClick={e => e.target === e.currentTarget && setShowEmailComposer(null)}>
+              <div style={{ background:T.card, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:500, maxHeight:"90vh", overflow:"auto", paddingBottom:24 }}>
+                {/* Header */}
+                <div style={{ padding:"16px 16px 10px", display:"flex", alignItems:"center", gap:10, position:"sticky", top:0, background:T.card, zIndex:1, borderBottom:`1px solid ${T.bdr}` }}>
+                  <span style={{ fontSize:22 }}>✉️</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:15, fontWeight:800, color:T.text }}>Componi Email</div>
+                    <div style={{ fontSize:11, color:T.sub }}>{showEmailComposer.cm?.code} — {showEmailComposer.cm?.cliente} {showEmailComposer.cm?.cognome||""}</div>
+                  </div>
+                  <div onClick={() => setShowEmailComposer(null)} style={{ width:30, height:30, borderRadius:"50%", background:T.bdr, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16, color:T.sub }}>×</div>
+                </div>
+                <div style={{ padding:"14px 16px" }}>
+                  {/* Template selector */}
+                  <div style={{ display:"flex", gap:4, marginBottom:12, flexWrap:"wrap" }}>
+                    {[
+                      { id: "preventivo", l: "📄 Preventivo", c: "#007aff" },
+                      { id: "conferma", l: "✅ Conferma", c: "#34c759" },
+                      { id: "montaggio", l: "🔧 Montaggio", c: "#5856d6" },
+                      { id: "saldo", l: "💶 Saldo", c: "#ff9500" },
+                      { id: "generico", l: "✏️ Libero", c: "#86868b" },
+                    ].map(t => (
+                      <div key={t.id} onClick={() => inviaEmail(showEmailComposer.cm, t.id)}
+                        style={{ padding:"6px 12px", borderRadius:20, border:`1.5px solid ${showEmailComposer.tipo === t.id ? t.c : t.c+"40"}`, background: showEmailComposer.tipo === t.id ? t.c+"15" : "transparent", fontSize:11, fontWeight:700, color:t.c, cursor:"pointer" }}>
+                        {t.l}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Destinatario */}
+                  <div style={{ marginBottom:10 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:T.sub, textTransform:"uppercase", marginBottom:4 }}>A:</div>
+                    <input value={emailDest} onChange={e => setEmailDest(e.target.value)} placeholder="email@cliente.it"
+                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:`1px solid ${T.bdr}`, background:T.bg, fontSize:13, color:T.text, fontFamily:"inherit", boxSizing:"border-box" as any }} />
+                  </div>
+                  {/* Oggetto */}
+                  <div style={{ marginBottom:10 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:T.sub, textTransform:"uppercase", marginBottom:4 }}>Oggetto:</div>
+                    <input value={emailOggetto} onChange={e => setEmailOggetto(e.target.value)}
+                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:`1px solid ${T.bdr}`, background:T.bg, fontSize:13, color:T.text, fontFamily:"inherit", boxSizing:"border-box" as any }} />
+                  </div>
+                  {/* Corpo */}
+                  <div style={{ marginBottom:14 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:T.sub, textTransform:"uppercase", marginBottom:4 }}>Messaggio:</div>
+                    <textarea value={emailCorpo} onChange={e => setEmailCorpo(e.target.value)} rows={14}
+                      style={{ width:"100%", padding:"10px 12px", borderRadius:8, border:`1px solid ${T.bdr}`, background:T.bg, fontSize:12, color:T.text, fontFamily:"inherit", resize:"vertical" as any, boxSizing:"border-box" as any, lineHeight:1.6 }} />
+                  </div>
+
+                  {/* Bottoni invio */}
+                  <div style={{ display:"flex", gap:8 }}>
+                    <div onClick={() => {
+                      window.open(`mailto:${emailDest}?subject=${encodeURIComponent(emailOggetto)}&body=${encodeURIComponent(emailCorpo)}`);
+                    }} style={{ flex:1, padding:12, borderRadius:10, background:"#007aff", color:"#fff", textAlign:"center", cursor:"pointer", fontSize:13, fontWeight:700 }}>
+                      ✉️ Apri in Mail
+                    </div>
+                    <div onClick={() => {
+                      window.open(`https://mail.google.com/mail/?view=cm&to=${emailDest}&su=${encodeURIComponent(emailOggetto)}&body=${encodeURIComponent(emailCorpo)}`, "_blank");
+                    }} style={{ flex:1, padding:12, borderRadius:10, background:"#ea4335", color:"#fff", textAlign:"center", cursor:"pointer", fontSize:13, fontWeight:700 }}>
+                      Gmail
+                    </div>
+                    <div onClick={() => {
+                      const tel = (showEmailComposer.cm?.telefono||"").replace(/\D/g,"");
+                      const t = tel.startsWith("39") ? tel : "39" + tel;
+                      window.open(`https://wa.me/${t}?text=${encodeURIComponent(emailCorpo)}`, "_blank");
+                    }} style={{ padding:12, borderRadius:10, background:"#25d366", color:"#fff", textAlign:"center", cursor:"pointer", fontSize:13, fontWeight:700 }}>
+                      💬
+                    </div>
+                  </div>
+                  <div onClick={() => { navigator.clipboard?.writeText(emailCorpo); alert("Copiato!"); }}
+                    style={{ marginTop:8, padding:10, borderRadius:8, background:T.bg, border:`1px solid ${T.bdr}`, textAlign:"center", cursor:"pointer", fontSize:12, fontWeight:600, color:T.sub }}>
+                    📋 Copia testo
                   </div>
                 </div>
               </div>
@@ -13221,12 +13891,45 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     window.open(`https://wa.me/${tel.startsWith("39") ? tel : "39" + tel}?text=${msg}`, "_blank");
   };
 
-  const inviaEmail = (c, tipo: "preventivo" | "conferma") => {
-    const sogg = tipo === "preventivo" ? `Preventivo ${c.code} — ${aziendaDB.nome || "MASTRO"}` : `Conferma ordine ${c.code}`;
-    const body = tipo === "preventivo"
-      ? `Gentile ${c.cliente},\n\nle invio in allegato il preventivo per la fornitura e posa in opera dei serramenti.\n\nRif: ${c.code}\nImporto: €${c.euro || "—"}\n\nResto a disposizione.\nCordiali saluti\n${aziendaDB.nome || ""}`
-      : `Gentile ${c.cliente},\n\ncon la presente le confermiamo l'ordine ${c.code}.\n\nProvvederemo a ordinare il materiale e la terremo aggiornata.\n\nCordiali saluti\n${aziendaDB.nome || ""}`;
-    window.open(`mailto:${c.email || ""}?subject=${encodeURIComponent(sogg)}&body=${encodeURIComponent(body)}`, "_blank");
+  const inviaEmail = (c, tipo: "preventivo" | "conferma" | "montaggio" | "saldo" | "generico") => {
+    const az = aziendaDB;
+    const azNome = az.ragione || az.nome || "Walter Cozza Serramenti";
+    const azTel = az.telefono || "";
+    const azEmail = az.email || "";
+    const firma = `\nCordiali saluti,\n${azNome}${azTel ? "\nTel. " + azTel : ""}${azEmail ? "\n" + azEmail : ""}`;
+    const vani = getVaniAttivi(c);
+    const totale = vani.reduce((s, v) => s + calcolaVanoPrezzo(v, c), 0) + (c.vociLibere || []).reduce((s, vl) => s + ((vl.importo||0)*(vl.qta||1)), 0);
+    const ivaP = parseFloat(c.ivaPerc || 10);
+    const totIva = totale * (1 + ivaP / 100);
+    const fmt = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2 }) : "0,00";
+    
+    const templates = {
+      preventivo: {
+        oggetto: `Preventivo ${c.code} — ${azNome}`,
+        corpo: `Gentile ${c.cliente} ${c.cognome || ""},\n\nle trasmetto il preventivo per la fornitura e posa in opera dei serramenti per l'immobile in ${c.indirizzo || "—"}.\n\n📋 Rif. commessa: ${c.code}\n📦 Vani: ${vani.length}\n${c.sistema ? "🏭 Sistema: " + c.sistema + "\n" : ""}💰 Importo: €${fmt(totale)} + IVA ${ivaP}% = €${fmt(totIva)}\n${c.praticaFiscale ? "📑 Agevolazione: " + c.praticaFiscale + "\n" : ""}\nIl preventivo include fornitura, posa in opera, smaltimento vecchi infissi e rilascio documentazione (DoP, CE, manuale).\n\nResto a disposizione per qualsiasi chiarimento.${firma}`
+      },
+      conferma: {
+        oggetto: `Conferma ordine ${c.code} — ${azNome}`,
+        corpo: `Gentile ${c.cliente} ${c.cognome || ""},\n\ncon la presente le confermiamo la ricezione dell'ordine per la commessa ${c.code}.\n\n✅ Materiale ordinato al fornitore\n⏱ Tempi di consegna stimati: 4-6 settimane\n📍 Cantiere: ${c.indirizzo || "—"}\n\nLa terremo aggiornata sullo stato di avanzamento della produzione.\n\nPer qualsiasi necessità non esiti a contattarci.${firma}`
+      },
+      montaggio: {
+        oggetto: `Programmazione montaggio ${c.code} — ${azNome}`,
+        corpo: `Gentile ${c.cliente} ${c.cognome || ""},\n\nsiamo lieti di comunicarle che il materiale per la commessa ${c.code} è arrivato.\n\n🔧 Montaggio previsto: [INSERIRE DATA]\n📍 Indirizzo: ${c.indirizzo || "—"}\n⏱ Durata stimata: ${vani.length <= 3 ? "1 giorno" : vani.length <= 6 ? "2 giorni" : "3+ giorni"}\n👷 Squadra: [NOME SQUADRA]\n\n📌 Note per il giorno del montaggio:\n- Assicurarsi che i locali siano accessibili\n- Spostare eventuali mobili vicino alle finestre\n- È possibile che si verifichi polvere durante lo smontaggio\n\nLa preghiamo di confermare la data rispondendo a questa mail.${firma}`
+      },
+      saldo: {
+        oggetto: `Completamento lavori e saldo ${c.code} — ${azNome}`,
+        corpo: `Gentile ${c.cliente} ${c.cognome || ""},\n\ncon la presente le comunichiamo che i lavori relativi alla commessa ${c.code} sono stati completati con successo.\n\n✅ Fornitura e posa completata\n📦 Vani installati: ${vani.length}\n📍 Cantiere: ${c.indirizzo || "—"}\n\n💶 Importo totale: €${fmt(totIva)} (IVA ${ivaP}% inclusa)\n${(() => { const inc = fattureDB.filter(f => f.cmId === c.id && f.pagata).reduce((s,f)=>s+(f.importo||0),0); return inc > 0 ? `💳 Già versato: €${fmt(inc)}\n📄 Saldo dovuto: €${fmt(totIva - inc)}\n` : ""; })()}\n📎 In allegato:\n- Fattura di saldo\n- Dichiarazione di prestazione (DoP)\n- Certificazione CE\n- Manuale d'uso e manutenzione\n\nModalità di pagamento: Bonifico bancario\nIBAN: ${az.iban || "[IBAN]"}\n\nLa ringraziamo per la fiducia.${firma}`
+      },
+      generico: {
+        oggetto: `Commessa ${c.code} — ${azNome}`,
+        corpo: `Gentile ${c.cliente} ${c.cognome || ""},\n\n[Scrivi qui il messaggio]\n\nRif. commessa: ${c.code}\nCantiere: ${c.indirizzo || "—"}${firma}`
+      }
+    };
+    const t = templates[tipo] || templates.generico;
+    setEmailDest(c.email || "");
+    setEmailOggetto(t.oggetto);
+    setEmailCorpo(t.corpo);
+    setShowEmailComposer({ cm: c, tipo });
   };
 
   // =============================================
@@ -14593,6 +15296,20 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                   📲 Stato
                 </button>
               )}
+            </div>
+            {/* Email template rapidi */}
+            <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
+              {[
+                { id: "preventivo", l: "📄 Preventivo", c: "#007aff" },
+                { id: "conferma", l: "✅ Conferma", c: "#34c759" },
+                { id: "montaggio", l: "🔧 Montaggio", c: "#5856d6" },
+                { id: "saldo", l: "💶 Saldo", c: "#ff9500" },
+                { id: "generico", l: "✏️ Libero", c: "#86868b" },
+              ].map(t => (
+                <div key={t.id} onClick={() => inviaEmail(c, t.id)} style={{ padding: "5px 10px", borderRadius: 20, border: `1px solid ${t.c}30`, background: t.c + "08", fontSize: 10, fontWeight: 600, color: t.c, cursor: "pointer" }}>
+                  {t.l}
+                </div>
+              ))}
             </div>
 
             {/* === FATTURAZIONE === */}
