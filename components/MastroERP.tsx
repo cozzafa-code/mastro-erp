@@ -11328,13 +11328,13 @@ Grazie per il suo messaggio.
                     <span style={{fontSize:20,flexShrink:0}}>{p.ico}</span>
                     <input value={p.nome} onChange={e=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,nome:e.target.value}:x))}
                       onClick={(e)=>e.stopPropagation()} style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:700,color:T.text,fontFamily:FF,outline:"none",padding:0}}/>
-                    <div style={{width:12,height:12,borderRadius:"50%",background:p.color,flexShrink:0}}/>
+                    <div onClick={(e)=>{e.stopPropagation();setExpandedPipelinePhase(isExp?null:p.id);setPipelinePhaseTab("email");}} style={{width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",background:isExp?T.acc+"18":"#f0f0f0",cursor:"pointer",flexShrink:0,marginLeft:4}}><span style={{fontSize:12,color:isExp?T.acc:"#999",transform:isExp?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}>▾</span></div><div style={{width:12,height:12,borderRadius:"50%",background:p.color,flexShrink:0}}/>
                     <div onClick={(e)=>{e.stopPropagation(); if(p.id==="chiusura") return; setPipelineDB(db=>db.map((x,j)=>j===i?{...x,attiva:x.attiva===false?true:false}:x)); }}
                       style={{width:36,height:20,borderRadius:10,background:p.attiva===false?T.bdr:T.grn,cursor:p.id==="chiusura"?"default":"pointer",transition:"background 0.2s",position:"relative",flexShrink:0}}>
                       <div style={{position:"absolute",top:2,left:p.attiva===false?2:18,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
                     </div>
                     {p.custom && <div onClick={(e)=>{e.stopPropagation();setPipelineDB(db=>db.filter((_,j)=>j!==i));}} style={{fontSize:12,cursor:"pointer",color:T.red}}>✕</div>}
-                    <div onClick={()=>{setExpandedPipelinePhase(isExp?null:p.id);setPipelinePhaseTab("email");}} style={{fontSize:16,cursor:"pointer",color:isExp?T.acc:T.sub,transition:"transform 0.2s",transform:isExp?"rotate(180deg)":"rotate(0deg)",lineHeight:1,width:28,height:28,minWidth:28,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:6,background:isExp?T.acc+"15":T.bg,flexShrink:0}}>▾</div>
+                    
                   </div>
                   {!isExp && (p.emailTemplate || (p.checklistMontaggio||[]).length>0 || (p.automazioni||[]).length>0) && (
                     <div style={{display:"flex",gap:4,padding:"0 12px 8px",flexWrap:"wrap"}}>
