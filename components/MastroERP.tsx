@@ -11334,7 +11334,7 @@ Grazie per il suo messaggio.
                       <div style={{position:"absolute",top:2,left:p.attiva===false?2:18,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
                     </div>
                     {p.custom && <div onClick={()=>setPipelineDB(db=>db.filter((_,j)=>j!==i))} style={{fontSize:12,cursor:"pointer",color:T.red}}>✕</div>}
-                    <div onClick={()=>{setExpandedPipelinePhase(isExp?null:p.id);setPipelinePhaseTab("email");}} style={{fontSize:20,cursor:"pointer",color:isExp?T.acc:T.sub,transition:"transform 0.2s",transform:isExp?"rotate(180deg)":"rotate(0deg)",lineHeight:1,width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:8,background:isExp?T.acc+"15":"transparent"}}>▾</div>
+                    <div onClick={()=>{setExpandedPipelinePhase(isExp?null:p.id);setPipelinePhaseTab("email");}} style={{fontSize:16,cursor:"pointer",color:isExp?T.acc:T.sub,transition:"transform 0.2s",transform:isExp?"rotate(180deg)":"rotate(0deg)",lineHeight:1,width:28,height:28,minWidth:28,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:6,background:isExp?T.acc+"15":T.bg,flexShrink:0}}>▾</div>
                   </div>
                   {!isExp && (p.emailTemplate || (p.checklistMontaggio||[]).length>0 || (p.automazioni||[]).length>0) && (
                     <div style={{display:"flex",gap:4,padding:"0 12px 8px",flexWrap:"wrap"}}>
