@@ -8742,48 +8742,6 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
   const [selectedCliente, setSelectedCliente] = useState<any>(null);
 
 
-  // === PERSISTENZA LOCALSTORAGE ===
-  const STORAGE_KEY = "mastro_erp_data";
-  const [dataLoaded, setDataLoaded] = useState(false);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const d = JSON.parse(saved);
-        if (d.contatti) setContatti(d.contatti);
-        if (d.cantieri) setCantieri(d.cantieri);
-        if (d.events) setEvents(d.events);
-        if (d.fattureDB) setFattureDB(d.fattureDB);
-        if (d.pipelineDB) setPipelineDB(d.pipelineDB);
-        if (d.team) setTeam(d.team);
-        if (d.tasks) setTasks(d.tasks);
-        if (d.problemi) setProblemi(d.problemi);
-        if (d.squadreDB) setSquadreDB(d.squadreDB);
-        if (d.montaggiDB) setMontaggiDB(d.montaggiDB);
-        if (d.aziendaInfo) setAziendaInfo(d.aziendaInfo);
-        if (d.sogliaDays !== undefined) setSogliaDays(d.sogliaDays);
-        if (d.theme) setTheme(d.theme);
-        console.log("MASTRO: dati caricati da localStorage");
-      }
-    } catch (e) { console.warn("Errore caricamento:", e); }
-    setDataLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!dataLoaded) return;
-    const timer = setTimeout(() => {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          contatti, cantieri, events, fattureDB, pipelineDB,
-          team, tasks, problemi, squadreDB, montaggiDB,
-          aziendaInfo, sogliaDays, theme,
-          _savedAt: new Date().toISOString()
-        }));
-      } catch (e) { console.warn("Errore salvataggio:", e); }
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [dataLoaded, contatti, cantieri, events, fattureDB, pipelineDB, team, tasks, problemi, squadreDB, montaggiDB, aziendaInfo, sogliaDays, theme]);
 
   const renderClienti = () => {
     const filters = [
