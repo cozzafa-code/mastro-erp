@@ -1,7 +1,10 @@
 import React from "react";
+import { supabase } from "@/lib/supabase";
 
 //               MOTIVI_BLOCCO, AFASE, useDragOrder hook, Home, Helpers, Stili
 // Supabase sync — stubs (enable import when Supabase is configured)
+let _syncQueue: Record<string, any> = {};
+let _syncTimer: any = null;
 export const cloudSave = (userId: string, key: string, data: any) => {
   if (!userId) return;
   _syncQueue[key] = data;
@@ -673,4 +676,4 @@ export const tipoEvColor = (tipo) => {
   const t = TIPI_EVENTO.find(x => x.id === tipo);
   return t ? t.c : "#D08008";
 };
-
+
