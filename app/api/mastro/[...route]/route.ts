@@ -1,0 +1,41 @@
+import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+export async function POST(request, { params }) {
+  const route = params.route?.join('/');
+  const body = await request.json().catch(() => ({}));
+  try {
+    switch (route) {
+      case 'commesse/avanza': {
+        const { commessa_id, nuova_fase } = body;
+        const { data, error } = await supabase.from('commesse').update({ fase_pipeline: nuova_fase, sotto_fase: 0 }).eq('id', commessa_id).select().single();
+        if (error) throw error;
+        return NextResponse.json({ ok: true, commessa: data });
+      }
+      case 'messaggi/invia': {
+        const { data, error } = await supabase.from('messaggi').insert(body).select().single();
+        if (error) throw error;
+        return NextResponse.json({ ok: true, messaggio: data });
+      }
+      case 'produzione/avanza': {
+        const { commessa_id, sotto_fase, operatore_id, azienda_id } = body;
+        const { data } = await supabase.from('produzione').upsert({ azienda_id, commessa_id, sotto_fase, stato: 'in_corso', operatore_id, data_inizio: new Date().toISOString() }).select().single();
+        await supabase.from('commesse').update({ sotto_fase }).eq('id', commessa_id);
+        return NextResponse.json({ ok: true, fase: data });
+      }
+      default: return NextResponse.json({ error: 'Route non trovata: ' + route }, { status: 404 });
+    }
+  } catch (err) { return NextResponse.json({ error: err.message }, { status: 500 }); }
+}
+export async function GET(request, { params }) {
+  const route = params.route?.join('/');
+  const { searchParams } = new URL(request.url);
+  const aziendaId = searchParams.get('azienda_id');
+  try {
+    switch (route) {
+      case 'pipeline': { const { data } = await supabase.from('pipeline_config').select('*').eq('azienda_id', aziendaId).eq('attiva', true).order('ordine'); return NextResponse.json(data || []); }
+      case 'commesse': { const { data } = await supabase.from('commesse').select('*, cliente:clienti(nome,cognome,telefono)').eq('azienda_id', aziendaId).order('updated_at', { ascending: false }); return NextResponse.json(data || []); }
+      default: return NextResponse.json({ error: 'Route GET non trovata: ' + route }, { status: 404 });
+    }
+  } catch (err) { return NextResponse.json({ error: err.message }, { status: 500 }); }
+}

@@ -11320,20 +11320,20 @@ Grazie per il suo messaggio.
               return (
               <div key={p.id} style={{marginBottom:8, opacity: p.attiva===false ? 0.45 : 1}}>
                 <div style={{...S.card, marginBottom:0, borderRadius: isExp ? "10px 10px 0 0" : undefined}}>
-                  <div style={{display:"flex", alignItems:"center", gap:8, padding:"10px 12px"}}>
+                  <div onClick={()=>{setExpandedPipelinePhase(isExp?null:p.id);setPipelinePhaseTab("email");}} style={{display:"flex", alignItems:"center", gap:8, padding:"10px 12px", cursor:"pointer"}}>
                     <div style={{display:"flex",flexDirection:"column",gap:1}}>
-                      <div onClick={()=>{ if(i===0) return; const a=[...pipelineDB]; [a[i-1],a[i]]=[a[i],a[i-1]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===0?"default":"pointer",color:i===0?T.bdr:T.sub,lineHeight:1}}>▲</div>
-                      <div onClick={()=>{ if(i===pipelineDB.length-1) return; const a=[...pipelineDB]; [a[i],a[i+1]]=[a[i+1],a[i]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===pipelineDB.length-1?"default":"pointer",color:i===pipelineDB.length-1?T.bdr:T.sub,lineHeight:1}}>▼</div>
+                      <div onClick={(e)=>{e.stopPropagation(); if(i===0) return; const a=[...pipelineDB]; [a[i-1],a[i]]=[a[i],a[i-1]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===0?"default":"pointer",color:i===0?T.bdr:T.sub,lineHeight:1}}>▲</div>
+                      <div onClick={(e)=>{e.stopPropagation(); if(i===pipelineDB.length-1) return; const a=[...pipelineDB]; [a[i],a[i+1]]=[a[i+1],a[i]]; setPipelineDB(a); }} style={{fontSize:10,cursor:i===pipelineDB.length-1?"default":"pointer",color:i===pipelineDB.length-1?T.bdr:T.sub,lineHeight:1}}>▼</div>
                     </div>
-                    <span onClick={()=>{setExpandedPipelinePhase(isExp?null:p.id);setPipelinePhaseTab("email");}} style={{fontSize:20,flexShrink:0,cursor:"pointer"}}>{p.ico}</span>
+                    <span style={{fontSize:20,flexShrink:0}}>{p.ico}</span>
                     <input value={p.nome} onChange={e=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,nome:e.target.value}:x))}
-                      onClick={()=>{setExpandedPipelinePhase(isExp?null:p.id);setPipelinePhaseTab("email");}} style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:700,color:T.text,fontFamily:FF,outline:"none",padding:0,cursor:"pointer"}}/>
+                      onClick={(e)=>e.stopPropagation()} style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:700,color:T.text,fontFamily:FF,outline:"none",padding:0}}/>
                     <div style={{width:12,height:12,borderRadius:"50%",background:p.color,flexShrink:0}}/>
-                    <div onClick={()=>{ if(p.id==="chiusura") return; setPipelineDB(db=>db.map((x,j)=>j===i?{...x,attiva:x.attiva===false?true:false}:x)); }}
+                    <div onClick={(e)=>{e.stopPropagation(); if(p.id==="chiusura") return; setPipelineDB(db=>db.map((x,j)=>j===i?{...x,attiva:x.attiva===false?true:false}:x)); }}
                       style={{width:36,height:20,borderRadius:10,background:p.attiva===false?T.bdr:T.grn,cursor:p.id==="chiusura"?"default":"pointer",transition:"background 0.2s",position:"relative",flexShrink:0}}>
                       <div style={{position:"absolute",top:2,left:p.attiva===false?2:18,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
                     </div>
-                    {p.custom && <div onClick={()=>setPipelineDB(db=>db.filter((_,j)=>j!==i))} style={{fontSize:12,cursor:"pointer",color:T.red}}>✕</div>}
+                    {p.custom && <div onClick={(e)=>{e.stopPropagation();setPipelineDB(db=>db.filter((_,j)=>j!==i));}} style={{fontSize:12,cursor:"pointer",color:T.red}}>✕</div>}
                     <div onClick={()=>{setExpandedPipelinePhase(isExp?null:p.id);setPipelinePhaseTab("email");}} style={{fontSize:16,cursor:"pointer",color:isExp?T.acc:T.sub,transition:"transform 0.2s",transform:isExp?"rotate(180deg)":"rotate(0deg)",lineHeight:1,width:28,height:28,minWidth:28,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:6,background:isExp?T.acc+"15":T.bg,flexShrink:0}}>▾</div>
                   </div>
                   {!isExp && (p.emailTemplate || (p.checklistMontaggio||[]).length>0 || (p.automazioni||[]).length>0) && (
