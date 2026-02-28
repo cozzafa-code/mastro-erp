@@ -5,7 +5,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   // Static export for Capacitor native apps
-  output: 'export',
+  
   // Disable image optimization (not supported in static export)
   images: {
     unoptimized: true,
