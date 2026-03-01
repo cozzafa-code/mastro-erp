@@ -4,7 +4,7 @@
 // MASTRO ERP — VanoDetailPanel
 // Estratto S4: ~1.505 righe (Dettaglio vano + misure + disegno + accessori)
 // ═══════════════════════════════════════════════════════════
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useMastro } from "./MastroContext";
 import { FF, FM, ICO, Ico, TIPOLOGIE_RAPIDE } from "./mastro-constants";
 
@@ -44,6 +44,165 @@ export default function VanoDetailPanel() {
     { id: "riepilogo", title: "RIEPILOGO", desc: "Anteprima completa del vano", color: "#34c759", icon: "📋" },
   ];
   const [detailOpen, setDetailOpen] = useState<Record<string,boolean>>({});
+
+  // ═══ VOICE RECOGNITION — Self-contained implementation ═══
+  const [vrActive, setVrActive] = useState(false);
+  const [vrTranscripts, setVrTranscripts] = useState<{text:string,time:string,parsed?:Record<string,any>}[]>([]);
+  const [vrInterim, setVrInterim] = useState("");
+  const [vrError, setVrError] = useState("");
+  const recognitionRef = useRef<any>(null);
+
+  const parseVoiceText = useCallback((text: string) => {
+    const t = text.toLowerCase().replace(/[\.,;!?]/g, " ").trim();
+    const parsed: Record<string, any> = {};
+    // Larghezze
+    const lMatch = t.match(/larghezza\s+(\d{3,4})/);
+    if (lMatch) parsed.lCentro = parseInt(lMatch[1]);
+    const lAlto = t.match(/larghezza\s+alto\s+(\d{3,4})/);
+    if (lAlto) parsed.lAlto = parseInt(lAlto[1]);
+    const lBasso = t.match(/larghezza\s+basso\s+(\d{3,4})/);
+    if (lBasso) parsed.lBasso = parseInt(lBasso[1]);
+    // Altezze
+    const hMatch = t.match(/altezza\s+(\d{3,4})/);
+    if (hMatch) parsed.hCentro = parseInt(hMatch[1]);
+    const hSx = t.match(/altezza\s+sinistra\s+(\d{3,4})/);
+    if (hSx) parsed.hSx = parseInt(hSx[1]);
+    const hDx = t.match(/altezza\s+destra\s+(\d{3,4})/);
+    if (hDx) parsed.hDx = parseInt(hDx[1]);
+    // Diagonali
+    const d1 = t.match(/diagonal[ei]\s*1?\s+(\d{3,4})/);
+    if (d1) parsed.d1 = parseInt(d1[1]);
+    const d2 = t.match(/diagonal[ei]\s*2\s+(\d{3,4})/);
+    if (d2) parsed.d2 = parseInt(d2[1]);
+    // Numeri isolati: 4 cifre = probabile misura
+    if (Object.keys(parsed).length === 0) {
+      const nums = t.match(/\b(\d{3,4})\b/g);
+      if (nums && nums.length >= 2) {
+        parsed.lCentro = parseInt(nums[0]);
+        parsed.hCentro = parseInt(nums[1]);
+      } else if (nums && nums.length === 1) {
+        parsed.lCentro = parseInt(nums[0]);
+      }
+    }
+    // Tipo
+    if (t.includes("finestra")) parsed.tipo = "F1A";
+    if (t.includes("portafinestra")) parsed.tipo = "PF1A";
+    if (t.includes("due ante") || t.includes("2 ante")) {
+      if (t.includes("portafinestra")) parsed.tipo = "PF2A"; else parsed.tipo = "F2A";
+    }
+    if (t.includes("scorrevole")) parsed.tipo = "PST";
+    if (t.includes("vasistas")) parsed.tipo = "VAS";
+    // Stanza
+    if (t.includes("soggiorno")) parsed.stanza = "Soggiorno";
+    if (t.includes("cucina")) parsed.stanza = "Cucina";
+    if (t.includes("camera")) parsed.stanza = "Camera";
+    if (t.includes("bagno")) parsed.stanza = "Bagno";
+    if (t.includes("studio")) parsed.stanza = "Studio";
+    if (t.includes("ingresso")) parsed.stanza = "Ingresso";
+    // Piano
+    const pianoM = t.match(/piano\s+(terra|primo|secondo|terzo|\d+)/);
+    if (pianoM) {
+      const pv = pianoM[1];
+      if (pv === "terra") parsed.piano = "PT";
+      else if (pv === "primo") parsed.piano = "P1";
+      else if (pv === "secondo") parsed.piano = "P2";
+      else if (pv === "terzo") parsed.piano = "P3";
+      else parsed.piano = `P${pv}`;
+    }
+    // Accessori
+    if (t.includes("tapparella")) parsed.tapparella = true;
+    if (t.includes("motorizzata")) parsed.tapparellaMotorizzata = true;
+    if (t.includes("zanzariera")) parsed.zanzariera = true;
+    if (t.includes("persiana")) parsed.persiana = true;
+    // Colori
+    if (t.includes("bianco")) parsed.coloreInt = "RAL 9010";
+    if (t.includes("bicolore")) parsed.bicolore = true;
+    if (t.match(/grigio|antracite|7016/)) parsed.coloreEst = "RAL 7016";
+    // Spallette
+    const spSx = t.match(/spalletta\s+sinistra\s+(\d{2,4})/);
+    if (spSx) parsed.spSx = parseInt(spSx[1]);
+    const spDx = t.match(/spalletta\s+destra\s+(\d{2,4})/);
+    if (spDx) parsed.spDx = parseInt(spDx[1]);
+    // Davanzale
+    const dav = t.match(/davanzale\s+(\d{2,4})/);
+    if (dav) parsed.davProf = parseInt(dav[1]);
+    return parsed;
+  }, []);
+
+  const applyParsed = useCallback((parsed: Record<string, any>) => {
+    if (!selectedVano || !selectedRilievo) return;
+    const mid = selectedVano.id;
+    // Misure
+    ["lAlto","lCentro","lBasso","hSx","hCentro","hDx","d1","d2","spSx","spDx","davProf"].forEach(k => {
+      if (parsed[k]) updateMisura(mid, k, parsed[k]);
+    });
+    // Vano fields
+    if (parsed.tipo) updateVanoField(mid, "tipo", parsed.tipo);
+    if (parsed.stanza) updateVanoField(mid, "stanza", parsed.stanza);
+    if (parsed.piano) updateVanoField(mid, "piano", parsed.piano);
+    if (parsed.coloreInt) updateVanoField(mid, "coloreInt", parsed.coloreInt);
+    if (parsed.coloreEst) updateVanoField(mid, "coloreEst", parsed.coloreEst);
+    if (parsed.bicolore) updateVanoField(mid, "bicolore", true);
+    if (parsed.tapparella) toggleAccessorio(mid, "tapparella");
+    if (parsed.zanzariera) toggleAccessorio(mid, "zanzariera");
+    if (parsed.persiana) toggleAccessorio(mid, "persiana");
+  }, [selectedVano, selectedRilievo, updateMisura, updateVanoField, toggleAccessorio]);
+
+  const vrStart = useCallback(() => {
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) { setVrError("Browser non supporta riconoscimento vocale. Usa Chrome."); return; }
+    const rec = new SpeechRec();
+    rec.lang = "it-IT";
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.onstart = () => { setVrActive(true); setVrError(""); };
+    rec.onerror = (e: any) => {
+      if (e.error === "not-allowed") setVrError("Microfono non autorizzato. Controlla i permessi del browser.");
+      else if (e.error === "no-speech") setVrError("Nessun audio rilevato. Parla più forte.");
+      else setVrError(`Errore: ${e.error}`);
+    };
+    rec.onend = () => {
+      setVrActive(false);
+      // Auto-restart if still mounted and was active
+    };
+    rec.onresult = (e: any) => {
+      let interim = "";
+      let finalText = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const transcript = e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          finalText += transcript;
+        } else {
+          interim += transcript;
+        }
+      }
+      setVrInterim(interim);
+      if (finalText.trim()) {
+        const now = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        const parsed = parseVoiceText(finalText.trim());
+        setVrTranscripts(prev => [...prev, { text: finalText.trim(), time: now, parsed }]);
+        // Auto apply parsed fields
+        if (Object.keys(parsed).length > 0) {
+          applyParsed(parsed);
+        }
+        setVrInterim("");
+      }
+    };
+    recognitionRef.current = rec;
+    try { rec.start(); } catch(e) { setVrError("Errore avvio microfono."); }
+  }, [parseVoiceText, applyParsed]);
+
+  const vrStop = useCallback(() => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch(e) {}
+      recognitionRef.current = null;
+    }
+    setVrActive(false);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => () => { if (recognitionRef.current) try { recognitionRef.current.stop(); } catch(e) {} }, []);
 
     if (!selectedVano || !selectedCM) return null;
     const v = selectedVano;
@@ -116,21 +275,70 @@ export default function VanoDetailPanel() {
           </div>
         </div>
 
-        {/* ═══ VOCE AI SOPRALLUOGO ═══ */}
-        <div style={{ display: "flex", justifyContent: "center", margin: "8px 16px" }}>
-          <div onClick={voiceActive ? stopVoice : startVoice}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 20, background: voiceActive ? "#ff3b30" : T.accLt, border: `1px solid ${voiceActive ? "#ff3b30" : T.bdr}`, cursor: "pointer" }}>
-            <span style={{ fontSize: 16 }}>{voiceActive ? "\u23F9" : "\uD83C\uDFA4"}</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: voiceActive ? "#fff" : T.acc }}>
-              {voiceActive ? "Dettatura attiva..." : "Dettatura vocale"}
+        {/* ═══ VOCE AI SOPRALLUOGO — Self-contained ═══ */}
+        <div style={{ margin: "8px 16px" }}>
+          {/* Main button */}
+          <div onClick={vrActive ? vrStop : vrStart}
+            style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", borderRadius: 16, background: vrActive ? "linear-gradient(135deg, #ff3b30, #ff6b6b)" : "linear-gradient(135deg, #D08008, #b86e00)", border: "none", cursor: "pointer", justifyContent: "center", boxShadow: vrActive ? "0 0 20px rgba(255,59,48,0.4)" : "0 2px 8px rgba(208,128,8,0.3)" }}>
+            <span style={{ fontSize: 22 }}>{vrActive ? "⏹" : "🎙️"}</span>
+            <span style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>
+              {vrActive ? "⏺ STOP REGISTRAZIONE" : "🎙️ Avvia Dettatura"}
             </span>
+            {vrActive && <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#fff", animation: "pulse 1s infinite" }} />}
           </div>
+          <style>{`@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }`}</style>
+
+          {/* Error */}
+          {vrError && (
+            <div style={{ marginTop: 6, padding: "6px 12px", borderRadius: 8, background: "#ffebee", border: "1px solid #ef9a9a", fontSize: 10, color: "#c62828", textAlign: "center" }}>
+              ⚠️ {vrError}
+            </div>
+          )}
+
+          {/* Hint when active */}
+          {vrActive && (
+            <div style={{ marginTop: 6, padding: "6px 10px", borderRadius: 8, background: "#ff3b3008", border: "1px dashed #ff3b3040", fontSize: 9, color: "#666", textAlign: "center", lineHeight: 1.6 }}>
+              🔴 <b>Parla ora</b> — Es: "Finestra due ante, soggiorno, piano terra, larghezza 1400, altezza 1200, tapparella motorizzata, bicolore bianco grigio"
+            </div>
+          )}
+
+          {/* Interim (live) */}
+          {vrActive && vrInterim && (
+            <div style={{ marginTop: 6, padding: "8px 12px", borderRadius: 8, background: "#fff8e1", border: "1px solid #ffe082", fontSize: 12, color: "#f57f17", fontStyle: "italic" }}>
+              🎤 {vrInterim}...
+            </div>
+          )}
+
+          {/* Transcripts history */}
+          {vrTranscripts.length > 0 && (
+            <div style={{ marginTop: 8, borderRadius: 10, border: `1px solid ${T.bdr}`, overflow: "hidden", maxHeight: 200, overflowY: "auto" }}>
+              <div style={{ padding: "4px 10px", background: T.acc + "10", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 9, fontWeight: 800, color: T.acc, textTransform: "uppercase" }}>📝 Trascrizioni ({vrTranscripts.length})</span>
+                <span onClick={() => setVrTranscripts([])} style={{ fontSize: 9, color: T.red, cursor: "pointer", fontWeight: 700 }}>🗑 Pulisci</span>
+              </div>
+              {vrTranscripts.map((tr, i) => (
+                <div key={i} style={{ padding: "6px 10px", borderTop: `1px solid ${T.bdr}`, fontSize: 11 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                    <span style={{ color: T.text, fontWeight: 600 }}>"{tr.text}"</span>
+                    <span style={{ fontSize: 8, color: T.sub, flexShrink: 0, marginLeft: 6 }}>{tr.time}</span>
+                  </div>
+                  {tr.parsed && Object.keys(tr.parsed).length > 0 && (
+                    <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginTop: 2 }}>
+                      {Object.entries(tr.parsed).map(([k, val]) => (
+                        <span key={k} style={{ padding: "1px 5px", borderRadius: 4, background: T.grn + "18", fontSize: 8, fontWeight: 700, color: T.grn }}>
+                          ✓ {k}: {String(val)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {tr.parsed && Object.keys(tr.parsed).length === 0 && (
+                    <div style={{ fontSize: 8, color: T.orange, fontWeight: 600, marginTop: 1 }}>⚠ Nessun campo riconosciuto — salvata come nota</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        {voiceTranscript && (
-          <div style={{ margin: "0 16px 8px", padding: "8px 12px", borderRadius: 8, background: T.accLt, border: `1px solid ${T.bdr}`, fontSize: 11, color: T.text }}>
-            <span style={{ fontSize: 9, fontWeight: 700, color: T.acc }}>Trascrizione: </span>{voiceTranscript}
-          </div>
-        )}
 
         {/* == INFO VANO — fisarmoniche (solo step 0) == */}
         {vanoStep === 0 && (() => {
@@ -148,7 +356,7 @@ export default function VanoDetailPanel() {
 
           const sections = [
             { id:"accesso", icon:"🏗", label:"Accesso / Difficoltà",
-              badge: v.difficoltaSalita||null,
+              badge: v.difficoltaSalita||null, filled: [v.difficoltaSalita, v.mezzoSalita].filter(Boolean).length, total: 2,
               body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <div style={{display:"flex",gap:4}}>
                   {[{id:"facile",l:"Facile",c:T.grn,e:"✅"},{id:"media",l:"Media",c:T.orange,e:"⚠️"},{id:"difficile",l:"Difficile",c:T.red,e:"🔴"}].map(d=>(
@@ -167,7 +375,7 @@ export default function VanoDetailPanel() {
               </div>
             },
             { id:"tipologia", icon:"🪟", label:"Tipologia",
-              badge: v.tipo||null,
+              badge: v.tipo||null, filled: v.tipo ? 1 : 0, total: 1,
               body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bdr}`,paddingBottom:0,marginBottom:4}}>
                   {cats.map(cat=>(
@@ -188,7 +396,7 @@ export default function VanoDetailPanel() {
               </div>
             },
             { id:"posizione", icon:"🏠", label:"Stanza / Piano",
-              badge: v.stanza?`${v.stanza} · ${v.piano}`:null,
+              badge: v.stanza?`${v.stanza} · ${v.piano}`:null, filled: [v.stanza, v.piano].filter(Boolean).length, total: 2,
               body: <div style={{display:"flex",gap:8}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>STANZA</div>
@@ -213,7 +421,7 @@ export default function VanoDetailPanel() {
               </div>
             },
             { id:"sistema", icon:"⚙️", label:"Sistema / Vetro",
-              badge: v.sistema?v.sistema.split(" ").slice(0,2).join(" · "):null,
+              badge: v.sistema?v.sistema.split(" ").slice(0,2).join(" · "):null, filled: [v.sistema, v.vetro].filter(Boolean).length, total: 2,
               body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <div>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>SISTEMA</div>
@@ -232,7 +440,7 @@ export default function VanoDetailPanel() {
               </div>
             },
             { id:"colori", icon:"🎨", label:"Colori profili",
-              badge: v.coloreInt||null,
+              badge: v.coloreInt||null, filled: [v.coloreInt, v.bicolore && v.coloreEst, v.coloreAcc].filter(Boolean).length, total: v.bicolore ? 3 : 2,
               body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub}}>INT</div>
@@ -271,7 +479,7 @@ export default function VanoDetailPanel() {
               </div>
             },
             { id:"telaio", icon:"📐", label:"Telaio / Rifilato",
-              badge: v.telaio?(v.telaio==="Z"?"Telaio Z":"Telaio L"):(v.rifilato?"Rifilato":null),
+              badge: v.telaio?(v.telaio==="Z"?"Telaio Z":"Telaio L"):(v.rifilato?"Rifilato":null), filled: [v.telaio, v.rifilato, v.telaioAlaZ].filter(Boolean).length, total: 2,
               body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <div style={{display:"flex",gap:6}}>
                   {[{id:"Z",l:"Telaio a Z"},{id:"L",l:"Telaio a L"}].map(t=>(
@@ -301,7 +509,7 @@ export default function VanoDetailPanel() {
               </div>
             },
             { id:"finiture", icon:"🔩", label:"Coprifilo / Lamiera",
-              badge: (v.coprifilo||v.lamiera)?"✓":null,
+              badge: (v.coprifilo||v.lamiera)?"✓":null, filled: [v.coprifilo, v.lamiera].filter(Boolean).length, total: 2,
               body: <div style={{display:"flex",gap:8}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:3}}>COPRIFILO</div>
@@ -320,7 +528,7 @@ export default function VanoDetailPanel() {
               </div>
             },
             { id:"controtelaio", icon:"🔲", label:"Controtelaio",
-              badge: v.controtelaio?.tipo ? (v.controtelaio.tipo==="singolo"?"Singolo":v.controtelaio.tipo==="doppio"?"Doppio":"Con cassonetto") : null,
+              badge: v.controtelaio?.tipo ? (v.controtelaio.tipo==="singolo"?"Singolo":v.controtelaio.tipo==="doppio"?"Doppio":"Con cassonetto") : null, filled: v.controtelaio?.tipo ? 1 : 0, total: 1,
               body: <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:2}}>TIPO CONTROTELAIO</div>
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
@@ -437,8 +645,10 @@ export default function VanoDetailPanel() {
             <div style={{padding:"6px 16px 2px"}}>
               {sections.map(sec=>{
                 const isOpen = vanoInfoOpen===sec.id;
+                const hasFill = sec.filled > 0;
+                const allFill = sec.filled >= sec.total;
                 return (
-                  <div key={sec.id} style={{marginBottom:3,borderRadius:10,border:`1px solid ${isOpen?T.acc+"50":T.bdr}`,overflow:"hidden"}}>
+                  <div key={sec.id} style={{marginBottom:3,borderRadius:10,border:`1px solid ${isOpen?T.acc+"50":hasFill?T.grn+"30":T.bdr}`,overflow:"hidden"}}>
                     <div onClick={()=>setVanoInfoOpen(isOpen?null:sec.id)}
                       style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 12px",background:isOpen?T.acc+"06":T.card,cursor:"pointer"}}>
                       <div style={{display:"flex",alignItems:"center",gap:7}}>
@@ -446,7 +656,11 @@ export default function VanoDetailPanel() {
                         <span style={{fontSize:12,fontWeight:600,color:T.text}}>{sec.label}</span>
                         {sec.badge && <span style={{...S.badge(T.accLt,T.acc),fontSize:9,padding:"1px 6px"}}>{sec.badge}</span>}
                       </div>
-                      <span style={{fontSize:9,color:T.sub,display:"inline-block",transform:isOpen?"rotate(180deg)":"none",transition:"transform 0.15s"}}>▼</span>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        {hasFill && <span style={{width:8,height:8,borderRadius:"50%",background:allFill?T.grn:T.orange,display:"inline-block"}} />}
+                        {hasFill && <span style={{fontSize:9,fontWeight:700,color:allFill?T.grn:T.orange}}>{sec.filled}/{sec.total}</span>}
+                        <span style={{fontSize:9,color:T.sub,display:"inline-block",transform:isOpen?"rotate(180deg)":"none",transition:"transform 0.15s"}}>▼</span>
+                      </div>
                     </div>
                     {isOpen && <div style={{padding:"12px",background:T.bg,borderTop:`1px solid ${T.bdr}`}}>{sec.body}</div>}
                   </div>
@@ -626,6 +840,191 @@ export default function VanoDetailPanel() {
 
               {/* ═══ MISURE STANDARD: Serramenti (8 punti) ═══ */}
               {!["TDBR","TDCAD","TDCAP","TDVER","TDRUL","TDPERG","TDZIP","TDVELA","VENEZIA","TDS","TDR","TVE","PBC","PGA","PGF","TCA","TCB","ZTE"].includes(v.tipo) && (<>
+
+              {/* ═══ DISEGNO RAPIDO VANO ═══ */}
+              {(() => {
+                const dState = v._rilDisegno || { elements: [], mode: null, _pendingLine: null };
+                const setDS = (upd) => {
+                  const nv = { ...v, _rilDisegno: typeof upd === "function" ? upd(dState) : { ...dState, ...upd } };
+                  setSelectedVano(nv);
+                  if (selectedRilievo) {
+                    const updR = { ...selectedRilievo, vani: selectedRilievo.vani.map(x => x.id === v.id ? nv : x) };
+                    setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? updR : r2) } : c));
+                    setSelectedRilievo(updR);
+                  }
+                };
+                const els = dState.elements || [];
+                const drawMode = dState.mode;
+                const cW = Math.min(window.innerWidth - 40, 380);
+                const rW = m.lCentro || m.lAlto || 1200;
+                const rH = m.hCentro || m.hSx || 1400;
+                const aspect = rW / rH;
+                const cH = Math.min(260, cW / aspect);
+                const PAD = 20;
+                const iW = cW - PAD * 2, iH = cH - PAD * 2;
+                const scX = iW / rW, scY = iH / rH;
+                const sc2 = Math.min(scX, scY);
+                const oX = PAD + (iW - rW * sc2) / 2, oY = PAD + (iH - rH * sc2) / 2;
+                const toSvg = (mmX, mmY) => ({ x: oX + mmX * sc2, y: oY + mmY * sc2 });
+                const toMM = (px, py) => ({ mx: Math.round((px - oX) / sc2), my: Math.round((py - oY) / sc2) });
+                const snap2 = (val) => Math.round(val / 10) * 10;
+
+                // Mestiere presets
+                const mestieri = [
+                  { id: "serr", label: "🪟 Serramento", els: [
+                    { type: "rect", x: 0, y: 0, w: rW, h: rH, stroke: "#1A1A1C" },
+                    { type: "rect", x: 40, y: 40, w: rW - 80, h: rH - 80, stroke: "#999", dash: true },
+                  ]},
+                  { id: "fabbro", label: "⚙️ Fabbro", els: [
+                    { type: "rect", x: 0, y: 0, w: rW, h: rH, stroke: "#555" },
+                    { type: "line", x1: rW / 2, y1: 0, x2: rW / 2, y2: rH, stroke: "#555" },
+                    { type: "line", x1: 0, y1: rH / 2, x2: rW, y2: rH / 2, stroke: "#555" },
+                  ]},
+                  { id: "falegname", label: "🪵 Falegname", els: [
+                    { type: "rect", x: 0, y: 0, w: rW, h: rH, stroke: "#8B4513" },
+                    { type: "rect", x: 30, y: 30, w: rW - 60, h: rH - 60, stroke: "#D2691E", dash: true },
+                  ]},
+                  { id: "tenda", label: "🏠 Tenda", els: [
+                    { type: "rect", x: 0, y: 0, w: rW, h: rH * 0.15, stroke: "#007aff" },
+                    { type: "line", x1: 0, y1: rH * 0.15, x2: 0, y2: rH, stroke: "#007aff", dash: true },
+                    { type: "line", x1: rW, y1: rH * 0.15, x2: rW, y2: rH, stroke: "#007aff", dash: true },
+                    { type: "line", x1: 0, y1: rH, x2: rW, y2: rH, stroke: "#007aff" },
+                  ]},
+                  { id: "vuoto", label: "✏️ Vuoto", els: [] },
+                ];
+
+                const getSvgPt = (e) => {
+                  const svg = e.currentTarget;
+                  const r = svg.getBoundingClientRect();
+                  const cX = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+                  const cY = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+                  return toMM(cX, cY);
+                };
+
+                return (
+                  <div style={{ marginBottom: 14, borderRadius: 12, border: `1px solid ${T.acc}40`, overflow: "hidden", background: T.card }}>
+                    {/* Header */}
+                    <div style={{ padding: "8px 12px", background: `${T.acc}08`, display: "flex", alignItems: "center", gap: 6, borderBottom: `1px solid ${T.bdr}` }}>
+                      <span style={{ fontSize: 13 }}>✏️</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: T.acc }}>Disegno rapido</span>
+                      <span style={{ fontSize: 9, color: T.sub, flex: 1 }}>{rW}×{rH}mm</span>
+                      {els.length > 0 && <span style={{ fontSize: 9, color: T.grn, fontWeight: 700 }}>{els.length} el.</span>}
+                    </div>
+
+                    {/* Mestiere presets */}
+                    <div style={{ display: "flex", gap: 3, padding: "4px 8px", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+                      {mestieri.map(me => (
+                        <div key={me.id} onClick={() => {
+                          const newEls = me.els.map((e, i) => ({ ...e, id: Date.now() + i }));
+                          setDS({ elements: newEls, mode: null, _pendingLine: null });
+                        }} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 9, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+                          {me.label}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Drawing toolbar */}
+                    <div style={{ display: "flex", gap: 3, padding: "3px 8px", borderTop: `1px solid ${T.bdr}`, flexWrap: "wrap" }}>
+                      {[
+                        { id: "line", label: "╱ Linea" },
+                        { id: "rect-draw", label: "▭ Rett." },
+                        { id: "arrow", label: "→ Freccia" },
+                        { id: "text", label: "Aa Testo" },
+                      ].map(tool => (
+                        <div key={tool.id} onClick={() => {
+                          if (tool.id === "text") {
+                            const txt = prompt("Testo:");
+                            if (txt) setDS({ elements: [...els, { id: Date.now(), type: "label", x: rW / 2, y: rH / 2, text: txt }], mode: null });
+                          } else {
+                            setDS({ mode: drawMode === tool.id ? null : tool.id, _pendingLine: null });
+                          }
+                        }} style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${drawMode === tool.id ? T.acc : T.bdr}`, background: drawMode === tool.id ? `${T.acc}15` : T.card, fontSize: 9, fontWeight: 700, cursor: "pointer", color: drawMode === tool.id ? T.acc : T.sub }}>
+                          {tool.label}
+                        </div>
+                      ))}
+                      <div style={{ flex: 1 }} />
+                      {els.length > 0 && <div onClick={() => {
+                        const newEls = els.slice(0, -1);
+                        setDS({ elements: newEls });
+                      }} style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${T.bdr}`, fontSize: 9, fontWeight: 700, cursor: "pointer", color: T.orange }}>↩</div>}
+                      {els.length > 0 && <div onClick={() => setDS({ elements: [], mode: null, _pendingLine: null })} style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${T.bdr}`, fontSize: 9, fontWeight: 700, cursor: "pointer", color: T.red }}>🗑</div>}
+                    </div>
+
+                    {/* SVG Canvas */}
+                    <svg width={cW} height={cH} style={{ display: "block", background: "#fafaf8", touchAction: "none" }}
+                      onClick={(e2) => {
+                        if (!drawMode) return;
+                        const pt = getSvgPt(e2);
+                        const mmX = snap2(pt.mx), mmY = snap2(pt.my);
+                        const pending = dState._pendingLine;
+
+                        if (drawMode === "line" || drawMode === "arrow") {
+                          if (!pending) {
+                            setDS({ ...dState, _pendingLine: { x: mmX, y: mmY } });
+                          } else {
+                            const newEl = { id: Date.now(), type: drawMode === "arrow" ? "arrow" : "sline", x1: pending.x, y1: pending.y, x2: mmX, y2: mmY };
+                            setDS({ elements: [...els, newEl], _pendingLine: null });
+                          }
+                        }
+                        if (drawMode === "rect-draw") {
+                          if (!pending) {
+                            setDS({ ...dState, _pendingLine: { x: mmX, y: mmY } });
+                          } else {
+                            const x = Math.min(pending.x, mmX), y = Math.min(pending.y, mmY);
+                            const w = Math.abs(mmX - pending.x), h = Math.abs(mmY - pending.y);
+                            setDS({ elements: [...els, { id: Date.now(), type: "rect", x, y, w: w || 100, h: h || 100, stroke: "#555" }], _pendingLine: null });
+                          }
+                        }
+                      }}>
+                      {/* Grid */}
+                      <defs>
+                        <pattern id="rilGrid" width={50 * sc2} height={50 * sc2} patternUnits="userSpaceOnUse">
+                          <path d={`M ${50 * sc2} 0 L 0 0 0 ${50 * sc2}`} fill="none" stroke="#eee" strokeWidth="0.5" />
+                        </pattern>
+                      </defs>
+                      <rect width={cW} height={cH} fill="url(#rilGrid)" />
+
+                      {/* Vano outline */}
+                      <rect x={oX} y={oY} width={rW * sc2} height={rH * sc2} fill="none" stroke="#ccc" strokeWidth={0.8} strokeDasharray="4,3" />
+
+                      {/* Dimension labels */}
+                      <text x={oX + rW * sc2 / 2} y={oY - 5} textAnchor="middle" fontSize={8} fill={T.acc} fontWeight={700} fontFamily="monospace">{rW}</text>
+                      <text x={oX - 5} y={oY + rH * sc2 / 2} textAnchor="end" fontSize={8} fill={T.acc} fontWeight={700} fontFamily="monospace" transform={`rotate(-90, ${oX - 5}, ${oY + rH * sc2 / 2})`}>{rH}</text>
+
+                      {/* Elements */}
+                      {els.map(el => {
+                        if (el.type === "rect") {
+                          const p1 = toSvg(el.x, el.y);
+                          return <rect key={el.id} x={p1.x} y={p1.y} width={el.w * sc2} height={el.h * sc2} fill="none" stroke={el.stroke || "#333"} strokeWidth={1.2} strokeDasharray={el.dash ? "4,3" : "none"} rx={1} />;
+                        }
+                        if (el.type === "sline" || el.type === "line") {
+                          const p1 = toSvg(el.x1, el.y1), p2 = toSvg(el.x2, el.y2);
+                          return <line key={el.id} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={el.stroke || "#333"} strokeWidth={1.2} strokeDasharray={el.dash ? "4,3" : "none"} />;
+                        }
+                        if (el.type === "arrow") {
+                          const p1 = toSvg(el.x1, el.y1), p2 = toSvg(el.x2, el.y2);
+                          const dx = p2.x - p1.x, dy = p2.y - p1.y, len = Math.hypot(dx, dy) || 1;
+                          const ux = dx / len, uy = dy / len;
+                          const ax1 = p2.x - ux * 8 + uy * 4, ay1 = p2.y - uy * 8 - ux * 4;
+                          const ax2 = p2.x - ux * 8 - uy * 4, ay2 = p2.y - uy * 8 + ux * 4;
+                          return <g key={el.id}><line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#333" strokeWidth={1.5} /><polygon points={`${p2.x},${p2.y} ${ax1},${ay1} ${ax2},${ay2}`} fill="#333" /></g>;
+                        }
+                        if (el.type === "label") {
+                          const p1 = toSvg(el.x, el.y);
+                          return <text key={el.id} x={p1.x} y={p1.y} fontSize={10} fontWeight={700} fill="#333" fontFamily="Inter, sans-serif">{el.text}</text>;
+                        }
+                        return null;
+                      })}
+
+                      {/* Pending point */}
+                      {dState._pendingLine && (() => {
+                        const p = toSvg(dState._pendingLine.x, dState._pendingLine.y);
+                        return <circle cx={p.x} cy={p.y} r={4} fill={T.acc} stroke="#fff" strokeWidth={2} />;
+                      })()}
+                    </svg>
+                  </div>
+                );
+              })()}
               <div style={{ fontSize: 11, fontWeight: 800, color: "#507aff", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>📏 Larghezze</div>
               {bInput("Larghezza ALTO", "lAlto")}
               {m.lAlto > 0 && !m.lCentro && !m.lBasso && (
@@ -1253,116 +1652,162 @@ export default function VanoDetailPanel() {
           )}
 
 
-          {/* === STEP 7: RIEPILOGO === */}
+          {/* === STEP 7: RIEPILOGO COMPLETO === */}
           {vanoStep === 2 && (
             <>
               <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 16, marginBottom: 12 }}>
                 <div style={{ textAlign: "center", marginBottom: 14 }}>
                   <div style={{ fontSize: 16, fontWeight: 700 }}>{v.nome}</div>
-                  <div style={{ fontSize: 12, color: T.sub }}>{v.tipo} • {v.stanza} • {v.piano}</div>
+                  <div style={{ fontSize: 12, color: T.sub }}>{v.tipo} • {v.stanza} • {v.piano} • {v.pezzi||1}pz</div>
                 </div>
-                {/* Larghezze */}
-                <div style={{ borderRadius: 10, border: `1px solid #507aff25`, overflow: "hidden", marginBottom: 8 }}>
-                  <div style={{ padding: "6px 12px", background: "#507aff10", fontSize: 11, fontWeight: 700, color: "#507aff" }}>📏 LARGHEZZE</div>
-                  {[["Alto", m.lAlto], ["Centro", m.lCentro], ["Basso", m.lBasso]].map(([l, val]) => (
-                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
-                      <span style={{ color: T.text }}>{l}</span>
-                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
-                    </div>
-                  ))}
-                </div>
-                {/* Altezze */}
-                <div style={{ borderRadius: 10, border: `1px solid #34c75925`, overflow: "hidden", marginBottom: 8 }}>
-                  <div style={{ padding: "6px 12px", background: "#34c75910", fontSize: 11, fontWeight: 700, color: "#34c759" }}>📐 ALTEZZE</div>
-                  {[["Sinistra", m.hSx], ["Centro", m.hCentro], ["Destra", m.hDx]].map(([l, val]) => (
-                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
-                      <span>{l}</span>
-                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
-                    </div>
-                  ))}
-                </div>
-                {/* Diagonali */}
-                <div style={{ borderRadius: 10, border: `1px solid #ff950025`, overflow: "hidden", marginBottom: 8 }}>
-                  <div style={{ padding: "6px 12px", background: "#ff950010", fontSize: 11, fontWeight: 700, color: "#ff9500" }}>✕ DIAGONALI</div>
-                  {[["D1", m.d1], ["D2", m.d2], ["Fuori squadra", fSq !== null ? `${fSq}mm` : ""]].map(([l, val]) => (
-                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
-                      <span>{l}</span>
-                      <span style={{ fontFamily: FM, fontWeight: 600, color: l === "Fuori squadra" && fSq > 3 ? "#ff3b30" : val ? T.text : T.sub2 }}>{val || "—"}</span>
-                    </div>
-                  ))}
-                </div>
-                {/* Controtelaio */}
-                {v.controtelaio?.tipo && (
-                  <div style={{ borderRadius: 10, border: `1px solid #2563eb25`, overflow: "hidden", marginBottom: 8 }}>
-                    <div style={{ padding: "6px 12px", background: "#2563eb10", fontSize: 11, fontWeight: 700, color: "#2563eb" }}>🔲 CONTROTELAIO {v.controtelaio.tipo==="singolo"?"SINGOLO":v.controtelaio.tipo==="doppio"?"DOPPIO":"CON CASSONETTO"}</div>
-                    {[["Larghezza", v.controtelaio.l], ["Altezza", v.controtelaio.h]].map(([l, val]) => (
-                      <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
-                        <span>{l}</span>
-                        <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
+
+                {/* Helper row renderer */}
+                {(() => {
+                  const Sec = ({ title, color, icon, rows }) => {
+                    const hasData = rows.some(r => r[1]);
+                    return (
+                      <div style={{ borderRadius: 10, border: `1px solid ${color}25`, overflow: "hidden", marginBottom: 8 }}>
+                        <div style={{ padding: "6px 12px", background: color + "10", fontSize: 11, fontWeight: 700, color, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span>{icon} {title}</span>
+                          {hasData && <span style={{ width: 7, height: 7, borderRadius: "50%", background: T.grn, display: "inline-block" }} />}
+                        </div>
+                        {rows.map(([l, val, highlight], ri) => (
+                          <div key={ri} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
+                            <span style={{ color: T.text }}>{l}</span>
+                            <span style={{ fontFamily: FM, fontWeight: 600, color: highlight ? highlight : val ? T.text : T.sub2, maxWidth: "60%", textAlign: "right" }}>{val || "—"}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                    {v.controtelaio.tipo==="singolo" && v.controtelaio.prof && (
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
-                        <span>Profondità</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.prof}mm</span>
+                    );
+                  };
+
+                  const acc = v.accessori || {};
+                  const ct = v.controtelaio || {};
+
+                  return <>
+                    {/* Misure */}
+                    <Sec title="LARGHEZZE" color="#507aff" icon="📏" rows={[["Alto", m.lAlto], ["Centro", m.lCentro], ["Basso", m.lBasso]]} />
+                    <Sec title="ALTEZZE" color="#34c759" icon="📐" rows={[["Sinistra", m.hSx], ["Centro", m.hCentro], ["Destra", m.hDx]]} />
+                    <Sec title="DIAGONALI" color="#ff9500" icon="✕" rows={[["D1", m.d1], ["D2", m.d2], ["Fuori squadra", fSq !== null ? `${fSq}mm` : "", fSq > 3 ? "#ff3b30" : undefined]]} />
+
+                    {/* Sistema + Vetro */}
+                    <Sec title="SISTEMA / VETRO" color="#007aff" icon="⚙️" rows={[
+                      ["Sistema", v.sistema],
+                      ["Vetro", v.vetro],
+                    ]} />
+
+                    {/* Colori */}
+                    <Sec title="COLORI PROFILI" color="#af52de" icon="🎨" rows={[
+                      ["Colore Int.", v.coloreInt],
+                      ...(v.bicolore ? [["Colore Est.", v.coloreEst]] : []),
+                      ...(v.bicolore ? [["Bicolore", "Sì", T.acc]] : []),
+                      ["Colore Accessori", v.coloreAcc || "Come profili"],
+                    ]} />
+
+                    {/* Telaio */}
+                    <Sec title="TELAIO / RIFILATO" color="#8e8e93" icon="📐" rows={[
+                      ["Telaio", v.telaio === "Z" ? "Telaio a Z" : v.telaio === "L" ? "Telaio a L" : "—"],
+                      ...(v.telaio === "Z" && v.telaioAlaZ ? [["Ala Z", `${v.telaioAlaZ}mm`]] : []),
+                      ["Rifilato", v.rifilato ? "Sì" : "No"],
+                      ...(v.rifilato ? [["Rifilo Sx", v.rifilSx || "—"], ["Rifilo Dx", v.rifilDx || "—"], ["Rifilo Sopra", v.rifilSopra || "—"], ["Rifilo Sotto", v.rifilSotto || "—"]] : []),
+                    ]} />
+
+                    {/* Coprifilo / Lamiera */}
+                    <Sec title="COPRIFILO / LAMIERA" color="#b45309" icon="🔩" rows={[
+                      ["Coprifilo", v.coprifilo],
+                      ["Lamiera", v.lamiera],
+                    ]} />
+
+                    {/* Controtelaio */}
+                    {ct.tipo && <Sec title={`CONTROTELAIO ${ct.tipo === "singolo" ? "SINGOLO" : ct.tipo === "doppio" ? "DOPPIO" : "CON CASSONETTO"}`} color="#2563eb" icon="🔲" rows={[
+                      ["Larghezza", ct.l ? `${ct.l}mm` : ""],
+                      ["Altezza", ct.h ? `${ct.h}mm` : ""],
+                      ...(ct.tipo === "singolo" && ct.prof ? [["Profondità", `${ct.prof}mm`]] : []),
+                      ...(ct.tipo === "doppio" ? [["Sez. Interna", ct.sezInt], ["Sez. Esterna", ct.sezEst], ["Distanziale", ct.distanziale]] : []),
+                      ...(ct.tipo === "cassonetto" ? [["H Cassonetto", ct.hCass], ["P Cassonetto", ct.pCass], ["Sezione", ct.sezione], ["Spalla", ct.spalla], ["Cielino", ct.cielino]] : []),
+                    ]} />}
+
+                    {/* Spallette */}
+                    <Sec title="SPALLETTE" color="#32ade6" icon="🧱" rows={[["Sinistra", m.spSx], ["Destra", m.spDx], ["Sopra", m.spSopra], ["Imbotte", m.imbotte]]} />
+
+                    {/* Davanzale */}
+                    <Sec title="DAVANZALE" color="#ff2d55" icon="⬇" rows={[["Profondità", m.davProf], ["Sporgenza", m.davSporg], ["Soglia", m.soglia]]} />
+
+                    {/* Accessori — dettagliato */}
+                    {(acc.tapparella?.attivo || acc.persiana?.attivo || acc.zanzariera?.attivo) && (
+                      <Sec title="ACCESSORI" color="#af52de" icon="✚" rows={[
+                        ...(acc.tapparella?.attivo ? [
+                          ["🪟 Tapparella", "Sì", T.grn],
+                          ...(acc.tapparella.tipo ? [["  Tipo", acc.tapparella.tipo]] : []),
+                          ...(acc.tapparella.l ? [["  Larghezza", `${acc.tapparella.l}mm`]] : []),
+                          ...(acc.tapparella.h ? [["  Altezza", `${acc.tapparella.h}mm`]] : []),
+                          ...(acc.tapparella.motorizzata !== undefined ? [["  Motorizzata", acc.tapparella.motorizzata ? "Sì" : "No"]] : []),
+                          ...(acc.tapparella.colore ? [["  Colore", acc.tapparella.colore]] : []),
+                        ] : []),
+                        ...(acc.persiana?.attivo ? [
+                          ["🏠 Persiana", "Sì", T.grn],
+                          ...(acc.persiana.tipo ? [["  Tipo", acc.persiana.tipo]] : []),
+                          ...(acc.persiana.ante ? [["  N° ante", String(acc.persiana.ante)]] : []),
+                          ...(acc.persiana.colore ? [["  Colore", acc.persiana.colore]] : []),
+                        ] : []),
+                        ...(acc.zanzariera?.attivo ? [
+                          ["🦟 Zanzariera", "Sì", T.grn],
+                          ...(acc.zanzariera.tipo ? [["  Tipo", acc.zanzariera.tipo]] : []),
+                          ...(acc.zanzariera.colore ? [["  Colore", acc.zanzariera.colore]] : []),
+                        ] : []),
+                      ]} />
+                    )}
+
+                    {/* Voci libere */}
+                    {v.vociLibere && v.vociLibere.length > 0 && (
+                      <Sec title="VOCI LIBERE" color="#ff9500" icon="📝" rows={v.vociLibere.map(vl => [vl.nome || "Voce", vl.valore || "—"])} />
+                    )}
+
+                    {/* Note */}
+                    {v.note && (
+                      <div style={{ borderRadius: 10, border: `1px solid ${T.bdr}`, overflow: "hidden", marginBottom: 8 }}>
+                        <div style={{ padding: "6px 12px", background: "#8e8e9310", fontSize: 11, fontWeight: 700, color: "#8e8e93" }}>📝 NOTE</div>
+                        <div style={{ padding: "8px 12px", fontSize: 12, lineHeight: 1.5 }}>{v.note}</div>
                       </div>
                     )}
-                    {v.controtelaio.tipo==="doppio" && <>
-                      {v.controtelaio.sezInt && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>Sez. interna</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.sezInt}</span></div>}
-                      {v.controtelaio.sezEst && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>Sez. esterna</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.sezEst}</span></div>}
-                      {v.controtelaio.distanziale && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>Distanziale</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.distanziale}</span></div>}
-                    </>}
-                    {v.controtelaio.tipo==="cassonetto" && <>
-                      {v.controtelaio.hCass && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>H Cassonetto</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.hCass}</span></div>}
-                      {v.controtelaio.pCass && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>P Cassonetto</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.pCass}</span></div>}
-                      {v.controtelaio.sezione && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>Sezione</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.sezione}</span></div>}
-                      {v.controtelaio.spalla && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>Spalla</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.spalla}</span></div>}
-                      {v.controtelaio.cielino && <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}><span>Cielino</span><span style={{ fontFamily: FM, fontWeight: 600 }}>{v.controtelaio.cielino}</span></div>}
-                    </>}
-                  </div>
-                )}
-                {/* Spallette */}
-                <div style={{ borderRadius: 10, border: `1px solid #32ade625`, overflow: "hidden", marginBottom: 8 }}>
-                  <div style={{ padding: "6px 12px", background: "#32ade610", fontSize: 11, fontWeight: 700, color: "#32ade6" }}>🧱 SPALLETTE</div>
-                  {[["Sinistra", m.spSx], ["Destra", m.spDx], ["Sopra", m.spSopra], ["Imbotte", m.imbotte]].map(([l, val]) => (
-                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
-                      <span>{l}</span>
-                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
-                    </div>
-                  ))}
-                </div>
-                {/* Davanzale */}
-                <div style={{ borderRadius: 10, border: `1px solid #ff2d5525`, overflow: "hidden", marginBottom: 8 }}>
-                  <div style={{ padding: "6px 12px", background: "#ff2d5510", fontSize: 11, fontWeight: 700, color: "#ff2d55" }}>⬇ DAVANZALE</div>
-                  {[["Profondità", m.davProf], ["Sporgenza", m.davSporg], ["Soglia", m.soglia]].map(([l, val]) => (
-                    <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>
-                      <span>{l}</span>
-                      <span style={{ fontFamily: FM, fontWeight: 600, color: val ? T.text : T.sub2 }}>{val || "—"}</span>
-                    </div>
-                  ))}
-                </div>
-                {/* Accessori */}
-                {(v.accessori?.tapparella?.attivo || v.accessori?.persiana?.attivo || v.accessori?.zanzariera?.attivo) && (
-                  <div style={{ borderRadius: 10, border: `1px solid #af52de25`, overflow: "hidden", marginBottom: 8 }}>
-                    <div style={{ padding: "6px 12px", background: "#af52de10", fontSize: 11, fontWeight: 700, color: "#af52de" }}>✚ ACCESSORI</div>
-                    {v.accessori?.tapparella?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>🪟 Tapparella</div>}
-                    {v.accessori?.persiana?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>🏠 Persiana</div>}
-                    {v.accessori?.zanzariera?.attivo && <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, fontSize: 12 }}>🦟 Zanzariera</div>}
-                  </div>
-                )}
-                {/* Foto gallery */}
-                {Object.values(v.foto || {}).filter(f => f.tipo === "foto" && f.dataUrl).length > 0 && (
-                  <div style={{ borderRadius: 10, border: `1px solid #007aff25`, overflow: "hidden", marginBottom: 8 }}>
-                    <div style={{ padding: "6px 12px", background: "#007aff10", fontSize: 11, fontWeight: 700, color: "#007aff" }}>📷 FOTO ({Object.values(v.foto || {}).filter(f => f.tipo === "foto").length})</div>
-                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", padding: 8 }}>
-                      {Object.entries(v.foto || {}).filter(([, f]) => f.tipo === "foto" && f.dataUrl).map(([k, f]) => (
-                        <div key={k} style={{ position: "relative", width: 64, height: 48, borderRadius: 6, overflow: "hidden" }}>
-                          <img src={f.dataUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
-                          {f.categoria && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 6, textAlign: "center", padding: "1px" }}>{f.categoria}</div>}
+
+                    {/* Accesso */}
+                    {(v.difficoltaSalita || v.mezzoSalita) && (
+                      <Sec title="ACCESSO" color={v.difficoltaSalita === "facile" ? T.grn : v.difficoltaSalita === "difficile" ? "#ff3b30" : "#ff9500"} icon="🏗" rows={[
+                        ["Difficoltà", v.difficoltaSalita],
+                        ["Mezzo salita", v.mezzoSalita],
+                      ]} />
+                    )}
+
+                    {/* Foto gallery */}
+                    {Object.values(v.foto || {}).filter(f => f.tipo === "foto" && f.dataUrl).length > 0 && (
+                      <div style={{ borderRadius: 10, border: `1px solid #007aff25`, overflow: "hidden", marginBottom: 8 }}>
+                        <div style={{ padding: "6px 12px", background: "#007aff10", fontSize: 11, fontWeight: 700, color: "#007aff" }}>📷 FOTO ({Object.values(v.foto || {}).filter(f => f.tipo === "foto").length})</div>
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", padding: 8 }}>
+                          {Object.entries(v.foto || {}).filter(([, f]) => f.tipo === "foto" && f.dataUrl).map(([k, f]) => (
+                            <div key={k} style={{ position: "relative", width: 64, height: 48, borderRadius: 6, overflow: "hidden" }}>
+                              <img src={f.dataUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+                              {f.categoria && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 6, textAlign: "center", padding: "1px" }}>{f.categoria}</div>}
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      </div>
+                    )}
+
+                    {/* Completeness score */}
+                    {(() => {
+                      const fields = [m.lCentro, m.hCentro, v.sistema, v.vetro, v.coloreInt, v.tipo, v.stanza].filter(Boolean).length;
+                      const tot = 7;
+                      const pct = Math.round(fields / tot * 100);
+                      return (
+                        <div style={{ padding: "10px 12px", borderRadius: 10, background: pct >= 80 ? T.grn + "10" : pct >= 50 ? "#ff950010" : "#ff3b3010", border: `1px solid ${pct >= 80 ? T.grn + "30" : pct >= 50 ? "#ff950030" : "#ff3b3030"}`, textAlign: "center" }}>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: pct >= 80 ? T.grn : pct >= 50 ? "#ff9500" : "#ff3b30" }}>{pct}%</div>
+                          <div style={{ fontSize: 10, color: T.sub, fontWeight: 600 }}>Completezza vano ({fields}/{tot} campi chiave)</div>
+                        </div>
+                      );
+                    })()}
+                  </>;
+                })()}
               </div>
             </>
           )}
@@ -1385,17 +1830,28 @@ export default function VanoDetailPanel() {
           {/* === RIEPILOGO RAPIDO === */}
           <div style={{ marginTop: 12, padding: "8px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Riepilogo rapido</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               {[
-                ["L", m.lCentro || m.lAlto || m.lBasso],
-                ["H", m.hCentro || m.hSx || m.hDx],
-                ["D1", m.d1], ["D2", m.d2],
-                ["F.sq", fSq !== null ? `${fSq}` : null],
-              ].map(([l, val]) => (
-                <div key={l} style={{ padding: "3px 8px", borderRadius: 4, background: T.bg, fontSize: 10, fontFamily: FM, color: val ? T.text : T.sub2 }}>
+                ["L", m.lCentro || m.lAlto || m.lBasso, null],
+                ["H", m.hCentro || m.hSx || m.hDx, null],
+                ["D1", m.d1, null], ["D2", m.d2, null],
+                ["F.sq", fSq !== null ? `${fSq}` : null, fSq > 3 ? "#ff3b30" : null],
+              ].map(([l, val, c]) => (
+                <div key={l} style={{ padding: "3px 8px", borderRadius: 4, background: c ? c + "12" : T.bg, fontSize: 10, fontFamily: FM, color: c || (val ? T.text : T.sub2) }}>
                   {l}: {val || "—"}
                 </div>
               ))}
+            </div>
+            {/* Row 2: details */}
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
+              {v.sistema && <div style={{ padding: "2px 6px", borderRadius: 4, background: "#007aff12", fontSize: 9, color: "#007aff", fontWeight: 600 }}>⚙ {v.sistema.split(" ").slice(0, 2).join(" ")}</div>}
+              {v.coloreInt && <div style={{ padding: "2px 6px", borderRadius: 4, background: "#af52de12", fontSize: 9, color: "#af52de", fontWeight: 600 }}>🎨 {v.coloreInt}</div>}
+              {v.vetro && <div style={{ padding: "2px 6px", borderRadius: 4, background: "#32ade612", fontSize: 9, color: "#32ade6", fontWeight: 600 }}>💎 {v.vetro}</div>}
+              {v.coprifilo && <div style={{ padding: "2px 6px", borderRadius: 4, background: "#b4530912", fontSize: 9, color: "#b45309", fontWeight: 600 }}>🔩 {v.coprifilo}</div>}
+              {v.accessori?.tapparella?.attivo && <div style={{ padding: "2px 6px", borderRadius: 4, background: "#34c75912", fontSize: 9, color: "#34c759", fontWeight: 600 }}>🪟 Tapp.</div>}
+              {v.accessori?.persiana?.attivo && <div style={{ padding: "2px 6px", borderRadius: 4, background: "#34c75912", fontSize: 9, color: "#34c759", fontWeight: 600 }}>🏠 Pers.</div>}
+              {v.accessori?.zanzariera?.attivo && <div style={{ padding: "2px 6px", borderRadius: 4, background: "#af52de12", fontSize: 9, color: "#af52de", fontWeight: 600 }}>🦟 Zanz.</div>}
+              {v.controtelaio?.tipo && <div style={{ padding: "2px 6px", borderRadius: 4, background: "#2563eb12", fontSize: 9, color: "#2563eb", fontWeight: 600 }}>🔲 CT</div>}
             </div>
           </div>
 

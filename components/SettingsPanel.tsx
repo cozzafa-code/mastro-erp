@@ -52,7 +52,7 @@ export default function SettingsPanel() {
     tasks, setTasks, msgs, setMsgs, problemi, setProblemi,
     montaggiDB, setMontaggiDB, ordiniFornDB, setOrdiniFornDB,
     // Import
-    importStatus, importLog,
+    importStatus, importLog, importExcelCatalog,
     // Helpers
     addSettingsItem, deleteSettingsItem, countVani,
     // Piano & onboarding

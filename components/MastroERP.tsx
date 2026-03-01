@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import { useSyncEngine, SyncStatusBar, cloudLoadAll as cloudLoadAllSync } from "./mastro-sync";
 import { MastroErrorBoundary, PanelErrorBoundary } from "./MastroErrorBoundary";
 import { useConfirmDialog, useToast, exportAllData } from "./mastro-ui-safety";
+import { validateCommessa, validateVano, validateTask, validateEvento, validateFatturaPassiva, validateMisura, sanitize, FormErrors, FieldError } from "./mastro-validation";
 
 // === CLOUD SYNC HELPERS ===
 const SYNC_KEYS = ["cantieri","events","contatti","tasks","problemi","team","azienda","pipeline","sistemi","vetri","colori","coprifili","lamiere","libreria","fatture","squadre","montaggi","ordiniForn"];
@@ -38,10 +39,11 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   const [theme, setTheme] = useState("chiaro");
   const T = THEMES[theme];
   const syncReady = useRef(false);
+  const userId = user?.id || null;
   const sync = useSyncEngine(userId);
   const { confirm, ConfirmDialog } = useConfirmDialog();
+  const [formErrors, setFormErrors] = useState<string[]>([]);
   const { toast, ToastContainer } = useToast();
-  const userId = user?.id || null;
   
   const [tab, setTab] = useState("home");
   // === SUBSCRIPTION ===
@@ -225,6 +227,13 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   const [firmaFileUrl, setFirmaFileUrl] = useState<string | null>(null);
   const [firmaFileName, setFirmaFileName] = useState("");
   const [fattPerc, setFattPerc] = useState(50);
+  const [voceTempDesc, setVoceTempDesc] = useState("");
+  const [voceTempImporto, setVoceTempImporto] = useState("");
+  const [voceTempQta, setVoceTempQta] = useState("1");
+  const [prevWorkspace, setPrevWorkspace] = useState(false);
+  const [prevTab, setPrevTab] = useState("preventivo");
+  const [editingVanoId, setEditingVanoId] = useState(null);
+  const [drawingVanoId, setDrawingVanoId] = useState(null);
   const [montGiorni, setMontGiorni] = useState(1);
   const [docViewer, setDocViewer] = useState<{ docs: any[], title: string } | null>(null);
   const [ccExpandStep, setCcExpandStep] = useState<string|null>(null);
@@ -519,7 +528,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       try{const _v=localStorage.getItem("mastro:piano");if(_v)setPianoAttivo(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:team");if(_v)setTeam(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:contatti");if(_v)setContatti(JSON.parse(_v));}catch(e){}
-      try{const _v=localStorage.getItem("mastro:pipeline");if(_v)setPipelineDB(JSON.parse(_v));}catch(e){}
+      try{const _v=localStorage.getItem("mastro:pipeline");if(_v){const parsed=JSON.parse(_v); if(parsed.some(p=>p.id==="collaudo")){setPipelineDB(parsed);}else{setPipelineDB(PIPELINE_DEFAULT);localStorage.setItem("mastro:pipeline",JSON.stringify(PIPELINE_DEFAULT));}} }catch(e){}
       try{const _v=localStorage.getItem("mastro:azienda");if(_v)setAziendaInfo(JSON.parse(_v));}catch(e){}
 },[]);
   useEffect(()=>{try{localStorage.setItem("mastro:cantieri",JSON.stringify(cantieri));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("cantieri", cantieri);},[cantieri]);
@@ -556,7 +565,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       const safeArr = (arr: any) => Array.isArray(arr) ? arr.filter(x => x && typeof x === "object") : null;
       const sa = (k: string) => safeArr(cloud[k]);
       // Ensure cantieri always have .fase
-      const safeCantieri = sa("cantieri")?.map(c => ({ fase: "sopralluogo", ...c })) || null;
+      const safeCantieri = sa("cantieri")?.map(c => ({ fase: "sopralluogo", ...c, fase: c.fase === "misure" ? "sopralluogo" : (c.fase || "sopralluogo") })) || null;
       if (safeCantieri) { setCantieri(safeCantieri); localStorage.setItem("mastro:cantieri", JSON.stringify(safeCantieri)); }
       if (sa("events")) { setEvents(sa("events")!); localStorage.setItem("mastro:events", JSON.stringify(sa("events"))); }
       if (sa("contatti")) { setContatti(sa("contatti")!); localStorage.setItem("mastro:contatti", JSON.stringify(sa("contatti"))); }
@@ -806,7 +815,8 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   const toggleTask = (id) => setTasks(ts => ts.map(t => t.id === id ? { ...t, done: !t.done } : t));
 
   const addTask = () => {
-    if (!newTask.text.trim()) return;
+    const v = validateTask(newTask);
+    if (!v.valid) { toast(v.errors[0], "error"); return; }
     setTasks(ts => [...ts, { id: Date.now(), ...newTask, done: false, allegati: [...taskAllegati] }]);
     setTaskAllegati([]);
     setNewTask({ text: "", meta: "", time: "", priority: "media", cm: "", date: "", persona: "" });
@@ -814,7 +824,9 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   };
 
   const addCommessa = () => {
-    if (!newCM.cliente.trim()) return;
+    const v = validateCommessa(newCM);
+    if (!v.valid) { setFormErrors(v.errors); toast(v.errors[0], "error"); return; }
+    setFormErrors([]);
     if (!canDo("commessa")) return;
     const code = "S-" + String(cantieri.length + 1).padStart(4, "0");
     const nc = { id: Date.now(), code, cliente: newCM.cliente, cognome: newCM.cognome||"", indirizzo: newCM.indirizzo, telefono: newCM.telefono, email: newCM.email||"", fase: "sopralluogo", rilievi: [], sistema: newCM.sistema, tipo: newCM.tipo, difficoltaSalita: newCM.difficoltaSalita, mezzoSalita: newCM.mezzoSalita, foroScale: newCM.foroScale, pianoEdificio: newCM.pianoEdificio, note: newCM.note, allegati: [], creato: new Date().toLocaleDateString("it-IT",{day:"numeric",month:"short"}), aggiornato: new Date().toLocaleDateString("it-IT",{day:"numeric",month:"short"}), log: [{ chi: "Fabio", cosa: "creato la commessa", quando: "Adesso", color: T.sub }] };
@@ -841,7 +853,9 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   };
 
   const updateMisura = (vanoId, key, value) => {
-    const numVal = parseInt(value) || 0;
+    const numVal = sanitize.misura(value);
+    const mv = validateMisura(key, numVal);
+    if (!mv.valid) { toast(mv.errors[0], "warning"); }
     // Capture IDs NOW to prevent stale closures
     const cmId = selectedCM?.id;
     const rilId = selectedRilievo?.id;
@@ -1333,7 +1347,8 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
 
   const addEvent = () => {
     const _evTitle = newEvent.text.trim() || (newEvent.persona ? "Appuntamento " + newEvent.persona : "");
-    if (!_evTitle) return;
+    const v = validateEvento(newEvent);
+    if (!v.valid) { toast(v.errors[0], "error"); return; }
     newEvent.text = _evTitle;
     // If tipo is "task", create a task instead of an event
     if (newEvent.tipo === "task") {
@@ -1365,7 +1380,9 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
 
   // ═══ FATTURE PASSIVE ═══
   const creaFatturaPassiva = () => {
-    const fp = { ...newFattPassiva, id: "fp_" + Date.now(), importo: parseFloat(String(newFattPassiva.importo)) || 0, dataISO: newFattPassiva.data || new Date().toISOString().split("T")[0] };
+    const v = validateFatturaPassiva(newFattPassiva);
+    if (!v.valid) { toast(v.errors[0], "error"); return; }
+    const fp = { ...newFattPassiva, id: "fp_" + Date.now(), importo: sanitize.numero(newFattPassiva.importo), dataISO: newFattPassiva.data || new Date().toISOString().split("T")[0] };
     setFatturePassive(prev => [...prev, fp]);
     setNewFattPassiva({ fornitore: "", numero: "", data: "", importo: 0, iva: 22, descrizione: "", cmId: "", pagata: false, scadenza: "" });
     setShowFatturaPassiva(false);
@@ -2225,8 +2242,8 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       return { tot, mq, perim, sysRec, vetroRec, copRec, lamRec };
     };
     const vaniPDF = getVaniAttivi(c);
-    const totale = vaniPDF.reduce((s,v)=>s+calcolaVanoPDF(v).tot, 0);
-    const sconto = parseFloat(c.sconto||0);
+    const totale = vaniPDF.reduce((s,v)=>s+calcolaVanoPDF(v).tot, 0) + (c.vociLibere || []).reduce((s, vl) => s + ((vl.importo||0)*(vl.qta||1)), 0);
+    const sconto = parseFloat(c.scontoPerc||c.sconto||0);
     const scontoVal = totale * sconto / 100;
     const imponibile = totale - scontoVal;
     const ivaPerc = parseFloat(c.ivaPerc||10);
@@ -2349,6 +2366,9 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       const acc = v.accessori || {};
       let specs = '';
       const addS = (l: string, val: string) => { if (val) specs += `<tr><td class="sl">${l}</td><td class="sv"><b>${val}</b></td></tr>`; };
+      // Posizione
+      if (v.stanza || v.piano) addS("Posizione:", [v.stanza, v.piano ? "Piano " + v.piano : ""].filter(Boolean).join(", "));
+      if ((v.pezzi || 1) > 1) addS("Quantità:", (v.pezzi || 1) + " elementi");
       addS("Colore interno:", colInt);
       addS("Colore esterno:", colEst);
       if (v.bicolore) addS("Finitura:", "Bicolore");
@@ -2361,12 +2381,33 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       if (v.rifilSx) addS("Sagoma telaio sx:", v.rifilSx);
       if (v.telaio) addS("Telaio fisso:", v.telaio);
       if (v.telaioAlaZ) addS("Telaio mobile:", v.telaioAlaZ);
+      // Controtelaio dettagliato
+      if (v.controtelaio && v.controtelaio !== "Nessuno") {
+        let ctDesc = v.controtelaio;
+        if (v.ctMarca) ctDesc += " — " + v.ctMarca;
+        if (v.ctModello) ctDesc += " " + v.ctModello;
+        addS("Controtelaio:", ctDesc);
+        if (v.ctLarghezza || v.ctAltezza || v.ctSpessore) {
+          const ctDims = [(v.ctLarghezza ? v.ctLarghezza + "mm L" : ""), (v.ctAltezza ? v.ctAltezza + "mm H" : ""), (v.ctSpessore ? v.ctSpessore + "mm sp." : "")].filter(Boolean).join(" × ");
+          addS("Misure CT:", ctDims);
+        }
+        if (v.ctPosizione) addS("Posizione CT:", v.ctPosizione);
+        if (v.ctNote) addS("Note CT:", v.ctNote);
+      }
+      // Cassonetto
+      if (v.cassonetto) addS("Cassonetto:", v.cassonetto);
+      // Coprifilo
       if (copRec) addS("Coprifilo:", copRec.nome || copRec.cod);
+      else if (v.coprifilo) addS("Coprifilo:", v.coprifilo);
+      // Soglia
+      if (v.soglia) addS("Soglia:", v.soglia);
+      // Davanzale
+      if (v.davanzale) addS("Davanzale:", v.davanzale);
       if (lamRec) addS("Lamiera:", lamRec.nome || lamRec.cod);
       addS("Trasmitt. termica:", (v.trasmittanzaUw || sysRec?.uw || "1,2") + " W/m\u00b2K");
       if (acc.tapparella?.attivo) addS("Tapparella:", (acc.tapparella.tipo || "PVC") + (acc.tapparella.colore ? " " + acc.tapparella.colore : ""));
-      if (acc.persiana?.attivo) addS("Persiana:", (acc.persiana.tipo || "Alluminio"));
-      if (acc.zanzariera?.attivo) addS("Zanzariera:", (acc.zanzariera.tipo || "Rullo"));
+      if (acc.persiana?.attivo) addS("Persiana:", (acc.persiana.tipo || "Alluminio") + (acc.persiana.colore ? " " + acc.persiana.colore : ""));
+      if (acc.zanzariera?.attivo) addS("Zanzariera:", (acc.zanzariera.tipo || "Rullo") + (acc.zanzariera.colore ? " " + acc.zanzariera.colore : ""));
       if (v.note && !v.note.startsWith("\ud83d\udd34")) addS("Note:", v.note);
       // Voci libere
       if (v.vociLibere?.length > 0) {
@@ -2417,13 +2458,13 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
             <div style="font-size:22px;font-weight:900;color:#0066cc;margin-bottom:2px">${String(globalIdx).padStart(2,"0")}</div>
             ${drawSVG(v.tipoCode, v.lmm, v.hmm)}
             <div style="font-size:7.5px;color:#999;font-style:italic;margin-top:1px">Vista interna</div>
-            <div style="font-size:9px;font-weight:700;color:#333;margin-top:2px">${v.tipoLabel}</div>
-            ${v.stanza ? `<div style="font-size:8px;color:#888">${v.stanza}${v.piano ? ", " + v.piano : ""}</div>` : ""}
+            <div style="font-size:9px;font-weight:700;color:#333;margin-top:2px">${v.tipoLabel}${(v.pezzi || 1) > 1 ? ` × ${v.pezzi}` : ""}</div>
+            <div style="font-size:8px;color:#555;font-weight:600">${v.stanza || ""}${v.stanza && v.piano ? ", " : ""}${v.piano ? "Piano " + v.piano : ""}</div>
           </div>
           <div style="flex:1;min-width:0">
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
-              <div style="font-size:11px;font-weight:700">${v.lmm} × ${v.hmm} mm</div>
-              <div style="font-size:12px;font-weight:900;color:#1a1a1c">&euro; ${fmt(v.sub)}</div>
+              <div><span style="font-size:11px;font-weight:700">${v.lmm} × ${v.hmm} mm</span>${v.nome ? `<span style="font-size:9px;color:#666;margin-left:6px">${v.nome}</span>` : ""}</div>
+              <div style="font-size:12px;font-weight:900;color:#1a1a1c">&euro; ${fmt(v.sub)}${(v.pezzi || 1) > 1 ? `<div style="font-size:8px;color:#888;text-align:right">×${v.pezzi} = &euro;${fmt(v.sub * (v.pezzi || 1))}</div>` : ""}</div>
             </div>
             <table class="st"><tbody>${v.specs}</tbody></table>
             ${Object.values(v.foto || {}).filter(f => f.tipo === "foto" && f.dataUrl).length > 0 ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${Object.values(v.foto || {}).filter(f => f.tipo === "foto" && f.dataUrl).slice(0, 4).map(f => `<img src="${f.dataUrl}" style="width:60px;height:45px;object-fit:cover;border-radius:3px;border:1px solid #ddd" alt=""/>`).join("")}${Object.values(v.foto || {}).filter(f => f.tipo === "foto" && f.dataUrl).length > 4 ? `<div style="width:60px;height:45px;background:#f0f0f0;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#666">+${Object.values(v.foto || {}).filter(f => f.tipo === "foto" && f.dataUrl).length - 4}</div>` : ""}</div>` : ""}
@@ -2434,12 +2475,36 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       return sysHeader + `<div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;margin-bottom:6px">${rows}</div>`;
     }).join("");
 
-    // Extra rows (trasporto etc)
+    // Extra rows (trasporto, voci libere commessa)
     let extraHtml = '';
+    // Voci libere della commessa
+    if ((c.vociLibere || []).length > 0) {
+      extraHtml += `<div style="margin-top:12px;padding:10px 14px;background:#f9f9f9;border:1px solid #ddd;border-radius:4px">
+        <div style="font-size:11px;font-weight:800;color:#333;margin-bottom:6px">LAVORI E ACCESSORI</div>
+        ${(c.vociLibere || []).map(vl => {
+          const vlTot = (vl.importo || 0) * (vl.qta || 1);
+          return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #eee;font-size:10px">
+            <div><span style="font-weight:600">${vl.desc || "Voce"}</span> <span style="color:#888">×${vl.qta || 1}</span></div>
+            <div style="font-weight:700">&euro; ${fmt(vlTot)}</div>
+          </div>`;
+        }).join("")}
+      </div>`;
+    }
     if (c.trasporto && parseFloat(c.trasporto) > 0) {
-      extraHtml = `<div style="margin-top:8px;padding:10px 14px;background:#f9f9f9;border:1px solid #ddd;border-radius:4px;display:flex;justify-content:space-between;align-items:center">
+      extraHtml += `<div style="margin-top:8px;padding:10px 14px;background:#f9f9f9;border:1px solid #ddd;border-radius:4px;display:flex;justify-content:space-between;align-items:center">
         <div><div style="font-size:11px;font-weight:700">🚛 Trasporto</div><div style="font-size:9px;color:#666">${c.trasportoNote || "Trasporto e scarico"}</div></div>
         <div style="font-size:12px;font-weight:900">&euro; ${fmt(parseFloat(c.trasporto))}</div>
+      </div>`;
+    }
+    // Detrazione fiscale
+    const detrId = c.detrazione || "nessuna";
+    const DETR_MAP = { "50": "Detrazione Ristrutturazione 50%", "65": "Ecobonus 65%", "75": "Detrazione Barriere Architettoniche 75%", "110": "Superbonus 110%" };
+    if (detrId !== "nessuna" && DETR_MAP[detrId]) {
+      const detrPerc = parseInt(detrId);
+      const detrVal = imponibile * detrPerc / 100;
+      extraHtml += `<div style="margin-top:8px;padding:10px 14px;background:#e8f5e9;border:1px solid #4caf5040;border-radius:4px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:11px;font-weight:700;color:#2e7d32">🏛 ${DETR_MAP[detrId]}</div><div style="font-size:9px;color:#666">Importo detraibile su imponibile</div></div>
+        <div style="text-align:right"><div style="font-size:12px;font-weight:900;color:#2e7d32">&minus; &euro; ${fmt(detrVal)}</div><div style="font-size:8px;color:#888">Costo effettivo: &euro; ${fmt(totIva - detrVal)}</div></div>
       </div>`;
     }
 
@@ -4102,6 +4167,11 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     ccConfirm, setCcConfirm, ccDone, setCcDone,
     firmaStep, setFirmaStep, firmaFileUrl, setFirmaFileUrl,
     firmaFileName, setFirmaFileName, fattPerc, setFattPerc,
+    voceTempDesc, setVoceTempDesc, voceTempImporto, setVoceTempImporto, voceTempQta, setVoceTempQta,
+    prevWorkspace, setPrevWorkspace, prevTab, setPrevTab,
+    editingVanoId, setEditingVanoId,
+    drawingVanoId, setDrawingVanoId,
+    sistemiDB, coloriDB, vetriDB,
     montGiorni, setMontGiorni, docViewer, setDocViewer,
     ccExpandStep, setCcExpandStep, confSett, setConfSett,
     selectedCM, setSelectedCM, selectedRilievo, setSelectedRilievo,
@@ -4131,7 +4201,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     newEvent, setNewEvent, events, setEvents,
     faseNotif, setFaseNotif, showAIPhoto, setShowAIPhoto,
     aiPhotoStep, setAiPhotoStep, settingsModal, setSettingsModal,
-    importStatus, setImportStatus, importLog, setImportLog,
+    importStatus, setImportStatus, importLog, setImportLog, importExcelCatalog,
     settingsForm, setSettingsForm, showAllegatiModal, setShowAllegatiModal,
     allegatiText, setAllegatiText, isRecording, setIsRecording,
     recSeconds, setRecSeconds, playingId, setPlayingId,
@@ -4179,7 +4249,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     PipelineBar, VanoSVG, toggleCollapse, SectionHead, caricaDemoCompleto, renderCalendarioMontaggi,
     spCanvasRef, canvasRef, fotoVanoRef, videoVanoRef, openCamera, fileInputRef, fotoInputRef, ripFotoRef, firmaRef,
     // Refs/computed
-    filtered, calDays, today, confirm, toast, exportAllData,
+    filtered, calDays, today, confirm, toast, exportAllData, formErrors, setFormErrors, FormErrors, FieldError,
     // Business logic functions
     generaPreventivoPDF, generaPDFMisure, creaFattura, generaFatturaPDF, inviaWhatsApp, inviaEmail, creaOrdineFornitore, ricalcolaOrdine, updateOrdine, calcolaScadenzaPagamento, generaOrdinePDF, generaConfermaFirmataPDF, inviaOrdineFornitore, creaMontaggio, getWeekDays, generaPreventivoCondivisibile, uploadConfermaFornitore, estraiDatiPDF, confermaInboxDoc, assegnaDocUniversale, generaTrackingCliente, generaXmlSDI, nextNumFattura,
  ORDINE_STATI, activePlan, trialDaysLeft, drag,
@@ -4249,7 +4319,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                   <div onClick={() => { if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #007aff15, #007aff08)", border: "1px solid #007aff25", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#007aff" }}>{"📁"} Commessa</div>
-                  <div onClick={() => { if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "misure", vani: [], note: "Misure: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #ff950015, #ff950008)", border: "1px solid #ff950025", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#ff9500" }}>{"📏"} Misure</div>
+                  <div onClick={() => { if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: "Misure: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #ff950015, #ff950008)", border: "1px solid #ff950025", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#ff9500" }}>{"📏"} Misure</div>
                   <div onClick={() => { const code = "INT-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: "Intervento: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #34c75915, #34c75908)", border: "1px solid #34c75925", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#34c759" }}>{"🔧"} Intervento</div>
                 </div>
               </div>
@@ -4290,7 +4360,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         })()}
         {fabOpen && <div onClick={() => setFabOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", backdropFilter: "blur(4px)", zIndex: 89 }} />}
         {(() => {
-          const lastCM = lastOpenedCMId ? cantieri.find(c => c.id === lastOpenedCMId) : (cantieri.find(c => c.fase === "misure") || cantieri.find(c => c.fase !== "chiusura") || cantieri[0]);
+          const lastCM = lastOpenedCMId ? cantieri.find(c => c.id === lastOpenedCMId) : (cantieri.find(c => c.fase === "sopralluogo") || cantieri.find(c => c.fase !== "chiusura") || cantieri[0]);
           const fabItems: Array<{id:string;ico:string;l:string;c:string;action:()=>void}> = [
             { id: "evento", ico: "📅", l: "Appuntamento", c: "#007aff", action: () => { setFabOpen(false); setShowNewEvent(true); } },
             { id: "cliente", ico: "👤", l: "Nuovo cliente", c: "#34c759", action: () => { setFabOpen(false); setShowModal("contatto"); } },

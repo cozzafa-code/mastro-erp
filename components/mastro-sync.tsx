@@ -144,7 +144,7 @@ export async function cloudLoadAll(userId: string): Promise<Record<string, any>>
 
 export function useSyncEngine(userId: string | null) {
   const [status, setStatus] = useState<SyncStatus>({
-    online: typeof navigator !== "undefined" ? navigator.onLine : true,
+    online: true,
     supabaseOk: true,
     queueSize: 0,
     lastSync: null,

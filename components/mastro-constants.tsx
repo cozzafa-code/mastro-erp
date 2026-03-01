@@ -1,31 +1,32 @@
 import React from "react";
 
 //               MOTIVI_BLOCCO, AFASE, useDragOrder hook, Home, Helpers, Stili
-// Supabase sync — fully self-contained IIFE closure
-export const cloudSave = (() => {
-  const _q: any = {}; 
-  let _t: any = null;
-  return (userId: string, key: string, data: any) => {
-    if (!userId) return;
-    _q[key] = data;
-    if (_t) clearTimeout(_t);
-    _t = setTimeout(async () => {
+// Supabase sync — stubs (enable import when Supabase is configured)
+var _syncQueue: Record<string, any> = {};
+var _syncTimer: any = null;
+export const cloudSave = (userId: string, key: string, data: any) => {
+  try {
+  if (!userId) return;
+  if (!_syncQueue) _syncQueue = {};
+  _syncQueue[key] = data;
+  if (_syncTimer) clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(async () => {
+    try {
+    const { supabase } = await import("@/lib/supabase");
+    const batch = { ..._syncQueue };
+    _syncQueue = {};
+    for (const [k, v] of Object.entries(batch)) {
       try {
-        const { supabase } = await import("@/lib/supabase");
-        const batch = { ..._q };
-        Object.keys(_q).forEach(k => delete _q[k]);
-        for (const [k, v] of Object.entries(batch)) {
-          try {
-            await supabase.from("user_data").upsert(
-              { user_id: userId, azienda_id: userId, key: k, data: v, updated_at: new Date().toISOString() },
-              { onConflict: "user_id,azienda_id,key" }
-            );
-          } catch (e) { console.warn("Cloud save error:", k, e); }
-        }
-      } catch (e) { console.warn("cloudSave error:", e); }
-    }, 1500);
-  };
-})();
+        await supabase.from("user_data").upsert(
+          { user_id: userId, azienda_id: userId, key: k, data: v, updated_at: new Date().toISOString() },
+          { onConflict: "user_id,azienda_id,key" }
+        );
+      } catch (e) { console.warn("Cloud save error:", k, e); }
+    }
+    } catch (e) { console.warn("cloudSave batch error:", e); }
+  }, 1500); // debounce 1.5s
+  } catch (e) { console.warn("cloudSave init error:", e); }
+};
 
 export const cloudLoadAll = async (userId: string): Promise<Record<string, any>> => {
   try {
@@ -130,14 +131,14 @@ export const PLANS = {
 
 /* == PIPELINE 7+1 FASI == */
 export const PIPELINE_DEFAULT = [
-  { id: "sopralluogo", nome: "Sopralluogo", ico: "🔍", color: "#007aff", attiva: true },
-  { id: "preventivo", nome: "Preventivo", ico: "📋", color: "#ff9500", attiva: true },
-  { id: "conferma", nome: "Conferma", ico: "✍️", color: "#af52de", attiva: true },
-  { id: "misure", nome: "Misure", ico: "📐", color: "#5856d6", attiva: true },
-  { id: "ordini", nome: "Ordini", ico: "📦", color: "#ff2d55", attiva: true },
-  { id: "produzione", nome: "Produzione", ico: "🏭", color: "#ff9500", attiva: true },
-  { id: "posa", nome: "Posa", ico: "🔧", color: "#34c759", attiva: true },
-  { id: "chiusura", nome: "Chiusura", ico: "✅", color: "#30b0c7", attiva: true },
+  { id: "sopralluogo", nome: "Sopralluogo", ico: "🔍", color: "#007aff", attiva: true, desc: "Vai al cantiere, prendi misure, foto, note" },
+  { id: "preventivo", nome: "Preventivo", ico: "📋", color: "#ff9500", attiva: true, desc: "Rivedi misure, calcola prezzi, sconti, condizioni" },
+  { id: "conferma", nome: "Conferma", ico: "✍️", color: "#af52de", attiva: true, desc: "Cliente accetta, misure definitive, firma contratto" },
+  { id: "ordini", nome: "Ordini", ico: "📦", color: "#ff2d55", attiva: true, desc: "Ordina materiali ai fornitori" },
+  { id: "produzione", nome: "Produzione", ico: "🏭", color: "#ff9500", attiva: true, desc: "In lavorazione, attesa materiali" },
+  { id: "posa", nome: "Posa", ico: "🔧", color: "#34c759", attiva: true, desc: "Montaggio al cantiere" },
+  { id: "collaudo", nome: "Collaudo", ico: "🔎", color: "#5856d6", attiva: true, desc: "Verifica lavoro, foto finale" },
+  { id: "chiusura", nome: "Chiusura", ico: "✅", color: "#30b0c7", attiva: true, desc: "Fattura saldo, documenti, archivia" },
 ];
 
 /* == MOTIVI BLOCCO SOPRALLUOGO == */
@@ -152,14 +153,14 @@ export const MOTIVI_BLOCCO = [
 
 /* == AZIONE SUGGERITA PER FASE == */
 export const AFASE = {
-  sopralluogo: { i: "📐", t: "Pianifica sopralluogo",  c: "#007aff" },
-  preventivo:  { i: "📝", t: "Invia preventivo",        c: "#ff9500" },
-  conferma:    { i: "✍️", t: "Fai firmare contratto",   c: "#af52de" },
-  misure:      { i: "📏", t: "Esegui rilievo misure",   c: "#5856d6" },
-  ordini:      { i: "🛒", t: "Conferma ordine",          c: "#ff2d55" },
+  sopralluogo: { i: "🔍", t: "Vai al cantiere — misure, foto, note",  c: "#007aff" },
+  preventivo:  { i: "📋", t: "Prepara preventivo — prezzi, sconti, condizioni",  c: "#ff9500" },
+  conferma:    { i: "✍️", t: "Attendi conferma cliente — firma contratto",   c: "#af52de" },
+  ordini:      { i: "📦", t: "Ordina materiali ai fornitori",          c: "#ff2d55" },
   produzione:  { i: "🏭", t: "Monitora produzione",      c: "#ff9500" },
-  posa:        { i: "🔧", t: "Schedula posa",            c: "#34c759" },
-  chiusura:    { i: "✅", t: "Richiedi saldo finale",    c: "#30b0c7" },
+  posa:        { i: "🔧", t: "Schedula montaggio",            c: "#34c759" },
+  collaudo:    { i: "🔎", t: "Verifica lavoro, foto finale",   c: "#5856d6" },
+  chiusura:    { i: "✅", t: "Fattura saldo e chiudi",    c: "#30b0c7" },
 };
 
 // ═══ 20 COMMESSE DEMO REALISTICHE ═══
@@ -308,7 +309,7 @@ export const CANTIERI_INIT = [
   { id: 1006, code: "S-0006", cliente: "Francesca", cognome: "Romano", indirizzo: "Via Popilia 156, Cosenza (CS)", telefono: "340 777 3333", email: "f.romano@outlook.it", fase: "posa", sistema: "Rehau Geneo", tipo: "nuova", difficoltaSalita: "facile", note: "Villa bifamiliare PT+1°, 8 vani totali.", prezzoMq: 250, euro: 6400, firmaCliente: true, dataFirma: "2026-01-05", rilievi: [{ id: 2006, n: 1, data: "2025-12-20", ora: "10:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3040, nome: "F1 Cucina PT", tipo: "F2A", stanza: "Cucina", piano: "PT", sistema: "Rehau Geneo", pezzi: 1, misure: { lAlto: 1210, lCentro: 1200, lBasso: 1195, hSx: 1010, hCentro: 1000, hDx: 1005 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }, { id: 3041, nome: "PF Soggiorno PT", tipo: "PF2A", stanza: "Soggiorno", piano: "PT", sistema: "Rehau Geneo", pezzi: 1, misure: { lAlto: 1810, lCentro: 1800, lBasso: 1798, hSx: 2310, hCentro: 2300, hDx: 2305 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: true }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9920, tipo: "firma", nome: "Preventivo_S-0006.pdf", data: "05/01/2026" }, { id: 9921, tipo: "ordine", nome: "Ordine_Rehau.pdf", data: "10/01/2026" }, { id: 9922, tipo: "conferma", nome: "Conferma_Rehau_9987.pdf", data: "14/01/2026" }], creato: "15 dic", aggiornato: "14 gen", cf: "RMNFNC88M41D086T", ivaPerc: 10, praticaFiscale: "Detraz. 50%", docIdentita: [{ id: "di6", tipo: "CI", nome: "CI_Romano_fronte.jpg", data: "05/01/2026" }, { id: "di7", tipo: "CF", nome: "CF_Romano.jpg", data: "05/01/2026" }], log: [{ chi: "Fabio", cosa: "materiale arrivato, programmare montaggio", quando: "2 sett fa", color: "#34c759" }] },
   // ═══ 7-20 — commesse aggiuntive in vari stadi ═══
   { id: 1007, code: "S-0007", cliente: "Marco", cognome: "Ferraro", indirizzo: "Via dei Mille 33, Rende (CS)", telefono: "335 444 9999", email: "m.ferraro@gmail.com", fase: "sopralluogo", sistema: "", tipo: "nuova", note: "Nuovo cliente da passaparola De Luca. 6 finestre.", rilievi: [], allegati: [], creato: "27 feb", aggiornato: "27 feb", log: [{ chi: "Fabio", cosa: "creato da passaparola", quando: "oggi", color: "#86868b" }] },
-  { id: 1008, code: "S-0008", cliente: "Lucia", cognome: "Greco", indirizzo: "Piazza XV Marzo 8, Cosenza (CS)", telefono: "328 111 2222", email: "lucia.greco@pec.it", fase: "misure", sistema: "Aluplast Ideal 8000", tipo: "nuova", difficoltaSalita: "difficile", mezzoSalita: "Autoscala", pianoEdificio: "5°", note: "5° piano, serve autoscala. Condominio storico.", prezzoMq: 200, rilievi: [{ id: 2008, n: 1, data: "2026-02-15", ora: "08:00", rilevatore: "Fabio", tipo: "rilievo", stato: "parziale", vani: [{ id: 3050, nome: "F1 Salone", tipo: "F2A", stanza: "Salone", piano: "5°", sistema: "Aluplast Ideal 8000", pezzi: 1, misure: { lAlto: 1010, lCentro: 1000, lBasso: 998, hSx: 1510, hCentro: 1500, hDx: 1505 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [], creato: "10 feb", aggiornato: "15 feb", cf: "GRCLCU92P65D086S", log: [{ chi: "Fabio", cosa: "rilievo parziale — tornare per 3 vani", quando: "12 giorni fa", color: "#ff9500" }] },
+  { id: 1008, code: "S-0008", cliente: "Lucia", cognome: "Greco", indirizzo: "Piazza XV Marzo 8, Cosenza (CS)", telefono: "328 111 2222", email: "lucia.greco@pec.it", fase: "sopralluogo", sistema: "Aluplast Ideal 8000", tipo: "nuova", difficoltaSalita: "difficile", mezzoSalita: "Autoscala", pianoEdificio: "5°", note: "5° piano, serve autoscala. Condominio storico.", prezzoMq: 200, rilievi: [{ id: 2008, n: 1, data: "2026-02-15", ora: "08:00", rilevatore: "Fabio", tipo: "rilievo", stato: "parziale", vani: [{ id: 3050, nome: "F1 Salone", tipo: "F2A", stanza: "Salone", piano: "5°", sistema: "Aluplast Ideal 8000", pezzi: 1, misure: { lAlto: 1010, lCentro: 1000, lBasso: 998, hSx: 1510, hCentro: 1500, hDx: 1505 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [], creato: "10 feb", aggiornato: "15 feb", cf: "GRCLCU92P65D086S", log: [{ chi: "Fabio", cosa: "rilievo parziale — tornare per 3 vani", quando: "12 giorni fa", color: "#ff9500" }] },
   { id: 1009, code: "S-0009", cliente: "Roberto", cognome: "Mancini", indirizzo: "Contrada San Vito, Mendicino (CS)", telefono: "347 888 1111", email: "", fase: "produzione", sistema: "Aluplast Ideal 4000", tipo: "nuova", note: "Villa in campagna, 8 vani. Materiale in produzione.", prezzoMq: 180, euro: 5760, firmaCliente: true, dataFirma: "2026-01-25", rilievi: [{ id: 2009, n: 1, data: "2026-01-18", ora: "09:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3060, nome: "F1", tipo: "F2A", stanza: "Cucina", piano: "PT", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 1210, lCentro: 1200, lBasso: 1195, hSx: 1010, hCentro: 1000, hDx: 1005 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }, { id: 3061, nome: "F2", tipo: "F2A", stanza: "Camera", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 1010, lCentro: 1000, lBasso: 998, hSx: 1210, hCentro: 1200, hDx: 1205 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9930, tipo: "firma", nome: "Prev_S-0009_firmato.pdf", data: "25/01/2026" }, { id: 9931, tipo: "ordine", nome: "Ordine_Aluplast_S0009.pdf", data: "28/01/2026" }], creato: "15 gen", aggiornato: "28 gen", cf: "MNCRRT68S20D086R", ivaPerc: 10, log: [] },
   { id: 1010, code: "S-0010", cliente: "Francesco", cognome: "Greco", indirizzo: "Via Calabria 77, Cosenza (CS)", telefono: "339 555 6666", email: "f.greco@gmail.com", fase: "posa", sistema: "Schüco AWS 75", tipo: "nuova", note: "Ufficio commerciale, 6 finestre grandi.", prezzoMq: 300, euro: 7200, firmaCliente: true, dataFirma: "2026-01-08", rilievi: [{ id: 2010, n: 1, data: "2025-12-15", ora: "14:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3070, nome: "F1 Ufficio", tipo: "F2A", stanza: "Ufficio 1", piano: "PT", sistema: "Schüco AWS 75", pezzi: 1, misure: { lAlto: 1810, lCentro: 1800, lBasso: 1798, hSx: 1610, hCentro: 1600, hDx: 1605 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9940, tipo: "firma", nome: "Prev_S-0010.pdf", data: "08/01/2026" }], creato: "10 dic", aggiornato: "20 feb", cf: "", piva: "03456789012", ivaPerc: 22, log: [] },
   { id: 1011, code: "S-0011", cliente: "Lucia", cognome: "Ferraro", indirizzo: "Via Panebianco 200, Cosenza (CS)", telefono: "366 999 4444", email: "l.ferraro@alice.it", fase: "conferma", sistema: "Aluplast Ideal 4000", tipo: "nuova", note: "Preventivo da firmare. 2 vasistas bagno.", prezzoMq: 180, rilievi: [{ id: 2011, n: 1, data: "2026-02-22", ora: "11:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3080, nome: "VAS Bagno 1", tipo: "VAS", stanza: "Bagno", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 605, lCentro: 600, lBasso: 598, hSx: 505, hCentro: 500, hDx: 502 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }, { id: 3081, nome: "VAS Bagno 2", tipo: "VAS", stanza: "Bagno ospiti", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 505, lCentro: 500, lBasso: 498, hSx: 505, hCentro: 500, hDx: 502 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [], creato: "22 feb", aggiornato: "24 feb", log: [] },
