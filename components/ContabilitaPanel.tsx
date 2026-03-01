@@ -1,0 +1,428 @@
+"use client";
+// @ts-nocheck
+import React from "react";
+import { useMastro } from "./MastroContext";
+import { FF, FM, ICO, Ico } from "./mastro-constants";
+
+export default function ContabilitaPanel() {
+  const {
+    T, S, isDesktop, fs,
+    cantieri, contabMese, contabTab, creaFatturaPassiva, events, fattureDB, fatturePassive, fornitori, montaggiDB, newFattPassiva, ordiniFornDB, setContabMese, setContabTab, setFattureDB, setFatturePassive, setNewFattPassiva, setSelectedCM, setShowContabilita, setShowFatturaPassiva, setTab, showFatturaPassiva, squadreDB,
+  } = useMastro();
+
+    const today = new Date();
+    const [cY, cM] = contabMese.split("-").map(Number);
+    const daysInMonth = new Date(cY, cM, 0).getDate();
+    const firstDow = (new Date(cY, cM - 1, 1).getDay() + 6) % 7; // Mon=0
+    const meseLbl = new Date(cY, cM - 1).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+    
+    // All invoices
+    const allEmesse = fattureDB || [];
+    const allRicevute = fatturePassive || [];
+    
+    // Monthly filter
+    const meseEmesse = allEmesse.filter(f => (f.dataISO || "").startsWith(contabMese));
+    const meseRicevute = allRicevute.filter(f => (f.dataISO || f.data || "").startsWith(contabMese));
+    
+    // Totals
+    const totEmesso = allEmesse.reduce((s, f) => s + (f.importo || 0), 0);
+    const totIncassato = allEmesse.filter(f => f.pagata).reduce((s, f) => s + (f.importo || 0), 0);
+    const totDaIncassare = allEmesse.filter(f => !f.pagata).reduce((s, f) => s + (f.importo || 0), 0);
+    const totCosti = allRicevute.reduce((s, f) => s + (f.importo || 0), 0);
+    const totPagati = allRicevute.filter(f => f.pagata).reduce((s, f) => s + (f.importo || 0), 0);
+    const totDaPagare = allRicevute.filter(f => !f.pagata).reduce((s, f) => s + (f.importo || 0), 0);
+    const margine = totIncassato - totPagati;
+    
+    // Mese totals
+    const meseEmTot = meseEmesse.reduce((s, f) => s + (f.importo || 0), 0);
+    const meseRicTot = meseRicevute.reduce((s, f) => s + (f.importo || 0), 0);
+    
+    // Scadenze per giorno del mese (calendar dots)
+    const scadenzeMap: Record<number, Array<{tipo:string;importo:number;nome:string}>> = {};
+    allEmesse.filter(f => !f.pagata && f.scadenza && f.scadenza.startsWith(contabMese)).forEach(f => {
+      const d = parseInt(f.scadenza.split("-")[2]);
+      if (!scadenzeMap[d]) scadenzeMap[d] = [];
+      scadenzeMap[d].push({ tipo: "incasso", importo: f.importo, nome: f.cliente });
+    });
+    allRicevute.filter(f => !f.pagata && f.scadenza && f.scadenza.startsWith(contabMese)).forEach(f => {
+      const d = parseInt(f.scadenza.split("-")[2]);
+      if (!scadenzeMap[d]) scadenzeMap[d] = [];
+      scadenzeMap[d].push({ tipo: "pagamento", importo: f.importo || 0, nome: f.fornitore || "" });
+    });
+    
+    // Monthly bar data (last 6 months)
+    const barData: Array<{lbl:string;emesso:number;costi:number}> = [];
+    for (let i = 5; i >= 0; i--) {
+      const bd = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const key = `${bd.getFullYear()}-${String(bd.getMonth()+1).padStart(2,"0")}`;
+      const lbl = bd.toLocaleDateString("it-IT", { month: "short" });
+      const em = allEmesse.filter(f => (f.dataISO || "").startsWith(key)).reduce((s, f) => s + (f.importo || 0), 0);
+      const co = allRicevute.filter(f => (f.dataISO || f.data || "").startsWith(key)).reduce((s, f) => s + (f.importo || 0), 0);
+      barData.push({ lbl, emesso: em, costi: co });
+    }
+    const barMax = Math.max(...barData.map(b => Math.max(b.emesso, b.costi)), 1);
+    
+    const prevMese = () => { const d = new Date(cY, cM - 2, 1); setContabMese(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`); };
+    const nextMese = () => { const d = new Date(cY, cM, 1); setContabMese(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`); };
+    
+    const fmt = (n: number) => "€" + n.toLocaleString("it-IT", { minimumFractionDigits: 0 });
+    
+    return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 10002, background: T.bg, overflow: "auto" }}>
+      {/* HEADER */}
+      <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", background: T.card, borderBottom: "1px solid " + T.bdr, position: "sticky", top: 0, zIndex: 10 }}>
+        <div onClick={() => setShowContabilita(false)} style={{ cursor: "pointer", color: T.acc, fontWeight: 700, fontSize: 14 }}>← Indietro</div>
+        <div style={{ flex: 1, textAlign: "center", fontSize: 16, fontWeight: 800, color: T.text }}>💰 Contabilità</div>
+        <div style={{ width: 60 }} />
+      </div>
+      
+      {/* TABS */}
+      <div style={{ display: "flex", margin: "8px 16px", borderRadius: 8, border: "1px solid " + T.bdr, overflow: "hidden" }}>
+        {[{ id: "panoramica", l: "📊 Panoramica" }, { id: "emesse", l: "📤 Emesse" }, { id: "ricevute", l: "📥 Ricevute" }, { id: "calendario", l: "📅 Calendario" }, { id: "sdi", l: "🏛 SDI" }].map(t => (
+          <div key={t.id} onClick={() => setContabTab(t.id)} style={{ flex: 1, padding: "8px 2px", textAlign: "center", fontSize: 9, fontWeight: 700, background: contabTab === t.id ? T.acc : T.card, color: contabTab === t.id ? "#fff" : T.sub, cursor: "pointer" }}>{t.l}</div>
+        ))}
+      </div>
+      
+      <div style={{ padding: "0 16px 100px" }}>
+      
+      {/* ═══ PANORAMICA ═══ */}
+      {contabTab === "panoramica" && <>
+        {/* KPI Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 12 }}>
+          <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 7, color: T.sub, textTransform: "uppercase" as const, fontWeight: 700, letterSpacing: 0.5 }}>FATTURATO</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: T.text }}>{fmt(totEmesso)}</div>
+          </div>
+          <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 7, color: T.sub, textTransform: "uppercase" as const, fontWeight: 700, letterSpacing: 0.5 }}>INCASSATO</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: T.grn }}>{fmt(totIncassato)}</div>
+          </div>
+          <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 7, color: T.sub, textTransform: "uppercase" as const, fontWeight: 700, letterSpacing: 0.5 }}>DA INCASSARE</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: T.red }}>{fmt(totDaIncassare)}</div>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 16 }}>
+          <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 7, color: T.sub, textTransform: "uppercase" as const, fontWeight: 700, letterSpacing: 0.5 }}>COSTI</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: T.orange }}>{fmt(totCosti)}</div>
+          </div>
+          <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 7, color: T.sub, textTransform: "uppercase" as const, fontWeight: 700, letterSpacing: 0.5 }}>DA PAGARE</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: "#ff6b00" }}>{fmt(totDaPagare)}</div>
+          </div>
+          <div style={{ background: T.card, borderRadius: T.r, border: "2px solid " + (margine >= 0 ? T.grn : T.red), padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 7, color: T.sub, textTransform: "uppercase" as const, fontWeight: 700, letterSpacing: 0.5 }}>MARGINE</div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: margine >= 0 ? T.grn : T.red }}>{fmt(margine)}</div>
+          </div>
+        </div>
+        
+        {/* BAR CHART - Last 6 months */}
+        <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 12 }}>📊 Andamento 6 mesi</div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 100 }}>
+            {barData.map((b, i) => (
+              <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 2 }}>
+                <div style={{ width: "100%", display: "flex", gap: 2, alignItems: "flex-end", justifyContent: "center", height: 80 }}>
+                  <div style={{ width: "40%", height: Math.max(2, (b.emesso / barMax) * 80), background: T.acc, borderRadius: "3px 3px 0 0", transition: "height 0.3s" }} />
+                  <div style={{ width: "40%", height: Math.max(2, (b.costi / barMax) * 80), background: T.orange, borderRadius: "3px 3px 0 0", transition: "height 0.3s" }} />
+                </div>
+                <div style={{ fontSize: 8, color: T.sub, fontWeight: 600, textTransform: "uppercase" as const }}>{b.lbl}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: T.acc }} /><span style={{ fontSize: 9, color: T.sub }}>Fatturato</span></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: T.orange }} /><span style={{ fontSize: 9, color: T.sub }}>Costi</span></div>
+          </div>
+        </div>
+        
+        {/* SCADENZE PROSSIME */}
+        <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>⏰ Prossime scadenze</div>
+          {[...allEmesse.filter(f => !f.pagata && f.scadenza).map(f => ({ ...f, dir: "incasso" as const })), 
+            ...allRicevute.filter(f => !f.pagata && f.scadenza).map(f => ({ ...f, dir: "pagamento" as const }))]
+            .sort((a, b) => (a.scadenza || "z").localeCompare(b.scadenza || "z")).slice(0, 6).map((f, i) => {
+              const isLate = (f.scadenza || "") < today.toISOString().split("T")[0];
+              const days = Math.ceil((new Date(f.scadenza || "").getTime() - today.getTime()) / 86400000);
+              return <div key={i} style={{ display: "flex", alignItems: "center", padding: "8px 0", borderBottom: i < 5 ? "1px solid " + T.bg : "none" }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: isLate ? T.redLt : f.dir === "incasso" ? T.grnLt : T.orangeLt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
+                  {isLate ? "🔴" : f.dir === "incasso" ? "📤" : "📥"}
+                </div>
+                <div style={{ flex: 1, marginLeft: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{(f as any).fornitore || f.cliente}</div>
+                  <div style={{ fontSize: 9, color: isLate ? T.red : T.sub }}>
+                    {isLate ? `Scaduta da ${Math.abs(days)} gg` : days === 0 ? "Scade oggi!" : `Tra ${days} gg`} · {new Date(f.scadenza || "").toLocaleDateString("it-IT")}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: isLate ? T.red : T.text }}>{fmt(f.importo || 0)}</div>
+                  <div style={{ fontSize: 8, color: f.dir === "incasso" ? T.grn : T.orange, fontWeight: 700 }}>{f.dir === "incasso" ? "INCASSO" : "PAGAMENTO"}</div>
+                </div>
+              </div>;
+            })}
+          {allEmesse.filter(f => !f.pagata && f.scadenza).length + allRicevute.filter(f => !f.pagata && f.scadenza).length === 0 && (
+            <div style={{ textAlign: "center", padding: 16, color: T.sub, fontSize: 12 }}>✅ Nessuna scadenza in sospeso</div>
+          )}
+        </div>
+        
+        {/* RIEPILOGO MESE */}
+        <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div onClick={prevMese} style={{ cursor: "pointer", fontSize: 16, color: T.acc }}>◀</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.text, textTransform: "capitalize" as const }}>{meseLbl}</div>
+            <div onClick={nextMese} style={{ cursor: "pointer", fontSize: 16, color: T.acc }}>▶</div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={{ padding: 10, borderRadius: 8, background: T.accLt, textAlign: "center" }}>
+              <div style={{ fontSize: 8, color: T.sub, fontWeight: 700 }}>EMESSO</div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: T.acc }}>{fmt(meseEmTot)}</div>
+              <div style={{ fontSize: 9, color: T.sub }}>{meseEmesse.length} fatture</div>
+            </div>
+            <div style={{ padding: 10, borderRadius: 8, background: T.orangeLt, textAlign: "center" }}>
+              <div style={{ fontSize: 8, color: T.sub, fontWeight: 700 }}>COSTI</div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: T.orange }}>{fmt(meseRicTot)}</div>
+              <div style={{ fontSize: 9, color: T.sub }}>{meseRicevute.length} fatture</div>
+            </div>
+          </div>
+        </div>
+      </>}
+      
+      {/* ═══ EMESSE ═══ */}
+      {contabTab === "emesse" && <>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Fatture emesse ({allEmesse.length})</div>
+          <div style={{ display: "flex", gap: 4 }}>
+            <span style={{ fontSize: 9, padding: "3px 8px", borderRadius: 4, background: T.grnLt, color: T.grn, fontWeight: 700 }}>✅ {allEmesse.filter(f=>f.pagata).length}</span>
+            <span style={{ fontSize: 9, padding: "3px 8px", borderRadius: 4, background: T.redLt, color: T.red, fontWeight: 700 }}>⏳ {allEmesse.filter(f=>!f.pagata).length}</span>
+          </div>
+        </div>
+        {allEmesse.sort((a, b) => b.numero - a.numero).map(f => (
+          <div key={f.id} style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 12, marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>N. {f.numero}/{f.anno}</div>
+                <div style={{ fontSize: 10, color: T.sub }}>{f.cliente} · {f.cmCode}</div>
+                <div style={{ display: "flex", gap: 4, marginTop: 3 }}>
+                  <span style={{ fontSize: 8, padding: "1px 6px", borderRadius: 3, background: f.tipo === "saldo" ? T.grnLt : f.tipo === "acconto" ? T.orangeLt : T.accLt, color: f.tipo === "saldo" ? T.grn : f.tipo === "acconto" ? T.orange : T.acc, fontWeight: 700 }}>{f.tipo?.toUpperCase()}</span>
+                  <span style={{ fontSize: 8, color: T.sub }}>{f.dataISO}</span>
+                  {f.scadenza && <span style={{ fontSize: 8, color: f.scadenza < today.toISOString().split("T")[0] && !f.pagata ? T.red : T.sub }}>Scade: {new Date(f.scadenza).toLocaleDateString("it-IT")}</span>}
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: f.pagata ? T.grn : T.red }}>{fmt(f.importo)}</div>
+                <span onClick={() => setFattureDB(prev => prev.map(ff => ff.id === f.id ? { ...ff, pagata: !ff.pagata, dataPagamento: !ff.pagata ? today.toISOString().split("T")[0] : null } : ff))} 
+                  style={{ fontSize: 9, padding: "3px 8px", borderRadius: 6, background: f.pagata ? T.grnLt : T.redLt, color: f.pagata ? T.grn : T.red, fontWeight: 700, cursor: "pointer" }}>
+                  {f.pagata ? "✅ Incassata" : "⏳ Da incassare"}
+                </span>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <div onClick={() => generaFatturaPDF(f)} style={{ flex: 1, padding: 7, borderRadius: 6, background: T.accLt, color: T.acc, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>📄 PDF</div>
+              <div onClick={() => generaXmlSDI(f)} style={{ flex: 1, padding: 7, borderRadius: 6, background: T.purpleLt, color: T.purple, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>🏛 XML SDI</div>
+              <div onClick={() => { const cm = cantieri.find(c => c.code === f.cmCode); if(cm) { setSelectedCM(cm); setShowContabilita(false); setTab("commesse"); }}} style={{ flex: 1, padding: 7, borderRadius: 6, background: T.bg, color: T.sub, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer", border: "1px solid " + T.bdr }}>📁 Commessa</div>
+            </div>
+          </div>
+        ))}
+      </>}
+      
+      {/* ═══ RICEVUTE ═══ */}
+      {contabTab === "ricevute" && <>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Fatture fornitori ({allRicevute.length})</div>
+          <div onClick={() => setShowFatturaPassiva(true)} style={{ padding: "6px 14px", borderRadius: 8, background: T.acc, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Nuova</div>
+        </div>
+        {allRicevute.length === 0 && <div style={{ textAlign: "center", padding: 32, color: T.sub }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📥</div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Nessuna fattura ricevuta</div>
+          <div style={{ fontSize: 11 }}>Clicca "+ Nuova" per registrare una fattura fornitore</div>
+        </div>}
+        {allRicevute.map(f => (
+          <div key={f.id} style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 12, marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>{f.fornitore}</div>
+                <div style={{ fontSize: 10, color: T.sub }}>N. {f.numero} · {f.data || f.dataISO}</div>
+                {f.descrizione && <div style={{ fontSize: 9, color: T.sub, marginTop: 2 }}>{f.descrizione}</div>}
+                {f.scadenza && <div style={{ fontSize: 9, color: f.scadenza < today.toISOString().split("T")[0] && !f.pagata ? T.red : T.sub, marginTop: 2 }}>
+                  {f.scadenza < today.toISOString().split("T")[0] && !f.pagata ? "🔴 " : ""}Scadenza: {new Date(f.scadenza).toLocaleDateString("it-IT")}
+                </div>}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: T.orange }}>{fmt(f.importo || 0)}</div>
+                <span onClick={() => setFatturePassive(prev => prev.map(ff => ff.id === f.id ? { ...ff, pagata: !ff.pagata } : ff))} 
+                  style={{ fontSize: 9, padding: "3px 8px", borderRadius: 6, background: f.pagata ? T.grnLt : T.orangeLt, color: f.pagata ? T.grn : T.orange, fontWeight: 700, cursor: "pointer" }}>
+                  {f.pagata ? "✅ Pagata" : "⏳ Da pagare"}
+                </span>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+              {f.cmId && <div onClick={() => { const cm = cantieri.find(c => c.id === f.cmId); if(cm) { setSelectedCM(cm); setShowContabilita(false); setTab("commesse"); }}} style={{ flex: 1, padding: 6, borderRadius: 6, background: T.accLt, color: T.acc, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>📁 Commessa</div>}
+              <div onClick={() => setFatturePassive(prev => prev.filter(ff => ff.id !== f.id))} style={{ padding: "6px 12px", borderRadius: 6, background: T.redLt, color: T.red, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>🗑</div>
+            </div>
+          </div>
+        ))}
+        {showFatturaPassiva && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={e => { if(e.target === e.currentTarget) setShowFatturaPassiva(false); }}>
+            <div style={{ background: T.card, borderRadius: 16, padding: 20, width: "90%", maxWidth: 420 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 14 }}>📥 Registra fattura fornitore</div>
+              {[{k:"fornitore",l:"Fornitore",t:"text"},{k:"numero",l:"N. Fattura",t:"text"},{k:"data",l:"Data",t:"date"},{k:"importo",l:"Importo €",t:"number"},{k:"descrizione",l:"Descrizione",t:"text"},{k:"scadenza",l:"Scadenza",t:"date"}].map(f => (
+                <div key={f.k} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 2 }}>{f.l}</div>
+                  <input type={f.t} value={(newFattPassiva as any)[f.k]} onChange={e => setNewFattPassiva(p => ({ ...p, [f.k]: e.target.value }))}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid " + T.bdr, background: T.bg, color: T.text, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box" as const }} />
+                </div>
+              ))}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 2 }}>Commessa (opzionale)</div>
+                <select value={newFattPassiva.cmId} onChange={e => setNewFattPassiva(p => ({ ...p, cmId: e.target.value }))} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid " + T.bdr, background: T.bg, color: T.text, fontSize: 13, fontFamily: "inherit" }}>
+                  <option value="">— Nessuna —</option>
+                  {cantieri.map(c => <option key={c.id} value={c.id}>{c.code} · {c.cliente}</option>)}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <button onClick={() => setShowFatturaPassiva(false)} style={{ flex: 1, padding: 12, borderRadius: 10, border: "1px solid " + T.bdr, background: T.bg, color: T.sub, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Annulla</button>
+                <button onClick={creaFatturaPassiva} style={{ flex: 2, padding: 12, borderRadius: 10, border: "none", background: T.acc, color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>💾 Registra</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>}
+      
+      {/* ═══ CALENDARIO COMPLETO ═══ */}
+      {contabTab === "calendario" && (() => {
+        // Gather ALL events for calendar: scadenze + montaggi + events + consegne
+        const calMap: Record<number, Array<{tipo:string;ico:string;col:string;label:string;importo?:number;detail?:string}>> = {};
+        const addCal = (day: number, item: any) => { if (!calMap[day]) calMap[day] = []; calMap[day].push(item); };
+        
+        // Scadenze fatture
+        allEmesse.filter(f => !f.pagata && f.scadenza && f.scadenza.startsWith(contabMese)).forEach(f => {
+          const d = parseInt(f.scadenza.split("-")[2]);
+          addCal(d, { tipo: "incasso", ico: "📤", col: T.grn, label: f.cliente, importo: f.importo, detail: "Da incassare" });
+        });
+        allRicevute.filter(f => !f.pagata && f.scadenza && f.scadenza.startsWith(contabMese)).forEach(f => {
+          const d = parseInt(f.scadenza.split("-")[2]);
+          addCal(d, { tipo: "pagamento", ico: "📥", col: T.orange, label: f.fornitore || "", importo: f.importo || 0, detail: "Da pagare" });
+        });
+        // Montaggi
+        (montaggiDB || []).filter(m => m.data && m.data.startsWith(contabMese)).forEach(m => {
+          const d = parseInt(m.data.split("-")[2]);
+          const cm = cantieri.find(c => c.id === m.cmId);
+          const sq = (squadreDB || []).find(s => s.id === m.squadraId);
+          addCal(d, { tipo: "montaggio", ico: "🔧", col: "#007aff", label: cm?.cliente || "Montaggio", detail: sq?.nome || "" });
+        });
+        // Consegne previste ordini
+        (ordiniFornDB || []).filter(o => o.consegna?.prevista && o.consegna.prevista.startsWith(contabMese) && o.stato !== "consegnato").forEach(o => {
+          const d = parseInt(o.consegna.prevista.split("-")[2]);
+          addCal(d, { tipo: "consegna", ico: "🚚", col: "#af52de", label: o.fornitore?.nome || "Consegna", detail: o.cmCode || "" });
+        });
+        // Events/appuntamenti
+        (events || []).filter(ev => ev.date && ev.date.startsWith(contabMese)).forEach(ev => {
+          const d = parseInt(ev.date.split("-")[2]);
+          const tipoIco: Record<string,string> = { sopralluogo: "📍", posa: "🔧", controllo: "🔍", consegna: "🚚", misure: "📏", altro: "📌" };
+          const tipoCol: Record<string,string> = { sopralluogo: "#007aff", posa: "#34c759", controllo: "#ff9500", consegna: "#af52de", misure: "#5856d6", altro: "#86868b" };
+          addCal(d, { tipo: ev.tipo || "altro", ico: tipoIco[ev.tipo] || "📌", col: tipoCol[ev.tipo] || "#86868b", label: ev.persona || ev.text?.slice(0, 20) || "Evento", detail: ev.time || "" });
+        });
+        
+        return <>
+        {/* Month nav */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: "10px 16px" }}>
+          <div onClick={prevMese} style={{ cursor: "pointer", fontSize: 18, color: T.acc, fontWeight: 700 }}>◀</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: T.text, textTransform: "capitalize" as const }}>{meseLbl}</div>
+          <div onClick={nextMese} style={{ cursor: "pointer", fontSize: 18, color: T.acc, fontWeight: 700 }}>▶</div>
+        </div>
+        
+        {/* Calendar grid */}
+        <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 6, marginBottom: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+            {["LUN","MAR","MER","GIO","VEN","SAB","DOM"].map(d => (
+              <div key={d} style={{ textAlign: "center", fontSize: 8, fontWeight: 700, color: T.sub, padding: 4 }}>{d}</div>
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+            {Array.from({ length: firstDow }, (_, i) => <div key={"e"+i} />)}
+            {Array.from({ length: daysInMonth }, (_, i) => {
+              const day = i + 1;
+              const dateStr = contabMese + "-" + String(day).padStart(2, "0");
+              const isToday = dateStr === today.toISOString().split("T")[0];
+              const items = calMap[day] || [];
+              const hasMoney = items.some(it => it.tipo === "incasso" || it.tipo === "pagamento");
+              const hasMontaggio = items.some(it => it.tipo === "montaggio");
+              const hasConsegna = items.some(it => it.tipo === "consegna");
+              const hasEvento = items.some(it => !["incasso","pagamento","montaggio","consegna"].includes(it.tipo));
+              const bgColor = isToday ? T.accLt : items.length > 0 ? (hasMontaggio ? "#007aff08" : hasMoney ? T.grnLt : hasConsegna ? "#af52de08" : "#f5f5f5") : "transparent";
+              return <div key={day} style={{ 
+                padding: "3px 1px", borderRadius: 6, minHeight: 44, textAlign: "center",
+                background: bgColor,
+                border: isToday ? "2px solid " + T.acc : items.length > 0 ? "1px solid " + T.bdr : "1px solid transparent",
+              }}>
+                <div style={{ fontSize: 11, fontWeight: isToday ? 900 : 600, color: isToday ? T.acc : T.text }}>{day}</div>
+                {items.length > 0 && <div style={{ display: "flex", justifyContent: "center", gap: 1, marginTop: 2, flexWrap: "wrap" as any }}>
+                  {items.slice(0, 4).map((it, ii) => <div key={ii} style={{ width: 6, height: 6, borderRadius: "50%", background: it.col }} title={it.label} />)}
+                  {items.length > 4 && <div style={{ fontSize: 6, color: T.sub, fontWeight: 700 }}>+{items.length - 4}</div>}
+                </div>}
+                {hasMoney && <div style={{ fontSize: 6, fontWeight: 700, color: T.grn, marginTop: 1 }}>{fmt(items.filter(it => it.tipo === "incasso").reduce((s, x) => s + (x.importo || 0), 0))}</div>}
+              </div>;
+            })}
+          </div>
+        </div>
+        
+        {/* Legend */}
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 12, flexWrap: "wrap" as any }}>
+          {[{c:T.grn,l:"Incasso"},{c:T.orange,l:"Pagamento"},{c:"#007aff",l:"Montaggio"},{c:"#af52de",l:"Consegna"},{c:"#5856d6",l:"Evento"}].map(x => (
+            <div key={x.l} style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 7, height: 7, borderRadius: "50%", background: x.c }} /><span style={{ fontSize: 8, color: T.sub }}>{x.l}</span></div>
+          ))}
+        </div>
+        
+        {/* LISTA GIORNO PER GIORNO */}
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 8 }}>📅 Dettaglio {meseLbl}</div>
+        {Object.keys(calMap).sort((a, b) => Number(a) - Number(b)).map(dayStr => {
+          const day = Number(dayStr);
+          const items = calMap[day];
+          const dateStr = contabMese + "-" + String(day).padStart(2, "0");
+          const isLate = dateStr < today.toISOString().split("T")[0];
+          const dayLbl = new Date(cY, cM - 1, day).toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" });
+          return <div key={dayStr} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 4, textTransform: "capitalize" as const }}>{dayLbl}</div>
+            {items.map((it, si) => (
+              <div key={si} style={{ display: "flex", alignItems: "center", padding: "8px 10px", background: T.card, borderRadius: 8, border: "1px solid " + (isLate && (it.tipo === "incasso" || it.tipo === "pagamento") ? T.red + "60" : T.bdr), marginBottom: 3 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: it.col + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>{it.ico}</div>
+                <div style={{ flex: 1, marginLeft: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{it.label}</div>
+                  <div style={{ fontSize: 9, color: T.sub }}>{it.detail}</div>
+                </div>
+                {it.importo && it.importo > 0 && <div style={{ fontSize: 13, fontWeight: 900, color: isLate && it.tipo === "incasso" ? T.red : it.col }}>{fmt(it.importo)}</div>}
+              </div>
+            ))}
+          </div>;
+        })}
+        {Object.keys(calMap).length === 0 && <div style={{ textAlign: "center", padding: 32, color: T.sub }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📅</div>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>Nessun evento questo mese</div>
+        </div>}
+        </>;
+      })()}
+      
+      {/* ═══ SDI ═══ */}
+      {contabTab === "sdi" && <>
+        <div style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 4 }}>🏛 Fatturazione Elettronica</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>Genera XML FatturaPA 1.2 per il Sistema di Interscambio (SDI).</div>
+          <div style={{ fontSize: 9, color: T.sub }}>Formato: FPR12 · Regime: RF01 · I file possono essere caricati su AdE, Aruba, Fatture in Cloud.</div>
+        </div>
+        {allEmesse.map(f => (
+          <div key={f.id} style={{ display: "flex", alignItems: "center", padding: "10px 12px", background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, marginBottom: 6 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>N. {f.numero}/{f.anno} — {f.cliente}</div>
+              <div style={{ fontSize: 9, color: T.sub }}>{f.tipo} · {f.dataISO} · {fmt(f.importo)}</div>
+            </div>
+            <div onClick={() => generaXmlSDI(f)} style={{ padding: "8px 14px", borderRadius: 8, background: T.purpleLt, color: T.purple, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>📥 XML</div>
+          </div>
+        ))}
+      </>}
+      
+      </div>
+    </div>
+    );
+
+}
