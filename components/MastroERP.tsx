@@ -28,6 +28,8 @@ import AgendaPanel from "./AgendaPanel";
 import MessaggiPanel from "./MessaggiPanel";
 import ContabilitaPanel from "./ContabilitaPanel";
 import ClientiPanel from "./ClientiPanel";
+import CommessePanel from "./CommessePanel";
+import { OnboardingPanel, FirmaModalPanel } from "./OnboardingPanel";
 
 export default function MastroMisure({ user, azienda: aziendaInit }: { user?: any, azienda?: any }) {
   const [theme, setTheme] = useState("chiaro");
@@ -1745,77 +1747,6 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
 //                 renderRiepilogo, renderFasePanel
 // =======================================================
   /* == COMMESSA CARD == */
-  const renderCMCard = (c, inGrid) => {
-    const fase = PIPELINE.find(p => p.id === c.fase);
-    const progress = ((faseIndex(c.fase) + 1) / PIPELINE.length) * 100;
-    const az = AFASE[c.fase] || AFASE["sopralluogo"];
-    const TODAY_ISO = new Date().toISOString().split("T")[0];
-    const isScad = c.scadenza && c.scadenza < TODAY_ISO;
-    const isUrgente = (giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura") || isScad;
-    // Conta vani misurati da visite
-    const vaniMisurati = c.vaniList?.length > 0
-      ? [...new Set((c.visite || []).flatMap(v => v.vaniMisurati))].length
-      : null;
-    return (
-      <div key={c.id} style={{
-        ...S.card,
-        margin: inGrid ? "0" : "0 16px 8px",
-        borderLeft: `3px solid ${isUrgente ? T.red : progress > 50 ? T.grn : T.blue}`
-      }} onClick={() => { setSelectedCM(c); setTab("commesse"); }}>
-        <div style={S.cardInner}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: T.sub, fontFamily: FM }}>{c.code}</span>
-                <span style={{ fontSize: 15, fontWeight: 600 }}>{c.cliente}</span>
-              </div>
-              <div style={{ fontSize: 12, color: T.sub, marginTop: 3 }}>
-                {c.indirizzo}
-                {vaniMisurati !== null
-                  ? ` · ${vaniMisurati}/${c.vaniList.length} vani rilevati`
-                  : ` · ${(c.rilievi||[]).length} rilievi`}
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-              {isUrgente && <span style={{ ...S.badge(T.redLt, T.red), fontSize: 9 }}>FERMA</span>}
-              {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>🔧</span>}
-              <span style={S.badge(fase?.color + "18", fase?.color)}>{fase?.nome}</span>
-            </div>
-          </div>
-          {c.alert && <div style={{ ...S.badge(c.alert.includes("Nessun") ? T.orangeLt : T.redLt, c.alert.includes("Nessun") ? T.orange : T.red), marginTop: 6 }}>{c.alert}</div>}
-          <div style={{ height: 3, background: T.bdr, borderRadius: 2, marginTop: 8 }}>
-            <div style={{ height: "100%", borderRadius: 2, background: isUrgente ? T.red : fase?.color, width: `${progress}%`, transition: "width 0.3s" }} />
-          </div>
-          {/* Box azione suggerita per fase */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "7px 10px", borderRadius: 7, marginTop: 8,
-            background: isUrgente ? T.redLt : az.c + "12",
-            border: `1px solid ${isUrgente ? T.red + "30" : az.c + "30"}`
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 14 }}>{isUrgente ? "🔴" : az.i}</span>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: isUrgente ? T.red : az.c }}>
-                  {isUrgente ? "Commessa bloccata" : az.t}
-                </div>
-                <div style={{ fontSize: 10, color: T.sub, marginTop: 1 }}>
-                  {Math.round(progress)}%
-                  {c.euro ? ` · €${c.euro.toLocaleString("it-IT")}` : ""}
-                  {c.scadenza ? <span style={{ color: isScad ? T.red : T.sub }}>
-                    {` · scad. ${new Date(c.scadenza + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" })}`}
-                  </span> : null}
-                </div>
-              </div>
-            </div>
-            <div style={{ padding: "5px 10px", borderRadius: 6, background: isUrgente ? T.red : az.c, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
-              {isUrgente ? "Sblocca" : "→"}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   /* == COMMESSE TAB == */
   // ============================================================
@@ -1824,115 +1755,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const renderRilieviList = () => <RilieviListPanel />;
 
   // Card compatta per vista lista
-  const renderCMCardCompact = (c) => {
-    const fase = PIPELINE.find(p => p.id === c.fase);
-    const TODAY_ISO = new Date().toISOString().split("T")[0];
-    const isScad = c.scadenza && c.scadenza < TODAY_ISO;
-    const isFerma = giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura";
-    const vaniA = getVaniAttivi(c);
-    const vaniMis = vaniA.filter(v => Object.values(v.misure||{}).filter(x=>(x as number)>0).length >= 6).length;
-    const vaniInc = vaniA.filter(v => { const n=Object.values(v.misure||{}).filter(x=>(x as number)>0).length; return n>0&&n<6; }).length;
-    const vaniBloc = vaniA.filter(v => v.note?.startsWith("🔴 BLOCCATO")).length;
-    const az = AFASE[c.fase] || AFASE["sopralluogo"];
-    const faseIdx = PIPELINE.findIndex(x => x.id === c.fase);
-    const progFase = faseIdx >= 0 ? Math.round((faseIdx+1)/PIPELINE.length*100) : 0;
-    return (
-      <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); }}
-        style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:`1px solid ${T.bdr}`,
-          borderLeft:`3px solid ${isFerma?T.red:isScad?T.orange:fase?.color||T.acc}`,
-          background: isFerma ? "rgba(255,59,48,0.03)" : T.card, cursor:"pointer" }}>
-        {/* Colonna sinistra: codice + cliente */}
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-            <span style={{ fontSize:10, color:T.sub, fontFamily:FM }}>{c.code}</span>
-            <span style={{ fontSize:14, fontWeight:700 }}>{c.cliente}</span>
-            {isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.red, background:T.redLt, borderRadius:6, padding:"1px 5px" }}>FERMA {giorniFermaCM(c)}gg</span>}
-            {isScad && !isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.orange, background:T.orangeLt, borderRadius:6, padding:"1px 5px" }}>SCAD</span>}
-          </div>
-          <div style={{ display:"flex", gap:8, marginTop:3, alignItems:"center", flexWrap:"wrap" }}>
-            <span style={{ ...S.badge(fase?.color+"18"||T.accLt, fase?.color||T.acc), fontSize:10 }}>{fase?.ico} {fase?.nome}</span>
-            {c.trackingStato && <span style={{ fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:4, background: c.trackingStato==="montato"?"#34c75920":c.trackingStato==="pronto"?"#34c75920":"#5856d620", color: c.trackingStato==="montato"?"#34c759":c.trackingStato==="pronto"?"#34c759":"#5856d6" }}>{{ordinato:"📦",produzione:"🏭",pronto:"✅",consegnato:"🚛",montato:"🔧"}[c.trackingStato]} {c.trackingStato}</span>}
-            {c.confermato && <span style={{ fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:4, background:"#34c75920", color:"#34c759" }}>✍️ Confermato</span>}
-            {c.euro && <span style={{ fontSize:11, color:T.grn, fontWeight:700 }}>€{c.euro.toLocaleString("it-IT")}</span>}
-            {c.scadenza && <span style={{ fontSize:10, color: isScad ? T.red : T.sub }}>📅 {c.scadenza}</span>}
-          </div>
-        </div>
-        {/* Colonna destra: info mancanti */}
-        <div style={{ textAlign:"right", flexShrink:0, minWidth:80 }}>
-          {vaniA.length > 0 ? (
-            <div style={{ fontSize:11, fontWeight:600 }}>
-              {vaniBloc > 0 && <div style={{ color:T.red }}>🔴 {vaniBloc} bloccati</div>}
-              {vaniInc > 0 && <div style={{ color:T.orange }}>⚠ {vaniInc} incompleti</div>}
-              {vaniBloc===0 && vaniInc===0 && <div style={{ color:T.grn }}>✅ {vaniMis}/{vaniA.length}</div>}
-            </div>
-          ) : (
-            <div style={{ fontSize:10, color:T.sub }}>Nessun vano</div>
-          )}
-          <div style={{ marginTop:4, fontSize:10, color: isFerma?T.red:fase?.color||T.acc, fontWeight:700 }}>{progFase}%</div>
-          <div style={{ marginTop:3, height:3, width:60, background:T.bdr, borderRadius:2, marginLeft:"auto" }}>
-            <div style={{ height:"100%", width:`${progFase}%`, background:isFerma?T.red:fase?.color||T.acc, borderRadius:2 }}/>
-          </div>
-        </div>
-        <span style={{ color:T.sub, fontSize:16 }}>›</span>
-      </div>
-    );
-  };
 
   
-  const renderCommesse = () => {
-    if (showRiepilogo && selectedCM) return renderRiepilogo();
-    if (selectedVano) return renderVanoDetail();
-
-      if (selectedRilievo) return renderCMDetail();
-    if (selectedCM) return renderRilieviList();
-    return (
-      <div style={{ paddingBottom: 80 }}>
-        <div style={S.header}>
-          <div style={{ flex: 1 }}>
-            <div style={S.headerTitle}>Commesse</div>
-            <div style={S.headerSub}>{cantieri.length} totali · {filtered.length} visibili</div>
-          </div>
-          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-            {/* Toggle vista */}
-            <div style={{ display:"flex", background:T.bg, borderRadius:8, padding:2, gap:1 }}>
-              <div onClick={() => setCmView("list")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="list"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Lista compatta">☰</div>
-              <div onClick={() => setCmView("card")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="card"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Card grandi">▦</div>
-            </div>
-            <div onClick={() => apriInboxDocumento()} style={{ width:36, height:36, borderRadius:10, background:"#af52de", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:18 }} title="Carica documento fornitore">📥</div>
-            <div onClick={() => setShowModal("commessa")} style={{ width:36, height:36, borderRadius:10, background:T.acc, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:20, fontWeight:300 }}>+</div>
-          </div>
-        </div>
-
-        {/* Filtri fase */}
-        <div style={{ display:"flex", gap:6, padding:"4px 16px 10px", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
-          <div style={S.chip(filterFase === "tutte")} onClick={() => setFilterFase("tutte")}>Tutte ({cantieri.length})</div>
-          {PIPELINE.map(p => {
-            const n = cantieri.filter(c => c.fase === p.id).length;
-            return n > 0 ? <div key={p.id} style={S.chip(filterFase === p.id)} onClick={() => setFilterFase(p.id)}>{p.ico} {p.nome} ({n})</div> : null;
-          })}
-        </div>
-
-        {/* Search */}
-        <div style={{ padding:"0 16px", marginBottom:10 }}>
-          <input style={{ ...S.input, width:"100%", boxSizing:"border-box" }} placeholder="Cerca per cliente, codice, indirizzo..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
-        </div>
-
-        {/* Lista o Card */}
-        {cmView === "list" ? (
-          <div style={{ background:T.card, margin:"0 16px", borderRadius:T.r, border:`1px solid ${T.bdr}`, overflow:"hidden" }}>
-            {filtered.length === 0
-              ? <div style={{ padding:"24px", textAlign:"center", color:T.sub }}>Nessuna commessa trovata</div>
-              : filtered.map(c => renderCMCardCompact(c))
-            }
-          </div>
-        ) : (
-          <div style={isDesktop ? { display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, padding:"0 16px" } : isTablet ? { display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, padding:"0 16px" } : {}}>
-            {filtered.map(c => renderCMCard(c, isTablet || isDesktop))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const renderCommesse = () => <CommessePanel />;
 
   /* == COMMESSA DETAIL == */
   const renderCMDetail = () => <CMDetailPanel />;
@@ -4187,106 +4012,9 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
 
 
   // === ONBOARDING MODAL "COSA VENDI?" ===
-  const renderOnboarding = () => {
-    if (!showOnboarding) return null;
-    return (
-      <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-        <div style={{ background: T.card, borderRadius: 20, padding: 24, maxWidth: 420, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 16 }}>
-            <div style={{ width: 56, height: 56, borderRadius: 14, background: T.text, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-              <span style={{ fontSize: 28, fontWeight: 900, color: T.card, fontFamily: FF }}>M</span>
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: T.text, letterSpacing: -0.5 }}>Benvenuto in MASTRO</div>
-            <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Seleziona i prodotti che vendi o installi. Puoi modificare in qualsiasi momento dalle Impostazioni.</div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {SETTORI.map(s => {
-              const isOn = settoriAttivi.includes(s.id);
-              return (
-                <div key={s.id} onClick={() => {
-                  setSettoriAttivi(prev => isOn ? prev.filter(x => x !== s.id) : [...prev, s.id]);
-                }} style={{
-                  padding: "14px 16px", borderRadius: 14, cursor: "pointer",
-                  border: `2px solid ${isOn ? "#007aff" : T.bdr}`,
-                  background: isOn ? "#007aff10" : T.bg,
-                  display: "flex", alignItems: "center", gap: 12, transition: "all .15s",
-                }}>
-                  <div style={{ fontSize: 28, width: 36, textAlign: "center" }}>{s.icon}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: isOn ? "#007aff" : T.text }}>{s.label}</div>
-                    <div style={{ fontSize: 10, color: T.sub }}>{s.desc}</div>
-                  </div>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: 14,
-                    background: isOn ? "#007aff" : T.bg,
-                    border: `2px solid ${isOn ? "#007aff" : T.bdr}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 14, color: "#fff", fontWeight: 900,
-                  }}>{isOn ? "✓" : ""}</div>
-                </div>
-              );
-            })}
-          </div>
-          <button onClick={() => {
-            if (settoriAttivi.length === 0) { setSettoriAttivi(SETTORI_DEFAULT); }
-            setShowOnboarding(false);
-          }} style={{
-            width: "100%", padding: 16, borderRadius: 14, border: "none",
-            background: settoriAttivi.length > 0 ? "#007aff" : T.bdr,
-            color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: FF,
-            marginTop: 16,
-          }}>
-            {settoriAttivi.length > 0 ? `Inizia con ${settoriAttivi.length} ${settoriAttivi.length === 1 ? "settore" : "settori"} →` : "Seleziona almeno un settore"}
-          </button>
-          <div style={{ textAlign: "center", fontSize: 10, color: T.sub, marginTop: 10 }}>
-            MASTRO si adatta al tuo lavoro: serramenti, zanzariere, tende, box doccia e altro.
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const renderOnboarding = () => <OnboardingPanel />;
 
-  const renderFirmaModal = () => {
-    if (!showFirmaModal) return null;
-    const c = selectedCM;
-    const clearFirma = () => { const cv=firmaRef.current; if(cv){const ctx=cv.getContext("2d");ctx.clearRect(0,0,cv.width,cv.height);} };
-    const salvaFirma = () => {
-      const cv=firmaRef.current; if(!cv)return;
-      const dataUrl=cv.toDataURL("image/png");
-      setCantieri(cs=>cs.map(x=>x.id===c.id?{...x,firmaCliente:dataUrl,dataFirma:new Date().toLocaleDateString("it-IT")}:x));
-      setSelectedCM(p=>({...p,firmaCliente:dataUrl,dataFirma:new Date().toLocaleDateString("it-IT")}));
-      setFaseTo(c.id, "conferma"); // AUTO-ADVANCE: firma → conferma
-      setShowFirmaModal(false);
-    };
-    return (
-      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-        <div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:420,overflow:"hidden"}}>
-          <div style={{padding:"14px 16px",borderBottom:"1px solid #eee",display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:20}}>✍️</span>
-            <div><div style={{fontSize:14,fontWeight:800}}>Firma del Cliente</div><div style={{fontSize:11,color:"#666"}}>{c?.code}</div></div>
-            <div onClick={()=>setShowFirmaModal(false)} style={{marginLeft:"auto",width:28,height:28,borderRadius:"50%",background:"#f5f5f7",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>✕</div>
-          </div>
-          <div style={{padding:"12px 16px 0"}}>
-            <div style={{fontSize:11,color:"#666",marginBottom:8,textAlign:"center"}}>Firma nella casella qui sotto</div>
-            <div style={{border:"2px solid #007aff",borderRadius:10,overflow:"hidden",background:"#fafafa",touchAction:"none"}}>
-              <canvas ref={firmaRef} width={388} height={160} style={{width:"100%",height:160,display:"block",cursor:"crosshair"}}
-                onPointerDown={e=>{firmaRef.current?.setPointerCapture(e.pointerId);setFirmaDrawing(true);const cv=firmaRef.current;const r=cv.getBoundingClientRect();const sx=cv.width/r.width,sy=cv.height/r.height;const ctx=cv.getContext("2d");ctx.beginPath();ctx.moveTo((e.clientX-r.left)*sx,(e.clientY-r.top)*sy);ctx.strokeStyle="#1a1a1c";ctx.lineWidth=2.5;ctx.lineCap="round";ctx.lineJoin="round";}}
-                onPointerMove={e=>{if(!firmaDrawing)return;const cv=firmaRef.current;const r=cv.getBoundingClientRect();const sx=cv.width/r.width,sy=cv.height/r.height;const ctx=cv.getContext("2d");ctx.lineTo((e.clientX-r.left)*sx,(e.clientY-r.top)*sy);ctx.stroke();}}
-                onPointerUp={()=>setFirmaDrawing(false)} onPointerLeave={()=>setFirmaDrawing(false)}/>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0 10px"}}>
-              <div style={{fontSize:10,color:"#999"}}>📅 {new Date().toLocaleDateString("it-IT")}</div>
-              <div onClick={clearFirma} style={{fontSize:11,color:"#ff3b30",cursor:"pointer",fontWeight:600}}>🗝‘ Cancella</div>
-            </div>
-          </div>
-          <div style={{padding:"0 16px 16px",display:"flex",gap:8}}>
-            <button onClick={()=>setShowFirmaModal(false)} style={{flex:1,padding:12,borderRadius:10,border:"1px solid #eee",background:"#f5f5f7",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:"#666"}}>Annulla</button>
-            <button onClick={salvaFirma} style={{flex:2,padding:12,borderRadius:10,border:"none",background:"linear-gradient(135deg,#34c759,#1a9e40)",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>✅ Conferma firma</button>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const renderFirmaModal = () => <FirmaModalPanel />;
 
 
   const renderPreventivoModal = () => <PreventivoModal />;
@@ -4427,10 +4155,10 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     startCameraVideoRec, stopCameraVideoRec, closeCamera,
     addSettingsItem, deleteSettingsItem, advanceFase, setFaseTo,
     addEvent, convertEvent, linkEventToCM, creaFatturaPassiva,
-    startVoice, stopVoice, sendCommessa, handleAI, exportPDF, gmailFetchMessages, gmailSendReply, gmailMatchCommessa,
+    startVoice, stopVoice, sendCommessa, handleAI, exportPDF, apriInboxDocumento, gmailFetchMessages, gmailSendReply, gmailMatchCommessa,
     // Sub-components
     PipelineBar, VanoSVG, toggleCollapse, SectionHead, caricaDemoCompleto, renderCalendarioMontaggi,
-    spCanvasRef, canvasRef, fotoVanoRef, videoVanoRef, openCamera, fileInputRef, fotoInputRef, ripFotoRef,
+    spCanvasRef, canvasRef, fotoVanoRef, videoVanoRef, openCamera, fileInputRef, fotoInputRef, ripFotoRef, firmaRef,
     // Refs/computed
     filtered, calDays, today, ORDINE_STATI, activePlan, trialDaysLeft, drag,
     clientiSearch, setClientiSearch, clientiFilter, setClientiFilter,
