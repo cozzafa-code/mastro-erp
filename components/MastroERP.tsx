@@ -9,12 +9,15 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 // import { getAziendaId, loadAllData, saveCantiere, saveEvent, deleteEvent as deleteEventDB, saveContatto, saveTeamMember, saveTask, saveAzienda, saveVano, deleteVano, saveMateriali, savePipeline } from "@/lib/supabase-sync";
 import { supabase } from "@/lib/supabase";
+import { useSyncEngine, SyncStatusBar, cloudLoadAll as cloudLoadAllSync } from "./mastro-sync";
+import { MastroErrorBoundary, PanelErrorBoundary } from "./MastroErrorBoundary";
+import { useConfirmDialog, useToast, exportAllData } from "./mastro-ui-safety";
 
 // === CLOUD SYNC HELPERS ===
 const SYNC_KEYS = ["cantieri","events","contatti","tasks","problemi","team","azienda","pipeline","sistemi","vetri","colori","coprifili","lamiere","libreria","fatture","squadre","montaggi","ordiniForn"];
 
 
-import { cloudSave, cloudLoadAll, getAziendaId, loadAllData, saveCantiere, saveEvent, deleteEventDB, saveContatto, saveTeamMember, saveTask, saveAzienda, saveVanoDB, saveMateriali, savePipeline, FONT, FF, FM, tipoToMinCat, THEMES, PLANS, PIPELINE_DEFAULT, MOTIVI_BLOCCO, AFASE, CANTIERI_INIT, FATTURE_INIT, ORDINI_INIT, MONTAGGI_INIT, TASKS_INIT, AI_INBOX_INIT, MSGS_INIT, TEAM_INIT, CONTATTI_INIT, COLORI_INIT, SISTEMI_INIT, VETRI_INIT, TIPOLOGIE_RAPIDE, SETTORI, SETTORI_DEFAULT, COPRIFILI_INIT, LAMIERE_INIT, Ico, ICO, PUNTI_MISURE, useDragOrder, TIPI_EVENTO, tipoEvColor } from "./mastro-constants";
+import { getAziendaId, loadAllData, saveCantiere, saveEvent, deleteEventDB, saveContatto, saveTeamMember, saveTask, saveAzienda, saveVanoDB, saveMateriali, savePipeline, FONT, FF, FM, tipoToMinCat, THEMES, PLANS, PIPELINE_DEFAULT, MOTIVI_BLOCCO, AFASE, CANTIERI_INIT, FATTURE_INIT, ORDINI_INIT, MONTAGGI_INIT, TASKS_INIT, AI_INBOX_INIT, MSGS_INIT, TEAM_INIT, CONTATTI_INIT, COLORI_INIT, SISTEMI_INIT, VETRI_INIT, TIPOLOGIE_RAPIDE, SETTORI, SETTORI_DEFAULT, COPRIFILI_INIT, LAMIERE_INIT, Ico, ICO, PUNTI_MISURE, useDragOrder, TIPI_EVENTO, tipoEvColor } from "./mastro-constants";
 import { MastroContext } from "./MastroContext";
 import SettingsPanel from "./SettingsPanel";
 import PreventivoModal from "./PreventivoModal";
@@ -31,10 +34,13 @@ import ClientiPanel from "./ClientiPanel";
 import CommessePanel from "./CommessePanel";
 import { OnboardingPanel, FirmaModalPanel } from "./OnboardingPanel";
 
-export default function MastroMisure({ user, azienda: aziendaInit }: { user?: any, azienda?: any }) {
+function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda?: any }) {
   const [theme, setTheme] = useState("chiaro");
   const T = THEMES[theme];
   const syncReady = useRef(false);
+  const sync = useSyncEngine(userId);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
+  const { toast, ToastContainer } = useToast();
   const userId = user?.id || null;
   
   const [tab, setTab] = useState("home");
@@ -82,7 +88,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const [problemaForm, setProblemaForm] = useState({ titolo: "", descrizione: "", tipo: "materiale", priorita: "media", assegnato: "" });
   const [showProblemiView, setShowProblemiView] = useState(false);
   // Save problemi to localStorage
-  useEffect(() => { try { localStorage.setItem("mastro:problemi", JSON.stringify(problemi)); } catch {} if(syncReady.current&&userId)cloudSave(userId,"problemi",problemi); }, [problemi]);
+  useEffect(() => { try { localStorage.setItem("mastro:problemi", JSON.stringify(problemi)); } catch {} if(syncReady.current&&userId)sync.cloudSave("problemi", problemi); }, [problemi]);
   const [team, setTeam] = useState(TEAM_INIT);
   const [coloriDB, setColoriDB] = useState(COLORI_INIT);
   const [sistemiDB, setSistemiDB] = useState(SISTEMI_INIT);
@@ -516,26 +522,26 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       try{const _v=localStorage.getItem("mastro:pipeline");if(_v)setPipelineDB(JSON.parse(_v));}catch(e){}
       try{const _v=localStorage.getItem("mastro:azienda");if(_v)setAziendaInfo(JSON.parse(_v));}catch(e){}
 },[]);
-  useEffect(()=>{try{localStorage.setItem("mastro:cantieri",JSON.stringify(cantieri));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"cantieri",cantieri);},[cantieri]);
-  useEffect(()=>{try{localStorage.setItem("mastro:tasks",JSON.stringify(tasks));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"tasks",tasks);},[tasks]);
-  useEffect(()=>{try{localStorage.setItem("mastro:events",JSON.stringify(events));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"events",events);},[events]);
-  useEffect(()=>{try{localStorage.setItem("mastro:colori",JSON.stringify(coloriDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"colori",coloriDB);},[coloriDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:sistemi",JSON.stringify(sistemiDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"sistemi",sistemiDB);},[sistemiDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:vetri",JSON.stringify(vetriDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"vetri",vetriDB);},[vetriDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:coprifili",JSON.stringify(coprifiliDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"coprifili",coprifiliDB);},[coprifiliDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:lamiere",JSON.stringify(lamiereDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"lamiere",lamiereDB);},[lamiereDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:libreria",JSON.stringify(libreriaDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"libreria",libreriaDB);},[libreriaDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:fatture",JSON.stringify(fattureDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"fatture",fattureDB);},[fattureDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:cantieri",JSON.stringify(cantieri));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("cantieri", cantieri);},[cantieri]);
+  useEffect(()=>{try{localStorage.setItem("mastro:tasks",JSON.stringify(tasks));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("tasks", tasks);},[tasks]);
+  useEffect(()=>{try{localStorage.setItem("mastro:events",JSON.stringify(events));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("events", events);},[events]);
+  useEffect(()=>{try{localStorage.setItem("mastro:colori",JSON.stringify(coloriDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("colori", coloriDB);},[coloriDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:sistemi",JSON.stringify(sistemiDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("sistemi", sistemiDB);},[sistemiDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:vetri",JSON.stringify(vetriDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("vetri", vetriDB);},[vetriDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:coprifili",JSON.stringify(coprifiliDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("coprifili", coprifiliDB);},[coprifiliDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:lamiere",JSON.stringify(lamiereDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("lamiere", lamiereDB);},[lamiereDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:libreria",JSON.stringify(libreriaDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("libreria", libreriaDB);},[libreriaDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:fatture",JSON.stringify(fattureDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("fatture", fattureDB);},[fattureDB]);
 
-  useEffect(()=>{try{localStorage.setItem("mastro:ordiniForn",JSON.stringify(ordiniFornDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"ordiniForn",ordiniFornDB);},[ordiniFornDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:squadre",JSON.stringify(squadreDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"squadre",squadreDB);},[squadreDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:montaggi",JSON.stringify(montaggiDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"montaggi",montaggiDB);},[montaggiDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:ordiniForn",JSON.stringify(ordiniFornDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("ordiniForn", ordiniFornDB);},[ordiniFornDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:squadre",JSON.stringify(squadreDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("squadre", squadreDB);},[squadreDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:montaggi",JSON.stringify(montaggiDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("montaggi", montaggiDB);},[montaggiDB]);
   useEffect(()=>{try{localStorage.setItem("mastro:settori",JSON.stringify(settoriAttivi));}catch(e){}},[settoriAttivi]);
   useEffect(()=>{try{localStorage.setItem("mastro:piano",JSON.stringify(pianoAttivo));}catch(e){}},[pianoAttivo]);
-  useEffect(()=>{try{localStorage.setItem("mastro:team",JSON.stringify(team));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"team",team);},[team]);
-  useEffect(()=>{try{localStorage.setItem("mastro:contatti",JSON.stringify(contatti));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"contatti",contatti);},[contatti]);
-  useEffect(()=>{try{localStorage.setItem("mastro:pipeline",JSON.stringify(pipelineDB));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"pipeline",pipelineDB);},[pipelineDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:azienda",JSON.stringify(aziendaInfo));}catch(e){} if(syncReady.current&&userId)cloudSave(userId,"azienda",aziendaInfo);},[aziendaInfo]);
+  useEffect(()=>{try{localStorage.setItem("mastro:team",JSON.stringify(team));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("team", team);},[team]);
+  useEffect(()=>{try{localStorage.setItem("mastro:contatti",JSON.stringify(contatti));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("contatti", contatti);},[contatti]);
+  useEffect(()=>{try{localStorage.setItem("mastro:pipeline",JSON.stringify(pipelineDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("pipeline", pipelineDB);},[pipelineDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:azienda",JSON.stringify(aziendaInfo));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("azienda", aziendaInfo);},[aziendaInfo]);
   useEffect(() => { if (selectedCM?.id) setLastOpenedCMId(selectedCM.id); }, [selectedCM]);
 
   // === CLOUD SYNC (user_data key-value) ===
@@ -544,7 +550,7 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   const applyCloud = useCallback(async () => {
     if (!userId) return;
     try {
-      const cloud = await cloudLoadAll(userId);
+      const cloud = await cloudLoadAllSync(userId);
       if (Object.keys(cloud).length === 0) return;
       // Safety: filter out null/invalid entries from arrays
       const safeArr = (arr: any) => Array.isArray(arr) ? arr.filter(x => x && typeof x === "object") : null;
@@ -901,9 +907,9 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
   };
 
   // DELETE functions
-  const deleteTask = (taskId) => { if ((()=>{try{return window.confirm("Eliminare questo task?");}catch(e){return false;}})()) setTasks(ts => ts.filter(t => t.id !== taskId)); };
+  const deleteTask = (taskId) => { confirm({ title: "Eliminare task?", message: "Questa azione è irreversibile.", confirmText: "Elimina", danger: true, onConfirm: () => { setTasks(ts => ts.filter(t => t.id !== taskId)); toast("Task eliminato", "success"); } }); };
   const deleteVano = (vanoId) => {
-    if (!(()=>{try{return window.confirm("Eliminare questo vano e tutte le sue misure?");}catch(e){return false;}})()) return;
+    confirm({ title: "Eliminare vano?", message: "Il vano e tutte le sue misure verranno eliminati.", confirmText: "Elimina", danger: true, onConfirm: () => {
     if (selectedRilievo) {
       const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.filter(v => v.id !== vanoId) };
       setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
@@ -911,14 +917,25 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
       setSelectedCM(prev => prev ? ({ ...prev, rilievi: prev.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) }) : prev);
     }
     if (selectedVano?.id === vanoId) { setSelectedVano(null); setVanoStep(0); }
+    toast("Vano eliminato", "success");
+    } });
   };
   const deleteCommessa = (cmId) => {
-    if (!(()=>{try{return window.confirm("Eliminare questa commessa e tutti i suoi vani?");}catch(e){return false;}})()) return;
-    setCantieri(cs => cs.filter(c => c.id !== cmId));
-    if (selectedCM?.id === cmId) { setSelectedCM(null); setSelectedVano(null); }
+    const cm = cantieri.find(c => c.id === cmId);
+    confirm({
+      title: "Eliminare commessa?",
+      message: `Stai per eliminare "${cm?.cliente || "commessa"}" e tutti i suoi vani, rilievi e documenti. Questa azione è irreversibile.`,
+      confirmText: "Elimina",
+      danger: true,
+      onConfirm: () => {
+        setCantieri(cs => cs.filter(c => c.id !== cmId));
+        if (selectedCM?.id === cmId) { setSelectedCM(null); setSelectedVano(null); }
+        toast("Commessa eliminata", "success");
+      },
+    });
   };
-  const deleteEvent = (evId) => { if ((()=>{try{return window.confirm("Eliminare questo evento?");}catch(e){return false;}})()) setEvents(ev => ev.filter(e => e.id !== evId)); };
-  const deleteMsg = (msgId) => { if ((()=>{try{return window.confirm("Eliminare questo messaggio?");}catch(e){return false;}})()) setMsgs(ms => ms.filter(m => m.id !== msgId)); };
+  const deleteEvent = (evId) => { confirm({ title: "Eliminare evento?", message: "L'evento verrà rimosso dal calendario.", confirmText: "Elimina", danger: true, onConfirm: () => { setEvents(ev => ev.filter(e => e.id !== evId)); toast("Evento eliminato", "success"); } }); };
+  const deleteMsg = (msgId) => { confirm({ title: "Eliminare messaggio?", message: "Il messaggio verrà rimosso.", confirmText: "Elimina", danger: true, onConfirm: () => { setMsgs(ms => ms.filter(m => m.id !== msgId)); toast("Messaggio eliminato", "success"); } }); };
 
   const addAllegato = (tipo, content, dataUrl?: string, durata?: string) => {
     if (!selectedCM) return;
@@ -1258,12 +1275,14 @@ export default function MastroMisure({ user, azienda: aziendaInit }: { user?: an
     setSettingsModal(null); setSettingsForm({});
   };
   const deleteSettingsItem = (type, id) => {
-    if (!(()=>{try{return window.confirm("Eliminare?");}catch(e){return false;}})()) return;
+    confirm({ title: "Eliminare elemento?", message: "L'elemento verrà rimosso dal catalogo.", confirmText: "Elimina", danger: true, onConfirm: () => {
     if (type === "sistema") setSistemiDB(s => s.filter(x => x.id !== id));
     if (type === "colore") setColoriDB(c => c.filter(x => x.id !== id));
     if (type === "vetro") setVetriDB(v => v.filter(x => x.id !== id));
     if (type === "coprifilo") setCoprifiliDB(c => c.filter(x => x.id !== id));
     if (type === "lamiera") setLamiereDB(l => l.filter(x => x.id !== id));
+    toast("Elemento eliminato", "success");
+    } });
   };
 
   const advanceFase = (cmId) => {
@@ -4160,7 +4179,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     PipelineBar, VanoSVG, toggleCollapse, SectionHead, caricaDemoCompleto, renderCalendarioMontaggi,
     spCanvasRef, canvasRef, fotoVanoRef, videoVanoRef, openCamera, fileInputRef, fotoInputRef, ripFotoRef, firmaRef,
     // Refs/computed
-    filtered, calDays, today,
+    filtered, calDays, today, confirm, toast, exportAllData,
     // Business logic functions
     generaPreventivoPDF, generaPDFMisure, creaFattura, generaFatturaPDF, inviaWhatsApp, inviaEmail, creaOrdineFornitore, ricalcolaOrdine, updateOrdine, calcolaScadenzaPagamento, generaOrdinePDF, generaConfermaFirmataPDF, inviaOrdineFornitore, creaMontaggio, getWeekDays, generaPreventivoCondivisibile, uploadConfermaFornitore, estraiDatiPDF, confermaInboxDoc, assegnaDocUniversale, generaTrackingCliente, generaXmlSDI, nextNumFattura,
  ORDINE_STATI, activePlan, trialDaysLeft, drag,
@@ -4180,13 +4199,16 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       `}</style>
       <div style={S.app}>
         {/* Content */}
-        {tab === "home" && !selectedCM && !selectedMsg && renderHome()}
-        {tab === "commesse" && renderCommesse()}
-        {tab === "clienti" && renderClienti()}
-        {tab === "messaggi" && !selectedMsg && renderMessaggi()}
-        {tab === "agenda" && renderAgenda()}
-        {tab === "settings" && renderSettings()}
+        {tab === "home" && !selectedCM && !selectedMsg && <PanelErrorBoundary name="Home">{renderHome()}</PanelErrorBoundary>}
+        {tab === "commesse" && <PanelErrorBoundary name="Commesse">{renderCommesse()}</PanelErrorBoundary>}
+        {tab === "clienti" && <PanelErrorBoundary name="Clienti">{renderClienti()}</PanelErrorBoundary>}
+        {tab === "messaggi" && !selectedMsg && <PanelErrorBoundary name="Messaggi">{renderMessaggi()}</PanelErrorBoundary>}
+        {tab === "agenda" && <PanelErrorBoundary name="Agenda">{renderAgenda()}</PanelErrorBoundary>}
+        {tab === "settings" && <PanelErrorBoundary name="Impostazioni">{renderSettings()}</PanelErrorBoundary>}
 
+        <SyncStatusBar status={sync.status} />
+        {ConfirmDialog}
+        {ToastContainer}
         {/* FAB — Quick Actions */}
         {/* FAB — Compose menu */}
         <style>{`
@@ -4815,8 +4837,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         )}
 
         {/* Modals */}
-        {renderModal()}
-        {renderPreventivoModal()}
+        {<PanelErrorBoundary name="Modal">{renderModal()}</PanelErrorBoundary>}
+        {<PanelErrorBoundary name="Preventivo">{renderPreventivoModal()}</PanelErrorBoundary>}
         {renderFirmaModal()}
         {renderOnboarding()}
 
@@ -5342,7 +5364,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         </div>
       )}
       {/* === 📥 INBOX DOCUMENTI — Modal globale === */}
-      {showContabilita && renderContabilita()}
+      {showContabilita && <PanelErrorBoundary name="Contabilità">{renderContabilita()}</PanelErrorBoundary>}
         {showInboxDoc && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
@@ -5587,3 +5609,13 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
 }
 
 
+
+
+// ─── ERROR BOUNDARY WRAPPER ──────────────────────────────
+export default function MastroMisure() {
+  return (
+    <MastroErrorBoundary>
+      <MastroMisureInner />
+    </MastroErrorBoundary>
+  );
+}
