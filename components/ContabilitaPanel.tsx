@@ -8,6 +8,8 @@ export default function ContabilitaPanel() {
   const {
     T, S, isDesktop, fs,
     cantieri, contabMese, contabTab, creaFatturaPassiva, events, fattureDB, fatturePassive, fornitori, montaggiDB, newFattPassiva, ordiniFornDB, setContabMese, setContabTab, setFattureDB, setFatturePassive, setNewFattPassiva, setSelectedCM, setShowContabilita, setShowFatturaPassiva, setTab, showFatturaPassiva, squadreDB,
+    // Business logic
+    generaFatturaPDF, generaXmlSDI,
   } = useMastro();
 
     const today = new Date();

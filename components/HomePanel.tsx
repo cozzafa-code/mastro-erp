@@ -26,6 +26,7 @@ export default function HomePanel() {
     getVaniAttivi, giorniFermaCM, toggleCollapse, SectionHead,
     // Computed
     filtered, calDays, today, ORDINE_STATI, activePlan, trialDaysLeft, drag,
+    apriInboxDocumento,
   } = useMastro();
 
     const todayISO = today.toISOString().split("T")[0];

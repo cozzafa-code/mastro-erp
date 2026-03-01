@@ -42,6 +42,9 @@ export default function CMDetailPanel() {
     fileInputRef, fotoInputRef,
     // Navigation
     setSelectedVano, setVanoStep,
+    // Business logic
+    generaPreventivoPDF, creaFattura, creaOrdineFornitore,
+    apriInboxDocumento,
   } = useMastro();
 
     if (!selectedCM) return null;

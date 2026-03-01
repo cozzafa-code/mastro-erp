@@ -57,6 +57,8 @@ export default function SettingsPanel() {
     addSettingsItem, deleteSettingsItem, countVani,
     // Piano & onboarding
     setSubPlan, setTutoStep, setAiInbox,
+    // Business logic
+    generaFatturaPDF,
   } = ctx;
 
   return (

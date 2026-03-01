@@ -31,6 +31,9 @@ export default function RilieviListPanel() {
     // Helpers
     calcolaVanoPrezzo, getVaniAttivi, deleteCommessa, setFaseTo,
     PipelineBar, ORDINE_STATI,
+    // Business logic
+    generaPreventivoPDF, creaFattura, creaOrdineFornitore,
+    apriInboxDocumento,
   } = useMastro();
 
     if (!selectedCM) return null;

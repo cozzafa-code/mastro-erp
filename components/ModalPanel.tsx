@@ -26,6 +26,8 @@ export default function ModalPanel() {
     // Helpers
     addCommessa, addTask, getVaniAttivi,
     setSelectedCM, setTab,
+    // Business logic
+    inviaEmail,
   } = useMastro();
 
     if (!showModal) return null;

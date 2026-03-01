@@ -24,6 +24,9 @@ export default function PreventivoModal() {
     // Helpers
     calcolaTotaleCommessa, getVaniAttivi, setFaseTo,
     ORDINE_STATI, renderCalendarioMontaggi,
+    // Business logic + state
+    ordineDetail, setOrdineDetail,
+    generaPreventivoPDF, generaPDFMisure, creaFattura, generaFatturaPDF, inviaWhatsApp, inviaEmail, creaOrdineFornitore, ricalcolaOrdine, updateOrdine, calcolaScadenzaPagamento, generaOrdinePDF, generaConfermaFirmataPDF, inviaOrdineFornitore, creaMontaggio, generaTrackingCliente,
   } = useMastro();
 
     if (!showPreventivoModal || !selectedCM) return null;
