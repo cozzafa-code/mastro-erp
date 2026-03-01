@@ -1,30 +1,35 @@
 import React from "react";
-import { supabase } from "@/lib/supabase";
 
 //               MOTIVI_BLOCCO, AFASE, useDragOrder hook, Home, Helpers, Stili
-// Supabase sync — stubs (enable import when Supabase is configured)
-let _syncQueue: Record<string, any> = {};
-let _syncTimer: any = null;
-export const cloudSave = (userId: string, key: string, data: any) => {
-  if (!userId) return;
-  _syncQueue[key] = data;
-  if (_syncTimer) clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(async () => {
-    const batch = { ..._syncQueue };
-    _syncQueue = {};
-    for (const [k, v] of Object.entries(batch)) {
+// Supabase sync — fully self-contained IIFE closure
+export const cloudSave = (() => {
+  const _q: any = {}; 
+  let _t: any = null;
+  return (userId: string, key: string, data: any) => {
+    if (!userId) return;
+    _q[key] = data;
+    if (_t) clearTimeout(_t);
+    _t = setTimeout(async () => {
       try {
-        await supabase.from("user_data").upsert(
-          { user_id: userId, azienda_id: userId, key: k, data: v, updated_at: new Date().toISOString() },
-          { onConflict: "user_id,azienda_id,key" }
-        );
-      } catch (e) { console.warn("Cloud save error:", k, e); }
-    }
-  }, 1500); // debounce 1.5s
-};
+        const { supabase } = await import("@/lib/supabase");
+        const batch = { ..._q };
+        Object.keys(_q).forEach(k => delete _q[k]);
+        for (const [k, v] of Object.entries(batch)) {
+          try {
+            await supabase.from("user_data").upsert(
+              { user_id: userId, azienda_id: userId, key: k, data: v, updated_at: new Date().toISOString() },
+              { onConflict: "user_id,azienda_id,key" }
+            );
+          } catch (e) { console.warn("Cloud save error:", k, e); }
+        }
+      } catch (e) { console.warn("cloudSave error:", e); }
+    }, 1500);
+  };
+})();
 
 export const cloudLoadAll = async (userId: string): Promise<Record<string, any>> => {
   try {
+    const { supabase } = await import("@/lib/supabase");
     const { data, error } = await supabase
       .from("user_data")
       .select("key, data, updated_at")

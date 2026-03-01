@@ -10,7 +10,7 @@ import { FF, FM, ICO, Ico, TIPOLOGIE_RAPIDE } from "./mastro-constants";
 
 export default function VanoDetailPanel() {
   const {
-    T, S, isDesktop, fs,
+    T, S, isDesktop, fs, tipologieFiltrate,
     // State
     selectedCM, setSelectedCM, cantieri, setCantieri,
     selectedRilievo, setSelectedRilievo,
@@ -35,6 +35,7 @@ export default function VanoDetailPanel() {
     // Helpers
     goBack, updateMisura, updateMisureBatch, updateVanoField,
     toggleAccessorio, updateAccessorio, compressImage,
+    spCanvasRef, canvasRef, fotoVanoRef, videoVanoRef, openCamera,
   } = useMastro();
 
   const STEPS = [
