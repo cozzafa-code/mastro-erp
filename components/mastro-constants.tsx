@@ -569,7 +569,14 @@ export const TIPOLOGIE_RAPIDE = [
   { code: "SOPR",   label: "Sopraluce",                 icon: "△",  cat: "Altro", settore: "serramenti" },
   { code: "MONO",   label: "Monoblocco",                icon: "⬜",  cat: "Altro", settore: "serramenti" },
   { code: "GRATA",  label: "Grata di sicurezza",        icon: "🔒", cat: "Altro", settore: "serramenti" },
-  { code: "CANC",   label: "Cancello",                  icon: "🚧", cat: "Altro", settore: "serramenti" },
+  { code: "CANCSING", label: "Cancello battente",        icon: "🏗️", cat: "Cancelli", settore: "cancelli" },
+  { code: "CANCDOPP", label: "Cancello doppio",          icon: "🏗️", cat: "Cancelli", settore: "cancelli" },
+  { code: "CANCSCOR", label: "Cancello scorrevole",      icon: "🏗️", cat: "Cancelli", settore: "cancelli" },
+  { code: "CANCPED",  label: "Pedonale",                 icon: "🚶", cat: "Cancelli", settore: "cancelli" },
+  { code: "CANCCP",   label: "Carraio + pedonale",       icon: "🏗️", cat: "Cancelli", settore: "cancelli" },
+  { code: "RECINZ",   label: "Recinzione pannelli",      icon: "🧱", cat: "Cancelli", settore: "cancelli" },
+  { code: "RINGH",    label: "Ringhiera",                icon: "🔩", cat: "Cancelli", settore: "cancelli" },
+  { code: "PARAP",    label: "Parapetto",                icon: "🔩", cat: "Cancelli", settore: "cancelli" },
   { code: "VERANDA",label: "Veranda / Vetrata",         icon: "🏠", cat: "Altro", settore: "serramenti" },
 ];
 
@@ -582,6 +589,7 @@ export const SETTORI = [
   { id: "zanzariere", label: "Zanzariere", icon: "🕸", desc: "Laterali, verticali, plissé, battenti, magnetiche" },
   { id: "tende", label: "Tende da Sole", icon: "☀️", desc: "Bracci, caduta, cappottine, pergole, ZIP, veneziane" },
   { id: "boxdoccia", label: "Box Doccia", icon: "🚿", desc: "Nicchia, angolari, walk-in, pareti vasca" },
+  { id: "cancelli", label: "Cancelli e Recinzioni", icon: "🏗️", desc: "Battenti, scorrevoli, recinzioni, ringhiere, automazioni" },
 ];
 
 export const SETTORI_DEFAULT = ["serramenti", "persiane", "tapparelle", "zanzariere"]; // serramentista classico

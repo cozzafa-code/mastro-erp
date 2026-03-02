@@ -24,6 +24,7 @@ import SettingsPanel from "./SettingsPanel";
 import PreventivoModal from "./PreventivoModal";
 import RilieviListPanel from "./RilieviListPanel";
 import VanoDetailPanel from "./VanoDetailPanel";
+import VanoSectorRouter from "./VanoSectorRouter";
 import HomePanel from "./HomePanel";
 import CMDetailPanel from "./CMDetailPanel";
 import ModalPanel from "./ModalPanel";
@@ -438,8 +439,8 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   const [ripUrgenza, setRipUrgenza] = useState("media");
   // New vano form
   const [vanoInfoOpen, setVanoInfoOpen] = useState(null); // which accordion section is open
-  const [tipCat, setTipCat] = useState("Finestre");
-  const [newVano, setNewVano] = useState({ nome: "", tipo: "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", pezzi: 1 });
+  const [tipCat, setTipCat] = useState("");
+  const [newVano, setNewVano] = useState({ nome: "", tipo: "", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", pezzi: 1 });
   const [customPiani, setCustomPiani] = useState(["S1", "PT", "P1", "P2", "P3"]);
   const [mezziSalita, setMezziSalita] = useState(["Scala interna", "Scala esterna", "Scala aerea", "Scala a mano", "Gru", "Elevatore", "Ponteggio", "Nessuno"]);
   const [showAddPiano, setShowAddPiano] = useState(false);
@@ -839,9 +840,10 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
 
   const addVano = () => {
     if (!selectedCM || !selectedRilievo) return;
-    const tipObj = TIPOLOGIE_RAPIDE.find(t => t.code === newVano.tipo);
-    const nome = newVano.nome.trim() || `${tipObj?.label || newVano.tipo} ${(selectedRilievo.vani?.length || 0) + 1}`;
-    const v = { id: Date.now(), nome, tipo: newVano.tipo, stanza: newVano.stanza, piano: newVano.piano, sistema: newVano.sistema, pezzi: newVano.pezzi||1, coloreInt: newVano.coloreInt, coloreEst: newVano.coloreEst, bicolore: newVano.bicolore, coloreAcc: newVano.coloreAcc, vetro: newVano.vetro, telaio: newVano.telaio, telaioAlaZ: newVano.telaioAlaZ, rifilato: newVano.rifilato, rifilSx: newVano.rifilSx, rifilDx: newVano.rifilDx, rifilSopra: newVano.rifilSopra, rifilSotto: newVano.rifilSotto, coprifilo: newVano.coprifilo, lamiera: newVano.lamiera, misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } };
+    const vanoTipo = newVano.tipo || tipologieFiltrate[0]?.code || "F1A";
+    const tipObj = TIPOLOGIE_RAPIDE.find(t => t.code === vanoTipo);
+    const nome = newVano.nome.trim() || `${tipObj?.label || vanoTipo} ${(selectedRilievo.vani?.length || 0) + 1}`;
+    const v = { id: Date.now(), nome, tipo: vanoTipo, stanza: newVano.stanza, piano: newVano.piano, sistema: newVano.sistema, pezzi: newVano.pezzi||1, coloreInt: newVano.coloreInt, coloreEst: newVano.coloreEst, bicolore: newVano.bicolore, coloreAcc: newVano.coloreAcc, vetro: newVano.vetro, telaio: newVano.telaio, telaioAlaZ: newVano.telaioAlaZ, rifilato: newVano.rifilato, rifilSx: newVano.rifilSx, rifilDx: newVano.rifilDx, rifilSopra: newVano.rifilSopra, rifilSotto: newVano.rifilSotto, coprifilo: newVano.coprifilo, lamiera: newVano.lamiera, misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } }, settoreData: {} };
     const updRilievo = { ...selectedRilievo, vani: [...(selectedRilievo.vani || []), v] };
     setCantieri(cs => cs.map(c => c.id === selectedCM.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRilievo : r), aggiornato: "Oggi" } : c));
     setSelectedRilievo(updRilievo);
@@ -2149,7 +2151,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
 // Righe 2639-3594: Vano Detail Wizard completo
 // =======================================================
   /* == VANO DETAIL == */
-  const renderVanoDetail = () => <VanoDetailPanel />;
+  const renderVanoDetail = () => <VanoSectorRouter />;
 
   /* == AGENDA TAB — Giorno / Settimana / Mese == */
   /* == CLIENTI TAB == */

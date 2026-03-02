@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useMastro } from "./MastroContext";
 import { FF, FM, ICO, Ico, TIPOLOGIE_RAPIDE } from "./mastro-constants";
+import DisegnoTecnico from "./DisegnoTecnico";
 
 export default function VanoDetailPanel() {
   const {
@@ -44,6 +45,7 @@ export default function VanoDetailPanel() {
     { id: "riepilogo", title: "RIEPILOGO", desc: "Anteprima completa del vano", color: "#34c759", icon: "📋" },
   ];
   const [detailOpen, setDetailOpen] = useState<Record<string,boolean>>({});
+  const [showDisegno, setShowDisegno] = useState(false);
 
   // ═══ VOICE RECOGNITION — Self-contained implementation ═══
   const [vrActive, setVrActive] = useState(false);
@@ -92,21 +94,35 @@ export default function VanoDetailPanel() {
     }
     if (t.includes("scorrevole")) parsed.tipo = "PST";
     if (t.includes("vasistas")) parsed.tipo = "VAS";
+    if (t.includes("porta blindata")) parsed.tipo = "PBC";
+    if (t.includes("porta garage")) parsed.tipo = "PGA";
+    if (t.includes("fisso") || t.includes("fissa")) parsed.tipo = "FISSO";
     // Stanza
     if (t.includes("soggiorno")) parsed.stanza = "Soggiorno";
     if (t.includes("cucina")) parsed.stanza = "Cucina";
     if (t.includes("camera")) parsed.stanza = "Camera";
+    if (t.includes("cameretta")) parsed.stanza = "Cameretta";
     if (t.includes("bagno")) parsed.stanza = "Bagno";
     if (t.includes("studio")) parsed.stanza = "Studio";
     if (t.includes("ingresso")) parsed.stanza = "Ingresso";
+    if (t.includes("corridoio")) parsed.stanza = "Corridoio";
+    if (t.includes("ripostiglio")) parsed.stanza = "Ripostiglio";
+    if (t.includes("cantina")) parsed.stanza = "Cantina";
+    if (t.includes("garage")) parsed.stanza = "Garage";
+    if (t.includes("mansarda")) parsed.stanza = "Mansarda";
+    if (t.includes("sala")) parsed.stanza = "Sala";
+    if (t.includes("lavanderia")) parsed.stanza = "Lavanderia";
     // Piano
-    const pianoM = t.match(/piano\s+(terra|primo|secondo|terzo|\d+)/);
+    const pianoM = t.match(/piano\s+(terra|primo|secondo|terzo|quarto|quinto|seminterrato|interrato|\d+)/);
     if (pianoM) {
       const pv = pianoM[1];
       if (pv === "terra") parsed.piano = "PT";
       else if (pv === "primo") parsed.piano = "P1";
       else if (pv === "secondo") parsed.piano = "P2";
       else if (pv === "terzo") parsed.piano = "P3";
+      else if (pv === "quarto") parsed.piano = "P4";
+      else if (pv === "quinto") parsed.piano = "P5";
+      else if (pv === "seminterrato" || pv === "interrato") parsed.piano = "S1";
       else parsed.piano = `P${pv}`;
     }
     // Accessori
@@ -114,15 +130,34 @@ export default function VanoDetailPanel() {
     if (t.includes("motorizzata")) parsed.tapparellaMotorizzata = true;
     if (t.includes("zanzariera")) parsed.zanzariera = true;
     if (t.includes("persiana")) parsed.persiana = true;
+    if (t.includes("cassonetto")) parsed.cassonetto = true;
+    if (t.includes("davanzale in marmo")) parsed.davanzaleMarmo = true;
+    if (t.includes("soglia")) parsed.soglia = true;
+    if (t.includes("controtelaio")) parsed.controtelaio = true;
+    if (t.includes("coprifilo")) parsed.coprifilo = true;
+    // Vetro
+    if (t.match(/vetro\s+satinato|satinato/)) parsed.vetro = "Satinato";
+    if (t.match(/vetro\s+opaco|opaco/)) parsed.vetro = "Opaco";
+    if (t.match(/vetro\s+trasparente|trasparente/)) parsed.vetro = "Trasparente";
+    if (t.match(/triplo\s+vetro/)) parsed.vetro = "Triplo";
+    if (t.match(/doppio\s+vetro/)) parsed.vetro = "Doppio";
+    if (t.match(/vetro\s+temperato|temperato/)) parsed.vetro = "Temperato";
+    if (t.match(/vetro\s+stratificato|stratificato/)) parsed.vetro = "Stratificato";
+    if (t.match(/vetro\s+bassoemissivo|basso\s+emissivo/)) parsed.vetro = "Basso emissivo";
+    if (t.match(/vetro\s+antisfondamento|antisfondamento/)) parsed.vetro = "Antisfondamento";
+    if (t.match(/vetrocamera/)) parsed.vetro = "Vetrocamera";
     // Colori
     if (t.includes("bianco")) parsed.coloreInt = "RAL 9010";
     if (t.includes("bicolore")) parsed.bicolore = true;
     if (t.match(/grigio|antracite|7016/)) parsed.coloreEst = "RAL 7016";
+    if (t.match(/effetto\s+legno|noce|rovere|ciliegio|douglass/)) parsed.coloreEst = t.match(/noce|rovere|ciliegio|douglass/)?.[0]?.charAt(0).toUpperCase() + t.match(/noce|rovere|ciliegio|douglass/)?.[0]?.slice(1) || "Effetto legno";
     // Spallette
     const spSx = t.match(/spalletta\s+sinistra\s+(\d{2,4})/);
     if (spSx) parsed.spSx = parseInt(spSx[1]);
     const spDx = t.match(/spalletta\s+destra\s+(\d{2,4})/);
     if (spDx) parsed.spDx = parseInt(spDx[1]);
+    const spM = t.match(/spallette?\s+(\d{2,4})/);
+    if (spM && !spSx && !spDx) { parsed.spSx = parseInt(spM[1]); parsed.spDx = parseInt(spM[1]); }
     // Davanzale
     const dav = t.match(/davanzale\s+(\d{2,4})/);
     if (dav) parsed.davProf = parseInt(dav[1]);
@@ -143,10 +178,24 @@ export default function VanoDetailPanel() {
     if (parsed.coloreInt) updateVanoField(mid, "coloreInt", parsed.coloreInt);
     if (parsed.coloreEst) updateVanoField(mid, "coloreEst", parsed.coloreEst);
     if (parsed.bicolore) updateVanoField(mid, "bicolore", true);
+    if (parsed.vetro) updateVanoField(mid, "vetro", parsed.vetro);
     if (parsed.tapparella) toggleAccessorio(mid, "tapparella");
     if (parsed.zanzariera) toggleAccessorio(mid, "zanzariera");
     if (parsed.persiana) toggleAccessorio(mid, "persiana");
   }, [selectedVano, selectedRilievo, updateMisura, updateVanoField, toggleAccessorio]);
+
+  // Save ALL voice text as note on the vano (recognized or not)
+  const saveVoiceNote = useCallback((text: string, parsed: Record<string, any>) => {
+    if (!selectedVano || !selectedRilievo) return;
+    const mid = selectedVano.id;
+    const time = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    const parsedKeys = Object.keys(parsed);
+    const prefix = parsedKeys.length > 0 ? "🎤" : "🎤💬";
+    const newNote = `${prefix} [${time}] ${text}`;
+    const existing = selectedVano.note || "";
+    const updatedNote = existing ? `${existing}\n${newNote}` : newNote;
+    updateVanoField(mid, "note", updatedNote);
+  }, [selectedVano, selectedRilievo, updateVanoField]);
 
   const vrStart = useCallback(() => {
     const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -186,12 +235,14 @@ export default function VanoDetailPanel() {
         if (Object.keys(parsed).length > 0) {
           applyParsed(parsed);
         }
+        // ALWAYS save raw text as note on the vano
+        saveVoiceNote(finalText.trim(), parsed);
         setVrInterim("");
       }
     };
     recognitionRef.current = rec;
     try { rec.start(); } catch(e) { setVrError("Errore avvio microfono."); }
-  }, [parseVoiceText, applyParsed]);
+  }, [parseVoiceText, applyParsed, saveVoiceNote]);
 
   const vrStop = useCallback(() => {
     if (recognitionRef.current) {
@@ -841,190 +892,33 @@ export default function VanoDetailPanel() {
               {/* ═══ MISURE STANDARD: Serramenti (8 punti) ═══ */}
               {!["TDBR","TDCAD","TDCAP","TDVER","TDRUL","TDPERG","TDZIP","TDVELA","VENEZIA","TDS","TDR","TVE","PBC","PGA","PGF","TCA","TCB","ZTE"].includes(v.tipo) && (<>
 
-              {/* ═══ DISEGNO RAPIDO VANO ═══ */}
-              {(() => {
-                const dState = v._rilDisegno || { elements: [], mode: null, _pendingLine: null };
-                const setDS = (upd) => {
-                  const nv = { ...v, _rilDisegno: typeof upd === "function" ? upd(dState) : { ...dState, ...upd } };
-                  setSelectedVano(nv);
-                  if (selectedRilievo) {
-                    const updR = { ...selectedRilievo, vani: selectedRilievo.vani.map(x => x.id === v.id ? nv : x) };
-                    setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo?.id ? updR : r2) } : c));
-                    setSelectedRilievo(updR);
-                  }
-                };
-                const els = dState.elements || [];
-                const drawMode = dState.mode;
-                const cW = Math.min(window.innerWidth - 40, 380);
-                const rW = m.lCentro || m.lAlto || 1200;
-                const rH = m.hCentro || m.hSx || 1400;
-                const aspect = rW / rH;
-                const cH = Math.min(260, cW / aspect);
-                const PAD = 20;
-                const iW = cW - PAD * 2, iH = cH - PAD * 2;
-                const scX = iW / rW, scY = iH / rH;
-                const sc2 = Math.min(scX, scY);
-                const oX = PAD + (iW - rW * sc2) / 2, oY = PAD + (iH - rH * sc2) / 2;
-                const toSvg = (mmX, mmY) => ({ x: oX + mmX * sc2, y: oY + mmY * sc2 });
-                const toMM = (px, py) => ({ mx: Math.round((px - oX) / sc2), my: Math.round((py - oY) / sc2) });
-                const snap2 = (val) => Math.round(val / 10) * 10;
-
-                // Mestiere presets
-                const mestieri = [
-                  { id: "serr", label: "🪟 Serramento", els: [
-                    { type: "rect", x: 0, y: 0, w: rW, h: rH, stroke: "#1A1A1C" },
-                    { type: "rect", x: 40, y: 40, w: rW - 80, h: rH - 80, stroke: "#999", dash: true },
-                  ]},
-                  { id: "fabbro", label: "⚙️ Fabbro", els: [
-                    { type: "rect", x: 0, y: 0, w: rW, h: rH, stroke: "#555" },
-                    { type: "line", x1: rW / 2, y1: 0, x2: rW / 2, y2: rH, stroke: "#555" },
-                    { type: "line", x1: 0, y1: rH / 2, x2: rW, y2: rH / 2, stroke: "#555" },
-                  ]},
-                  { id: "falegname", label: "🪵 Falegname", els: [
-                    { type: "rect", x: 0, y: 0, w: rW, h: rH, stroke: "#8B4513" },
-                    { type: "rect", x: 30, y: 30, w: rW - 60, h: rH - 60, stroke: "#D2691E", dash: true },
-                  ]},
-                  { id: "tenda", label: "🏠 Tenda", els: [
-                    { type: "rect", x: 0, y: 0, w: rW, h: rH * 0.15, stroke: "#007aff" },
-                    { type: "line", x1: 0, y1: rH * 0.15, x2: 0, y2: rH, stroke: "#007aff", dash: true },
-                    { type: "line", x1: rW, y1: rH * 0.15, x2: rW, y2: rH, stroke: "#007aff", dash: true },
-                    { type: "line", x1: 0, y1: rH, x2: rW, y2: rH, stroke: "#007aff" },
-                  ]},
-                  { id: "vuoto", label: "✏️ Vuoto", els: [] },
-                ];
-
-                const getSvgPt = (e) => {
-                  const svg = e.currentTarget;
-                  const r = svg.getBoundingClientRect();
-                  const cX = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-                  const cY = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
-                  return toMM(cX, cY);
-                };
-
-                return (
-                  <div style={{ marginBottom: 14, borderRadius: 12, border: `1px solid ${T.acc}40`, overflow: "hidden", background: T.card }}>
-                    {/* Header */}
-                    <div style={{ padding: "8px 12px", background: `${T.acc}08`, display: "flex", alignItems: "center", gap: 6, borderBottom: `1px solid ${T.bdr}` }}>
-                      <span style={{ fontSize: 13 }}>✏️</span>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: T.acc }}>Disegno rapido</span>
-                      <span style={{ fontSize: 9, color: T.sub, flex: 1 }}>{rW}×{rH}mm</span>
-                      {els.length > 0 && <span style={{ fontSize: 9, color: T.grn, fontWeight: 700 }}>{els.length} el.</span>}
-                    </div>
-
-                    {/* Mestiere presets */}
-                    <div style={{ display: "flex", gap: 3, padding: "4px 8px", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-                      {mestieri.map(me => (
-                        <div key={me.id} onClick={() => {
-                          const newEls = me.els.map((e, i) => ({ ...e, id: Date.now() + i }));
-                          setDS({ elements: newEls, mode: null, _pendingLine: null });
-                        }} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 9, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-                          {me.label}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Drawing toolbar */}
-                    <div style={{ display: "flex", gap: 3, padding: "3px 8px", borderTop: `1px solid ${T.bdr}`, flexWrap: "wrap" }}>
-                      {[
-                        { id: "line", label: "╱ Linea" },
-                        { id: "rect-draw", label: "▭ Rett." },
-                        { id: "arrow", label: "→ Freccia" },
-                        { id: "text", label: "Aa Testo" },
-                      ].map(tool => (
-                        <div key={tool.id} onClick={() => {
-                          if (tool.id === "text") {
-                            const txt = prompt("Testo:");
-                            if (txt) setDS({ elements: [...els, { id: Date.now(), type: "label", x: rW / 2, y: rH / 2, text: txt }], mode: null });
-                          } else {
-                            setDS({ mode: drawMode === tool.id ? null : tool.id, _pendingLine: null });
-                          }
-                        }} style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${drawMode === tool.id ? T.acc : T.bdr}`, background: drawMode === tool.id ? `${T.acc}15` : T.card, fontSize: 9, fontWeight: 700, cursor: "pointer", color: drawMode === tool.id ? T.acc : T.sub }}>
-                          {tool.label}
-                        </div>
-                      ))}
-                      <div style={{ flex: 1 }} />
-                      {els.length > 0 && <div onClick={() => {
-                        const newEls = els.slice(0, -1);
-                        setDS({ elements: newEls });
-                      }} style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${T.bdr}`, fontSize: 9, fontWeight: 700, cursor: "pointer", color: T.orange }}>↩</div>}
-                      {els.length > 0 && <div onClick={() => setDS({ elements: [], mode: null, _pendingLine: null })} style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${T.bdr}`, fontSize: 9, fontWeight: 700, cursor: "pointer", color: T.red }}>🗑</div>}
-                    </div>
-
-                    {/* SVG Canvas */}
-                    <svg width={cW} height={cH} style={{ display: "block", background: "#fafaf8", touchAction: "none" }}
-                      onClick={(e2) => {
-                        if (!drawMode) return;
-                        const pt = getSvgPt(e2);
-                        const mmX = snap2(pt.mx), mmY = snap2(pt.my);
-                        const pending = dState._pendingLine;
-
-                        if (drawMode === "line" || drawMode === "arrow") {
-                          if (!pending) {
-                            setDS({ ...dState, _pendingLine: { x: mmX, y: mmY } });
-                          } else {
-                            const newEl = { id: Date.now(), type: drawMode === "arrow" ? "arrow" : "sline", x1: pending.x, y1: pending.y, x2: mmX, y2: mmY };
-                            setDS({ elements: [...els, newEl], _pendingLine: null });
-                          }
-                        }
-                        if (drawMode === "rect-draw") {
-                          if (!pending) {
-                            setDS({ ...dState, _pendingLine: { x: mmX, y: mmY } });
-                          } else {
-                            const x = Math.min(pending.x, mmX), y = Math.min(pending.y, mmY);
-                            const w = Math.abs(mmX - pending.x), h = Math.abs(mmY - pending.y);
-                            setDS({ elements: [...els, { id: Date.now(), type: "rect", x, y, w: w || 100, h: h || 100, stroke: "#555" }], _pendingLine: null });
-                          }
-                        }
-                      }}>
-                      {/* Grid */}
-                      <defs>
-                        <pattern id="rilGrid" width={50 * sc2} height={50 * sc2} patternUnits="userSpaceOnUse">
-                          <path d={`M ${50 * sc2} 0 L 0 0 0 ${50 * sc2}`} fill="none" stroke="#eee" strokeWidth="0.5" />
-                        </pattern>
-                      </defs>
-                      <rect width={cW} height={cH} fill="url(#rilGrid)" />
-
-                      {/* Vano outline */}
-                      <rect x={oX} y={oY} width={rW * sc2} height={rH * sc2} fill="none" stroke="#ccc" strokeWidth={0.8} strokeDasharray="4,3" />
-
-                      {/* Dimension labels */}
-                      <text x={oX + rW * sc2 / 2} y={oY - 5} textAnchor="middle" fontSize={8} fill={T.acc} fontWeight={700} fontFamily="monospace">{rW}</text>
-                      <text x={oX - 5} y={oY + rH * sc2 / 2} textAnchor="end" fontSize={8} fill={T.acc} fontWeight={700} fontFamily="monospace" transform={`rotate(-90, ${oX - 5}, ${oY + rH * sc2 / 2})`}>{rH}</text>
-
-                      {/* Elements */}
-                      {els.map(el => {
-                        if (el.type === "rect") {
-                          const p1 = toSvg(el.x, el.y);
-                          return <rect key={el.id} x={p1.x} y={p1.y} width={el.w * sc2} height={el.h * sc2} fill="none" stroke={el.stroke || "#333"} strokeWidth={1.2} strokeDasharray={el.dash ? "4,3" : "none"} rx={1} />;
-                        }
-                        if (el.type === "sline" || el.type === "line") {
-                          const p1 = toSvg(el.x1, el.y1), p2 = toSvg(el.x2, el.y2);
-                          return <line key={el.id} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={el.stroke || "#333"} strokeWidth={1.2} strokeDasharray={el.dash ? "4,3" : "none"} />;
-                        }
-                        if (el.type === "arrow") {
-                          const p1 = toSvg(el.x1, el.y1), p2 = toSvg(el.x2, el.y2);
-                          const dx = p2.x - p1.x, dy = p2.y - p1.y, len = Math.hypot(dx, dy) || 1;
-                          const ux = dx / len, uy = dy / len;
-                          const ax1 = p2.x - ux * 8 + uy * 4, ay1 = p2.y - uy * 8 - ux * 4;
-                          const ax2 = p2.x - ux * 8 - uy * 4, ay2 = p2.y - uy * 8 + ux * 4;
-                          return <g key={el.id}><line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#333" strokeWidth={1.5} /><polygon points={`${p2.x},${p2.y} ${ax1},${ay1} ${ax2},${ay2}`} fill="#333" /></g>;
-                        }
-                        if (el.type === "label") {
-                          const p1 = toSvg(el.x, el.y);
-                          return <text key={el.id} x={p1.x} y={p1.y} fontSize={10} fontWeight={700} fill="#333" fontFamily="Inter, sans-serif">{el.text}</text>;
-                        }
-                        return null;
-                      })}
-
-                      {/* Pending point */}
-                      {dState._pendingLine && (() => {
-                        const p = toSvg(dState._pendingLine.x, dState._pendingLine.y);
-                        return <circle cx={p.x} cy={p.y} r={4} fill={T.acc} stroke="#fff" strokeWidth={2} />;
-                      })()}
-                    </svg>
-                  </div>
-                );
-              })()}
+              {/* ═══ DISEGNO TECNICO — Condiviso con preventivo ═══ */}
+              <div style={{ marginBottom: 14 }}>
+                <div onClick={() => setShowDisegno(!showDisegno)}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${showDisegno ? T.purple : T.bdr}`, background: showDisegno ? `${T.purple}08` : T.card, cursor: "pointer" }}>
+                  <span style={{ fontSize: 14 }}>✏️</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: showDisegno ? T.purple : T.text, flex: 1 }}>Disegno tecnico</span>
+                  <span style={{ fontSize: 9, color: T.sub, fontFamily: FM }}>{(m.lCentro || m.lAlto || 1200)}×{(m.hCentro || m.hSx || 1400)}mm</span>
+                  {(v.disegno?.elements?.length > 0) && <span style={{ padding: "1px 6px", borderRadius: 4, background: `${T.grn}18`, fontSize: 8, fontWeight: 800, color: T.grn }}>{v.disegno.elements.length} el.</span>}
+                  <span style={{ fontSize: 9, color: T.sub, transform: showDisegno ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▼</span>
+                </div>
+                {showDisegno && (
+                  <DisegnoTecnico
+                    vanoId={v.id}
+                    vanoNome={v.nome || `Vano ${v.numero || ""}`}
+                    vanoDisegno={v.disegno}
+                    realW={m.lCentro || m.lAlto || 1200}
+                    realH={m.hCentro || m.hSx || 1400}
+                    onUpdate={(newDisegno) => updateVanoField(v.id, "disegno", newDisegno)}
+                    onUpdateField={(field, value) => {
+                      if (field === "larghezza") updateMisura(v.id, "lCentro", value);
+                      if (field === "altezza") updateMisura(v.id, "hCentro", value);
+                    }}
+                    onClose={() => setShowDisegno(false)}
+                    T={T}
+                  />
+                )}
+              </div>
               <div style={{ fontSize: 11, fontWeight: 800, color: "#507aff", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>📏 Larghezze</div>
               {bInput("Larghezza ALTO", "lAlto")}
               {m.lAlto > 0 && !m.lCentro && !m.lBasso && (

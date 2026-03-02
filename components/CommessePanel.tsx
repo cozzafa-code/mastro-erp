@@ -1,11 +1,15 @@
 "use client";
 // @ts-nocheck
+// ═══════════════════════════════════════════════════════════
+// MASTRO ERP — CommessePanel v3 — Linear/Notion minimal
+// Removed pipeline bar (noise), cleaner cards, more air
+// ═══════════════════════════════════════════════════════════
 import React from "react";
 import { useMastro } from "./MastroContext";
-import { AFASE, FM, ICO, Ico } from "./mastro-constants";
+import { AFASE, FM, FF, ICO, Ico } from "./mastro-constants";
 import RilieviListPanel from "./RilieviListPanel";
 import CMDetailPanel from "./CMDetailPanel";
-import VanoDetailPanel from "./VanoDetailPanel";
+import VanoSectorRouter from "./VanoSectorRouter";
 import RiepilogoPanel from "./RiepilogoPanel";
 
 export default function CommessePanel() {
@@ -18,183 +22,165 @@ export default function CommessePanel() {
     apriInboxDocumento,
   } = useMastro();
 
-  const renderCMCard = (c, inGrid) => {
+  // ═══ CARD VIEW ═══
+  const renderCard = (c: any, inGrid: boolean) => {
     const fase = PIPELINE.find(p => p.id === c.fase);
     const progress = ((faseIndex(c.fase) + 1) / PIPELINE.length) * 100;
-    const az = AFASE[c.fase] || AFASE["sopralluogo"];
     const TODAY_ISO = new Date().toISOString().split("T")[0];
     const isScad = c.scadenza && c.scadenza < TODAY_ISO;
-    const isUrgente = (giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura") || isScad;
-    // Conta vani misurati da visite
-    const vaniMisurati = c.vaniList?.length > 0
-      ? [...new Set((c.visite || []).flatMap(v => v.vaniMisurati))].length
-      : null;
+    const isFerma = (giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura") || isScad;
+    const vaniA = getVaniAttivi(c);
+    const vaniOk = vaniA.filter(v => Object.values(v.misure || {}).filter(x => (x as number) > 0).length >= 6).length;
+
     return (
-      <div key={c.id} style={{
-        ...S.card,
-        margin: inGrid ? "0" : "0 16px 8px",
-        borderLeft: `3px solid ${isUrgente ? T.red : progress > 50 ? T.grn : T.blue}`
-      }} onClick={() => { setSelectedCM(c); setTab("commesse"); }}>
-        <div style={S.cardInner}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
+      <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); }}
+        style={{
+          background: T.card, borderRadius: 12, cursor: "pointer",
+          border: `1px solid ${isFerma ? T.red + "30" : T.bdr}`,
+          margin: inGrid ? 0 : "0 20px 10px",
+          overflow: "hidden",
+        }}>
+        <div style={{ padding: "14px 16px" }}>
+          {/* Top: code + fase */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: T.sub, fontFamily: FM }}>{c.code}</span>
-                <span style={{ fontSize: 15, fontWeight: 600 }}>{c.cliente}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: T.sub, fontFamily: FM }}>{c.code}</span>
+                {isFerma && <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.red, display: "inline-block" }} />}
               </div>
-              <div style={{ fontSize: 12, color: T.sub, marginTop: 3 }}>
-                {c.indirizzo}
-                {vaniMisurati !== null
-                  ? ` · ${vaniMisurati}/${c.vaniList.length} vani rilevati`
-                  : ` · ${(c.rilievi||[]).length} rilievi`}
-              </div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginTop: 4, lineHeight: 1.3 }}>{c.cliente}{c.cognome ? ` ${c.cognome}` : ""}</div>
+              {c.indirizzo && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{c.indirizzo}</div>}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-              {isUrgente && <span style={{ ...S.badge(T.redLt, T.red), fontSize: 9 }}>FERMA</span>}
-              {c.tipo === "riparazione" && <span style={S.badge(T.orangeLt, T.orange)}>🔧</span>}
-              <span style={S.badge(fase?.color + "18", fase?.color)}>{fase?.nome}</span>
-            </div>
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: "4px 10px", borderRadius: 6, flexShrink: 0,
+              background: (fase?.color || T.acc) + "10", color: fase?.color || T.acc,
+            }}>{fase?.nome}</span>
           </div>
-          {c.alert && <div style={{ ...S.badge(c.alert.includes("Nessun") ? T.orangeLt : T.redLt, c.alert.includes("Nessun") ? T.orange : T.red), marginTop: 6 }}>{c.alert}</div>}
-          <div style={{ height: 3, background: T.bdr, borderRadius: 2, marginTop: 8 }}>
-            <div style={{ height: "100%", borderRadius: 2, background: isUrgente ? T.red : fase?.color, width: `${progress}%`, transition: "width 0.3s" }} />
+
+          {/* Meta row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+            {vaniA.length > 0 && <span style={{ fontSize: 11, color: vaniOk === vaniA.length ? T.grn : T.sub, fontWeight: 500 }}>{vaniOk}/{vaniA.length} vani</span>}
+            {c.euro && <span style={{ fontSize: 12, color: T.text, fontWeight: 700, fontFamily: FM }}>€{parseFloat(c.euro).toLocaleString("it-IT")}</span>}
+            {c.confermato && <span style={{ fontSize: 10, fontWeight: 600, color: T.grn }}>✓ Confermato</span>}
+            {c.scadenza && <span style={{ fontSize: 11, color: isScad ? T.red : T.sub }}>{new Date(c.scadenza + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" })}</span>}
           </div>
-          {/* Box azione suggerita per fase */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "7px 10px", borderRadius: 7, marginTop: 8,
-            background: isUrgente ? T.redLt : az.c + "12",
-            border: `1px solid ${isUrgente ? T.red + "30" : az.c + "30"}`
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 14 }}>{isUrgente ? "🔴" : az.i}</span>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: isUrgente ? T.red : az.c }}>
-                  {isUrgente ? "Commessa bloccata" : az.t}
-                </div>
-                <div style={{ fontSize: 10, color: T.sub, marginTop: 1 }}>
-                  {Math.round(progress)}%
-                  {c.euro ? ` · €${c.euro.toLocaleString("it-IT")}` : ""}
-                  {c.scadenza ? <span style={{ color: isScad ? T.red : T.sub }}>
-                    {` · scad. ${new Date(c.scadenza + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" })}`}
-                  </span> : null}
-                </div>
-              </div>
-            </div>
-            <div style={{ padding: "5px 10px", borderRadius: 6, background: isUrgente ? T.red : az.c, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
-              {isUrgente ? "Sblocca" : "→"}
-            </div>
+
+          {/* Progress */}
+          <div style={{ height: 3, background: T.bdr, borderRadius: 2, marginTop: 12 }}>
+            <div style={{ height: "100%", borderRadius: 2, background: isFerma ? T.red : fase?.color || T.acc, width: `${progress}%`, opacity: 0.6, transition: "width 0.3s" }} />
           </div>
         </div>
       </div>
     );
   };
 
-  const renderCMCardCompact = (c) => {
+  // ═══ LIST VIEW ═══
+  const renderRow = (c: any) => {
     const fase = PIPELINE.find(p => p.id === c.fase);
     const TODAY_ISO = new Date().toISOString().split("T")[0];
     const isScad = c.scadenza && c.scadenza < TODAY_ISO;
     const isFerma = giorniFermaCM(c) >= sogliaDays && c.fase !== "chiusura";
     const vaniA = getVaniAttivi(c);
-    const vaniMis = vaniA.filter(v => Object.values(v.misure||{}).filter(x=>(x as number)>0).length >= 6).length;
-    const vaniInc = vaniA.filter(v => { const n=Object.values(v.misure||{}).filter(x=>(x as number)>0).length; return n>0&&n<6; }).length;
-    const vaniBloc = vaniA.filter(v => v.note?.startsWith("🔴 BLOCCATO")).length;
-    const az = AFASE[c.fase] || AFASE["sopralluogo"];
+    const vaniOk = vaniA.filter(v => Object.values(v.misure || {}).filter(x => (x as number) > 0).length >= 6).length;
     const faseIdx = PIPELINE.findIndex(x => x.id === c.fase);
-    const progFase = faseIdx >= 0 ? Math.round((faseIdx+1)/PIPELINE.length*100) : 0;
+    const prog = faseIdx >= 0 ? Math.round((faseIdx + 1) / PIPELINE.length * 100) : 0;
+
     return (
       <div key={c.id} onClick={() => { setSelectedCM(c); setTab("commesse"); }}
-        style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:`1px solid ${T.bdr}`,
-          borderLeft:`3px solid ${isFerma?T.red:isScad?T.orange:fase?.color||T.acc}`,
-          background: isFerma ? "rgba(255,59,48,0.03)" : T.card, cursor:"pointer" }}>
-        {/* Colonna sinistra: codice + cliente */}
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-            <span style={{ fontSize:10, color:T.sub, fontFamily:FM }}>{c.code}</span>
-            <span style={{ fontSize:14, fontWeight:700 }}>{c.cliente}</span>
-            {isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.red, background:T.redLt, borderRadius:6, padding:"1px 5px" }}>FERMA {giorniFermaCM(c)}gg</span>}
-            {isScad && !isFerma && <span style={{ fontSize:9, fontWeight:800, color:T.orange, background:T.orangeLt, borderRadius:6, padding:"1px 5px" }}>SCAD</span>}
+        style={{
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "13px 16px", cursor: "pointer",
+          borderBottom: `1px solid ${T.bdr}`,
+        }}>
+        <div style={{ width: 3, height: 32, borderRadius: 2, background: isFerma ? T.red : fase?.color || T.acc, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{c.cliente}</span>
+            <span style={{ fontSize: 10, color: T.sub, fontFamily: FM }}>{c.code}</span>
+            {isFerma && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.red, flexShrink: 0 }} />}
           </div>
-          <div style={{ display:"flex", gap:8, marginTop:3, alignItems:"center", flexWrap:"wrap" }}>
-            <span style={{ ...S.badge(fase?.color+"18"||T.accLt, fase?.color||T.acc), fontSize:10 }}>{fase?.ico} {fase?.nome}</span>
-            {c.trackingStato && <span style={{ fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:4, background: c.trackingStato==="montato"?"#34c75920":c.trackingStato==="pronto"?"#34c75920":"#5856d620", color: c.trackingStato==="montato"?"#34c759":c.trackingStato==="pronto"?"#34c759":"#5856d6" }}>{{ordinato:"📦",produzione:"🏭",pronto:"✅",consegnato:"🚛",montato:"🔧"}[c.trackingStato]} {c.trackingStato}</span>}
-            {c.confermato && <span style={{ fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:4, background:"#34c75920", color:"#34c759" }}>✍️ Confermato</span>}
-            {c.euro && <span style={{ fontSize:11, color:T.grn, fontWeight:700 }}>€{c.euro.toLocaleString("it-IT")}</span>}
-            {c.scadenza && <span style={{ fontSize:10, color: isScad ? T.red : T.sub }}>📅 {c.scadenza}</span>}
-          </div>
-        </div>
-        {/* Colonna destra: info mancanti */}
-        <div style={{ textAlign:"right", flexShrink:0, minWidth:80 }}>
-          {vaniA.length > 0 ? (
-            <div style={{ fontSize:11, fontWeight:600 }}>
-              {vaniBloc > 0 && <div style={{ color:T.red }}>🔴 {vaniBloc} bloccati</div>}
-              {vaniInc > 0 && <div style={{ color:T.orange }}>⚠ {vaniInc} incompleti</div>}
-              {vaniBloc===0 && vaniInc===0 && <div style={{ color:T.grn }}>✅ {vaniMis}/{vaniA.length}</div>}
-            </div>
-          ) : (
-            <div style={{ fontSize:10, color:T.sub }}>Nessun vano</div>
-          )}
-          <div style={{ marginTop:4, fontSize:10, color: isFerma?T.red:fase?.color||T.acc, fontWeight:700 }}>{progFase}%</div>
-          <div style={{ marginTop:3, height:3, width:60, background:T.bdr, borderRadius:2, marginLeft:"auto" }}>
-            <div style={{ height:"100%", width:`${progFase}%`, background:isFerma?T.red:fase?.color||T.acc, borderRadius:2 }}/>
+          <div style={{ display: "flex", gap: 8, marginTop: 3, alignItems: "center" }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: fase?.color || T.acc }}>{fase?.nome}</span>
+            {vaniA.length > 0 && <span style={{ fontSize: 10, color: T.sub }}>{vaniOk}/{vaniA.length} vani</span>}
+            {c.euro && <span style={{ fontSize: 11, fontWeight: 700, color: T.text, fontFamily: FM }}>€{parseFloat(c.euro).toLocaleString("it-IT")}</span>}
           </div>
         </div>
-        <span style={{ color:T.sub, fontSize:16 }}>›</span>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, fontFamily: FM }}>{prog}%</div>
+        </div>
+        <span style={{ color: T.sub + "50", fontSize: 16 }}>›</span>
       </div>
     );
   };
 
-    if (showRiepilogo && selectedCM) return <RiepilogoPanel />;
-    if (selectedVano) return <VanoDetailPanel />;
+  // ═══ ROUTING ═══
+  if (showRiepilogo && selectedCM) return <RiepilogoPanel />;
+  if (selectedVano) return <VanoSectorRouter />;
+  if (selectedRilievo) return <CMDetailPanel />;
+  if (selectedCM) return <RilieviListPanel />;
 
-      if (selectedRilievo) return <CMDetailPanel />;
-    if (selectedCM) return <RilieviListPanel />;
-    return (
-      <div style={{ paddingBottom: 80 }}>
-        <div style={S.header}>
-          <div style={{ flex: 1 }}>
-            <div style={S.headerTitle}>Commesse</div>
-            <div style={S.headerSub}>{cantieri.length} totali · {filtered.length} visibili</div>
-          </div>
-          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-            {/* Toggle vista */}
-            <div style={{ display:"flex", background:T.bg, borderRadius:8, padding:2, gap:1 }}>
-              <div onClick={() => setCmView("list")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="list"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Lista compatta">☰</div>
-              <div onClick={() => setCmView("card")} style={{ padding:"4px 8px", borderRadius:6, background:cmView==="card"?T.card:"transparent", cursor:"pointer", fontSize:14 }} title="Card grandi">▦</div>
-            </div>
-            <div onClick={() => apriInboxDocumento()} style={{ width:36, height:36, borderRadius:10, background:"#af52de", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:18 }} title="Carica documento fornitore">📥</div>
-            <div onClick={() => setShowModal("commessa")} style={{ width:36, height:36, borderRadius:10, background:T.acc, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:20, fontWeight:300 }}>+</div>
-          </div>
+  return (
+    <div style={{ paddingBottom: 80 }}>
+      {/* Header */}
+      <div style={{ padding: "20px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: "-0.03em" }}>Commesse</div>
+          <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{cantieri.length} totali · {filtered.length} visibili</div>
         </div>
-
-        {/* Filtri fase */}
-        <div style={{ display:"flex", gap:6, padding:"4px 16px 10px", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
-          <div style={S.chip(filterFase === "tutte")} onClick={() => setFilterFase("tutte")}>Tutte ({cantieri.length})</div>
-          {PIPELINE.map(p => {
-            const n = cantieri.filter(c => c.fase === p.id).length;
-            return n > 0 ? <div key={p.id} style={S.chip(filterFase === p.id)} onClick={() => setFilterFase(p.id)}>{p.ico} {p.nome} ({n})</div> : null;
-          })}
-        </div>
-
-        {/* Search */}
-        <div style={{ padding:"0 16px", marginBottom:10 }}>
-          <input style={{ ...S.input, width:"100%", boxSizing:"border-box" }} placeholder="Cerca per cliente, codice, indirizzo..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
-        </div>
-
-        {/* Lista o Card */}
-        {cmView === "list" ? (
-          <div style={{ background:T.card, margin:"0 16px", borderRadius:T.r, border:`1px solid ${T.bdr}`, overflow:"hidden" }}>
-            {filtered.length === 0
-              ? <div style={{ padding:"24px", textAlign:"center", color:T.sub }}>Nessuna commessa trovata</div>
-              : filtered.map(c => renderCMCardCompact(c))
-            }
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", background: T.bg, borderRadius: 8, padding: 2, border: `1px solid ${T.bdr}` }}>
+            <div onClick={() => setCmView("list")} style={{ padding: "6px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, background: cmView === "list" ? T.card : "transparent", color: cmView === "list" ? T.text : T.sub, boxShadow: cmView === "list" ? "0 1px 2px rgba(0,0,0,0.06)" : "none" }}>☰</div>
+            <div onClick={() => setCmView("card")} style={{ padding: "6px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, background: cmView === "card" ? T.card : "transparent", color: cmView === "card" ? T.text : T.sub, boxShadow: cmView === "card" ? "0 1px 2px rgba(0,0,0,0.06)" : "none" }}>▦</div>
           </div>
-        ) : (
-          <div style={isDesktop ? { display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, padding:"0 16px" } : isTablet ? { display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, padding:"0 16px" } : {}}>
-            {filtered.map(c => renderCMCard(c, isTablet || isDesktop))}
-          </div>
-        )}
+          <div onClick={() => setShowModal("commessa")} style={{ width: 36, height: 36, borderRadius: 10, background: T.text, color: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 20, fontWeight: 300 }}>+</div>
+        </div>
       </div>
-    );
 
+      {/* Search */}
+      <div style={{ padding: "0 20px 10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
+          <span style={{ fontSize: 14, color: T.sub }}>🔍</span>
+          <input style={{ flex: 1, border: "none", background: "transparent", fontSize: 13, color: T.text, outline: "none", fontFamily: FF }} placeholder="Cerca cliente, codice, indirizzo..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
+          {searchQ && <div onClick={() => setSearchQ("")} style={{ cursor: "pointer", fontSize: 13, color: T.sub, padding: 2 }}>✕</div>}
+        </div>
+      </div>
+
+      {/* Chips */}
+      <div style={{ display: "flex", gap: 6, padding: "0 20px 12px", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+        <div onClick={() => setFilterFase("tutte")} style={{
+          padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0,
+          background: filterFase === "tutte" ? T.text : "transparent", color: filterFase === "tutte" ? "#fff" : T.sub,
+          border: `1px solid ${filterFase === "tutte" ? T.text : T.bdr}`,
+        }}>Tutte {cantieri.length}</div>
+        {PIPELINE.filter(p => p.attiva).map(p => {
+          const n = cantieri.filter(c => c.fase === p.id).length;
+          if (n === 0) return null;
+          const sel = filterFase === p.id;
+          return (
+            <div key={p.id} onClick={() => setFilterFase(sel ? "tutte" : p.id)} style={{
+              padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0,
+              background: sel ? (p.color || T.acc) + "12" : "transparent", color: sel ? p.color || T.acc : T.sub,
+              border: `1px solid ${sel ? (p.color || T.acc) + "30" : T.bdr}`,
+            }}>{p.nome} · {n}</div>
+          );
+        })}
+      </div>
+
+      {/* Content */}
+      {filtered.length === 0 ? (
+        <div style={{ padding: "48px 20px", textAlign: "center" }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: T.text }}>Nessuna commessa</div>
+          <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>Modifica i filtri o crea una nuova commessa</div>
+        </div>
+      ) : cmView === "list" ? (
+        <div style={{ margin: "0 20px", borderRadius: 12, border: `1px solid ${T.bdr}`, overflow: "hidden", background: T.card }}>
+          {filtered.map(c => renderRow(c))}
+        </div>
+      ) : (
+        <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, padding: "0 20px" } : isTablet ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 20px" } : { padding: "0 0px" }}>
+          {filtered.map(c => renderCard(c, isTablet || isDesktop))}
+        </div>
+      )}
+    </div>
+  );
 }

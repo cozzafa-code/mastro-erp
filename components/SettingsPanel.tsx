@@ -77,7 +77,28 @@ export default function SettingsPanel() {
       {/* Settings sub-tabs — scrollable */}
       <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "8px 16px 12px", borderRadius: 8, border: `1px solid ${T.bdr}` }}>
         <div style={{ display: "flex", minWidth: "max-content" }}>
-          {[{ id: "settore", l: "🎯 Settore" }, { id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "piano", l: "💎 Piano" }, { id: "team", l: "👥 Team" }, { id: "squadre", l: "🔧 Squadre" }, { id: "fatture", l: "💰 Fatture" }, { id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "tipologie", l: "📐 Tipologie" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "controtelaio", l: "🔲 Controtelaio" }, { id: "tapparella", l: "⬇ Tapparella" }, { id: "persiana", l: "🏠 Persiana" }, { id: "zanzariera", l: "🦟 Zanzariera" }, { id: "cassonetto", l: "🧊 Cassonetto" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "libreria", l: "📦 Libreria" }, { id: "importa", l: "📥 Importa" }, { id: "guida", l: "📖 Guida" }, { id: "kit", l: "🔧 Kit" }, { id: "marketplace", l: "🏪 Fornitori" }, { id: "temi", l: "🎨 Temi" }].map(t => (
+          {[
+            // Core — sempre visibili
+            { id: "settore", l: "🎯 Settore" }, { id: "azienda", l: "🏢 Azienda" }, { id: "generali", l: "⚙️ Generali" }, { id: "piano", l: "💎 Piano" }, { id: "team", l: "👥 Team" }, { id: "squadre", l: "🔧 Squadre" }, { id: "fatture", l: "💰 Fatture" },
+            // Serramenti — solo se attivo
+            ...(settoriAttivi.includes("serramenti") ? [{ id: "sistemi", l: "🏗 Sistemi" }, { id: "colori", l: "🎨 Colori" }, { id: "vetri", l: "🪟 Vetri" }, { id: "coprifili", l: "📏 Coprifili" }, { id: "lamiere", l: "🔩 Lamiere" }, { id: "controtelaio", l: "🔲 Controtelaio" }] : []),
+            // Persiane
+            ...(settoriAttivi.includes("persiane") ? [{ id: "persiana", l: "🏠 Persiana" }] : []),
+            // Tapparelle
+            ...(settoriAttivi.includes("tapparelle") ? [{ id: "tapparella", l: "⬇ Tapparella" }, { id: "cassonetto", l: "🧊 Cassonetto" }] : []),
+            // Zanzariere
+            ...(settoriAttivi.includes("zanzariere") ? [{ id: "zanzariera", l: "🦟 Zanzariera" }] : []),
+            // Porte — nuovo
+            ...(settoriAttivi.includes("porte") ? [{ id: "porte_mat", l: "🚪 Mat. Porte" }, { id: "porte_cern", l: "🔩 Cerniere" }, { id: "porte_serr", l: "🔒 Serrature" }, { id: "porte_man", l: "🔑 Maniglie" }] : []),
+            // Tende da Sole — nuovo
+            ...(settoriAttivi.includes("tende") ? [{ id: "tende_tess", l: "🧵 Tessuti" }, { id: "tende_mot", l: "⚡ Motori Tende" }] : []),
+            // Box Doccia — nuovo
+            ...(settoriAttivi.includes("boxdoccia") ? [{ id: "bd_vetri", l: "🚿 Vetri Doccia" }, { id: "bd_profili", l: "🔧 Profili Doccia" }] : []),
+            // Cancelli — nuovo
+            ...(settoriAttivi.includes("cancelli") ? [{ id: "canc_mat", l: "🏗️ Mat. Cancelli" }, { id: "canc_auto", l: "⚡ Automazioni" }] : []),
+            // Sempre visibili
+            { id: "tipologie", l: "📐 Tipologie" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "libreria", l: "📦 Libreria" }, { id: "importa", l: "📥 Importa" }, { id: "guida", l: "📖 Guida" }, { id: "kit", l: "🔧 Kit" }, { id: "marketplace", l: "🏪 Fornitori" }, { id: "temi", l: "🎨 Temi" },
+          ].map(t => (
             <div key={t.id} onClick={() => setSettingsTab(t.id)} style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 600, background: settingsTab === t.id ? T.acc : T.card, color: settingsTab === t.id ? "#fff" : T.sub, cursor: "pointer", whiteSpace: "nowrap" }}>
               {t.l}
             </div>
@@ -2110,6 +2131,220 @@ export default function SettingsPanel() {
             cursor: "pointer", fontFamily: "inherit", marginTop: 8,
           }}>🧹 PULISCI TUTTO — Parti da zero</button>
         </div>
+
+        {/* ═══════════════════════════════════════════════════════ */}
+        {/* PORTE — Materiali */}
+        {/* ═══════════════════════════════════════════════════════ */}
+        {settingsTab === "porte_mat" && <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Materiali Porte</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura i materiali disponibili per le porte interne e blindate.</div>
+          {(ctx.porteMatDB || ["Legno massello","Laccato opaco","Laccato lucido","Laminato CPL","Laminato HPL","Vetro temperato","Blindata","Metallica REI","Light","EI tagliafuoco"]).map((m: string, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}`, marginBottom: 4 }}>
+              <span style={{ fontSize: 14 }}>🚪</span>
+              <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: T.text }}>{m}</span>
+              <span style={{ fontSize: 9, color: T.grn || T.acc, fontWeight: 700, background: (T.grn||T.acc) + "15", padding: "2px 8px", borderRadius: 6 }}>Attivo</span>
+            </div>
+          ))}
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Finiture porta</div>
+            {["Liscio","Pantografato","Inciso","Con vetro","Bugnato","Dogato H","Dogato V"].map((f: string, i: number) => (
+              <div key={i} style={{ display: "inline-block", padding: "5px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{f}</div>
+            ))}
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Colori/Essenze</div>
+            {["Bianco laccato","Bianco matrix","Grigio 7035","Grigio 7016","Noce nazionale","Noce canaletto","Rovere sbiancato","Rovere naturale","Rovere grigio","Wengé","Olmo","Frassino","RAL custom"].map((c: string, i: number) => (
+              <div key={i} style={{ display: "inline-block", padding: "5px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{c}</div>
+            ))}
+          </div>
+        </div>}
+
+        {/* PORTE — Cerniere */}
+        {settingsTab === "porte_cern" && <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Cerniere e Ferramenta</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Gestisci tipi di cerniere, quantità e finiture disponibili.</div>
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Tipi cerniera</div>
+          {["A scomparsa regolabile","A vista 3D","A molla (chiusura auto)","A bilico (pivot)","Per porta blindata","Per porta REI","Anuba (legno)","A libro"].map((c: string, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 8, border: `1px solid ${T.bdr}`, marginBottom: 3 }}>
+              <span style={{ fontSize: 12 }}>🔩</span>
+              <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: T.text }}>{c}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Finiture cerniere</div>
+          {["Cromo satinato","Cromo lucido","Nero opaco","Bronzo","Ottone","Bianco","Inox","Coordinata porta"].map((f: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{f}</div>
+          ))}
+        </div>}
+
+        {/* PORTE — Serrature */}
+        {settingsTab === "porte_serr" && <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Serrature</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura tipi serratura, cilindri e chiudiporta.</div>
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Tipi serratura (CISA)</div>
+          {["Da infilare standard","Da infilare 4 mandate","Da applicare","Multipunto","Elettrica","Smart","Antipanico"].map((s: string, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 8, border: `1px solid ${T.bdr}`, marginBottom: 3 }}>
+              <span style={{ fontSize: 12 }}>🔒</span>
+              <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: T.text }}>{s}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Cilindri</div>
+          {["Europeo","Alta sicurezza","Per pomolo","Doppia mappa","Elettronico"].map((c: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{c}</div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Chiudiporta</div>
+          {["Nessuno","A braccio","A slitta","A pavimento","Elettromagnetico"].map((c: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{c}</div>
+          ))}
+        </div>}
+
+        {/* PORTE — Maniglie */}
+        {settingsTab === "porte_man" && <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Maniglieria (HOPPE)</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Gestisci tipi, serie e finiture maniglie.</div>
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Tipo maniglia</div>
+          {["Su rosetta","Su placca","Maniglione","Scorrevole incasso","Tagliafuoco"].map((m: string, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 8, border: `1px solid ${T.bdr}`, marginBottom: 3 }}>
+              <span style={{ fontSize: 12 }}>🔑</span>
+              <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: T.text }}>{m}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Serie HOPPE</div>
+          {["Paris","Tokyo","Amsterdam","Atlanta","Milano","Dallas","Singapore","London","Amsterdam-E","Sertos","Liège","Vitoria","Trondheim","Toulon","Dallas SecuSan","Singapore inox"].map((s: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{s}</div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Finiture maniglie</div>
+          {["Cromo satinato F69","Cromo lucido F1","Nero opaco F9714M","Bronzo F4","Ottone F3","Inox F69SS","Bianco RAL 9016","Rame F49","Titanio F9"].map((f: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{f}</div>
+          ))}
+        </div>}
+
+        {/* ═══════════════════════════════════════════════════════ */}
+        {/* TENDE DA SOLE — Tessuti */}
+        {/* ═══════════════════════════════════════════════════════ */}
+        {settingsTab === "tende_tess" && <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Tessuti Tende da Sole</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura i tipi di tessuto e i colori/pattern disponibili.</div>
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Tipi tessuto</div>
+          {["Acrilico tinto massa","Poliestere spalmato","PVC microforato","Soltis 92 (screen)","Soltis 86 (blackout)","Dickson Orchestra","Tempotest Parà"].map((t: string, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 8, border: `1px solid ${T.bdr}`, marginBottom: 3 }}>
+              <span style={{ fontSize: 12 }}>🧵</span>
+              <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: T.text }}>{t}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Colori/Pattern</div>
+          {["Bianco","Avorio","Beige","Grigio chiaro","Grigio scuro","Tortora","Sabbia","Bordeaux","Blu navy","Verde bosco","Arancione","Rosso","Rigato classico","Rigato moderno","Fantasia","Da campionario"].map((c: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{c}</div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Cassonetti tenda</div>
+          {["Nessuno (aperto)","Semicassonetto","Cassonetto integrale","Cassonetto a scomparsa"].map((c: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{c}</div>
+          ))}
+        </div>}
+
+        {/* TENDE DA SOLE — Motori */}
+        {settingsTab === "tende_mot" && <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Motorizzazioni Tende</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura tipi di comando, sensori e accessori.</div>
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Tipo comando</div>
+          {["Arganello manuale","Manovella (asta)","Motore tubolare Ø45","Motore tubolare Ø60","Motore radio Somfy","Motore radio Nice","Motore WiFi/App","Motore solare"].map((m: string, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 8, border: `1px solid ${T.bdr}`, marginBottom: 3 }}>
+              <span style={{ fontSize: 12 }}>⚡</span>
+              <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: T.text }}>{m}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Sensori</div>
+          {["Nessuno","Sensore vento","Sensore sole","Sensore vento+sole","Sensore vento+sole+pioggia","Stazione meteo completa"].map((s: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{s}</div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Accessori</div>
+          {["Telecomando mono","Telecomando multi","Timer programmabile","Centralina domotica","Led integrato barra","Led integrato cassonetto","Volant frontale","Volant con guide"].map((a: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{a}</div>
+          ))}
+        </div>}
+
+        {/* ═══════════════════════════════════════════════════════ */}
+        {/* BOX DOCCIA — Vetri */}
+        {/* ═══════════════════════════════════════════════════════ */}
+        {settingsTab === "bd_vetri" && <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Vetri Box Doccia</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura tipi vetro, finiture e trattamenti anticalcare.</div>
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Tipo vetro</div>
+          {["Temperato 6mm","Temperato 8mm","Stratificato 6+6","Temperato extra-chiaro 6mm","Temperato extra-chiaro 8mm"].map((v: string, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 8, border: `1px solid ${T.bdr}`, marginBottom: 3 }}>
+              <span style={{ fontSize: 12 }}>🪟</span>
+              <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: T.text }}>{v}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Finiture vetro</div>
+          {["Trasparente","Satinato integrale","Satinato fascia centrale","Serigrafato","Fumé","Specchiato","Decorato"].map((f: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{f}</div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Trattamenti</div>
+          {["Nessuno","Anticalcare standard","Anticalcare permanente (ClearShield)","Easy-clean nanotecnologico"].map((t: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{t}</div>
+          ))}
+        </div>}
+
+        {/* BOX DOCCIA — Profili */}
+        {settingsTab === "bd_profili" && <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Profili Box Doccia</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura materiali profilo e finiture.</div>
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Materiale profili</div>
+          {["Alluminio","Acciaio inox","Ottone","Frameless (senza profili)"].map((m: string, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 8, border: `1px solid ${T.bdr}`, marginBottom: 3 }}>
+              <span style={{ fontSize: 12 }}>🔧</span>
+              <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: T.text }}>{m}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Finiture profilo</div>
+          {["Cromo lucido","Cromo satinato","Nero opaco","Nero satinato","Oro spazzolato","Bronzo","Rame","Bianco","Gunmetal"].map((f: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{f}</div>
+          ))}
+        </div>}
+
+        {/* ═══════════════════════════════════════════════════════ */}
+        {/* CANCELLI — Materiali */}
+        {/* ═══════════════════════════════════════════════════════ */}
+        {settingsTab === "canc_mat" && <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Materiali Cancelli e Recinzioni</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura materiali, tamponamenti e finiture.</div>
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Materiali</div>
+          {["Ferro zincato verniciato","Alluminio","Acciaio inox 304","Acciaio inox 316","COR-TEN","Ferro battuto","WPC composito","Legno trattato"].map((m: string, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 8, border: `1px solid ${T.bdr}`, marginBottom: 3 }}>
+              <span style={{ fontSize: 12 }}>🏗️</span>
+              <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: T.text }}>{m}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Tamponamenti</div>
+          {["Doghe orizzontali","Doghe verticali","Lamelle orientabili","Pannello cieco","Grigliato","Rete elettrosaldata","Tubolare verticale","Tubolare orizzontale","Misto","Vetro"].map((t: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{t}</div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Colori RAL</div>
+          {["Nero RAL 9005","Antracite RAL 7016","Grigio RAL 7035","Bianco RAL 9010","Marrone RAL 8017","Verde RAL 6005","Corten effect","Effetto legno","RAL custom"].map((c: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{c}</div>
+          ))}
+        </div>}
+
+        {/* CANCELLI — Automazioni */}
+        {settingsTab === "canc_auto" && <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Automazioni Cancelli</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configura tipi motore, accessori automazione e sensori.</div>
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Tipo automazione</div>
+          {["Manuale","Predisposizione cavidotto","Motore interrato 230V","Motore interrato 24V","Motore a cremagliera","Motore a catena","Motore solare","Motore a batteria"].map((a: string, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 8, border: `1px solid ${T.bdr}`, marginBottom: 3 }}>
+              <span style={{ fontSize: 12 }}>⚡</span>
+              <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: T.text }}>{a}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Accessori automazione</div>
+          {["Telecomando 2ch","Telecomando 4ch","Tastierino numerico","Lettore badge","Fotocellule coppia","Lampeggiante","Antenna esterna","Costa sensibile","Selettore chiave","Modulo WiFi/App","Batteria tampone"].map((a: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{a}</div>
+          ))}
+          <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, marginTop: 12, fontWeight: 700, textTransform: "uppercase" }}>Pilastri</div>
+          {["Esistenti","Nuovi muratura","Nuovi acciaio","Nuovi prefabbricati","Rivestimento su esistenti"].map((p: string, i: number) => (
+            <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{p}</div>
+          ))}
+        </div>}
 
       </div>
     </div>

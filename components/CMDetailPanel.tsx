@@ -50,6 +50,8 @@ export default function CMDetailPanel() {
     // Business logic
     generaPreventivoPDF, creaFattura, creaOrdineFornitore,
     apriInboxDocumento,
+    // Settori
+    tipologieFiltrate, settoriAttivi,
   } = useMastro();
 
     const [fabSecOpen, setFabSecOpen] = React.useState(false);
@@ -75,6 +77,28 @@ export default function CMDetailPanel() {
       { id: "75", l: "Barriere 75%", perc: 75 },
     ];
     const TIPI_VANO = ["F1A","F2A","F3A","PF1A","PF2A","PF3A","VAS","FISSO","SC2A","SC3A","PORTA","SCOR","BOX"];
+    // PORTE — preventivo fields
+    const PT_MAT = ["Legno massello","Laccato opaco","Laccato lucido","Laminato CPL","Laminato HPL","Vetro temperato","Blindata","Metallica REI","Light","EI tagliafuoco"];
+    const PT_SENSO = ["DX spinta","DX tirare","SX spinta","SX tirare"];
+    const PT_FINITURA = ["Liscio","Pantografato","Inciso","Con vetro","Bugnato","Dogato H","Dogato V"];
+    const PT_COLORE = ["Bianco laccato","Bianco matrix","Grigio 7035","Grigio 7016","Noce nazionale","Noce canaletto","Rovere sbiancato","Rovere naturale","Rovere grigio","Wengé","Olmo","Frassino","RAL custom"];
+    const PT_APERTURA = ["Battente singola","Battente doppia","Scomparsa singola","Scomparsa doppia","Esterno muro","Libro simmetrica","Libro asimmetrica","Filomuro battente","Filomuro scorrevole"];
+    const PT_CT = ["Standard legno","Metallo zincato","Scrigno scomparsa","Eclisse scomparsa","Filomuro alu","Esistente"];
+    const PT_MANIGLIA = ["Su rosetta","Su placca","Maniglione","Scorrevole incasso","Tagliafuoco"];
+    const PT_SERRATURA = ["Da infilare standard","Da infilare 4 mandate","Multipunto","Elettrica","Smart","Antipanico"];
+    const PT_SOGLIA = ["Automatica","Fissa pavimento","Ribassata","Nessuna","Esistente"];
+    // BOX DOCCIA
+    const BD_TIPO = ["Nicchia","Angolo","Walk-in","Vasca","Semicircolare","Tre lati"];
+    const BD_VETRO = ["Trasparente 6mm","Trasparente 8mm","Satinato 6mm","Satinato 8mm","Stampato 4mm","Serigrafato","Fumè"];
+    const BD_PROFILO = ["Cromo lucido","Cromo satinato","Nero opaco","Oro spazzolato","Bronzo","Bianco","Senza profilo"];
+    const BD_APERTURA = ["Scorrevole","Battente","Saloon","Soffietto","Pivot","Walk-in fisso"];
+    // CANCELLI
+    const CN_TIPO = ["Battente singolo","Battente doppio","Scorrevole","Scorrevole autoportante","Sezionale","Basculante","Pedonale"];
+    const CN_MAT = ["Ferro zincato","Ferro verniciato","Alluminio","Acciaio inox","Acciaio corten","Legno","Misto ferro/legno"];
+    const CN_TAMP = ["Doghe orizzontali","Doghe verticali","Lamiera piena","Lamiera forata","Pannelli sandwich","Grigliato","Pali tondi","Pali quadri"];
+    const CN_AUTO = ["Nessuna","Motore interrato","Motore a braccio","Motore scorrevole","Motore a cremagliera"];
+    const CN_MARCA = ["FAAC","CAME","BFT","Nice","Somfy","Benincà","Fadini"];
+    const CN_FIN = ["Zincato grezzo","Verniciato RAL","Corten naturale","Effetto legno","Anodizzato"];
 
     // ═══ PREVENTIVO WORKSPACE VIEW ═══
     if (prevWorkspace) {
@@ -493,6 +517,11 @@ export default function CMDetailPanel() {
                 const lv = v.misure?.lCentro || v.larghezza || v.l || 0;
                 const hv = v.misure?.hCentro || v.altezza || v.h || 0;
                 const acc = v.accessori || {};
+                const settoreVano = TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.settore || "serramenti";
+                const isPorte = settoreVano === "porte";
+                const isBoxDoccia = settoreVano === "boxdoccia";
+                const isCancelli = settoreVano === "cancelli";
+                const isSerr = !isPorte && !isBoxDoccia && !isCancelli;
                 return (
                   <div key={v.id} style={{ background: T.card, borderRadius: 12, marginBottom: 6, border: `1.5px solid ${isEd ? T.acc : T.bdr}`, overflow: "hidden" }}>
                     {/* Row compatta */}
@@ -504,7 +533,7 @@ export default function CMDetailPanel() {
                           <span style={{ fontWeight: 400, color: T.sub, fontSize: 10 }}> {v.tipo || "F2A"} · {v.pezzi || 1}pz</span>
                           {v.parentId && <span style={{ fontSize: 8, background: `${T.orange}15`, color: T.orange, padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>MOD</span>}
                         </div>
-                        <div style={{ fontSize: 10, color: T.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lv}×{hv} · {v.colore || "Bianco"}{v.controtelaio && v.controtelaio !== "Nessuno" ? " · CT" : ""}{acc.tapparella?.attivo ? " · T" : ""}{acc.persiana?.attivo ? " · P" : ""}{acc.zanzariera?.attivo ? " · Z" : ""}</div>
+                        <div style={{ fontSize: 10, color: T.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lv}×{hv} · {isPorte ? `${v.materiale||"—"} · ${v.apertura||"—"} · ${v.senso||""}` : isBoxDoccia ? `${v.tipoBox||"—"} · ${v.vetroBox||"—"} · ${v.profiloBox||""}` : isCancelli ? `${v.tipoCancello||"—"} · ${v.materialeCancello||"—"} · ${v.automazione||""}` : `${v.colore || "Bianco"}${v.controtelaio && v.controtelaio !== "Nessuno" ? " · CT" : ""}${acc.tapparella?.attivo ? " · T" : ""}${acc.persiana?.attivo ? " · P" : ""}${acc.zanzariera?.attivo ? " · Z" : ""}`}</div>
                       </div>
                       <div style={{ textAlign: "right" as any, flexShrink: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 900, color: T.acc }}>€{pwFmt(pTot)}</div>
@@ -2012,14 +2041,92 @@ export default function CMDetailPanel() {
                           <div style={{ width: 56, textAlign: "center", paddingTop: 14 }}><div style={{ fontSize: 9, color: T.sub2 }}>mq</div><div style={{ fontSize: 15, fontWeight: 900, color: T.acc }}>{((lv * hv) / 1000000).toFixed(2)}</div></div>
                         </div>
 
-                        {/* ── SISTEMA + COLORE + VETRO ── */}
+                        {/* ── SETTORE: SERRAMENTI ── */}
+                        {isSerr && (<>
                         <div id={`pw-sec-sistema-${v.id}`} style={{ marginBottom: 6 }}><div style={{ fontSize: 9, color: T.sub2 }}>Sistema</div><select value={v.sistema || c.sistema || ""} onChange={e => pwUpdVano(v.id, "sistema", e.target.value)} style={inputPw}>{(sistemiDB || []).map(s => <option key={s.nome || s.sistema} value={s.nome || `${s.marca} ${s.sistema}`}>{s.nome || `${s.marca} ${s.sistema}`}</option>)}</select></div>
                         <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
                           <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Colore</div><select value={v.colore || ""} onChange={e => pwUpdVano(v.id, "colore", e.target.value)} style={inputPw}>{(coloriDB || []).map(cl => <option key={cl.nome} value={cl.nome}>{cl.nome}</option>)}</select></div>
                           <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Vetro</div><select value={v.vetro || ""} onChange={e => pwUpdVano(v.id, "vetro", e.target.value)} style={inputPw}>{(vetriDB || []).map(vt => <option key={vt.nome || vt.code} value={vt.nome || vt.code}>{vt.nome || vt.code}</option>)}</select></div>
                         </div>
+                        </>)}
 
-                        {/* ══════ CONTROTELAIO (SEZIONE AMPIA CON MISURE) ══════ */}
+                        {/* ── SETTORE: PORTE ── */}
+                        {isPorte && (<>
+                        <div style={{ marginBottom: 8 }}>
+                          <div style={{ fontSize: 9, color: T.sub2, marginBottom: 3 }}>Spessore muro (mm)</div>
+                          <input type="number" value={v.misure?.spessoreMuro || ""} onChange={e => { const mis = { ...(v.misure||{}), spessoreMuro: parseInt(e.target.value)||0 }; pwUpdVano(v.id, "misure", mis); }} style={{ ...inputPw, maxWidth: 160 }} placeholder="mm" />
+                        </div>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Materiale</div><select value={v.materiale || ""} onChange={e => pwUpdVano(v.id, "materiale", e.target.value)} style={inputPw}><option value="">—</option>{PT_MAT.map(m => <option key={m}>{m}</option>)}</select></div>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Finitura</div><select value={v.finitura || ""} onChange={e => pwUpdVano(v.id, "finitura", e.target.value)} style={inputPw}><option value="">—</option>{PT_FINITURA.map(f => <option key={f}>{f}</option>)}</select></div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Colore/Essenza</div><select value={v.colore || ""} onChange={e => pwUpdVano(v.id, "colore", e.target.value)} style={inputPw}><option value="">—</option>{PT_COLORE.map(c2 => <option key={c2}>{c2}</option>)}</select></div>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Apertura</div><select value={v.apertura || ""} onChange={e => pwUpdVano(v.id, "apertura", e.target.value)} style={inputPw}><option value="">—</option>{PT_APERTURA.map(a => <option key={a}>{a}</option>)}</select></div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 9, color: T.sub2, marginBottom: 3 }}>Senso</div>
+                            <div style={{ display: "flex", gap: 3 }}>{PT_SENSO.map(s => (<div key={s} onClick={() => pwUpdVano(v.id, "senso", s)} style={chipPw(v.senso === s)}>{s}</div>))}</div>
+                          </div>
+                        </div>
+                        {/* CT Porta */}
+                        <div style={{ background: `${T.acc}05`, borderRadius: 12, padding: 12, marginBottom: 10, border: `1px solid ${T.acc}15` }}>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: T.acc, marginBottom: 8 }}>🔲 CONTROTELAIO</div>
+                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as any }}>{PT_CT.map(ct => (<div key={ct} onClick={() => pwUpdVano(v.id, "controtelaioPorta", ct)} style={chipPw(v.controtelaioPorta === ct)}>{ct}</div>))}</div>
+                        </div>
+                        {/* Ferramenta Porta */}
+                        <div style={{ background: `${T.blue}05`, borderRadius: 12, padding: 12, marginBottom: 10, border: `1px solid ${T.blue}15` }}>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: T.blue, marginBottom: 8 }}>🔑 FERRAMENTA</div>
+                          <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                            <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Maniglia</div><select value={v.maniglia || ""} onChange={e => pwUpdVano(v.id, "maniglia", e.target.value)} style={inputPw}><option value="">—</option>{PT_MANIGLIA.map(m => <option key={m}>{m}</option>)}</select></div>
+                            <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Serratura</div><select value={v.serratura || ""} onChange={e => pwUpdVano(v.id, "serratura", e.target.value)} style={inputPw}><option value="">—</option>{PT_SERRATURA.map(s => <option key={s}>{s}</option>)}</select></div>
+                          </div>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Soglia</div><select value={v.soglia || ""} onChange={e => pwUpdVano(v.id, "soglia", e.target.value)} style={inputPw}><option value="">—</option>{PT_SOGLIA.map(s => <option key={s}>{s}</option>)}</select></div>
+                            <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Coprifilo</div><input value={v.coprifilo || ""} onChange={e => pwUpdVano(v.id, "coprifilo", e.target.value)} placeholder="Tipo coprifilo" style={inputPw} /></div>
+                          </div>
+                        </div>
+                        </>)}
+
+                        {/* ── SETTORE: BOX DOCCIA ── */}
+                        {isBoxDoccia && (<>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Tipo box</div><select value={v.tipoBox || ""} onChange={e => pwUpdVano(v.id, "tipoBox", e.target.value)} style={inputPw}><option value="">—</option>{BD_TIPO.map(t => <option key={t}>{t}</option>)}</select></div>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Apertura</div><select value={v.aperturaBox || ""} onChange={e => pwUpdVano(v.id, "aperturaBox", e.target.value)} style={inputPw}><option value="">—</option>{BD_APERTURA.map(a => <option key={a}>{a}</option>)}</select></div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Vetro</div><select value={v.vetroBox || ""} onChange={e => pwUpdVano(v.id, "vetroBox", e.target.value)} style={inputPw}><option value="">—</option>{BD_VETRO.map(g => <option key={g}>{g}</option>)}</select></div>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Profilo</div><select value={v.profiloBox || ""} onChange={e => pwUpdVano(v.id, "profiloBox", e.target.value)} style={inputPw}><option value="">—</option>{BD_PROFILO.map(p => <option key={p}>{p}</option>)}</select></div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Profondità mm (angolo)</div><input type="number" value={v.misure?.profondita || ""} onChange={e => { const mis = { ...(v.misure||{}), profondita: parseInt(e.target.value)||0 }; pwUpdVano(v.id, "misure", mis); }} style={inputPw} placeholder="mm" /></div>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Trattamento</div><select value={v.trattamento || ""} onChange={e => pwUpdVano(v.id, "trattamento", e.target.value)} style={inputPw}><option value="">—</option><option>Anti-calcare</option><option>Nessuno</option></select></div>
+                        </div>
+                        </>)}
+
+                        {/* ── SETTORE: CANCELLI ── */}
+                        {isCancelli && (<>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Tipo cancello</div><select value={v.tipoCancello || ""} onChange={e => pwUpdVano(v.id, "tipoCancello", e.target.value)} style={inputPw}><option value="">—</option>{CN_TIPO.map(t => <option key={t}>{t}</option>)}</select></div>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Materiale</div><select value={v.materialeCancello || ""} onChange={e => pwUpdVano(v.id, "materialeCancello", e.target.value)} style={inputPw}><option value="">—</option>{CN_MAT.map(m => <option key={m}>{m}</option>)}</select></div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Tamponamento</div><select value={v.tamponamento || ""} onChange={e => pwUpdVano(v.id, "tamponamento", e.target.value)} style={inputPw}><option value="">—</option>{CN_TAMP.map(t => <option key={t}>{t}</option>)}</select></div>
+                          <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Finitura</div><select value={v.finituraCancello || ""} onChange={e => pwUpdVano(v.id, "finituraCancello", e.target.value)} style={inputPw}><option value="">—</option>{CN_FIN.map(f => <option key={f}>{f}</option>)}</select></div>
+                        </div>
+                        {/* Automazione */}
+                        <div style={{ background: `${T.red}05`, borderRadius: 12, padding: 12, marginBottom: 10, border: `1px solid ${T.red}15` }}>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: T.red, marginBottom: 8 }}>⚡ AUTOMAZIONE</div>
+                          <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                            <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Motore</div><select value={v.automazione || ""} onChange={e => pwUpdVano(v.id, "automazione", e.target.value)} style={inputPw}><option value="">—</option>{CN_AUTO.map(a => <option key={a}>{a}</option>)}</select></div>
+                            <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: T.sub2 }}>Marca</div><select value={v.marcaMotore || ""} onChange={e => pwUpdVano(v.id, "marcaMotore", e.target.value)} style={inputPw}><option value="">—</option>{CN_MARCA.map(m => <option key={m}>{m}</option>)}</select></div>
+                          </div>
+                        </div>
+                        </>)}
+
+                        {/* ══════ CONTROTELAIO + ACCESSORI (SERRAMENTI ONLY) ══════ */}
+                        {isSerr && (<>
                         <div id={`pw-sec-ct-${v.id}`} style={{ background: `${T.acc}05`, borderRadius: 12, padding: 12, marginBottom: 10, border: `1px solid ${T.acc}15` }}>
                           <div style={{ fontSize: 11, fontWeight: 800, color: T.acc, marginBottom: 8 }}>🔲 CONTROTELAIO</div>
                           <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as any, marginBottom: 8 }}>
@@ -2127,6 +2234,7 @@ export default function CMDetailPanel() {
                             <div><div style={{ fontSize: 9, color: T.sub2 }}>Davanzale</div><select value={v.davanzale || ""} onChange={e => pwUpdVano(v.id, "davanzale", e.target.value)} style={inputPw}>{DAVANZALE_OPT.map(dv => <option key={dv} value={dv}>{dv || "Nessuno"}</option>)}</select></div>
                           </div>
                         </div>
+                        </>)}
 
                         {/* ── PREZZO ── */}
                         <div id={`pw-sec-prezzo-${v.id}`} style={{ display: "flex", gap: 6, alignItems: "flex-end", marginBottom: 6 }}>
@@ -2192,19 +2300,20 @@ export default function CMDetailPanel() {
                 <div style={{ fontSize: 10, color: "#ffffff60", marginTop: 6 }}>{c.code} · {c.cliente} · {pwVani.length} vani · {pwVani.reduce((s, v) => s + (v.pezzi || 1), 0)}pz</div>
               </div>
 
-              <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 6 }}>INFISSI</div>
+              <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 6 }}>PRODOTTI</div>
               {pwVani.map(v => {
                 const pv = calcolaVanoPrezzo(v, c) * (v.pezzi || 1);
                 const lv = v.misure?.lCentro || v.larghezza || v.l || 0;
                 const hv = v.misure?.hCentro || v.altezza || v.h || 0;
                 const ac = v.accessori || {};
+                const svano = TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.settore || "serramenti";
                 return (
                   <div key={v.id} style={{ padding: "8px 0", borderBottom: `1px solid ${T.bdr}` }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                       <span style={{ fontWeight: 700 }}>{v.nome || "Vano"}{v.parentId ? " 🔄" : ""}</span>
                       <span style={{ fontWeight: 800, color: T.acc }}>€{pwFmt(pv)}</span>
                     </div>
-                    <div style={{ fontSize: 9, color: T.sub }}>{v.tipo} · {lv}×{hv} · {v.pezzi || 1}pz · {v.colore || "B."} · {v.vetro || "Std"}{v.controtelaio && v.controtelaio !== "Nessuno" ? ` · CT: ${v.controtelaio}` : ""}{ac.tapparella?.attivo ? ` · Tapp. ${ac.tapparella.tipo || ""}` : ""}{ac.persiana?.attivo ? ` · Pers. ${ac.persiana.tipo || ""}` : ""}{ac.zanzariera?.attivo ? ` · Zanz. ${ac.zanzariera.tipo || ""}` : ""}{v.coprifilo ? ` · CF: ${v.coprifilo}` : ""}{v.soglia ? ` · Soglia: ${v.soglia}` : ""}</div>
+                    <div style={{ fontSize: 9, color: T.sub }}>{v.tipo} · {lv}×{hv} · {v.pezzi || 1}pz · {svano === "porte" ? `${v.materiale||"—"} · ${v.apertura||"—"} · ${v.senso||""}${v.maniglia ? ` · ${v.maniglia}` : ""}` : svano === "boxdoccia" ? `${v.tipoBox||"—"} · ${v.vetroBox||"—"} · ${v.profiloBox||""}` : svano === "cancelli" ? `${v.tipoCancello||"—"} · ${v.materialeCancello||"—"} · ${v.automazione||""}` : `${v.colore || "B."} · ${v.vetro || "Std"}${v.controtelaio && v.controtelaio !== "Nessuno" ? ` · CT: ${v.controtelaio}` : ""}${ac.tapparella?.attivo ? ` · Tapp. ${ac.tapparella.tipo || ""}` : ""}${ac.persiana?.attivo ? ` · Pers. ${ac.persiana.tipo || ""}` : ""}${ac.zanzariera?.attivo ? ` · Zanz. ${ac.zanzariera.tipo || ""}` : ""}${v.coprifilo ? ` · CF: ${v.coprifilo}` : ""}${v.soglia ? ` · Soglia: ${v.soglia}` : ""}`}</div>
                   </div>
                 );
               })}
@@ -2312,7 +2421,9 @@ export default function CMDetailPanel() {
 
           {/* FAB — navigate sections — GRANDE con menu espandibile */}
           {editingVanoId && prevTab === "preventivo" && (() => {
-            const secs = [
+            const editVano = pwVani.find(v => v.id === editingVanoId);
+            const editSettore = TIPOLOGIE_RAPIDE.find(t => t.code === editVano?.tipo)?.settore || "serramenti";
+            const secsSerr = [
               { id: "foto", ico: "📷", label: "Foto" },
               { id: "tipo", ico: "📝", label: "Tipo" },
               { id: "misure", ico: "📐", label: "Misure" },
@@ -2321,6 +2432,13 @@ export default function CMDetailPanel() {
               { id: "acc", ico: "🏠", label: "Accessori" },
               { id: "prezzo", ico: "💰", label: "Prezzo" },
             ];
+            const secsOther = [
+              { id: "foto", ico: "📷", label: "Foto" },
+              { id: "tipo", ico: "📝", label: "Tipo" },
+              { id: "misure", ico: "📐", label: "Misure" },
+              { id: "prezzo", ico: "💰", label: "Prezzo" },
+            ];
+            const secs = editSettore === "serramenti" || editSettore === "persiane" || editSettore === "tapparelle" || editSettore === "zanzariere" || editSettore === "tendesole" ? secsSerr : secsOther;
             const fabOpen = fabSecOpen;
             const setFabOpen = setFabSecOpen;
             return (
@@ -3311,7 +3429,8 @@ export default function CMDetailPanel() {
               if (!selectedCM) return;
               const tipObj = TIPOLOGIE_RAPIDE[0];
               if (!selectedRilievo) return;
-              const v = { id: Date.now(), nome: `Vano ${(selectedRilievo.vani?.length||0)+1}`, tipo: "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", difficoltaSalita: "", mezzoSalita: "", misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } };
+              const defaultTipo = tipologieFiltrate[0]?.code || "F1A";
+              const v = { id: Date.now(), nome: `Vano ${(selectedRilievo.vani?.length||0)+1}`, tipo: defaultTipo, stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", difficoltaSalita: "", mezzoSalita: "", misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } }, settoreData: {} };
               const updR1 = { ...selectedRilievo, vani: [...(selectedRilievo.vani||[]), v] };
               setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo.id ? updR1 : r2), aggiornato: "Oggi" } : c));
               setSelectedRilievo(updR1);
@@ -3324,7 +3443,7 @@ export default function CMDetailPanel() {
           {vaniList.length === 0 ? (
             <div onClick={() => {
               if (!selectedCM) return;
-              const v = { id: Date.now(), nome: `Vano 1`, tipo: "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", difficoltaSalita: "", mezzoSalita: "", misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } };
+              const v = { id: Date.now(), nome: `Vano 1`, tipo: tipologieFiltrate[0]?.code || "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", difficoltaSalita: "", mezzoSalita: "", misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } }, settoreData: {} };
               if (selectedRilievo) { const updR2 = { ...selectedRilievo, vani: [...(selectedRilievo.vani||[]), v] }; setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r2 => r2.id === selectedRilievo.id ? updR2 : r2) } : c)); setSelectedRilievo(updR2); setSelectedCM(prev => ({ ...prev, rilievi: prev.rilievi.map(r2 => r2.id === selectedRilievo.id ? updR2 : r2) })); }
               setSelectedVano(v);
               setVanoStep(0);
