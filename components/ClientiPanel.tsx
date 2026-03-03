@@ -1,8 +1,25 @@
 "use client";
 // @ts-nocheck
+// ═══════════════════════════════════════════════════════════
+// MASTRO ERP — ClientiPanel v3 — Diario + Impostazioni
+// Tab Diario con tag colorati, tasto impostazioni cliente
+// ═══════════════════════════════════════════════════════════
 import React from "react";
 import { useMastro } from "./MastroContext";
 import { FF, ICO, Ico } from "./mastro-constants";
+
+const tipoEvColor = (tipo) => {
+  const map = { sopralluogo: "#3B7FE0", montaggio: "#E8A020", consegna: "#0D7C6B", preventivo: "#D08008", posa: "#059669", collaudo: "#10B981", chiamata: "#af52de" };
+  return map[tipo] || "#D08008";
+};
+
+const DIARIO_TAGS = [
+  { id: "nota", label: "Nota", color: "#6B7280" },
+  { id: "attenzione", label: "Attenzione", color: "#E8A020" },
+  { id: "positivo", label: "Positivo", color: "#0D7C6B" },
+  { id: "commerciale", label: "Commerciale", color: "#3B7FE0" },
+  { id: "problema", label: "Problema", color: "#DC4444" },
+];
 
 export default function ClientiPanel() {
   const {
@@ -15,6 +32,10 @@ export default function ClientiPanel() {
 
   const [clienteDetailTab, setClienteDetailTab] = React.useState("info");
   const [clienteNotes, setClienteNotes] = React.useState<Record<string, string>>({});
+  const [editMode, setEditMode] = React.useState(false);
+  const [editForm, setEditForm] = React.useState<any>(null);
+  const [newDiarioText, setNewDiarioText] = React.useState("");
+  const [newDiarioTag, setNewDiarioTag] = React.useState("nota");
 
     const filters = [
       { id: "tutti", l: "Tutti", c: T.acc },
@@ -31,25 +52,80 @@ export default function ClientiPanel() {
       })
       .sort((a, b) => (a.nome||"").localeCompare(b.nome||""));
 
-    // Count commesse per cliente
     const cmCountFor = (c) => cantieri.filter(cm => cm.cliente === c.nome || (c.cognome && cm.cognome === c.cognome)).length;
 
-    // Dettaglio cliente selezionato — ENRICHED v2
+    // ═══ EDIT CLIENT ═══
+    if (editMode && editForm) {
+      return (
+        <div style={{ padding: "0 0 100px" }}>
+          <div style={{ ...S.header, display: "flex", alignItems: "center", gap: 10 }}>
+            <div onClick={() => { setEditMode(false); setEditForm(null); }} style={{ cursor: "pointer", padding: 4 }}>
+              <Ico d={ICO.back} s={22} c={T.text} />
+            </div>
+            <div style={{ flex: 1, fontSize: 17, fontWeight: 800 }}>Modifica cliente</div>
+          </div>
+          <div style={{ padding: "0 16px" }}>
+            {[
+              { l: "Nome", k: "nome", ph: "Mario" },
+              { l: "Cognome", k: "cognome", ph: "Rossi" },
+              { l: "Telefono", k: "telefono", ph: "+39 333 1234567" },
+              { l: "Email", k: "email", ph: "mario@email.it" },
+              { l: "Indirizzo", k: "indirizzo", ph: "Via Roma 1, Cosenza" },
+              { l: "P.IVA", k: "piva", ph: "IT01234567890" },
+              { l: "Codice Fiscale", k: "cf", ph: "RSSMRA65A41D086Z" },
+            ].map(f => (
+              <div key={f.k} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>{f.l}</div>
+                <input value={editForm[f.k] || ""} onChange={e => setEditForm(prev => ({...prev, [f.k]: e.target.value}))}
+                  placeholder={f.ph} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 13, color: T.text, fontFamily: "inherit", boxSizing: "border-box" }} />
+              </div>
+            ))}
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>Note</div>
+              <textarea value={editForm.note || ""} onChange={e => setEditForm(prev => ({...prev, note: e.target.value}))}
+                placeholder="Note..." rows={3} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 13, color: T.text, fontFamily: "inherit", boxSizing: "border-box", resize: "vertical" }} />
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button onClick={() => { setEditMode(false); setEditForm(null); }} style={{ flex: 1, padding: 14, borderRadius: 12, border: `1px solid ${T.bdr}`, background: T.bg, fontSize: 14, fontWeight: 600, cursor: "pointer", color: T.text, fontFamily: "inherit" }}>Annulla</button>
+              <button onClick={() => {
+                setContatti(prev => prev.map(x => x.id === editForm.id ? { ...x, ...editForm } : x));
+                setSelectedCliente({ ...selectedCliente, ...editForm });
+                setEditMode(false); setEditForm(null);
+              }} style={{ flex: 2, padding: 14, borderRadius: 12, border: "none", background: T.acc, fontSize: 14, fontWeight: 700, cursor: "pointer", color: "#fff", fontFamily: "inherit" }}>Salva</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ═══ DETAIL VIEW ═══
     if (selectedCliente) {
       const c = selectedCliente;
       const cmList = cantieri.filter(cm => cm.cliente === c.nome || (c.cognome && cm.cognome === c.cognome));
       const evList = events.filter(ev => ev.persona === c.nome || ev.persona === (c.nome + " " + (c.cognome||"")).trim());
       const fattureTot = fattureDB.filter(f => cmList.some(cm => cm.id === f.cmId)).reduce((s, f) => s + (f.importo || 0), 0);
       const cmAttive = cmList.filter(cm => cm.fase !== "chiusura").length;
+      const diario = c.diario || [];
+
       const tabs = [
-        { id: "info", label: "Info", icon: "📋" },
-        { id: "storia", label: "Storia", icon: "📅" },
-        { id: "fatturato", label: "€ Fatturato", icon: "" },
-        { id: "note", label: "📝 Note", icon: "" }
+        { id: "info", label: "Info" },
+        { id: "diario", label: "Diario" },
+        { id: "storia", label: "Storia" },
+        { id: "fatturato", label: "€" },
       ];
+
+      const addDiarioEntry = () => {
+        if (!newDiarioText.trim()) return;
+        const entry = { id: "D-" + Date.now(), data: new Date().toLocaleDateString("it-IT", { day: "numeric", month: "short" }), testo: newDiarioText, tag: newDiarioTag };
+        const updatedDiario = [entry, ...diario];
+        setContatti(prev => prev.map(x => x.id === c.id ? { ...x, diario: updatedDiario } : x));
+        setSelectedCliente({ ...c, diario: updatedDiario });
+        setNewDiarioText(""); setNewDiarioTag("nota");
+      };
+
       return (
         <div style={{ padding: "0 0 100px" }}>
-          {/* Header */}
+          {/* Header + gear */}
           <div style={{ ...S.header, display: "flex", alignItems: "center", gap: 10 }}>
             <div onClick={() => { setSelectedCliente(null); setClienteDetailTab("info"); }} style={{ cursor: "pointer", padding: 4 }}>
               <Ico d={ICO.back} s={22} c={T.text} />
@@ -58,12 +134,17 @@ export default function ClientiPanel() {
               <div style={{ fontSize: 17, fontWeight: 800 }}>{c.nome} {c.cognome || ""}</div>
               <div style={{ fontSize: 11, color: T.sub }}>{c.tipo === "cliente" ? "👤 Cliente" : c.tipo === "fornitore" ? "🏭 Fornitore" : "👷 Professionista"}</div>
             </div>
+            {/* SETTINGS BUTTON */}
+            <div onClick={() => { setEditForm({ ...c }); setEditMode(true); }}
+              style={{ width: 34, height: 34, borderRadius: 8, background: T.bg, border: "1px solid " + T.bdr, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <Ico d={ICO.settings} s={16} c={T.sub} />
+            </div>
             <div onClick={() => { const idx = contatti.findIndex(x => x.id === c.id); if (idx >= 0) { const updated = { ...c, preferito: !c.preferito }; setContatti(prev => prev.map(x => x.id === c.id ? updated : x)); setSelectedCliente(updated); } }} style={{ fontSize: 22, cursor: "pointer" }}>
               {c.preferito ? "⭐" : "☆"}
             </div>
           </div>
 
-          {/* KPI Cards */}
+          {/* KPI */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, margin: "0 16px 12px" }}>
             <div style={{ background: T.card, borderRadius: 12, padding: "12px 10px", textAlign: "center", border: "1px solid " + T.bdr }}>
               <div style={{ fontSize: 20, fontWeight: 800, color: T.acc }}>{cmList.length}</div>
@@ -89,7 +170,7 @@ export default function ClientiPanel() {
                   color: clienteDetailTab === t.id ? T.acc : T.sub,
                   boxShadow: clienteDetailTab === t.id ? T.cardSh : "none"
                 }}>
-                {t.icon} {t.label}
+                {t.label}
               </div>
             ))}
           </div>
@@ -121,11 +202,15 @@ export default function ClientiPanel() {
                 <div style={{ fontSize: 14 }}>🆔</div>
                 <div style={{ fontSize: 13, color: T.sub, fontFamily: "'JetBrains Mono',monospace" }}>{c.cf}</div>
               </div>}
+              {c.note && <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, background: T.acc + "08", border: "1px solid " + T.acc + "15" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: T.acc, marginBottom: 3 }}>NOTE</div>
+                <div style={{ fontSize: 12, color: T.text, lineHeight: 1.4 }}>{c.note}</div>
+              </div>}
             </div>
             <div style={{ margin: "0 16px 12px" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span>📂 Commesse ({cmList.length})</span>
-                <div onClick={() => { setNewCM(prev => ({ ...prev, cliente: c.nome, telefono: c.telefono || "", indirizzo: c.indirizzo || "" } as any)); setTab("commesse"); }} style={{ fontSize: 11, fontWeight: 700, color: T.acc, cursor: "pointer" }}>+ Nuova commessa</div>
+                <div onClick={() => { setNewCM(prev => ({ ...prev, cliente: c.nome, telefono: c.telefono || "", indirizzo: c.indirizzo || "" })); setTab("commesse"); }} style={{ fontSize: 11, fontWeight: 700, color: T.acc, cursor: "pointer" }}>+ Nuova commessa</div>
               </div>
               {cmList.length === 0 && <div style={{ padding: 16, background: T.card, borderRadius: 10, textAlign: "center", fontSize: 12, color: T.sub }}>Nessuna commessa</div>}
               {cmList.map(cm => (
@@ -139,6 +224,51 @@ export default function ClientiPanel() {
                   </div>
                 </div>
               ))}
+            </div>
+          </>}
+
+          {/* ═══ TAB: DIARIO ═══ */}
+          {clienteDetailTab === "diario" && <>
+            <div style={{ margin: "0 16px 12px" }}>
+              {/* New entry */}
+              <div style={{ background: T.card, borderRadius: 14, padding: 14, border: "1px solid " + T.bdr, marginBottom: 12 }}>
+                <textarea value={newDiarioText} onChange={e => setNewDiarioText(e.target.value)}
+                  placeholder="Annota qualcosa su questo cliente..."
+                  style={{ width: "100%", minHeight: 60, border: "none", outline: "none", fontSize: 13, fontFamily: "inherit", resize: "none", background: "transparent", color: T.text, boxSizing: "border-box" }} />
+                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
+                  {DIARIO_TAGS.map(tag => (
+                    <div key={tag.id} onClick={() => setNewDiarioTag(tag.id)} style={{
+                      padding: "3px 8px", borderRadius: 6, cursor: "pointer",
+                      border: "1px solid " + tag.color + (newDiarioTag === tag.id ? "" : "40"),
+                      background: newDiarioTag === tag.id ? tag.color : "transparent",
+                      color: newDiarioTag === tag.id ? "#fff" : tag.color,
+                      fontSize: 10, fontWeight: 600,
+                    }}>{tag.label}</div>
+                  ))}
+                  <div style={{ flex: 1 }} />
+                  <div onClick={addDiarioEntry} style={{ padding: "5px 14px", background: T.acc, color: "#fff", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Salva</div>
+                </div>
+              </div>
+
+              {/* Entries */}
+              {diario.length === 0 && (
+                <div style={{ padding: "30px 20px", textAlign: "center" }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: T.sub }}>Nessuna nota nel diario</div>
+                  <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>Scrivi sensazioni, alert, appunti commerciali</div>
+                </div>
+              )}
+              {diario.map(d => {
+                const tagObj = DIARIO_TAGS.find(t => t.id === d.tag) || DIARIO_TAGS[0];
+                return (
+                  <div key={d.id} style={{ background: T.card, borderRadius: 12, padding: "12px 14px", marginBottom: 8, border: "1px solid " + T.bdr, borderLeft: "3px solid " + tagObj.color }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: tagObj.color, textTransform: "uppercase", letterSpacing: "0.05em" }}>{tagObj.label}</span>
+                      <span style={{ fontSize: 10, color: T.sub }}>{d.data}</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: T.text, lineHeight: 1.4 }}>{d.testo}</div>
+                  </div>
+                );
+              })}
             </div>
           </>}
 
@@ -200,21 +330,6 @@ export default function ClientiPanel() {
             </div>
           </>}
 
-          {/* TAB: Note */}
-          {clienteDetailTab === "note" && <>
-            <div style={{ margin: "0 16px 12px" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 8 }}>📝 Note private</div>
-              <textarea
-                value={clienteNotes[c.id] || c.note || ""}
-                onChange={e => setClienteNotes(prev => ({ ...prev, [c.id]: e.target.value }))}
-                onBlur={() => { const noteVal = clienteNotes[c.id]; if (noteVal !== undefined) { setContatti(prev => prev.map(x => x.id === c.id ? { ...x, note: noteVal } : x)); setSelectedCliente({ ...c, note: noteVal }); } }}
-                placeholder="Scrivi note private su questo cliente..."
-                style={{ width: "100%", minHeight: 120, padding: 12, borderRadius: 12, border: "1px solid " + T.bdr, background: T.card, color: T.text, fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none" }}
-              />
-              {c.note && <div style={{ marginTop: 6, fontSize: 10, color: T.sub }}>Le note si salvano automaticamente</div>}
-            </div>
-          </>}
-
           {/* Azioni */}
           <div style={{ margin: "12px 16px 0", display: "flex", gap: 8 }}>
             <div onClick={() => { if(confirm("Eliminare " + c.nome + "?")) { setContatti(prev => prev.filter(x => x.id !== c.id)); setSelectedCliente(null); }}} style={{ flex: 1, padding: 12, borderRadius: 10, background: T.redLt, color: T.red, textAlign: "center", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑 Elimina</div>
@@ -223,7 +338,7 @@ export default function ClientiPanel() {
       );
     }
 
-    // Nuovo cliente modal
+    // ═══ NUOVO CLIENTE ═══
     if (showNewCliente) {
       return (
         <div style={{ padding: "0 0 100px" }}>
@@ -233,15 +348,12 @@ export default function ClientiPanel() {
             </div>
             <div style={{ flex: 1, fontSize: 17, fontWeight: 800 }}>Nuovo contatto</div>
           </div>
-
           <div style={{ padding: "0 16px" }}>
-            {/* Tipo */}
             <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
               {[{id:"cliente",l:"👤 Cliente"},{id:"fornitore",l:"🏭 Fornitore"},{id:"professionista",l:"👷 Professionista"}].map(t => (
                 <div key={t.id} onClick={() => setNewCliente(prev => ({...prev, tipo: t.id}))} style={{ flex: 1, padding: "10px 6px", borderRadius: 10, border: `1.5px solid ${newCliente.tipo === t.id ? T.acc : T.bdr}`, background: newCliente.tipo === t.id ? T.accLt : T.card, textAlign: "center", fontSize: 11, fontWeight: 700, cursor: "pointer", color: newCliente.tipo === t.id ? T.acc : T.sub }}>{t.l}</div>
               ))}
             </div>
-
             {[
               { l: "Nome *", k: "nome", ph: "Mario" },
               { l: "Cognome", k: "cognome", ph: "Rossi" },
@@ -256,16 +368,14 @@ export default function ClientiPanel() {
                   placeholder={f.ph} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 13, color: T.text, fontFamily: "inherit", boxSizing: "border-box" }} />
               </div>
             ))}
-
             <div style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>Note</div>
               <textarea value={newCliente.note} onChange={e => setNewCliente(prev => ({...prev, note: e.target.value}))}
                 placeholder="Note aggiuntive..." rows={3} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 13, color: T.text, fontFamily: "inherit", boxSizing: "border-box", resize: "vertical" }} />
             </div>
-
             <button onClick={() => {
               if (!newCliente.nome.trim()) return;
-              setContatti(prev => [...prev, { id: "CT-" + Date.now(), ...newCliente, preferito: false }]);
+              setContatti(prev => [...prev, { id: "CT-" + Date.now(), ...newCliente, preferito: false, diario: [] }]);
               setNewCliente({ nome: "", cognome: "", tipo: "cliente", telefono: "", email: "", indirizzo: "", piva: "", note: "" });
               setShowNewCliente(false);
             }} style={{ width: "100%", padding: "14px", borderRadius: 12, border: "none", background: T.acc, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
@@ -276,7 +386,7 @@ export default function ClientiPanel() {
       );
     }
 
-    // Lista principale
+    // ═══ LISTA ═══
     return (
       <div style={{ padding: "0 0 100px" }}>
         <div style={{ ...S.header, flexDirection: "column", alignItems: "stretch" }}>
@@ -289,17 +399,11 @@ export default function ClientiPanel() {
               </div>
             </div>
           </div>
-
-          {/* Search */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.card, marginBottom: 8 }}>
             <Ico d={ICO.search} s={14} c={T.sub} />
-            <input value={clientiSearch} onChange={e => setClientiSearch(e.target.value)}
-              placeholder="Cerca..."
-              style={{ flex: 1, border: "none", background: "transparent", fontSize: 13, color: T.text, outline: "none", fontFamily: "inherit" }} />
+            <input value={clientiSearch} onChange={e => setClientiSearch(e.target.value)} placeholder="Cerca..." style={{ flex: 1, border: "none", background: "transparent", fontSize: 13, color: T.text, outline: "none", fontFamily: "inherit" }} />
             {clientiSearch && <div onClick={() => setClientiSearch("")} style={{ cursor: "pointer", fontSize: 12, color: T.sub }}>✕</div>}
           </div>
-
-          {/* Filters */}
           <div style={{ display: "flex", gap: 4, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
             {filters.map(f => (
               <div key={f.id} onClick={() => setClientiFilter(f.id)} style={{ padding: "5px 10px", borderRadius: 16, border: `1px solid ${clientiFilter === f.id ? f.c : T.bdr}`, background: clientiFilter === f.id ? f.c + "15" : T.card, fontSize: 10, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", color: clientiFilter === f.id ? f.c : T.sub }}>
@@ -308,8 +412,6 @@ export default function ClientiPanel() {
             ))}
           </div>
         </div>
-
-        {/* Lista */}
         <div style={{ padding: "0 16px" }}>
           {filtered.length === 0 && (
             <div style={{ padding: "40px 20px", textAlign: "center" }}>
@@ -324,11 +426,9 @@ export default function ClientiPanel() {
             const initials = ((c.nome||"")[0] || "") + ((c.cognome||"")[0] || "");
             return (
               <div key={c.id} onClick={() => setSelectedCliente(c)} style={{ padding: "12px 14px", background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, marginBottom: 6, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
-                {/* Avatar */}
                 <div style={{ width: 42, height: 42, borderRadius: "50%", background: tipoColor + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, color: tipoColor, flexShrink: 0 }}>
                   {initials.toUpperCase() || "?"}
                 </div>
-                {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: T.text, display: "flex", alignItems: "center", gap: 4 }}>
                     {c.nome} {c.cognome || ""}
@@ -342,7 +442,6 @@ export default function ClientiPanel() {
                     {cmCount > 0 && <span style={{ ...S.badge(T.accLt, T.acc), fontSize: 9 }}>📁 {cmCount}</span>}
                   </div>
                 </div>
-                {/* Quick actions */}
                 <div style={{ display: "flex", gap: 4 }}>
                   {c.telefono && <div onClick={(e) => { e.stopPropagation(); window.location.href="tel:" + c.telefono; }} style={{ width: 32, height: 32, borderRadius: "50%", background: T.grnLt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>📞</div>}
                   {c.telefono && <div onClick={(e) => { e.stopPropagation(); window.open("https://wa.me/" + (c.telefono||"").replace(/\s/g, "")); }} style={{ width: 32, height: 32, borderRadius: "50%", background: "#dcf8c6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>💬</div>}
@@ -353,5 +452,4 @@ export default function ClientiPanel() {
         </div>
       </div>
     );
-
 }

@@ -3394,9 +3394,9 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
 
         {/* Modals */}
         {<PanelErrorBoundary name="Modal">{renderModal()}</PanelErrorBoundary>}
-        {<PanelErrorBoundary name="Preventivo">{renderPreventivoModal()}</PanelErrorBoundary>}
-        {renderFirmaModal()}
-        {renderOnboarding()}
+        {showPreventivoModal && <PanelErrorBoundary name="Preventivo"><PreventivoModal /></PanelErrorBoundary>}
+        {/* renderFirmaModal — TODO */}
+        {/* renderOnboarding — TODO */}
 
         {/* SEND COMMESSA MODAL */}
         {showSendModal && selectedCM && (
