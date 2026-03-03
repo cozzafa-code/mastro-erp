@@ -13,6 +13,8 @@ import { FM, ICO, I } from "./mastro-constants";
 const TIME_WORDS = /\b(domani|dopodomani|luned[iì]|marted[iì]|mercoled[iì]|gioved[iì]|venerd[iì]|sabato|domenica|ore\s?\d|alle\s?\d|mattina|pomeriggio|sera|settimana prossima|oggi pomeriggio)\b/i;
 const PROBLEM_WORDS = /\b(rotto|marcio|difett|guast|sostitui|danneggi|crepa|infiltr|muffa|condens|spiffero|rumore|bloccat|non (funziona|chiude|apre|si apre))\b/i;
 const ACTION_WORDS = /\b(chiamar[ei]|telefonar[ei]|verificar[ei]|controllar[ei]|misura|ordinar[ei]|confermar[ei]|inviar[ei]|spedir[ei]|preparar[ei]|richiamar[ei])\b/i;
+const NAVIGATE_WORDS = /\b(vai|apri|mostra|vedi|visualizza)\s+(commess[ae]|ordini?|agenda|messaggi|clienti|impostazioni)\b/i;
+const ORDER_WORDS = /\b(ordina|ordine|ordinare)\s+(materiale|profili|vetri|accessori|ferramenta|guarnizioni)\b/i;
 const POSITIVE_WORDS = /\b(content[oia]|soddisfatt[oia]|brav[oia]|perfett[oia]|ottim[oia]|felic[ei]|grazie|compliment)\b/i;
 const COMMERCIAL_WORDS = /\b(sconto|prezzo|pagament|acconto|saldo|fattura|preventivo|costo|budget|rata|listino|offerta)\b/i;
 const VANO_WORDS = /\b(soggiorno|cucina|camera|bagno|ingresso|corridoio|sala|studio|mansarda|cantina|garage|balcone|finestra|portafinestra|porta)\b/i;
@@ -73,25 +75,74 @@ function analyzeVoiceNote(text, context) {
     result.confidence = 0.7;
   }
 
+  // Detect "ordina materiale" → task with order context
+  if (ORDER_WORDS.test(text)) {
+    result.type = "task";
+    result.tag = "ordine";
+    result.priority = "alta";
+    result.confidence = 0.85;
+    const matMatch = text.match(ORDER_WORDS);
+    if (matMatch) result.materiale = matMatch[2];
+  }
+
+  // Detect navigation command
+  if (NAVIGATE_WORDS.test(text)) {
+    result.type = "navigate";
+    const navMatch = text.match(NAVIGATE_WORDS);
+    if (navMatch) result.navigateTo = navMatch[2].toLowerCase().replace(/[ei]$/, "");
+    result.confidence = 0.9;
+  }
+
   // Default: task
   if (!result.type) {
     result.type = "task";
     result.confidence = 0.5;
   }
 
-  // Try to extract cliente name from text
+  // Try to extract cliente name from text — match full name first, then cognome, then nome
   if (!result.clienteNome && context.contatti) {
+    const tLow = text.toLowerCase();
+    // Pass 1: full name (nome + cognome) — most specific
     for (const c of context.contatti) {
-      const nome = (c.nome || "").toLowerCase();
-      const cognome = (c.cognome || "").toLowerCase();
-      if (nome && text.toLowerCase().includes(nome)) {
-        result.clienteNome = c.nome + (c.cognome ? " " + c.cognome : "");
+      const full = ((c.nome || "") + " " + (c.cognome || "")).trim().toLowerCase();
+      if (full.length > 3 && tLow.includes(full)) {
+        result.clienteNome = (c.nome + " " + (c.cognome || "")).trim();
+        result.clienteId = c.id;
         break;
       }
-      if (cognome && cognome.length > 2 && text.toLowerCase().includes(cognome)) {
-        result.clienteNome = c.nome + " " + c.cognome;
-        break;
+    }
+    // Pass 2: cognome only (if unique enough, >3 chars)
+    if (!result.clienteNome) {
+      for (const c of context.contatti) {
+        const cognome = (c.cognome || "").toLowerCase();
+        if (cognome.length > 3 && tLow.includes(cognome)) {
+          result.clienteNome = (c.nome + " " + c.cognome).trim();
+          result.clienteId = c.id;
+          break;
+        }
       }
+    }
+    // Pass 3: nome only (if >3 chars and not too common)
+    if (!result.clienteNome) {
+      for (const c of context.contatti) {
+        const nome = (c.nome || "").toLowerCase();
+        if (nome.length > 3 && tLow.includes(nome)) {
+          result.clienteNome = c.nome + (c.cognome ? " " + c.cognome : "");
+          result.clienteId = c.id;
+          break;
+        }
+      }
+    }
+  }
+  
+  // Match cantiere by client name
+  if (result.clienteNome && context.cantieri) {
+    const cm = context.cantieri.find(c => 
+      c.cliente && c.cliente.toLowerCase().includes(result.clienteNome.toLowerCase().split(" ")[0])
+    );
+    if (cm) {
+      result.cmId = cm.id;
+      result.cmCode = cm.code;
     }
   }
 
@@ -221,6 +272,7 @@ export default function VoiceAssistant({ onClose }) {
       cmCode: selectedCM?.code || null,
       clienteNome: selectedCM?.cliente || null,
       contatti,
+      cantieri,
     };
 
     // Analyze
@@ -266,7 +318,41 @@ export default function VoiceAssistant({ onClose }) {
       };
       setTasks(prev => [...prev, newTask]);
       const priLabel = r.priority === "alta" ? " (URGENTE)" : "";
-      toast("Task creata" + priLabel + ": " + r.title.slice(0, 40), r.priority === "alta" ? "red" : "green");
+      const tagLabel = r.tag === "ordine" ? " 📦" : "";
+      toast("Task creata" + priLabel + tagLabel + ": " + r.title.slice(0, 40), r.priority === "alta" ? "error" : "success", () => {
+        setTab("agenda");
+        onClose();
+      });
+      // If we found a commessa, auto-navigate
+      if (r.cmId && r.tag === "ordine") {
+        const cm = cantieri.find(c => c.id === r.cmId);
+        if (cm) {
+          setTimeout(() => {
+            setSelectedCM(cm);
+            setTab("commesse");
+          }, 1500);
+        }
+      }
+    }
+
+    else if (r.type === "navigate") {
+      const tabMap = { "commess": "commesse", "ordini": "commesse", "ordine": "commesse", "agenda": "agenda", "messagg": "messaggi", "client": "clienti", "impostazion": "impostazioni" };
+      const targetTab = Object.entries(tabMap).find(([k]) => (r.navigateTo || "").includes(k));
+      if (targetTab) {
+        setTab(targetTab[1]);
+        toast("Apro " + targetTab[1], "success");
+      }
+      // If client found, open their commessa
+      if (r.cmId) {
+        const cm = cantieri.find(c => c.id === r.cmId);
+        if (cm) {
+          setSelectedCM(cm);
+          setTab("commesse");
+          toast("Apro commessa " + cm.code + " — " + cm.cliente, "success");
+        }
+      }
+      setTimeout(() => onClose(), 800);
+      return;
     }
 
     else if (r.type === "diary") {
@@ -292,8 +378,9 @@ export default function VoiceAssistant({ onClose }) {
   };
 
   // ─── Type labels ───
-  const typeLabel = { task: "Task", event: "Evento", diary: "Diario", problema: "Problema" };
-  const typeColor = { task: T.acc, event: T.blue || "#3B7FE0", diary: "#6B7280", problema: T.red };
+  const typeLabel = { task: "Task", event: "Evento", diary: "Diario", problema: "Problema", navigate: "Navigazione" };
+  const typeColor = { task: T.acc, event: T.blue || "#3B7FE0", diary: "#6B7280", problema: T.red, navigate: "#1A9E73" };
+  const tagColors2 = { ordine: "#E8A020", problema: T.red, positivo: "#1A9E73", commerciale: T.blue || "#3B7FE0" };
   const tagColors = { nota: "#6B7280", attenzione: "#E8A020", positivo: T.grn || "#0D7C6B", commerciale: T.blue || "#3B7FE0", problema: T.red };
 
   return (
