@@ -82,73 +82,7 @@ export function generaFatturaPDF(fat: any, deps: DocDeps) {
     </body></html>`;
     const blob = new Blob([html], { type: "text/html" });
     window.open(URL.createObjectURL(blob), "_blank");
-  };
-
-  // === WHATSAPP / EMAIL HELPERS ===
-  const inviaWhatsApp = (c, tipo: "preventivo" | "conferma" | "stato") => {
-    const tel = (c.telefono || "").replace(/\D/g, "");
-    const msgs = {
-      preventivo: `Gentile ${c.cliente}, le invio in allegato il preventivo per la fornitura serramenti. Rif: ${c.code}. Resto a disposizione per qualsiasi chiarimento.`,
-      conferma: `Gentile ${c.cliente}, confermiamo la ricezione del suo ordine ${c.code}. Provvederemo a ordinare il materiale. La terremo aggiornata sullo stato di avanzamento.`,
-      stato: `Gentile ${c.cliente}, aggiornamento sul suo ordine ${c.code}: ${c.trackingStato === "ordinato" ? "il materiale è stato ordinato" : c.trackingStato === "produzione" ? "il materiale è in produzione" : c.trackingStato === "pronto" ? "il materiale è pronto per la consegna" : c.trackingStato === "consegnato" ? "il materiale è stato consegnato" : c.trackingStato === "montato" ? "il montaggio è completato" : "in lavorazione"}.${c.dataPrevConsegna ? " Consegna prevista: " + c.dataPrevConsegna : ""}`,
-    };
-    const msg = encodeURIComponent(msgs[tipo] || "");
-    window.open(`https://wa.me/${tel.startsWith("39") ? tel : "39" + tel}?text=${msg}`, "_blank");
-  };
-
-  const inviaEmail = (c, tipo: "preventivo" | "conferma" | "montaggio" | "saldo" | "generico") => {
-    const az = aziendaDB;
-    const azNome = az.ragione || az.nome || "Walter Cozza Serramenti";
-    const azTel = az.telefono || "";
-    const azEmail = az.email || "";
-    const firma = `\nCordiali saluti,\n${azNome}${azTel ? "\nTel. " + azTel : ""}${azEmail ? "\n" + azEmail : ""}`;
-    const vani = getVaniAttivi(c);
-    const totale = vani.reduce((s, v) => s + calcolaVanoPrezzo(v, c), 0) + (c.vociLibere || []).reduce((s, vl) => s + ((vl.importo||0)*(vl.qta||1)), 0);
-    const ivaP = parseFloat(c.ivaPerc || 10);
-    const totIva = totale * (1 + ivaP / 100);
-    const fmt = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2 }) : "0,00";
-    
-    const templates = {
-      preventivo: {
-        oggetto: `Preventivo ${c.code} — ${azNome}`,
-        corpo: `Gentile ${c.cliente} ${c.cognome || ""},\n\nle trasmetto il preventivo per la fornitura e posa in opera dei serramenti per l'immobile in ${c.indirizzo || "—"}.\n\n📋 Rif. commessa: ${c.code}\n📦 Vani: ${vani.length}\n${c.sistema ? "🏭 Sistema: " + c.sistema + "\n" : ""}💰 Importo: €${fmt(totale)} + IVA ${ivaP}% = €${fmt(totIva)}\n${c.praticaFiscale ? "📑 Agevolazione: " + c.praticaFiscale + "\n" : ""}\nIl preventivo include fornitura, posa in opera, smaltimento vecchi infissi e rilascio documentazione (DoP, CE, manuale).\n\nResto a disposizione per qualsiasi chiarimento.${firma}`
-      },
-      conferma: {
-        oggetto: `Conferma ordine ${c.code} — ${azNome}`,
-        corpo: `Gentile ${c.cliente} ${c.cognome || ""},\n\ncon la presente le confermiamo la ricezione dell'ordine per la commessa ${c.code}.\n\n✅ Materiale ordinato al fornitore\n⏱ Tempi di consegna stimati: 4-6 settimane\n📍 Cantiere: ${c.indirizzo || "—"}\n\nLa terremo aggiornata sullo stato di avanzamento della produzione.\n\nPer qualsiasi necessità non esiti a contattarci.${firma}`
-      },
-      montaggio: {
-        oggetto: `Programmazione montaggio ${c.code} — ${azNome}`,
-        corpo: `Gentile ${c.cliente} ${c.cognome || ""},\n\nsiamo lieti di comunicarle che il materiale per la commessa ${c.code} è arrivato.\n\n🔧 Montaggio previsto: [INSERIRE DATA]\n📍 Indirizzo: ${c.indirizzo || "—"}\n⏱ Durata stimata: ${vani.length <= 3 ? "1 giorno" : vani.length <= 6 ? "2 giorni" : "3+ giorni"}\n👷 Squadra: [NOME SQUADRA]\n\n📌 Note per il giorno del montaggio:\n- Assicurarsi che i locali siano accessibili\n- Spostare eventuali mobili vicino alle finestre\n- È possibile che si verifichi polvere durante lo smontaggio\n\nLa preghiamo di confermare la data rispondendo a questa mail.${firma}`
-      },
-      saldo: {
-        oggetto: `Completamento lavori e saldo ${c.code} — ${azNome}`,
-        corpo: `Gentile ${c.cliente} ${c.cognome || ""},\n\ncon la presente le comunichiamo che i lavori relativi alla commessa ${c.code} sono stati completati con successo.\n\n✅ Fornitura e posa completata\n📦 Vani installati: ${vani.length}\n📍 Cantiere: ${c.indirizzo || "—"}\n\n💶 Importo totale: €${fmt(totIva)} (IVA ${ivaP}% inclusa)\n${(() => { const inc = fattureDB.filter(f => f.cmId === c.id && f.pagata).reduce((s,f)=>s+(f.importo||0),0); return inc > 0 ? `💳 Già versato: €${fmt(inc)}\n📄 Saldo dovuto: €${fmt(totIva - inc)}\n` : ""; })()}\n📎 In allegato:\n- Fattura di saldo\n- Dichiarazione di prestazione (DoP)\n- Certificazione CE\n- Manuale d'uso e manutenzione\n\nModalità di pagamento: Bonifico bancario\nIBAN: ${az.iban || "[IBAN]"}\n\nLa ringraziamo per la fiducia.${firma}`
-      },
-      generico: {
-        oggetto: `Commessa ${c.code} — ${azNome}`,
-        corpo: `Gentile ${c.cliente} ${c.cognome || ""},\n\n[Scrivi qui il messaggio]\n\nRif. commessa: ${c.code}\nCantiere: ${c.indirizzo || "—"}${firma}`
-      }
-    };
-    const t = templates[tipo] || templates.generico;
-    setEmailDest(c.email || "");
-    setEmailOggetto(t.oggetto);
-    setEmailCorpo(t.corpo);
-    setShowEmailComposer({ cm: c, tipo });
-  };
-
-  // =============================================
-  // === ORDINI FORNITORE — MODULO COMPLETO ===
-  // =============================================
-
-  const [ordineDetail, setOrdineDetail] = useState<string | null>(null); // id ordine aperto
-  const [extractingPDF, setExtractingPDF] = useState(false); // loading AI extraction
-  const [showInboxDoc, setShowInboxDoc] = useState(false); // global document inbox
-  const [inboxResult, setInboxResult] = useState<any>(null); // extracted data from inbox
-
-
-
-  // Crea nuovo ordine fornitore da commessa
+}
 
 export function generaOrdinePDF(ord: any, deps: DocDeps) {
   const { aziendaInfo } = deps;
@@ -238,9 +172,7 @@ export function generaOrdinePDF(ord: any, deps: DocDeps) {
 
     const w = window.open("", "_blank");
     if (w) { w.document.write(html); w.document.close(); w.print(); }
-  };
-
-  // Genera PDF conferma firmata (per reinvio al fornitore)
+}
 
 export function generaConfermaFirmataPDF(ord: any, deps: DocDeps) {
   const { aziendaInfo } = deps;
@@ -289,9 +221,7 @@ export function generaConfermaFirmataPDF(ord: any, deps: DocDeps) {
 
     const w = window.open("", "_blank");
     if (w) { w.document.write(html); w.document.close(); w.print(); }
-  };
-
-  // Invio ordine/conferma via email/whatsapp
+}
 
 export function generaXmlSDI(fat: any, deps: DocDeps) {
   const { aziendaInfo } = deps;
@@ -347,11 +277,7 @@ export function generaXmlSDI(fat: any, deps: DocDeps) {
     const a = document.createElement("a"); a.href = url;
     a.download = "IT" + (az.piva || "00000000000") + "_" + progressivo + ".xml";
     a.click(); URL.revokeObjectURL(url);
-  };
-
-
-  // === ONBOARDING MODAL "COSA VENDI?" ===
-  const renderOnboarding = () => <OnboardingPanel />;
+}
 
 
 export function generaTrackingCliente(c: any, deps: DocDeps) {
@@ -456,7 +382,5 @@ export function generaTrackingCliente(c: any, deps: DocDeps) {
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank");
     return url;
-  };
-
-  // ═══ FATTURAZIONE ELETTRONICA XML SDI ═══
+}
 
