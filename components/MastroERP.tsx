@@ -40,9 +40,11 @@ import MastroStrutture from "./MastroStrutture";
 function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda?: any }) {
   const [theme, setTheme] = useState("chiaro");
   const T = THEMES[theme];
+  useEffect(() => { document.body.style.background = T.bg; }, [T.bg]);
   const syncReady = useRef(false);
   const userId = user?.id || null;
-  const sync = useSyncEngine(userId);
+  const isUuid = userId ? /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(userId) : false;
+  const sync = useSyncEngine(isUuid ? userId : null);
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const { toast, ToastContainer } = useToast();
@@ -93,7 +95,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   const [showProblemiView, setShowProblemiView] = useState(false);
   const [showStrutture, setShowStrutture] = useState(false);
   // Save problemi to localStorage
-  useEffect(() => { try { localStorage.setItem("mastro:problemi", JSON.stringify(problemi)); } catch {} if(syncReady.current&&userId)sync.cloudSave("problemi", problemi); }, [problemi]);
+  useEffect(() => { try { localStorage.setItem("mastro:problemi", JSON.stringify(problemi)); } catch {} if(syncReady.current&&isUuid)sync.cloudSave("problemi", problemi); }, [problemi]);
   const [team, setTeam] = useState(TEAM_INIT);
   const [coloriDB, setColoriDB] = useState(COLORI_INIT);
   const [sistemiDB, setSistemiDB] = useState(SISTEMI_INIT);
@@ -534,33 +536,33 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       try{const _v=localStorage.getItem("mastro:pipeline");if(_v){const parsed=JSON.parse(_v); if(parsed.some(p=>p.id==="collaudo")){setPipelineDB(parsed);}else{setPipelineDB(PIPELINE_DEFAULT);localStorage.setItem("mastro:pipeline",JSON.stringify(PIPELINE_DEFAULT));}} }catch(e){}
       try{const _v=localStorage.getItem("mastro:azienda");if(_v)setAziendaInfo(JSON.parse(_v));}catch(e){}
 },[]);
-  useEffect(()=>{try{localStorage.setItem("mastro:cantieri",JSON.stringify(cantieri));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("cantieri", cantieri);},[cantieri]);
-  useEffect(()=>{try{localStorage.setItem("mastro:tasks",JSON.stringify(tasks));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("tasks", tasks);},[tasks]);
-  useEffect(()=>{try{localStorage.setItem("mastro:events",JSON.stringify(events));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("events", events);},[events]);
-  useEffect(()=>{try{localStorage.setItem("mastro:colori",JSON.stringify(coloriDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("colori", coloriDB);},[coloriDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:sistemi",JSON.stringify(sistemiDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("sistemi", sistemiDB);},[sistemiDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:vetri",JSON.stringify(vetriDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("vetri", vetriDB);},[vetriDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:coprifili",JSON.stringify(coprifiliDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("coprifili", coprifiliDB);},[coprifiliDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:lamiere",JSON.stringify(lamiereDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("lamiere", lamiereDB);},[lamiereDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:libreria",JSON.stringify(libreriaDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("libreria", libreriaDB);},[libreriaDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:fatture",JSON.stringify(fattureDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("fatture", fattureDB);},[fattureDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:cantieri",JSON.stringify(cantieri));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("cantieri", cantieri);},[cantieri]);
+  useEffect(()=>{try{localStorage.setItem("mastro:tasks",JSON.stringify(tasks));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("tasks", tasks);},[tasks]);
+  useEffect(()=>{try{localStorage.setItem("mastro:events",JSON.stringify(events));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("events", events);},[events]);
+  useEffect(()=>{try{localStorage.setItem("mastro:colori",JSON.stringify(coloriDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("colori", coloriDB);},[coloriDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:sistemi",JSON.stringify(sistemiDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("sistemi", sistemiDB);},[sistemiDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:vetri",JSON.stringify(vetriDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("vetri", vetriDB);},[vetriDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:coprifili",JSON.stringify(coprifiliDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("coprifili", coprifiliDB);},[coprifiliDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:lamiere",JSON.stringify(lamiereDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("lamiere", lamiereDB);},[lamiereDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:libreria",JSON.stringify(libreriaDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("libreria", libreriaDB);},[libreriaDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:fatture",JSON.stringify(fattureDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("fatture", fattureDB);},[fattureDB]);
 
-  useEffect(()=>{try{localStorage.setItem("mastro:ordiniForn",JSON.stringify(ordiniFornDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("ordiniForn", ordiniFornDB);},[ordiniFornDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:squadre",JSON.stringify(squadreDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("squadre", squadreDB);},[squadreDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:montaggi",JSON.stringify(montaggiDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("montaggi", montaggiDB);},[montaggiDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:ordiniForn",JSON.stringify(ordiniFornDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("ordiniForn", ordiniFornDB);},[ordiniFornDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:squadre",JSON.stringify(squadreDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("squadre", squadreDB);},[squadreDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:montaggi",JSON.stringify(montaggiDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("montaggi", montaggiDB);},[montaggiDB]);
   useEffect(()=>{try{localStorage.setItem("mastro:settori",JSON.stringify(settoriAttivi));}catch(e){}},[settoriAttivi]);
   useEffect(()=>{try{localStorage.setItem("mastro:piano",JSON.stringify(pianoAttivo));}catch(e){}},[pianoAttivo]);
-  useEffect(()=>{try{localStorage.setItem("mastro:team",JSON.stringify(team));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("team", team);},[team]);
-  useEffect(()=>{try{localStorage.setItem("mastro:contatti",JSON.stringify(contatti));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("contatti", contatti);},[contatti]);
-  useEffect(()=>{try{localStorage.setItem("mastro:pipeline",JSON.stringify(pipelineDB));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("pipeline", pipelineDB);},[pipelineDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:azienda",JSON.stringify(aziendaInfo));}catch(e){} if(syncReady.current&&userId)sync.cloudSave("azienda", aziendaInfo);},[aziendaInfo]);
+  useEffect(()=>{try{localStorage.setItem("mastro:team",JSON.stringify(team));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("team", team);},[team]);
+  useEffect(()=>{try{localStorage.setItem("mastro:contatti",JSON.stringify(contatti));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("contatti", contatti);},[contatti]);
+  useEffect(()=>{try{localStorage.setItem("mastro:pipeline",JSON.stringify(pipelineDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("pipeline", pipelineDB);},[pipelineDB]);
+  useEffect(()=>{try{localStorage.setItem("mastro:azienda",JSON.stringify(aziendaInfo));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("azienda", aziendaInfo);},[aziendaInfo]);
   useEffect(() => { if (selectedCM?.id) setLastOpenedCMId(selectedCM.id); }, [selectedCM]);
 
   // === CLOUD SYNC (user_data key-value) ===
 
   // Reusable cloud load function
   const applyCloud = useCallback(async () => {
-    if (!userId) return;
+    if (!isUuid) return;
     try {
       const cloud = await cloudLoadAllSync(userId);
       if (Object.keys(cloud).length === 0) return;
@@ -4286,7 +4288,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       <link href={FONT} rel="stylesheet" />
       <style>{`
         * { box-sizing: border-box; }
-        body { margin: 0; background: ${T.bg}; }
+        body { margin: 0; }
         input, select, textarea, button { font-size: inherit; }
       `}</style>
       <div style={S.app}>

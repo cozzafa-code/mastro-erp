@@ -589,7 +589,7 @@ function Fase3D({ st, tipo, next }) {
     scene.add(new THREE.AmbientLight(0xffffff, 0.7))
     const sun = new THREE.DirectionalLight(0xffffff, 0.6); sun.position.set(5, 8, 5); sun.castShadow = true; scene.add(sun)
     const gnd = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshLambertMaterial({ color: 0xF0F0F0 })); gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true; scene.add(gnd)
-    scene.add(Object.assign(new THREE.GridHelper(10, 20, 0xE5E5E5, 0xF0F0F0), { position: { x: 0, y: 0.001, z: 0 } }))
+    const grid = new THREE.GridHelper(10, 20, 0xE5E5E5, 0xF0F0F0); grid.position.set(0, 0.001, 0); scene.add(grid)
 
     const sc3 = new THREE.Color(st.colStruct)
     const sm = new THREE.MeshPhongMaterial({ color: sc3, wireframe: wf })
