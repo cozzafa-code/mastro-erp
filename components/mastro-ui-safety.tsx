@@ -143,17 +143,19 @@ interface Toast {
   id: string;
   message: string;
   type: "success" | "error" | "warning" | "info";
+  onTap?: () => void;
 }
 
 export function useToast() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const toast = useCallback((message: string, type: "success" | "error" | "warning" | "info" = "success") => {
+  const toast = useCallback((message: string, type: "success" | "error" | "warning" | "info" | "green" | "orange" = "success", onTap?: () => void) => {
+    const mapped = type === "green" ? "success" : type === "orange" ? "warning" : type;
     const id = Date.now().toString() + Math.random().toString(36).slice(2);
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts(prev => [...prev, { id, message, type: mapped as any, onTap }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 3500);
+    }, onTap ? 5000 : 3500);
   }, []);
 
   const ToastContainer = toasts.length > 0 ? (
@@ -178,27 +180,32 @@ export function useToast() {
           info:    { bg: "#eff6ff", border: "#007aff", text: "#1e40af", icon: "ℹ️" },
         };
         const c = colors[t.type];
+        const clickable = !!t.onTap;
         return (
           <div
             key={t.id}
+            onClick={clickable ? () => { t.onTap!(); setToasts(prev => prev.filter(x => x.id !== t.id)); } : undefined}
             style={{
-              background: c.bg,
-              border: `1px solid ${c.border}30`,
+              background: c?.bg || "#f0fdf4",
+              border: `1px solid ${c?.border || "#86efac"}30`,
               borderRadius: 12,
               padding: "12px 16px",
               fontSize: 13,
               fontWeight: 700,
-              color: c.text,
+              color: (c?.text || "#166534"),
               display: "flex",
               alignItems: "center",
               gap: 8,
               boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
               animation: "toastSlideDown 0.3s ease",
               fontFamily: "'Inter', -apple-system, sans-serif",
+              pointerEvents: clickable ? "auto" : "none",
+              cursor: clickable ? "pointer" : "default",
             }}
           >
-            <span style={{ fontSize: 16 }}>{c.icon}</span>
-            {t.message}
+            <span style={{ fontSize: 16 }}>{(c?.icon || "#22c55e")}</span>
+            <span style={{ flex: 1 }}>{t.message}</span>
+            {clickable && <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.6 }}>Apri →</span>}
           </div>
         );
       })}

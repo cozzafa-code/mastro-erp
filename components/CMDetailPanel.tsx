@@ -2740,14 +2740,15 @@ export default function CMDetailPanel() {
           const tuttoCC = (hasSaldoCC && saldoPagCC) || (fattCC.some(f => f.tipo === "unica") && unicaPagCC) || (c.fase === "chiusura" && incassatoCC >= totIvaCC) || (incassatoCC >= totIvaCC && fattCC.length > 0 && fattCC.every(f => f.pagata));
           const fmtCC = (n) => typeof n === "number" ? n.toLocaleString("it-IT", { minimumFractionDigits: 2 }) : "0,00";
 
+          const skipped = (id) => (c.skipLog || []).some(s => s.fase === id);
           const stepsCC = [
-            { id: "sopralluogo", icon: "🔍", l: "Sopralluogo", done: rilieviCC.length > 0 && vaniCC.length > 0, desc: "Misure, foto, note dal cantiere" },
-            { id: "preventivo", icon: "📋", l: "Preventivo", done: !!c.preventivoInviato, desc: "Rivedi prezzi, sconti, condizioni" },
-            { id: "conferma", icon: "✏️", l: "Conferma", done: hasFirmaCC, desc: "Firma cliente e conferma ordine" },
-            { id: "ordini", icon: "📦", l: "Ordini", done: hasOrdCC, desc: "Ordina materiali ai fornitori" },
-            { id: "produzione", icon: "🏭", l: "Produzione", done: confFirmCC, desc: "Attesa materiali e lavorazione" },
-            { id: "posa", icon: "🔧", l: "Posa", done: hasMontCC, desc: "Montaggio al cantiere" },
-            { id: "collaudo", icon: "🔍", l: "Collaudo", done: !!c.collaudoOk, desc: "Verifica lavoro, foto finale" },
+            { id: "sopralluogo", icon: "🔍", l: "Sopralluogo", done: (rilieviCC.length > 0 && vaniCC.length > 0) || skipped("sopralluogo"), skipped: skipped("sopralluogo"), desc: "Misure, foto, note dal cantiere" },
+            { id: "preventivo", icon: "📋", l: "Preventivo", done: !!c.preventivoInviato || skipped("preventivo"), skipped: skipped("preventivo"), desc: "Rivedi prezzi, sconti, condizioni" },
+            { id: "conferma", icon: "✏️", l: "Conferma", done: hasFirmaCC || skipped("conferma"), skipped: skipped("conferma"), desc: "Firma cliente e conferma ordine" },
+            { id: "ordini", icon: "📦", l: "Ordini", done: hasOrdCC || skipped("ordini"), skipped: skipped("ordini"), desc: "Ordina materiali ai fornitori" },
+            { id: "produzione", icon: "🏭", l: "Produzione", done: confFirmCC || skipped("produzione"), skipped: skipped("produzione"), desc: "Attesa materiali e lavorazione" },
+            { id: "posa", icon: "🔧", l: "Posa", done: hasMontCC || skipped("posa"), skipped: skipped("posa"), desc: "Montaggio al cantiere" },
+            { id: "collaudo", icon: "🔍", l: "Collaudo", done: !!c.collaudoOk || skipped("collaudo"), skipped: skipped("collaudo"), desc: "Verifica lavoro, foto finale" },
             { id: "chiusura", icon: "€", l: "Chiusura", done: tuttoCC, desc: "Fattura saldo e chiudi" },
           ];
           const doneCC = stepsCC.filter(s => s.done).length;
@@ -2763,9 +2764,9 @@ export default function CMDetailPanel() {
                   <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 3 }}>
                     <div style={{
                       width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10,
-                      background: s.done ? "#34c759" : i === curIdxCC ? T.acc : T.bg,
-                      color: s.done || i === curIdxCC ? "#fff" : T.sub, fontWeight: 700,
-                    }}>{s.done ? "✓" : s.icon}</div>
+                      background: s.skipped ? "#ff9500" : s.done ? "#34c759" : i === curIdxCC ? T.acc : T.bg,
+                      color: s.done || s.skipped || i === curIdxCC ? "#fff" : T.sub, fontWeight: 700,
+                    }}>{s.skipped ? "⏭" : s.done ? "✓" : s.icon}</div>
                     {i < stepsCC.length - 1 && <div style={{ width: 8, height: 2, background: s.done ? "#34c759" : T.bdr }} />}
                   </div>
                 ))}
@@ -2784,6 +2785,22 @@ export default function CMDetailPanel() {
                   {/* Success flash */}
                   {ccDone && <div style={{ marginBottom: 8, padding: "8px 10px", borderRadius: 8, background: "#34c75918", border: "1px solid #34c75940", fontSize: 12, fontWeight: 700, color: "#34c759", textAlign: "center" }}>{ccDone}</div>}
 
+                  {/* Skipped steps log */}
+                  {(c.skipLog || []).length > 0 && (
+                    <div style={{ marginBottom: 8, padding: "6px 10px", borderRadius: 8, background: "#ff950010", border: "1px solid #ff950030" }}>
+                      <div style={{ fontSize: 9, fontWeight: 800, color: "#ff9500", textTransform: "uppercase", marginBottom: 3 }}>Passaggi saltati</div>
+                      {(c.skipLog || []).map((skip, si) => {
+                        const stepInfo = stepsCC.find(s => s.id === skip.fase);
+                        return (
+                          <div key={si} style={{ fontSize: 10, color: T.text, display: "flex", gap: 6, padding: "2px 0" }}>
+                            <span style={{ color: "#ff9500", fontWeight: 700 }}>⏭ {stepInfo?.l || skip.fase}</span>
+                            <span style={{ color: T.sub, flex: 1 }}>{skip.motivo || "—"}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {/* ══ SOPRALLUOGO ══ */}
                   {curCC.id === "sopralluogo" && (
                     <div>
@@ -2795,7 +2812,7 @@ export default function CMDetailPanel() {
                         </div>
                       )}
                       {vaniCC.length === 0 ? (
-                        <button onClick={() => { /* scroll to rilievo section */ }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: T.blue, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}><I d={ICO.search} /> INIZIA SOPRALLUOGO →</button>
+                        <button onClick={() => { /* scroll to rilievo section */ }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#1A9E73", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}><I d={ICO.mapPin} /> AVVIA SOPRALLUOGO</button>
                       ) : (
                         <div style={{ fontSize: 12, color: T.grn, fontWeight: 700, textAlign: "center" }}>✅ {vaniCC.length} vani misurati — Vai al preventivo</div>
                       )}
@@ -2899,7 +2916,7 @@ export default function CMDetailPanel() {
                         <div style={{ background: T.bg, borderRadius: 8, padding: 8, marginBottom: 8 }}>
                           {ordCC.map((o, oi) => (
                             <div key={oi} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "3px 0" }}>
-                              <span style={{ fontWeight: 600 }}>{o.fornitore || "Fornitore"}</span>
+                              <span style={{ fontWeight: 600 }}>{typeof o.fornitore === "object" ? (o.fornitore?.nome || "Fornitore") : (o.fornitore || "Fornitore")}</span>
                               <span style={{ color: o.conferma?.ricevuta ? T.grn : T.orange, fontWeight: 700 }}>
                                 {o.conferma?.firmata ? "✅ Confermato" : o.conferma?.ricevuta ? "📄 Conferma ricevuta" : "🕐 In attesa"}
                               </span>
@@ -2908,7 +2925,7 @@ export default function CMDetailPanel() {
                         </div>
                       )}
                       {!ordConfCC ? (
-                        <button onClick={() => apriInboxDocumento()} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#af52de", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}><I d={ICO.download} /> CARICA CONFERMA FORNITORE →</button>
+                        <button onClick={() => apriInboxDocumento(c.id, "conferma")} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#af52de", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}><I d={ICO.download} /> CARICA CONFERMA FORNITORE →</button>
                       ) : ccConfirm !== "conferma_ok" ? (
                         <button onClick={() => setCcConfirm("conferma_ok")} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#34c759", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✅ APPROVA E AVVIA PRODUZIONE →</button>
                       ) : (
@@ -2934,6 +2951,107 @@ export default function CMDetailPanel() {
                       ) : (
                         <div style={{ background: T.bg, borderRadius: 10, padding: 10, border: `1px solid ${T.bdr}` }}>
                           <input type="date" value={montFormData.data} onChange={e => setMontFormData(p => ({ ...p, data: e.target.value }))} style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" as any, marginBottom: 6 }} />
+
+                          {/* Mini calendario squadre — 3 settimane + anteprima */}
+                          {(() => {
+                            const selDate = montFormData.data ? new Date(montFormData.data + 'T12:00:00') : new Date();
+                            const todayISO = new Date().toISOString().split('T')[0];
+                            const baseDay = new Date(selDate);
+                            baseDay.setDate(baseDay.getDate() - (baseDay.getDay() === 0 ? 6 : baseDay.getDay() - 1));
+                            baseDay.setDate(baseDay.getDate() - 7);
+                            const WEEKS = 3;
+                            const allDays = Array.from({ length: WEEKS * 7 }, (_, i) => { const d = new Date(baseDay); d.setDate(d.getDate() + i); return d; });
+                            const fmtD = (d) => d.toISOString().split('T')[0];
+                            const dayN = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+                            const squads = squadreDB.length > 0 ? squadreDB : [{ id: 'default', nome: 'Squadra', colore: '#007aff' }];
+                            const previewDays = new Set();
+                            if (montFormData.data && montGiorni > 0) {
+                              let added = 0;
+                              const pStart = new Date(montFormData.data + 'T12:00:00');
+                              for (let i = 0; added < Math.ceil(montGiorni) && i < 30; i++) {
+                                const pd = new Date(pStart); pd.setDate(pd.getDate() + i);
+                                if (pd.getDay() === 0 || pd.getDay() === 6) continue;
+                                previewDays.add(fmtD(pd)); added++;
+                              }
+                            }
+                            const selSquadId = montFormData.squadraId || (squads.length === 1 ? squads[0].id : null);
+                            return (
+                              <div style={{ marginBottom: 8, borderRadius: 8, border: '1px solid ' + T.bdr, overflow: 'hidden', background: T.card }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 8px 0' }}>
+                                  <span onClick={() => { const p = new Date(baseDay); p.setDate(p.getDate() - 7); setMontFormData(prev => ({ ...prev, data: fmtD(p) })); }} style={{ cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.acc, padding: '4px 8px' }}>{"‹"}</span>
+                                  <span style={{ fontSize: 9, fontWeight: 800, color: T.sub, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                    Disponibilità squadre
+                                  </span>
+                                  <span onClick={() => { const n = new Date(baseDay); n.setDate(n.getDate() + 21); setMontFormData(prev => ({ ...prev, data: fmtD(n) })); }} style={{ cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.acc, padding: '4px 8px' }}>{"›"}</span>
+                                </div>
+                                {Array.from({ length: WEEKS }, (_, wi) => {
+                                  const weekDays = allDays.slice(wi * 7, wi * 7 + 7);
+                                  const weekStart = weekDays[0];
+                                  return (
+                                    <div key={wi} style={{ borderTop: wi > 0 ? '1px solid ' + T.bdr + '50' : 'none', paddingTop: wi > 0 ? 2 : 0 }}>
+                                      <div style={{ display: 'grid', gridTemplateColumns: '48px repeat(7, 1fr)', fontSize: 9, padding: '2px 4px 0' }}>
+                                        <div style={{ fontSize: 8, fontWeight: 600, color: T.sub + '80', padding: '1px 0' }}>
+                                          {weekStart.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
+                                        </div>
+                                        {weekDays.map((d, i) => {
+                                          const iso = fmtD(d);
+                                          const isSel = iso === montFormData.data;
+                                          const isToday = iso === todayISO;
+                                          const isPast = iso < todayISO;
+                                          return (
+                                            <div key={i} onClick={() => !isPast && setMontFormData(p => ({ ...p, data: iso }))} style={{
+                                              textAlign: 'center', cursor: isPast ? 'default' : 'pointer', padding: '1px 0', borderRadius: 4,
+                                              background: isSel ? T.acc + '25' : isToday ? T.grn + '12' : 'transparent',
+                                              border: isSel ? '1.5px solid ' + T.acc : '1.5px solid transparent',
+                                              opacity: isPast ? 0.3 : 1,
+                                            }}>
+                                              {wi === 0 && <div style={{ fontSize: 8, fontWeight: 600, color: isSel ? T.acc : isToday ? T.grn : i >= 5 ? T.sub + '60' : T.sub }}>{dayN[i]}</div>}
+                                              <div style={{ fontSize: 10, fontWeight: isSel || isToday ? 800 : 500, color: isSel ? T.acc : isToday ? T.grn : T.text }}>{d.getDate()}</div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                      {squads.map((sq, si) => {
+                                        const sqC = sq.colore || '#007aff';
+                                        return (
+                                          <div key={sq.id} style={{ display: 'grid', gridTemplateColumns: '48px repeat(7, 1fr)', fontSize: 7, padding: '0 4px' }}>
+                                            <div style={{ fontSize: 8, fontWeight: 700, color: sqC, padding: '1px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wi === 0 ? sq.nome : ''}</div>
+                                            {weekDays.map((d, di) => {
+                                              const iso = fmtD(d);
+                                              const dayM = (montaggiDB || []).filter(m => m.data === iso && (m.squadraId === sq.id || (!m.squadraId && squads.length === 1)));
+                                              const isPreview = previewDays.has(iso) && (selSquadId === sq.id);
+                                              const hasWork = dayM.length > 0;
+                                              const isConflict = hasWork && isPreview;
+                                              return (
+                                                <div key={di} onClick={() => { if (fmtD(d) >= todayISO) setMontFormData(p => ({ ...p, data: iso, squadraId: sq.id })); }} style={{
+                                                  textAlign: 'center', padding: '1px', cursor: 'pointer', borderRadius: 3, margin: '0 1px', minHeight: 13,
+                                                  background: isConflict ? '#ff3b3020' : isPreview ? T.acc + '18' : hasWork ? sqC + '10' : 'transparent',
+                                                  border: isPreview ? '1px dashed ' + (isConflict ? '#ff3b30' : T.acc) : '1px solid transparent',
+                                                }}>
+                                                  {hasWork ? dayM.map((m, mi) => (
+                                                    <div key={mi} style={{ fontSize: 7, fontWeight: 700, color: isConflict ? '#ff3b30' : sqC, lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                      {(m.cliente || '').split(' ')[0] || 'Occ'}
+                                                    </div>
+                                                  )) : isPreview ? (
+                                                    <div style={{ fontSize: 8, fontWeight: 800, color: T.acc }}>{"●"}</div>
+                                                  ) : null}
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })}
+                                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', padding: '3px 8px 5px', fontSize: 8, color: T.sub }}>
+                                  {previewDays.size > 0 && <span><span style={{ color: T.acc, fontWeight: 800 }}>{"●"}</span> Nuovo montaggio ({montGiorni}g)</span>}
+                                  {previewDays.size > 0 && Array.from(previewDays).some(pd => (montaggiDB || []).some(m => m.data === pd && (m.squadraId === selSquadId))) && <span style={{ color: '#ff3b30', fontWeight: 700 }}>{"⚠"} Sovrapposizione!</span>}
+                                  <span style={{ marginLeft: 'auto', cursor: 'pointer', color: T.acc, fontWeight: 700, fontSize: 9 }} onClick={() => setMontFormData(prev => ({ ...prev, data: todayISO }))}>Oggi</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
                           <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
                             <select value={montFormData.orario} onChange={e => setMontFormData(p => ({ ...p, orario: e.target.value }))} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, fontSize: 12, fontFamily: "inherit" }}>
                               {["06:00","07:00","07:30","08:00","08:30","09:00","10:00","14:00"].map(h => <option key={h} value={h}>{h}</option>)}
@@ -3225,7 +3343,7 @@ export default function CMDetailPanel() {
                       {/* Badge rilievo di appartenenza */}
                       {(() => {
                         const rIdx = c.rilievi?.findIndex(r => r.vani?.some(vv => vv.id === v.id));
-                        if (rIdx < 0) return null;
+                        if (rIdx == null || rIdx < 0) return null;
                         const ril = c.rilievi[rIdx];
                         const questoBloccato = v.note?.startsWith("⚠ BLOCCATO");
                         const questoIncompleto = !questoBloccato && Object.values(v.misure||{}).filter(x=>(x as number)>0).length > 0 && Object.values(v.misure||{}).filter(x=>(x as number)>0).length < 6;

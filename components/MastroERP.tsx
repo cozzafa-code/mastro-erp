@@ -33,6 +33,7 @@ import RilieviListPanel from "./RilieviListPanel";
 import VanoDetailPanel from "./VanoDetailPanel";
 import VanoSectorRouter from "./VanoSectorRouter";
 import HomePanel from "./HomePanel";
+import VoiceAssistant from "./VoiceAssistant";
 import CMDetailPanel from "./CMDetailPanel";
 import ModalPanel from "./ModalPanel";
 import RiepilogoPanel from "./RiepilogoPanel";
@@ -43,6 +44,7 @@ import ClientiPanel from "./ClientiPanel";
 import CommessePanel from "./CommessePanel";
 import { OnboardingPanel, FirmaModalPanel } from "./OnboardingPanel";
 import MastroStrutture from "./MastroStrutture";
+import MontaggiCalendar from "./MontaggiCalendar";
 
 function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda?: any }) {
   const [theme, setTheme] = useState("chiaro");
@@ -424,6 +426,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   const [showCompose, setShowCompose] = useState(false);
   const [composeMsg, setComposeMsg] = useState({ to: "", text: "", canale: "whatsapp", cm: "" });
   const [fabOpen, setFabOpen] = useState(false);
+  const [showVoice, setShowVoice] = useState(false);
   const [contatti, setContatti] = useState(CONTATTI_INIT);
   const [msgSubTab, setMsgSubTab] = useState("chat"); // "chat" | "rubrica" | "ai" | "email"
   const [aiInbox, setAiInbox] = useState(AI_INBOX_INIT);
@@ -1404,7 +1407,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   /* ======= FILTERED CANTIERI ======= */
   const filtered = cantieri.filter(c => {
     if (filterFase !== "tutte" && c.fase !== filterFase) return false;
-    if (searchQ && !c.cliente.toLowerCase().includes(searchQ.toLowerCase()) && !c.code.toLowerCase().includes(searchQ.toLowerCase())) return false;
+    if (searchQ && !c.cliente.toLowerCase().includes(searchQ.toLowerCase()) && !c.code.toLowerCase().includes(searchQ.toLowerCase()) && !(c.tipo || "").toLowerCase().includes(searchQ.toLowerCase()) && !(c.indirizzo || "").toLowerCase().includes(searchQ.toLowerCase())) return false;
     return true;
   });
 
@@ -2286,7 +2289,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
                 return (
                   <div key={o.id} style={{ fontSize: 10, color: isLate ? T.red : T.text, padding: "2px 0", display: "flex", gap: 8 }}>
                     <span style={{ fontWeight: 700, width: 30, color: "#E8A020" }}>{new Date(o.dataConsegnaPrev).toLocaleDateString("it-IT", { weekday: "short" })}</span>
-                    <span style={{ fontWeight: 600 }}>{o.fornitore}</span>
+                    <span style={{ fontWeight: 600 }}>{typeof o.fornitore === "object" ? (o.fornitore?.nome || "") : o.fornitore}</span>
                     <span style={{ color: T.sub }}>→ {cm?.cliente || o.cmId}</span>
                     {o.costo > 0 && <span style={{ color: T.sub }}>€{o.costo.toLocaleString("it-IT")}</span>}
                     {isLate && <span style={{ color: T.red, fontWeight: 700 }}><I d={ICO.alertTriangle} />️ RITARDO</span>}
@@ -2759,7 +2762,9 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
         {tab === "clienti" && <PanelErrorBoundary name="Clienti">{renderClienti()}</PanelErrorBoundary>}
         {tab === "messaggi" && !selectedMsg && <PanelErrorBoundary name="Messaggi">{renderMessaggi()}</PanelErrorBoundary>}
         {tab === "agenda" && <PanelErrorBoundary name="Agenda">{renderAgenda()}</PanelErrorBoundary>}
-        {tab === "settings" && <PanelErrorBoundary name="Impostazioni">{renderSettings()}</PanelErrorBoundary>}
+        {tab === "contabilita" && <PanelErrorBoundary name="Contabilita">{renderContabilita()}</PanelErrorBoundary>}
+        {tab === "montaggi_cal" && <PanelErrorBoundary name="MontaggiCal"><MontaggiCalendar /></PanelErrorBoundary>}
+          {tab === "settings" && <PanelErrorBoundary name="Impostazioni">{renderSettings()}</PanelErrorBoundary>}
 
         <SyncStatusBar status={sync.status} />
         {ConfirmDialog}
@@ -2847,6 +2852,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
         {(() => {
           const lastCM = lastOpenedCMId ? cantieri.find(c => c.id === lastOpenedCMId) : (cantieri.find(c => c.fase === "sopralluogo") || cantieri.find(c => c.fase !== "chiusura") || cantieri[0]);
           const fabItems: Array<{id:string;ico:any;l:string;c:string;action:()=>void}> = [
+            { id: "voce", ico: <Ico d={ICO.mic} s={20} c="#fff" />, l: "Nota vocale", c: "#DC4444", action: () => { setFabOpen(false); setShowVoice(true); } },
             { id: "evento", ico: <Ico d={ICO.calendar} s={20} c="#fff" />, l: "Appuntamento", c: "#0D7C6B", action: () => { setFabOpen(false); setShowNewEvent(true); } },
             { id: "cliente", ico: <Ico d={ICO.user} s={20} c="#fff" />, l: "Nuovo cliente", c: "#1A9E73", action: () => { setFabOpen(false); setShowModal("contatto"); } },
             { id: "commessa", ico: <Ico d={ICO.folder} s={20} c="#fff" />, l: "Nuova commessa", c: "#E8A020", action: () => { setFabOpen(false); setShowModal("commessa"); } },
@@ -2906,6 +2912,35 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
                   <I d={ICO.folder} /> {selectedMsg.cm}
                 </div>
               )}
+            </div>
+            {/* ── AZIONI MESSAGGIO ── */}
+            <div style={{ padding: "6px 16px", background: T.bg, borderBottom: "1px solid " + T.bdr, display: "flex", gap: 6, overflowX: "auto" }}>
+              <div onClick={() => {
+                const fromName = selectedMsg.from || "";
+                const lastText = (selectedMsg.thread || []).filter(m => m.who !== "Tu").pop()?.text || selectedMsg.preview || "";
+                setTasks(prev => [...prev, { id: "TK-" + Date.now(), text: "Rispondere a " + fromName + (lastText ? ": " + lastText.slice(0, 60) : ""), done: false, priority: "media", meta: selectedMsg.cm || fromName, createdAt: new Date().toISOString() }]);
+                toast("Task creata da messaggio", "green", () => { setSelectedMsg(null); setTab("agenda"); });
+              }} style={{ padding: "6px 12px", borderRadius: 8, background: T.acc + "12", border: "1px solid " + T.acc + "25", color: T.acc, fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
+                <I d={ICO.checkCircle} s={12} c={T.acc} /> Task
+              </div>
+              <div onClick={() => {
+                const fromName = selectedMsg.from || "";
+                setEvents(prev => [...prev, { id: "EV-" + Date.now(), text: "Appuntamento " + fromName, date: new Date(Date.now() + 86400000).toISOString().split("T")[0], time: "09:00", tipo: "sopralluogo", persona: fromName, color: T.acc, cmId: null }]);
+                toast("Evento creato da messaggio", "green", () => { setSelectedMsg(null); setTab("agenda"); });
+              }} style={{ padding: "6px 12px", borderRadius: 8, background: "#3B7FE012", border: "1px solid #3B7FE025", color: "#3B7FE0", fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
+                <I d={ICO.calendar} s={12} c="#3B7FE0" /> Evento
+              </div>
+              <div onClick={() => {
+                const fromName = selectedMsg.from || "";
+                const fromPhone = selectedMsg.phone || "";
+                const exists = contatti.find(c => c.nome === fromName.split(" ")[0]);
+                if (exists) { toast(fromName + " già in rubrica", "warning"); return; }
+                const parts = fromName.split(" ");
+                setContatti(prev => [...prev, { id: "CT-" + Date.now(), nome: parts[0] || fromName, cognome: parts.slice(1).join(" ") || "", telefono: fromPhone, tipo: "cliente", preferito: false, diario: [] }]);
+                toast(fromName + " aggiunto alla rubrica", "success");
+              }} style={{ padding: "6px 12px", borderRadius: 8, background: "#af52de12", border: "1px solid #af52de25", color: "#af52de", fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
+                <I d={ICO.user} s={12} c="#af52de" /> Rubrica
+              </div>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
               {(selectedMsg.thread || []).map((msg, i) => {
@@ -3375,7 +3410,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
               { id: "commesse", ico: ICO.filter, label: "Commesse" },
               { id: "clienti", ico: ICO.users, label: "Clienti" },
               { id: "messaggi", ico: ICO.chat, label: "Messaggi" },
-              { id: "settings", ico: ICO.settings, label: "Impost." },
+                            { id: "settings", ico: ICO.settings, label: "Impost." },
             ].map(t => (
               <div key={t.id} style={S.tabItem(tab === t.id)} onClick={() => { setTab(t.id); setSelectedCM(null); setSelectedVano(null); setSelectedMsg(null); }}>
                 <div style={{ position: "relative", display: "inline-block" }}>
@@ -3986,7 +4021,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
                 {inboxResult.dati && (inboxResult.dati.fornitoreNome || inboxResult.dati.totale > 0 || inboxResult.dati.settimane > 0) && (
                   <div style={{ ...S.card, padding: 12, marginBottom: 12, background: "#af52de08", border: `1px solid #af52de20` }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: "#af52de", textTransform: "uppercase", marginBottom: 8 }}><I d={ICO.cpu} /> Dati Estratti</div>
-                    {inboxResult.dati.fornitoreNome && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: T.sub }}>Fornitore</span><b>{inboxResult.dati.fornitoreNome}</b></div>}
+                    {inboxResult.dati.fornitoreNome && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: T.sub }}>Fornitore</span><b>{String(inboxResult.dati.fornitoreNome || "")}</b></div>}
                     {inboxResult.dati.totale > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: T.sub }}>Totale</span><b style={{ color: "#af52de" }}>€{inboxResult.dati.totale.toLocaleString("it-IT", { minimumFractionDigits: 2 })}</b></div>}
                     {inboxResult.dati.settimane > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: T.sub }}>Produzione</span><b>{inboxResult.dati.settimane} settimane</b></div>}
                     {inboxResult.dati.dataConsegna && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: T.sub }}>Consegna</span><b>{new Date(inboxResult.dati.dataConsegna).toLocaleDateString("it-IT")}</b></div>}
@@ -4162,6 +4197,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
     {/* === CONFIGURATORE STRUTTURE === */}
     {showStrutture && <MastroStrutture onClose={() => setShowStrutture(false)} />}
     </>
+      {showVoice && <VoiceAssistant onClose={() => setShowVoice(false)} />}
     </MastroContext.Provider>
   );
 }

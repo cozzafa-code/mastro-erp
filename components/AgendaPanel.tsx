@@ -25,7 +25,7 @@ export default function AgendaPanel() {
         id: "scad_e_" + f.id, date: f.scadenza, time: "", text: "Incasso " + f.cliente, persona: f.cliente, cm: f.cmCode || "", color: "#1A9E73", _isScadenza: true, _importo: f.importo, _tipo: "incasso"
       })),
       ...(fatturePassive || []).filter(f => !f.pagata && f.scadenza).map(f => ({
-        id: "scad_p_" + f.id, date: f.scadenza, time: "", text: "Pagamento " + (f.fornitore || ""), persona: f.fornitore || "", cm: "", color: "#E8A020", _isScadenza: true, _importo: f.importo || 0, _tipo: "pagamento"
+        id: "scad_p_" + f.id, date: f.scadenza, time: "", text: "Pagamento " + (typeof f.fornitore === "object" ? (f.fornitore?.nome || "") : (f.fornitore || "")), persona: typeof f.fornitore === "object" ? (f.fornitore?.nome || "") : (f.fornitore || ""), cm: "", color: "#E8A020", _isScadenza: true, _importo: f.importo || 0, _tipo: "pagamento"
       })),
     ];
     const allItemsRaw = [...events, ...tasksWithDate, ...montaggiItems, ...consegneItems, ...scadenzeItems];

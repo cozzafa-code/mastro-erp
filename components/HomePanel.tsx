@@ -136,7 +136,10 @@ export default function HomePanel() {
             <div suppressHydrationWarning style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: "-0.03em" }}>{saluto}, Fabio</div>
             <div suppressHydrationWarning style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{today.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>
           </div>
-          <div onClick={() => setHomeEditMode(e => !e)} style={{ padding: "5px 10px", borderRadius: 6, background: homeEditMode ? T.acc : T.bg, border: "1px solid " + (homeEditMode ? T.acc : T.bdr), fontSize: 10, fontWeight: 700, color: homeEditMode ? "#fff" : T.sub, cursor: "pointer" }}>{homeEditMode ? "✓ Fine" : "⋮ Riordina"}</div>
+          <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+            <div onClick={() => setTab("contabilita")} style={{ padding: "5px 8px", borderRadius: 6, background: T.bg, border: "1px solid " + T.bdr, fontSize: 9, fontWeight: 700, color: T.sub, cursor: "pointer" }}>€ Contab.</div>
+            <div onClick={() => setTab("montaggi_cal")} style={{ padding: "5px 8px", borderRadius: 6, background: "#1A9E7308", border: "1px solid #1A9E7340", fontSize: 9, fontWeight: 700, color: "#1A9E73", cursor: "pointer" }}>🗓 Cantieri</div>
+          </div>
         </div>
       </div>
 

@@ -3,6 +3,7 @@
 // Preventivo condivisibile + AI PDF extraction
 // ═══════════════════════════════════════════════════════════
 
+import { TIPOLOGIE_RAPIDE } from "@/components/mastro-constants";
 import { supabase } from "@/lib/supabase";
 
 interface CondDeps {
@@ -41,9 +42,9 @@ export async function generaPreventivoCondivisibile(c: any, deps: CondDeps) {
       .firma-done{background:#f0fdf4;border:2px solid #1A9E73;border-radius:12px;padding:16px;text-align:center}
     </style></head><body>
     <div class="header">
-      ${az.logo ? `<img src="${az.logo}" class="logo"/><br>` : ""}
-      <div class="title">${az.nome || "MASTRO"}</div>
-      <div class="sub">${az.indirizzo || ""}<br>${az.tel || ""} · ${az.email || ""}</div>
+      ${aziendaDB.logo ? `<img src="${aziendaDB.logo}" class="logo"/><br>` : ""}
+      <div class="title">${aziendaDB.nome || "MASTRO"}</div>
+      <div class="sub">${aziendaDB.indirizzo || ""}<br>${aziendaDB.tel || ""} · ${aziendaDB.email || ""}</div>
     </div>
 
     <div class="card">

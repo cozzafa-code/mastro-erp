@@ -49,7 +49,7 @@ export default function ContabilitaPanel() {
     allRicevute.filter(f => !f.pagata && f.scadenza && f.scadenza.startsWith(contabMese)).forEach(f => {
       const d = parseInt(f.scadenza.split("-")[2]);
       if (!scadenzeMap[d]) scadenzeMap[d] = [];
-      scadenzeMap[d].push({ tipo: "pagamento", importo: f.importo || 0, nome: f.fornitore || "" });
+      scadenzeMap[d].push({ tipo: "pagamento", importo: f.importo || 0, nome: typeof f.fornitore === "object" ? (f.fornitore?.nome || "") : (f.fornitore || "") });
     });
     
     // Monthly bar data (last 6 months)
@@ -73,7 +73,7 @@ export default function ContabilitaPanel() {
     <div style={{ position: "fixed", inset: 0, zIndex: 10002, background: T.bg, overflow: "auto" }}>
       {/* HEADER */}
       <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", background: T.card, borderBottom: "1px solid " + T.bdr, position: "sticky", top: 0, zIndex: 10 }}>
-        <div onClick={() => setShowContabilita(false)} style={{ cursor: "pointer", color: T.acc, fontWeight: 700, fontSize: 14 }}>← Indietro</div>
+        <div onClick={() => setTab("home")} style={{ cursor: "pointer", color: T.acc, fontWeight: 700, fontSize: 14 }}>← Indietro</div>
         <div style={{ flex: 1, textAlign: "center", fontSize: 16, fontWeight: 800, color: T.text }}>💰 Contabilità</div>
         <div style={{ width: 60 }} />
       </div>
@@ -152,7 +152,7 @@ export default function ContabilitaPanel() {
                   {isLate ? "🔴" : f.dir === "incasso" ? "📤" : "📥"}
                 </div>
                 <div style={{ flex: 1, marginLeft: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{(f as any).fornitore || f.cliente}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{typeof (f as any).fornitore === "object" ? ((f as any).fornitore?.nome || f.cliente) : ((f as any).fornitore || f.cliente)}</div>
                   <div style={{ fontSize: 9, color: isLate ? T.red : T.sub }}>
                     {isLate ? `Scaduta da ${Math.abs(days)} gg` : days === 0 ? "Scade oggi!" : `Tra ${days} gg`} · {new Date(f.scadenza || "").toLocaleDateString("it-IT")}
                   </div>
@@ -243,7 +243,7 @@ export default function ContabilitaPanel() {
           <div key={f.id} style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 12, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>{f.fornitore}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>{typeof f.fornitore === "object" ? (f.fornitore?.nome || "—") : (f.fornitore || "—")}</div>
                 <div style={{ fontSize: 10, color: T.sub }}>N. {f.numero} · {f.data || f.dataISO}</div>
                 {f.descrizione && <div style={{ fontSize: 9, color: T.sub, marginTop: 2 }}>{f.descrizione}</div>}
                 {f.scadenza && <div style={{ fontSize: 9, color: f.scadenza < today.toISOString().split("T")[0] && !f.pagata ? T.red : T.sub, marginTop: 2 }}>
@@ -304,7 +304,7 @@ export default function ContabilitaPanel() {
         });
         allRicevute.filter(f => !f.pagata && f.scadenza && f.scadenza.startsWith(contabMese)).forEach(f => {
           const d = parseInt(f.scadenza.split("-")[2]);
-          addCal(d, { tipo: "pagamento", ico: "📥", col: T.orange, label: f.fornitore || "", importo: f.importo || 0, detail: "Da pagare" });
+          addCal(d, { tipo: "pagamento", ico: "📥", col: T.orange, label: typeof f.fornitore === "object" ? (f.fornitore?.nome || "") : (f.fornitore || ""), importo: f.importo || 0, detail: "Da pagare" });
         });
         // Montaggi
         (montaggiDB || []).filter(m => m.data && m.data.startsWith(contabMese)).forEach(m => {
