@@ -9,7 +9,8 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 // import { getAziendaId, loadAllData, saveCantiere, saveEvent, deleteEvent as deleteEventDB, saveContatto, saveTeamMember, saveTask, saveAzienda, saveVano, deleteVano, saveMateriali, savePipeline } from "@/lib/supabase-sync";
 import { supabase } from "@/lib/supabase";
-import { useSyncEngine, SyncStatusBar, cloudLoadAll as cloudLoadAllSync } from "./mastro-sync";
+import { useSyncEngine, SyncStatusBar } from "./mastro-sync";
+import { useCloudLoader, persistAndSync } from "../hooks/useCloudLoader";
 import { MastroErrorBoundary, PanelErrorBoundary } from "./MastroErrorBoundary";
 import { useConfirmDialog, useToast, exportAllData } from "./mastro-ui-safety";
 import { validateCommessa, validateVano, validateTask, validateEvento, validateFatturaPassiva, validateMisura, sanitize, FormErrors, FieldError } from "./mastro-validation";
@@ -41,7 +42,6 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   const [theme, setTheme] = useState("chiaro");
   const T = THEMES[theme];
   useEffect(() => { document.body.style.background = T.bg; }, [T.bg]);
-  const syncReady = useRef(false);
   const userId = user?.id || null;
   const isUuid = userId ? /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(userId) : false;
   const sync = useSyncEngine(isUuid ? userId : null);
@@ -95,7 +95,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   const [showProblemiView, setShowProblemiView] = useState(false);
   const [showStrutture, setShowStrutture] = useState(false);
   // Save problemi to localStorage
-  useEffect(() => { try { localStorage.setItem("mastro:problemi", JSON.stringify(problemi)); } catch {} if(syncReady.current&&isUuid)sync.cloudSave("problemi", problemi); }, [problemi]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "problemi", problemi), [problemi]);
   const [team, setTeam] = useState(TEAM_INIT);
   const [coloriDB, setColoriDB] = useState(COLORI_INIT);
   const [sistemiDB, setSistemiDB] = useState(SISTEMI_INIT);
@@ -536,102 +536,36 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       try{const _v=localStorage.getItem("mastro:pipeline");if(_v){const parsed=JSON.parse(_v); if(parsed.some(p=>p.id==="collaudo")){setPipelineDB(parsed);}else{setPipelineDB(PIPELINE_DEFAULT);localStorage.setItem("mastro:pipeline",JSON.stringify(PIPELINE_DEFAULT));}} }catch(e){}
       try{const _v=localStorage.getItem("mastro:azienda");if(_v)setAziendaInfo(JSON.parse(_v));}catch(e){}
 },[]);
-  useEffect(()=>{try{localStorage.setItem("mastro:cantieri",JSON.stringify(cantieri));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("cantieri", cantieri);},[cantieri]);
-  useEffect(()=>{try{localStorage.setItem("mastro:tasks",JSON.stringify(tasks));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("tasks", tasks);},[tasks]);
-  useEffect(()=>{try{localStorage.setItem("mastro:events",JSON.stringify(events));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("events", events);},[events]);
-  useEffect(()=>{try{localStorage.setItem("mastro:colori",JSON.stringify(coloriDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("colori", coloriDB);},[coloriDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:sistemi",JSON.stringify(sistemiDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("sistemi", sistemiDB);},[sistemiDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:vetri",JSON.stringify(vetriDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("vetri", vetriDB);},[vetriDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:coprifili",JSON.stringify(coprifiliDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("coprifili", coprifiliDB);},[coprifiliDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:lamiere",JSON.stringify(lamiereDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("lamiere", lamiereDB);},[lamiereDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:libreria",JSON.stringify(libreriaDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("libreria", libreriaDB);},[libreriaDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:fatture",JSON.stringify(fattureDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("fatture", fattureDB);},[fattureDB]);
 
-  useEffect(()=>{try{localStorage.setItem("mastro:ordiniForn",JSON.stringify(ordiniFornDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("ordiniForn", ordiniFornDB);},[ordiniFornDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:squadre",JSON.stringify(squadreDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("squadre", squadreDB);},[squadreDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:montaggi",JSON.stringify(montaggiDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("montaggi", montaggiDB);},[montaggiDB]);
+  // Cloud loader hook (caricamento, visibility, polling)
+  const { syncReady } = useCloudLoader(userId, isUuid, {
+    setCantieri, setEvents, setContatti, setTasks, setProblemi, setTeam,
+    setAziendaInfo, setPipelineDB, setSistemiDB, setVetriDB, setColoriDB,
+    setCoprifiliDB, setLamiereDB, setLibreriaDB, setFattureDB, setOrdiniFornDB,
+    setSquadreDB, setMontaggiDB,
+  });
+
+  // Persist + cloud sync effects
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "cantieri", cantieri), [cantieri]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "tasks", tasks), [tasks]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "events", events), [events]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "colori", coloriDB), [coloriDB]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "sistemi", sistemiDB), [sistemiDB]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "vetri", vetriDB), [vetriDB]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "coprifili", coprifiliDB), [coprifiliDB]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "lamiere", lamiereDB), [lamiereDB]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "libreria", libreriaDB), [libreriaDB]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "fatture", fattureDB), [fattureDB]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "ordiniForn", ordiniFornDB), [ordiniFornDB]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "squadre", squadreDB), [squadreDB]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "montaggi", montaggiDB), [montaggiDB]);
   useEffect(()=>{try{localStorage.setItem("mastro:settori",JSON.stringify(settoriAttivi));}catch(e){}},[settoriAttivi]);
   useEffect(()=>{try{localStorage.setItem("mastro:piano",JSON.stringify(pianoAttivo));}catch(e){}},[pianoAttivo]);
-  useEffect(()=>{try{localStorage.setItem("mastro:team",JSON.stringify(team));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("team", team);},[team]);
-  useEffect(()=>{try{localStorage.setItem("mastro:contatti",JSON.stringify(contatti));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("contatti", contatti);},[contatti]);
-  useEffect(()=>{try{localStorage.setItem("mastro:pipeline",JSON.stringify(pipelineDB));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("pipeline", pipelineDB);},[pipelineDB]);
-  useEffect(()=>{try{localStorage.setItem("mastro:azienda",JSON.stringify(aziendaInfo));}catch(e){} if(syncReady.current&&isUuid)sync.cloudSave("azienda", aziendaInfo);},[aziendaInfo]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "team", team), [team]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "contatti", contatti), [contatti]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "pipeline", pipelineDB), [pipelineDB]);
+  useEffect(() => persistAndSync(syncReady, isUuid, sync, "azienda", aziendaInfo), [aziendaInfo]);
   useEffect(() => { if (selectedCM?.id) setLastOpenedCMId(selectedCM.id); }, [selectedCM]);
-
-  // === CLOUD SYNC (user_data key-value) ===
-
-  // Reusable cloud load function
-  const applyCloud = useCallback(async () => {
-    if (!isUuid) return;
-    try {
-      const cloud = await cloudLoadAllSync(userId);
-      if (Object.keys(cloud).length === 0) return;
-      // Safety: filter out null/invalid entries from arrays
-      const safeArr = (arr: any) => Array.isArray(arr) ? arr.filter(x => x && typeof x === "object") : null;
-      const sa = (k: string) => safeArr(cloud[k]);
-      // Ensure cantieri always have .fase
-      const safeCantieri = sa("cantieri")?.map(c => ({ fase: "sopralluogo", ...c, fase: c.fase === "misure" ? "sopralluogo" : (c.fase || "sopralluogo") })) || null;
-      if (safeCantieri) { setCantieri(safeCantieri); localStorage.setItem("mastro:cantieri", JSON.stringify(safeCantieri)); }
-      if (sa("events")) { setEvents(sa("events")!); localStorage.setItem("mastro:events", JSON.stringify(sa("events"))); }
-      if (sa("contatti")) { setContatti(sa("contatti")!); localStorage.setItem("mastro:contatti", JSON.stringify(sa("contatti"))); }
-      if (sa("tasks")) { setTasks(sa("tasks")!); localStorage.setItem("mastro:tasks", JSON.stringify(sa("tasks"))); }
-      if (sa("problemi")) { setProblemi(sa("problemi")!); localStorage.setItem("mastro:problemi", JSON.stringify(sa("problemi"))); }
-      if (sa("team")) { setTeam(sa("team")!); localStorage.setItem("mastro:team", JSON.stringify(sa("team"))); }
-      if (cloud.azienda) { setAziendaInfo(cloud.azienda); localStorage.setItem("mastro:azienda", JSON.stringify(cloud.azienda)); }
-      if (sa("pipeline")) { setPipelineDB(sa("pipeline")!); localStorage.setItem("mastro:pipeline", JSON.stringify(sa("pipeline"))); }
-      if (sa("sistemi")) {
-        const DEMO_GRIGLIE: Record<string, any[]> = {
-          "Ideal 4000": [{l:600,h:600,prezzo:120},{l:600,h:800,prezzo:145},{l:600,h:1000,prezzo:170},{l:600,h:1200,prezzo:195},{l:800,h:800,prezzo:175},{l:800,h:1000,prezzo:205},{l:800,h:1200,prezzo:240},{l:800,h:1400,prezzo:270},{l:1000,h:1000,prezzo:250},{l:1000,h:1200,prezzo:290},{l:1000,h:1400,prezzo:330},{l:1000,h:1600,prezzo:370},{l:1200,h:1200,prezzo:340},{l:1200,h:1400,prezzo:385},{l:1200,h:1600,prezzo:430},{l:1200,h:1800,prezzo:480},{l:1400,h:1400,prezzo:430},{l:1400,h:1600,prezzo:485},{l:1400,h:2200,prezzo:580}],
-          "CT70": [{l:600,h:800,prezzo:195},{l:600,h:1200,prezzo:260},{l:800,h:1000,prezzo:275},{l:800,h:1400,prezzo:365},{l:1000,h:1200,prezzo:380},{l:1000,h:1400,prezzo:440},{l:1200,h:1400,prezzo:520},{l:1200,h:1600,prezzo:580},{l:1400,h:2200,prezzo:780}],
-        };
-        const DEMO_MINIMI_MQ: Record<string, any> = { "Ideal 4000": { "1anta": 1.5, "2ante": 2.0, "3ante": 2.8, "scorrevole": 3.5, "fisso": 1.0 }, "CT70": { "1anta": 1.5, "2ante": 2.0, "scorrevole": 3.5 }, "S80": { "1anta": 1.5, "2ante": 2.0 }, "FIN-Project": { "1anta": 1.5, "2ante": 2.2, "scorrevole": 4.0 } };
-        const migrated = sa("sistemi")!.map(s => ({ ...s, griglia: s.griglia || DEMO_GRIGLIE[s.sistema] || [], minimiMq: s.minimiMq || {} }));
-        setSistemiDB(migrated); localStorage.setItem("mastro:sistemi", JSON.stringify(migrated));
-      }
-      if (sa("vetri")) { setVetriDB(sa("vetri")!); localStorage.setItem("mastro:vetri", JSON.stringify(sa("vetri"))); }
-      if (sa("colori")) { setColoriDB(sa("colori")!); localStorage.setItem("mastro:colori", JSON.stringify(sa("colori"))); }
-      if (sa("coprifili")) { setCoprifiliDB(sa("coprifili")!); localStorage.setItem("mastro:coprifili", JSON.stringify(sa("coprifili"))); }
-      if (sa("lamiere")) { setLamiereDB(sa("lamiere")!); localStorage.setItem("mastro:lamiere", JSON.stringify(sa("lamiere"))); }
-      if (sa("libreria")) { setLibreriaDB(sa("libreria")!); localStorage.setItem("mastro:libreria", JSON.stringify(sa("libreria"))); }
-      if (sa("fatture")) { setFattureDB(sa("fatture")!); localStorage.setItem("mastro:fatture", JSON.stringify(sa("fatture"))); }
-      if (sa("ordiniForn")) { setOrdiniFornDB(sa("ordiniForn")!); localStorage.setItem("mastro:ordiniForn", JSON.stringify(sa("ordiniForn"))); }
-      if (sa("squadre")) { setSquadreDB(sa("squadre")!); localStorage.setItem("mastro:squadre", JSON.stringify(sa("squadre"))); }
-      if (sa("montaggi")) { setMontaggiDB(sa("montaggi")!); localStorage.setItem("mastro:montaggi", JSON.stringify(sa("montaggi"))); }
-    } catch (e) { console.warn("Cloud sync error:", e); }
-  }, [userId]);
-
-  // Load from cloud on mount (after localStorage)
-  useEffect(() => {
-    if (!userId) { syncReady.current = true; return; }
-    let mounted = true;
-    (async () => {
-      await applyCloud();
-      setTimeout(() => { if (mounted) syncReady.current = true; }, 2000);
-    })();
-    return () => { mounted = false; };
-  }, [userId]);
-
-  // Auto-refresh when tab becomes visible (no manual refresh needed!)
-  useEffect(() => {
-    if (!userId) return;
-    const onVisible = () => {
-      if (!document.hidden && syncReady.current) {
-        syncReady.current = false;
-        applyCloud().then(() => { syncReady.current = true; });
-      }
-    };
-    document.addEventListener("visibilitychange", onVisible);
-
-    // Polling: ogni 10 secondi controlla aggiornamenti dal cloud
-    const poll = setInterval(() => {
-      if (!document.hidden && syncReady.current) {
-        applyCloud();
-      }
-    }, 10000);
-
-    return () => { document.removeEventListener("visibilitychange", onVisible); clearInterval(poll); };
-  }, [userId, applyCloud]);
-
 
   const PIPELINE = pipelineDB.filter(p => p.attiva !== false);
   const parseDataCM = (s) => {
