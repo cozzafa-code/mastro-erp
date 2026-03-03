@@ -9,6 +9,7 @@ import { useMastro } from "./MastroContext";
 import { FF, FM, ICO, Ico, I, TIPOLOGIE_RAPIDE, ZANZ_CATEGORIE } from "./mastro-constants";
 import DisegnoTecnico from "./DisegnoTecnico";
 import FotoMisure from "./FotoMisure";
+import AccessoriCatalogoVano from "./AccessoriCatalogoVano";
 
 export default function VanoDetailPanel() {
   const {
@@ -85,6 +86,8 @@ export default function VanoDetailPanel() {
   // ═══ VOICE RECOGNITION — Self-contained implementation ═══
   const [vrActive, setVrActive] = useState(false);
   const [showFotoMisure, setShowFotoMisure] = useState(false);
+  const applyParsedRef = useRef<any>(null);
+  const saveVoiceNoteRef = useRef<any>(null);
   const [vrTranscripts, setVrTranscripts] = useState<{text:string,time:string,parsed?:Record<string,any>}[]>([]);
   const [vrInterim, setVrInterim] = useState("");
   const [vrError, setVrError] = useState("");
@@ -219,6 +222,7 @@ export default function VanoDetailPanel() {
     if (parsed.zanzariera) toggleAccessorio(mid, "zanzariera");
     if (parsed.persiana) toggleAccessorio(mid, "persiana");
   }, [selectedVano, selectedRilievo, updateMisura, updateVanoField, toggleAccessorio]);
+  applyParsedRef.current = applyParsed;
 
   // Save ALL voice text as note on the vano (recognized or not)
   const saveVoiceNote = useCallback((text: string, parsed: Record<string, any>) => {
@@ -232,6 +236,7 @@ export default function VanoDetailPanel() {
     const updatedNote = existing ? `${existing}\n${newNote}` : newNote;
     updateVanoField(mid, "note", updatedNote);
   }, [selectedVano, selectedRilievo, updateVanoField]);
+  saveVoiceNoteRef.current = saveVoiceNote;
 
   const vrStart = useCallback(() => {
     const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -269,16 +274,16 @@ export default function VanoDetailPanel() {
         setVrTranscripts(prev => [...prev, { text: finalText.trim(), time: now, parsed }]);
         // Auto apply parsed fields
         if (Object.keys(parsed).length > 0) {
-          applyParsed(parsed);
+          if (applyParsedRef.current) applyParsedRef.current(parsed);
         }
         // ALWAYS save raw text as note on the vano
-        saveVoiceNote(finalText.trim(), parsed);
+        if (saveVoiceNoteRef.current) saveVoiceNoteRef.current(finalText.trim(), parsed);
         setVrInterim("");
       }
     };
     recognitionRef.current = rec;
     try { rec.start(); } catch(e) { setVrError("Errore avvio microfono."); }
-  }, [parseVoiceText, applyParsed, saveVoiceNote]);
+  }, [parseVoiceText]);
 
   const vrStop = useCallback(() => {
     if (recognitionRef.current) {
@@ -1395,6 +1400,10 @@ export default function VanoDetailPanel() {
               })}
                 </div>
               )}
+
+              {/* Accessori da Catalogo */}
+              <AccessoriCatalogoVano vano={v} updateVanoField={updateVanoField} T={T} />
+
               {/* Voci Libere */}
               <div onClick={() => setDetailOpen(d => ({...d, vociLibere: !d.vociLibere}))} style={{ padding: "12px 16px", borderRadius: 12, border: `1px solid ${detailOpen.vociLibere ? "#E8A020" : T.bdr}`, background: detailOpen.vociLibere ? "#E8A02008" : T.card, marginBottom: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1726,6 +1735,42 @@ export default function VanoDetailPanel() {
                     )}
                   </>
                 }
+              </div>
+
+              {/* Manodopera */}
+              <div style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: 14, marginBottom: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#D08008", marginBottom: 10 }}>👷 MANODOPERA</div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, marginBottom: 3 }}>Ore stimate</div>
+                    <input type="number" step="0.5" min="0" value={v.oreStimate ?? ""} onChange={e => updateVanoField(v.id, "oreStimate", Number(e.target.value) || 0)}
+                      placeholder="Auto" style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `1px solid ${T.bdr}`, fontSize: 14, fontWeight: 700, fontFamily: FF, textAlign: "center", boxSizing: "border-box" }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, marginBottom: 3 }}>Ore extra</div>
+                    <input type="number" step="0.5" min="0" value={v.oreExtra ?? ""} onChange={e => updateVanoField(v.id, "oreExtra", Number(e.target.value) || 0)}
+                      placeholder="0" style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `1px solid ${T.bdr}`, fontSize: 14, fontWeight: 700, fontFamily: FF, textAlign: "center", boxSizing: "border-box" }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, marginBottom: 3 }}>Totale ore</div>
+                    <div style={{ padding: "8px 10px", borderRadius: 8, background: "#D0800810", border: `1px solid #D0800825`, fontSize: 14, fontWeight: 800, fontFamily: FF, textAlign: "center", color: "#D08008" }}>
+                      {((v.oreStimate || 0) + (v.oreExtra || 0)).toFixed(1)}
+                    </div>
+                  </div>
+                </div>
+                <input value={v.notaManodopera || ""} onChange={e => updateVanoField(v.id, "notaManodopera", e.target.value)}
+                  placeholder="Note manodopera (demolizione, muratura...)" style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `1px solid ${T.bdr}`, fontSize: 11, fontFamily: "Inter", boxSizing: "border-box" }} />
+                {(() => {
+                  const costoOra = 35;
+                  const totOre = (v.oreStimate || 0) + (v.oreExtra || 0);
+                  const costo = totOre * costoOra;
+                  return totOre > 0 ? (
+                    <div style={{ marginTop: 6, fontSize: 10, color: T.sub, display: "flex", justifyContent: "space-between" }}>
+                      <span>{totOre}h × €{costoOra}/ora</span>
+                      <span style={{ fontWeight: 800, color: "#D08008" }}>€ {costo.toFixed(2)}</span>
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               {/* Note */}

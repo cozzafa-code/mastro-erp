@@ -112,7 +112,7 @@ export default function SettingsPanel() {
             // Strutture — Configuratore
             ...(settoriAttivi.includes("strutture") ? [{ id: "strutture", l: "🏗 Strutture" }] : []),
             // Sempre visibili
-            { id: "tipologie", l: "📐 Tipologie" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "libreria", l: "📦 Libreria" }, { id: "importa", l: "📥 Importa" }, { id: "guida", l: "📖 Guida" }, { id: "kit", l: "🔧 Kit" }, { id: "marketplace", l: "🏪 Fornitori" }, { id: "temi", l: "🎨 Temi" },
+            { id: "tipologie", l: "📐 Tipologie" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "manodopera", l: "👷 Manodopera" }, { id: "libreria", l: "📦 Libreria" }, { id: "importa", l: "📥 Importa" }, { id: "guida", l: "📖 Guida" }, { id: "kit", l: "🔧 Kit" }, { id: "marketplace", l: "🏪 Fornitori" }, { id: "temi", l: "🎨 Temi" },
           ].map(t => (
             <div key={t.id} onClick={() => setSettingsTab(t.id)} style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 600, background: settingsTab === t.id ? PRI : T.card, color: settingsTab === t.id ? "#fff" : T.sub, cursor: "pointer", whiteSpace: "nowrap", borderRadius: 6 }}>
               {t.l}
@@ -1206,6 +1206,120 @@ export default function SettingsPanel() {
               style={{textAlign:"center",padding:"10px 0 4px",fontSize:11,color:T.sub,cursor:"pointer"}}>Ripristina predefinita</div>
           </>
         )}
+
+        {/* === MANODOPERA === */}
+        {settingsTab === "manodopera" && (() => {
+          const config = ctx.aziendaInfo?.manodopera || { costoOraDefault: 35, oreDefaultPerTipo: [], mostraInPreventivo: false };
+          const updateConfig = (upd) => {
+            const next = { ...config, ...upd };
+            ctx.setAziendaInfo(prev => ({ ...prev, manodopera: next }));
+          };
+          const orePerTipo = config.oreDefaultPerTipo || [];
+          const addTipo = () => { updateConfig({ oreDefaultPerTipo: [...orePerTipo, { tipo: "", oreStimate: 1, nota: "" }] }); };
+          const updTipo = (i, upd) => { const a = [...orePerTipo]; a[i] = { ...a[i], ...upd }; updateConfig({ oreDefaultPerTipo: a }); };
+          const delTipo = (i) => { updateConfig({ oreDefaultPerTipo: orePerTipo.filter((_, j) => j !== i) }); };
+          const costiSquadre = config.costoPerSquadra || [];
+          const addSqCosto = () => { updateConfig({ costoPerSquadra: [...costiSquadre, { squadraId: "", costoOra: config.costoOraDefault }] }); };
+          const updSqCosto = (i, upd) => { const a = [...costiSquadre]; a[i] = { ...a[i], ...upd }; updateConfig({ costoPerSquadra: a }); };
+          const delSqCosto = (i) => { updateConfig({ costoPerSquadra: costiSquadre.filter((_, j) => j !== i) }); };
+          const squadre = ctx.squadreDB || [];
+          return (
+          <div>
+            {/* Header */}
+            <div style={{background:PRI,borderRadius:12,padding:"14px 16px",color:"#fff",marginBottom:12}}>
+              <div style={{fontSize:14,fontWeight:900}}>👷 Manodopera</div>
+              <div style={{fontSize:10,opacity:0.8,marginTop:2}}>Configura costi orari e ore stimate per tipo vano</div>
+            </div>
+
+            {/* Costo orario default */}
+            <div style={{...S.card, padding:"14px 16px", marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:800,color:T.text,marginBottom:8}}>Costo orario aziendale</div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:11,fontWeight:700,color:T.sub}}>€/ora default:</span>
+                <input type="number" value={config.costoOraDefault} onChange={e=>updateConfig({costoOraDefault:Number(e.target.value)})}
+                  style={{width:80,padding:"8px 10px",borderRadius:8,border:`1px solid ${T.bdr}`,fontSize:14,fontWeight:800,fontFamily:FF,textAlign:"center"}} />
+              </div>
+              <div style={{fontSize:9,color:T.sub,marginTop:4}}>Usato quando nessun costo specifico per squadra è impostato</div>
+            </div>
+
+            {/* Costi per squadra */}
+            <div style={{...S.card, padding:"14px 16px", marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <span style={{fontSize:11,fontWeight:800,color:T.text}}>Costi per squadra</span>
+                <div onClick={addSqCosto} style={{padding:"4px 10px",borderRadius:6,background:PRI+"12",border:`1px solid ${PRI}30`,fontSize:10,fontWeight:700,color:PRI,cursor:"pointer"}}>+ Squadra</div>
+              </div>
+              {costiSquadre.length === 0 && <div style={{fontSize:10,color:T.sub,textAlign:"center",padding:8}}>Tutte le squadre usano il costo default (€{config.costoOraDefault}/ora)</div>}
+              {costiSquadre.map((sq,i) => (
+                <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 0",borderBottom:`1px solid ${T.bdr}20`}}>
+                  <select value={sq.squadraId} onChange={e=>updSqCosto(i,{squadraId:e.target.value})} style={{flex:1,padding:"6px 8px",borderRadius:6,border:`1px solid ${T.bdr}`,fontSize:11,fontFamily:"Inter"}}>
+                    <option value="">Seleziona squadra</option>
+                    {squadre.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                  </select>
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <span style={{fontSize:10,color:T.sub}}>€</span>
+                    <input type="number" value={sq.costoOra} onChange={e=>updSqCosto(i,{costoOra:Number(e.target.value)})}
+                      style={{width:60,padding:"6px",borderRadius:6,border:`1px solid ${T.bdr}`,fontSize:12,fontWeight:700,fontFamily:FF,textAlign:"center"}} />
+                    <span style={{fontSize:10,color:T.sub}}>/ora</span>
+                  </div>
+                  <div onClick={()=>delSqCosto(i)} style={{padding:"4px 8px",cursor:"pointer",fontSize:14,color:"#DC4444"}}>×</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Ore stimate per tipo vano */}
+            <div style={{...S.card, padding:"14px 16px", marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <span style={{fontSize:11,fontWeight:800,color:T.text}}>Ore stimate per tipo vano</span>
+                <div onClick={addTipo} style={{padding:"4px 10px",borderRadius:6,background:PRI+"12",border:`1px solid ${PRI}30`,fontSize:10,fontWeight:700,color:PRI,cursor:"pointer"}}>+ Tipo</div>
+              </div>
+              <div style={{fontSize:9,color:T.sub,marginBottom:8}}>Quando aggiungi un vano, le ore si compilano automaticamente in base al tipo</div>
+              {orePerTipo.length === 0 && <div style={{fontSize:10,color:T.sub,textAlign:"center",padding:8}}>Nessuna regola. Aggiungi i tipi di vano comuni (es: Finestra 1A = 2h, Portafinestra 2A = 4h)</div>}
+              {orePerTipo.map((t,i) => (
+                <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 0",borderBottom:`1px solid ${T.bdr}20`}}>
+                  <input value={t.tipo} onChange={e=>updTipo(i,{tipo:e.target.value})} placeholder="Tipo (es: Finestra 1A)"
+                    style={{flex:1,padding:"6px 8px",borderRadius:6,border:`1px solid ${T.bdr}`,fontSize:11,fontFamily:"Inter"}} />
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <input type="number" step="0.5" value={t.oreStimate} onChange={e=>updTipo(i,{oreStimate:Number(e.target.value)})}
+                      style={{width:50,padding:"6px",borderRadius:6,border:`1px solid ${T.bdr}`,fontSize:12,fontWeight:700,fontFamily:FF,textAlign:"center"}} />
+                    <span style={{fontSize:10,color:T.sub}}>ore</span>
+                  </div>
+                  <div onClick={()=>delTipo(i)} style={{padding:"4px 8px",cursor:"pointer",fontSize:14,color:"#DC4444"}}>×</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Opzione preventivo */}
+            <div style={{...S.card, padding:"14px 16px", marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:11,fontWeight:800,color:T.text}}>Mostra manodopera nel preventivo</div>
+                  <div style={{fontSize:9,color:T.sub,marginTop:2}}>Se attivo, aggiunge una riga "Manodopera" separata nel PDF</div>
+                </div>
+                <div onClick={()=>updateConfig({mostraInPreventivo:!config.mostraInPreventivo})} style={{
+                  width:44,height:24,borderRadius:12,padding:2,cursor:"pointer",transition:"background 0.2s",
+                  background:config.mostraInPreventivo?"#1A9E73":T.bdr,display:"flex",alignItems:config.mostraInPreventivo?"center":"center",
+                  justifyContent:config.mostraInPreventivo?"flex-end":"flex-start"
+                }}>
+                  <div style={{width:20,height:20,borderRadius:10,background:"#fff",boxShadow:"0 1px 3px rgba(0,0,0,0.2)",transition:"all 0.2s"}} />
+                </div>
+              </div>
+            </div>
+
+            {/* Tabella riepilogativa esempio */}
+            <div style={{...S.card, padding:"14px 16px"}}>
+              <div style={{fontSize:11,fontWeight:800,color:T.text,marginBottom:8}}>Come funziona</div>
+              <div style={{fontSize:10,color:T.sub,lineHeight:1.6}}>
+                1. Configura i tipi vano comuni con le ore stimate<br/>
+                2. Quando crei un vano, le ore si compilano automaticamente<br/>
+                3. Puoi aggiungere ore extra per demolizione, muratura, etc.<br/>
+                4. Il costo si calcola: (ore stimate + ore extra) × costo orario<br/>
+                5. Nel riepilogo commessa vedi il totale manodopera<br/>
+                6. Se attivo, appare come riga separata nel preventivo PDF
+              </div>
+            </div>
+          </div>
+          );
+        })()}
 
         {/* === GUIDA === */}
         {/* === IMPORTA CATALOGO === */}

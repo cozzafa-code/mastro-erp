@@ -4,9 +4,11 @@
 // MASTRO ERP — CMDetailPanel
 // Estratto S6: ~938 righe (Dettaglio commessa)
 // ═══════════════════════════════════════════════════════════
-import React from "react";
+import React, { useState } from "react";
 import { useMastro } from "./MastroContext";
 import { FF, ICO, Ico, I, MOTIVI_BLOCCO, TIPOLOGIE_RAPIDE } from "./mastro-constants";
+import InterventoTab from "./InterventoTab";
+import InterventoFlowPanel from "./InterventoFlowPanel";
 
 export default function CMDetailPanel() {
   const {
@@ -54,6 +56,7 @@ export default function CMDetailPanel() {
   } = useMastro();
 
     const [fabSecOpen, setFabSecOpen] = React.useState(false);
+    const [interventoOpen, setInterventoOpen] = useState(null);
 
     if (!selectedCM) return null;
     const c = selectedCM;
@@ -2747,8 +2750,8 @@ export default function CMDetailPanel() {
             { id: "conferma", icon: "✏️", l: "Conferma", done: hasFirmaCC || skipped("conferma"), skipped: skipped("conferma"), desc: "Firma cliente e conferma ordine" },
             { id: "ordini", icon: "📦", l: "Ordini", done: hasOrdCC || skipped("ordini"), skipped: skipped("ordini"), desc: "Ordina materiali ai fornitori" },
             { id: "produzione", icon: "🏭", l: "Produzione", done: confFirmCC || skipped("produzione"), skipped: skipped("produzione"), desc: "Attesa materiali e lavorazione" },
-            { id: "posa", icon: "🔧", l: "Posa", done: hasMontCC || skipped("posa"), skipped: skipped("posa"), desc: "Montaggio al cantiere" },
-            { id: "collaudo", icon: "🔍", l: "Collaudo", done: !!c.collaudoOk || skipped("collaudo"), skipped: skipped("collaudo"), desc: "Verifica lavoro, foto finale" },
+            { id: "posa", icon: "🔧", l: "Posa", done: montCC.some(m => ["completato","collaudo","chiuso"].includes(m.interventoStato || m.stato)) || skipped("posa"), skipped: skipped("posa"), desc: "Montaggio al cantiere" },
+            { id: "collaudo", icon: "🔍", l: "Collaudo", done: !!c.collaudoOk || montCC.some(m => ["collaudo","chiuso"].includes(m.interventoStato)) || skipped("collaudo"), skipped: skipped("collaudo"), desc: "Verifica lavoro, foto finale" },
             { id: "chiusura", icon: "€", l: "Chiusura", done: tuttoCC, desc: "Fattura saldo e chiudi" },
           ];
           const doneCC = stepsCC.filter(s => s.done).length;
@@ -3570,6 +3573,24 @@ export default function CMDetailPanel() {
           )}
         </div>
 
+        {/* ══ SEZIONE INTERVENTI ══ */}
+        {montaggiDB.filter(m => String(m.cmId) === String(c.id)).length > 0 && (
+          <>
+            <div style={{ ...S.section, marginTop: 8 }}>
+              <div style={S.sectionTitle}><I d={ICO.wrench} /> Interventi ({montaggiDB.filter(m => String(m.cmId) === String(c.id)).length})</div>
+            </div>
+            <div style={{ padding: "0 16px" }}>
+              <InterventoTab
+                montaggiDB={montaggiDB}
+                cmId={c.id}
+                squadreDB={squadreDB}
+                T={T}
+                onOpenIntervento={(m) => setInterventoOpen(m)}
+              />
+            </div>
+          </>
+        )}
+
         {/* Timeline/Log */}
         {c.log && c.log.length > 0 && (
           <>
@@ -3598,6 +3619,18 @@ export default function CMDetailPanel() {
           {c.fase === "chiusura" && <div style={{ fontSize: 12, fontWeight: 700, color: T.grn }}>✅ Commessa chiusa</div>}
           <span onClick={() => deleteCommessa(c.id)} style={{ fontSize: 11, color: T.sub2, cursor: "pointer", textDecoration: "underline" }}>Elimina commessa</span>
         </div>
+
+        {/* ══ INTERVENTO FLOW PANEL (fixed overlay) ══ */}
+        {interventoOpen && (
+          <InterventoFlowPanel
+            montaggio={interventoOpen}
+            onClose={() => setInterventoOpen(null)}
+            onUpdate={(updated) => {
+              setMontaggiDB(prev => prev.map(m => m.id === updated.id ? updated : m));
+              setInterventoOpen(updated);
+            }}
+          />
+        )}
       </div>
     );
 

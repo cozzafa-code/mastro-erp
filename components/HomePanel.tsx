@@ -136,10 +136,7 @@ export default function HomePanel() {
             <div suppressHydrationWarning style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: "-0.03em" }}>{saluto}, Fabio</div>
             <div suppressHydrationWarning style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{today.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>
           </div>
-          <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-            <div onClick={() => setTab("contabilita")} style={{ padding: "5px 8px", borderRadius: 6, background: T.bg, border: "1px solid " + T.bdr, fontSize: 9, fontWeight: 700, color: T.sub, cursor: "pointer" }}>€ Contab.</div>
-            <div onClick={() => setTab("montaggi_cal")} style={{ padding: "5px 8px", borderRadius: 6, background: "#1A9E7308", border: "1px solid #1A9E7340", fontSize: 9, fontWeight: 700, color: "#1A9E73", cursor: "pointer" }}>🗓 Cantieri</div>
-          </div>
+          <div onClick={() => setHomeEditMode(e => !e)} style={{ padding: "5px 10px", borderRadius: 6, background: homeEditMode ? T.acc : T.bg, border: "1px solid " + (homeEditMode ? T.acc : T.bdr), fontSize: 10, fontWeight: 700, color: homeEditMode ? "#fff" : T.sub, cursor: "pointer" }}>{homeEditMode ? "✓ Fine" : "⋮ Riordina"}</div>
         </div>
       </div>
 
@@ -278,6 +275,12 @@ export default function HomePanel() {
         </div>)}
       </div>
 
+      {/* Scorciatoie */}
+      <div style={{ margin: "8px 20px 0", display: "flex", gap: 8 }}>
+        <div onClick={() => setTab("contabilita")} style={{ flex: 1, padding: "10px 14px", borderRadius: 10, background: T.card, border: "1px solid " + T.bdr, cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.sub, textAlign: "center" }}>€ Contabilità</div>
+        <div onClick={() => setTab("montaggi_cal")} style={{ flex: 1, padding: "10px 14px", borderRadius: 10, background: "#1A9E7308", border: "1px solid #1A9E7330", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#1A9E73", textAlign: "center" }}>🗓 Cantieri</div>
+      </div>
+
       {/* Quick links */}
       {(ordAtt.length > 0 || montAtt.length > 0) && (
         <div style={{ margin: "12px 20px 0", display: "flex", gap: 6 }}>
@@ -285,6 +288,8 @@ export default function HomePanel() {
           {montAtt.length > 0 && (<div onClick={() => setTab("commesse")} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: T.card, border: "1px solid " + T.bdr, cursor: "pointer" }}><I d={ICO.wrench} s={16} c={T.acc} /><div><div style={{ fontSize: 13, fontWeight: 800, color: T.text, fontFamily: FM }}>{montAtt.length}</div><div style={{ fontSize: 9, fontWeight: 600, color: T.sub }}>Montaggi</div></div></div>)}
         </div>
       )}
+
+
 
       <div style={{ height: 20 }} />
     </div>

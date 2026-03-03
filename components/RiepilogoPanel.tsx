@@ -547,6 +547,31 @@ export default function RiepilogoPanel() {
             );
           })}
 
+          {/* Manodopera totale */}
+          {(() => {
+            const totOre = vaniR.reduce((s,v) => s + (v.oreStimate||0) + (v.oreExtra||0), 0);
+            if (totOre === 0) return null;
+            const costoOra = 35;
+            const totCosto = totOre * costoOra;
+            return (
+              <div style={{background:"#D0800815",borderRadius:10,padding:"12px 14px",marginBottom:12,border:"1px solid #D0800830"}}>
+                <div style={{fontSize:9,fontWeight:700,color:"#D08008",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>👷 Manodopera</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                  {[["Ore stimate",vaniR.reduce((s,v)=>s+(v.oreStimate||0),0).toFixed(1),"#D08008"],["Ore extra",vaniR.reduce((s,v)=>s+(v.oreExtra||0),0).toFixed(1),"#E8A020"],["Costo totale","€"+totCosto.toFixed(0),"#D08008"]].map(([l,val,col])=>(
+                    <div key={l} style={{textAlign:"center",padding:"8px 4px",background:"rgba(255,255,255,0.6)",borderRadius:8}}>
+                      <div style={{fontSize:18,fontWeight:800,color:col,fontFamily:"'DM Mono',monospace"}}>{val}</div>
+                      <div style={{fontSize:8,color:"#94a3b8",marginTop:2}}>{l}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontSize:10,color:"#D08008"}}>
+                  <span>Totale: {totOre.toFixed(1)}h × €{costoOra}/ora</span>
+                  <span style={{fontWeight:900}}>€ {totCosto.toFixed(2)}</span>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Sommario */}
           <div style={{background:"#0f172a",borderRadius:10,padding:"12px 14px",marginBottom:12}}>
             <div style={{fontSize:9,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Sommario</div>
