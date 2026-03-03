@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════
 import React from "react";
 import { useMastro } from "./MastroContext";
-import { FM, tipoToMinCat } from "./mastro-constants";
+import { FM, tipoToMinCat, TIPOLOGIE_RAPIDE } from "./mastro-constants";
 
 export default function PreventivoModal() {
   const {
@@ -34,6 +34,13 @@ export default function PreventivoModal() {
     const updateCMp = (field, val) => { setCantieri(cs=>cs.map(x=>x.id===c.id?{...x,[field]:val}:x)); setSelectedCM(p=>({...p,[field]:val})); };
     const calcolaVano = (v) => {
       const m=v.misure||{}; const lc=(m.lCentro||0)/1000,hc=(m.hCentro||0)/1000; const lmm=m.lCentro||0,hmm=m.hCentro||0; const mq=lc*hc,perim=2*(lc+hc);
+      const settore = TIPOLOGIE_RAPIDE.find(t => t.code === v.tipo)?.settore || "serramenti";
+      // ── Per settori non-serramenti: usa prezzoManuale o 0 ──
+      if (settore !== "serramenti" && settore !== "persiane" && settore !== "tapparelle" && settore !== "zanzariere" && settore !== "tendesole") {
+        const tot = v.prezzoManuale ?? 0;
+        return { tot, mq, sysRec: null, vetroRec: null, copRec: null, lamRec: null, settore };
+      }
+      // ── Serramenti: calcolo completo con sistemiDB ──
       const sysRec=sistemiDB.find(s=>(s.marca+" "+s.sistema)===v.sistema||s.sistema===v.sistema);
       // Minimo mq per tipologia
       const minCat = tipoToMinCat(v.tipo || "F1A");
@@ -56,11 +63,11 @@ export default function PreventivoModal() {
       const pers=v.accessori?.persiana; if(pers?.attivo&&c.prezzoPersiana){const pmq=((pers.l||m.lCentro||0)/1000)*((pers.h||m.hCentro||0)/1000);tot+=pmq*parseFloat(c.prezzoPersiana);}
       const zanz=v.accessori?.zanzariera; if(zanz?.attivo&&c.prezzoZanzariera){const zmq=((zanz.l||m.lCentro||0)/1000)*((zanz.h||m.hCentro||0)/1000);tot+=zmq*parseFloat(c.prezzoZanzariera);}
       if (v.vociLibere?.length > 0) v.vociLibere.forEach(vl => { tot += (vl.prezzo || 0) * (vl.qta || 1); });
-      return {tot,mq,sysRec,vetroRec,copRec,lamRec};
+      return {tot,mq,sysRec,vetroRec,copRec,lamRec,settore};
     };
     const vaniCalc=getVaniAttivi(c).map(v=>({...v,calc:calcolaVano(v)}));
     const totale=vaniCalc.reduce((s,v)=>s+v.calc.tot,0);
-    const vaniSenzaSistema = vaniCalc.filter(v=>!v.calc.sysRec && !v.sistema);
+    const vaniSenzaSistema = vaniCalc.filter(v=>!v.calc.sysRec && !v.sistema && v.calc.settore === "serramenti");
     const vaniSenzaMisure = vaniCalc.filter(v=>!(v.misure?.lCentro) || !(v.misure?.hCentro));
     const hasWarnings = vaniSenzaSistema.length>0 || vaniSenzaMisure.length>0;
     const scontoVal=totale*parseFloat(c.sconto||0)/100;
@@ -105,13 +112,26 @@ export default function PreventivoModal() {
             <div style={{background:"#fff",borderRadius:12,padding:"14px",marginBottom:10}}>
               <div style={{fontSize:11,fontWeight:700,color:"#999",textTransform:"uppercase",marginBottom:8}}>Voci</div>
               {vaniCalc.length===0?<div style={{fontSize:12,color:"#999",textAlign:"center",padding:12}}>Nessun vano</div>:vaniCalc.map((v,i)=>(
-                <div key={v.id} style={{padding:"8px 0",borderBottom:"1px solid #f5f5f7",background:v.calc.tot===0?"#fff5f5":"transparent",borderRadius:v.calc.tot===0?8:0}}>
-                  <div style={{display:"flex",gap:8,alignItems:"flex-start"}}><div style={{flex:1}}><div style={{fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>{v.nome||"Vano "+(i+1)}{v.calc.tot===0&&<span style={{fontSize:9,background:"#ff3b30",color:"#fff",padding:"1px 5px",borderRadius:3,fontWeight:800}}>MANCA SISTEMA</span>}</div><div style={{fontSize:10,color:"#666"}}>{v.tipo} · {(v.misure?.lCentro||0)}×{(v.misure?.hCentro||0)}mm · {v.calc.mq.toFixed(2)} mq</div></div><div style={{fontSize:13,fontWeight:800,color:v.calc.tot===0?"#ff3b30":"#1a1a1c"}}>€ {v.calc.tot.toFixed(2)}</div></div>
+                <div key={v.id} style={{padding:"8px 0",borderBottom:"1px solid #f5f5f7",background:v.calc.tot===0&&v.calc.settore==="serramenti"?"#fff5f5":"transparent",borderRadius:v.calc.tot===0&&v.calc.settore==="serramenti"?8:0}}>
+                  <div style={{display:"flex",gap:8,alignItems:"flex-start"}}><div style={{flex:1}}><div style={{fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>{v.nome||"Vano "+(i+1)}{v.calc.tot===0&&v.calc.settore==="serramenti"&&<span style={{fontSize:9,background:"#ff3b30",color:"#fff",padding:"1px 5px",borderRadius:3,fontWeight:800}}>MANCA SISTEMA</span>}{v.calc.tot===0&&v.calc.settore!=="serramenti"&&<span style={{fontSize:9,background:"#ff950040",color:"#7a4500",padding:"1px 5px",borderRadius:3,fontWeight:800}}>INSERISCI PREZZO</span>}</div><div style={{fontSize:10,color:"#666"}}>{v.tipo} · {(v.misure?.lCentro||0)}×{(v.misure?.hCentro||0)}mm · {v.calc.mq.toFixed(2)} mq</div></div><div style={{fontSize:13,fontWeight:800,color:v.calc.tot===0?"#ff3b30":"#1a1a1c"}}>€ {v.calc.tot.toFixed(2)}</div></div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:3,marginTop:3}}>
+                    {/* Serramenti badges */}
                     {v.calc.sysRec&&<span style={{fontSize:9,background:"#007aff15",color:"#007aff",padding:"1px 5px",borderRadius:4}}>{v.calc.sysRec.sistema}</span>}
                     {v.calc.vetroRec&&<span style={{fontSize:9,background:"#34c75915",color:"#1a9e40",padding:"1px 5px",borderRadius:4}}>{v.calc.vetroRec.code}</span>}
                     {v.calc.copRec&&<span style={{fontSize:9,background:"#ff950015",color:"#7a4500",padding:"1px 5px",borderRadius:4}}>{v.calc.copRec.cod}</span>}
                     {v.calc.lamRec&&<span style={{fontSize:9,background:"#af52de15",color:"#7c2d9e",padding:"1px 5px",borderRadius:4}}>{v.calc.lamRec.cod}</span>}
+                    {/* Porte badges */}
+                    {v.calc.settore==="porte"&&v.materiale&&<span style={{fontSize:9,background:"#D0800815",color:"#D08008",padding:"1px 5px",borderRadius:4}}>🚪 {v.materiale}</span>}
+                    {v.calc.settore==="porte"&&v.apertura&&<span style={{fontSize:9,background:"#D0800815",color:"#D08008",padding:"1px 5px",borderRadius:4}}>{v.apertura}</span>}
+                    {v.calc.settore==="porte"&&v.maniglia&&<span style={{fontSize:9,background:"#507aff15",color:"#507aff",padding:"1px 5px",borderRadius:4}}>🔑 {v.maniglia}</span>}
+                    {/* Box Doccia badges */}
+                    {v.calc.settore==="boxdoccia"&&v.tipoBox&&<span style={{fontSize:9,background:"#3B7FE015",color:"#3B7FE0",padding:"1px 5px",borderRadius:4}}>🚿 {v.tipoBox}</span>}
+                    {v.calc.settore==="boxdoccia"&&v.vetroBox&&<span style={{fontSize:9,background:"#3B7FE015",color:"#3B7FE0",padding:"1px 5px",borderRadius:4}}>{v.vetroBox}</span>}
+                    {v.calc.settore==="boxdoccia"&&v.profiloBox&&<span style={{fontSize:9,background:"#af52de15",color:"#7c2d9e",padding:"1px 5px",borderRadius:4}}>{v.profiloBox}</span>}
+                    {/* Cancelli badges */}
+                    {v.calc.settore==="cancelli"&&v.tipoCancello&&<span style={{fontSize:9,background:"#8B5E3415",color:"#8B5E34",padding:"1px 5px",borderRadius:4}}>🏗️ {v.tipoCancello}</span>}
+                    {v.calc.settore==="cancelli"&&v.materialeCancello&&<span style={{fontSize:9,background:"#8B5E3415",color:"#8B5E34",padding:"1px 5px",borderRadius:4}}>{v.materialeCancello}</span>}
+                    {v.calc.settore==="cancelli"&&v.automazione&&v.automazione!=="Nessuna"&&<span style={{fontSize:9,background:"#e6394615",color:"#e63946",padding:"1px 5px",borderRadius:4}}>⚡ {v.automazione}</span>}
                   </div>
                 </div>
               ))}

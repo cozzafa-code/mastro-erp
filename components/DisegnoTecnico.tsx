@@ -4,9 +4,370 @@
 // MASTRO ERP — DisegnoTecnico (Shared Drawing Module)
 // Usato da: CMDetailPanel (preventivo) + VanoDetailPanel (rilievo)
 // ═══════════════════════════════════════════════════════════
-import React from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 
+// ═══════════════════════════════════════════════════════════
+// 3D ISOMETRIC VIEW — 6 Faces + Per-face drawing + Render
+// ═══════════════════════════════════════════════════════════
+const FM3 = "'SF Mono','JetBrains Mono',monospace";
+const FF3 = "'SF Pro Display',-apple-system,sans-serif";
+
+const EL3D = [
+  { id: "telaio", icon: "□", label: "Telaio", color: "#3A3A3C" },
+  { id: "montante", icon: "│", label: "Mont.", color: "#3A3A3C" },
+  { id: "traverso", icon: "─", label: "Trav.", color: "#3A3A3C" },
+  { id: "anta", icon: "▨", label: "Anta", color: "#3B7FE0" },
+  { id: "porta", icon: "▮", label: "Porta", color: "#D08008" },
+  { id: "scorrevole", icon: "▤", label: "Scorr.", color: "#0D9488" },
+  { id: "persiana", icon: "▦", label: "Pers.", color: "#8B5CF6" },
+  { id: "vetro", icon: "◇", label: "Vetro", color: "#3B7FE0" },
+  { id: "oblo", icon: "○", label: "Oblo", color: "#3B7FE0" },
+  { id: "pannello", icon: "▣", label: "Pann.", color: "#8E8E93" },
+  { id: "linea", icon: "╱", label: "Linea", color: "#DC4444" },
+  { id: "testo", icon: "Aa", label: "Testo", color: "#1A1A1C" },
+];
+const FA3: any = {
+  front: { label: "Prospetto", icon: "🪟", s: "F" },
+  back: { label: "Esterno", icon: "↩", s: "E" },
+  left: { label: "Spall.SX", icon: "◀", s: "SX" },
+  right: { label: "Spall.DX", icon: "▶", s: "DX" },
+  top: { label: "Architrave", icon: "⬆", s: "A" },
+  bottom: { label: "Davanzale", icon: "⬇", s: "D" },
+};
+const FK3 = ["front", "back", "left", "right", "top", "bottom"];
+
+function getFields3D(fk: string) {
+  const n = { k: "note", l: "Note", type: "text" };
+  if (fk === "front") return [{ k: "luce_l", l: "Luce L", u: "mm" }, { k: "luce_h", l: "Luce H", u: "mm" }, { k: "fuori_squadra", l: "Fuori squadra", u: "mm" }, { k: "tipo_apertura", l: "Tipo apertura", type: "text" }, n];
+  if (fk === "back") return [{ k: "tipo_muro", l: "Tipo muro", type: "text" }, { k: "finitura", l: "Finitura est.", type: "text" }, { k: "spessore_intonaco", l: "Spess. intonaco", u: "mm" }, n];
+  if (fk === "top") return [{ k: "arch_h", l: "Altezza", u: "mm" }, { k: "arch_tipo", l: "Tipo", type: "text" }, { k: "cassH", l: "Cassonetto H", u: "mm" }, { k: "cassP", l: "Cassonetto P", u: "mm" }, n];
+  if (fk === "bottom") return [{ k: "dav_prof", l: "Profondita", u: "mm" }, { k: "dav_sporg", l: "Sporgenza", u: "mm" }, { k: "dav_mat", l: "Materiale", type: "text" }, n];
+  return [{ k: "sp_larg", l: "Larghezza", u: "mm" }, { k: "sp_prof", l: "Profondita", u: "mm" }, { k: "sp_tipo", l: "Tipo muro", type: "text" }, { k: "fuori_piombo", l: "Fuori piombo", u: "mm" }, n];
+}
+
+function renderEl3D(el: any, sc: number, ox: number, oy: number) {
+  const x = ox + el.x * sc, y = oy + el.y * sc, w = el.w * sc, h = el.h * sc;
+  const et = EL3D.find(t => t.id === el.type); const c = et?.color || "#666"; const s = el._sel;
+  const sb = s ? <rect x={x - 2} y={y - 2} width={w + 4} height={h + 4} fill="none" stroke="#3B7FE0" strokeWidth={1} strokeDasharray="3,2" /> : null;
+  if (el.type === "telaio") return <g key={el.id}><rect x={x} y={y} width={w} height={h} fill="none" stroke={c} strokeWidth={s ? 2.5 : 1.5} rx={1} />{sb}</g>;
+  if (el.type === "montante") return <g key={el.id}><rect x={x} y={y} width={Math.max(w, 3)} height={h} fill={c} opacity={0.7} />{sb}</g>;
+  if (el.type === "traverso") return <g key={el.id}><rect x={x} y={y} width={w} height={Math.max(h, 3)} fill={c} opacity={0.7} />{sb}</g>;
+  if (el.type === "anta") return <g key={el.id}><rect x={x} y={y} width={w} height={h} fill={c + "15"} stroke={c} strokeWidth={1.2} rx={1} /><line x1={x} y1={y} x2={x + w} y2={y + h / 2} stroke={c + "40"} strokeWidth={0.5} /><line x1={x} y1={y + h} x2={x + w} y2={y + h / 2} stroke={c + "40"} strokeWidth={0.5} />{sb}</g>;
+  if (el.type === "porta") return <g key={el.id}><rect x={x} y={y} width={w} height={h} fill={c + "12"} stroke={c} strokeWidth={1.5} rx={1} /><line x1={x + w * .15} y1={y + h * .35} x2={x + w * .15} y2={y + h * .65} stroke={c} strokeWidth={2} />{sb}</g>;
+  if (el.type === "scorrevole") return <g key={el.id}><rect x={x} y={y} width={w} height={h} fill="#D6EEFF50" stroke={c} strokeWidth={1} strokeDasharray="4,2" rx={1} /><text x={x + w / 2} y={y + h / 2 + 3} textAnchor="middle" fontSize={6} fill={c} fontFamily={FM3}>SCORR.</text>{sb}</g>;
+  if (el.type === "persiana") return <g key={el.id}><rect x={x} y={y} width={w} height={h} fill={c + "10"} stroke={c} strokeWidth={1} />{Array.from({ length: Math.max(2, Math.floor(h / 5)) }).map((_, i, a) => <line key={i} x1={x + 2} y1={y + (i / a.length) * h + h / a.length / 2} x2={x + w - 2} y2={y + (i / a.length) * h + h / a.length / 2} stroke={c + "50"} strokeWidth={0.5} />)}{sb}</g>;
+  if (el.type === "vetro") return <g key={el.id}><rect x={x} y={y} width={w} height={h} fill="#D6EEFF" stroke={c} strokeWidth={0.8} rx={1} /><line x1={x} y1={y} x2={x + w} y2={y + h} stroke={c + "20"} strokeWidth={0.3} />{sb}</g>;
+  if (el.type === "oblo") return <g key={el.id}><ellipse cx={x + w / 2} cy={y + h / 2} rx={w / 2} ry={h / 2} fill="#D6EEFF" stroke={c} strokeWidth={1} />{sb}</g>;
+  if (el.type === "pannello") return <g key={el.id}><rect x={x} y={y} width={w} height={h} fill="#E8E4DF" stroke={c} strokeWidth={0.8} />{sb}</g>;
+  if (el.type === "linea") return <g key={el.id}><line x1={x} y1={y} x2={x + w} y2={y + h} stroke={c} strokeWidth={1.5} /></g>;
+  if (el.type === "testo") return <g key={el.id}><text x={x} y={y + 12} fontSize={10} fill="#1A1A1C" fontFamily={FM3} fontWeight={600}>{el.text || "Testo"}</text>{sb}</g>;
+  return <rect key={el.id} x={x} y={y} width={w} height={h} fill="#ccc" stroke="#999" strokeWidth={0.5} />;
+}
+
+function Iso3D({ T, realW, realH, profMuro, faceData, activeFace, onSelectFace }: any) {
+  const mx = Math.max(realW, realH, profMuro), bs = 110 / mx, W = realW * bs, H = realH * bs, D = profMuro * bs;
+  const c30 = Math.cos(Math.PI / 6), s30 = 0.5;
+  const iX = (x: number, y: number, z: number) => (x - z) * c30, iY = (x: number, y: number, z: number) => (x + z) * s30 - y;
+  const cx = 170, cy = 165;
+  const co = { fbl: { x: 0, y: 0, z: 0 }, fbr: { x: W, y: 0, z: 0 }, ftl: { x: 0, y: H, z: 0 }, ftr: { x: W, y: H, z: 0 }, bbl: { x: 0, y: 0, z: D }, bbr: { x: W, y: 0, z: D }, btl: { x: 0, y: H, z: D }, btr: { x: W, y: H, z: D } };
+  const p = (v: any) => `${cx + iX(v.x, v.y, v.z)},${cy + iY(v.x, v.y, v.z)}`;
+  const fp: any = { front: { pts: `${p(co.fbl)} ${p(co.fbr)} ${p(co.ftr)} ${p(co.ftl)}`, fill: "#B8D4E8" }, right: { pts: `${p(co.fbr)} ${p(co.bbr)} ${p(co.btr)} ${p(co.ftr)}`, fill: "#9AB8CC" }, top: { pts: `${p(co.ftl)} ${p(co.ftr)} ${p(co.btr)} ${p(co.btl)}`, fill: "#D4CFC4" }, left: { pts: `${p(co.fbl)} ${p(co.bbl)} ${p(co.btl)} ${p(co.ftl)}`, fill: "#C8C4B8" }, bottom: { pts: `${p(co.fbl)} ${p(co.fbr)} ${p(co.bbr)} ${p(co.bbl)}`, fill: "#E8D8B0" }, back: { pts: `${p(co.bbl)} ${p(co.bbr)} ${p(co.btr)} ${p(co.btl)}`, fill: "#A8C4D8" } };
+  const G = T.grn || "#1A9E73";
+  const lps: any = { front: { x: W / 2, y: H / 2, z: 0 }, right: { x: W, y: H / 2, z: D / 2 }, top: { x: W / 2, y: H, z: D / 2 }, left: { x: 0, y: H / 2, z: D / 2 }, bottom: { x: W / 2, y: 0, z: D / 2 }, back: { x: W / 2, y: H / 2, z: D } };
+  return (<svg width={340} height={280} style={{ background: "#fff", borderRadius: 6, border: `1px solid ${T.bdr}`, maxWidth: "100%" }}>
+    {[0, 1, 2, 3, 4].map(i => <line key={`z${i}`} x1={cx + iX(0, 0, (i / 4) * D)} y1={cy + iY(0, 0, (i / 4) * D)} x2={cx + iX(W, 0, (i / 4) * D)} y2={cy + iY(W, 0, (i / 4) * D)} stroke="#E8E8E8" strokeWidth={0.5} />)}
+    {[0, 1, 2, 3, 4].map(i => <line key={`x${i}`} x1={cx + iX((i / 4) * W, 0, 0)} y1={cy + iY((i / 4) * W, 0, 0)} x2={cx + iX((i / 4) * W, 0, D)} y2={cy + iY((i / 4) * W, 0, D)} stroke="#E8E8E8" strokeWidth={0.5} />)}
+    {["back", "bottom", "left", "right", "front", "top"].map(fk => { const f = fp[fk], sel = activeFace === fk, els = faceData[fk]?.elements || [], has = els.length > 0; const lp = lps[fk], lx = cx + iX(lp.x, lp.y, lp.z), ly = cy + iY(lp.x, lp.y, lp.z);
+      return (<g key={fk} onClick={() => onSelectFace(fk)} style={{ cursor: "pointer" }}><polygon points={f.pts} fill={sel ? T.purple + "40" : has ? G + "15" : f.fill} stroke={sel ? T.purple : has ? G : "#666"} strokeWidth={sel ? 2.5 : 1} strokeLinejoin="round" /><text x={lx} y={ly - 3} textAnchor="middle" fontSize={sel ? 10 : 7} fontWeight={sel ? 800 : 600} fontFamily={FM3} fill={sel ? T.purple : has ? G : "#555"}>{FA3[fk].label}</text>{has && <text x={lx} y={ly + 8} textAnchor="middle" fontSize={7} fontFamily={FM3} fill={G}>{els.length} el.</text>}</g>); })}
+    <text x={(cx + iX(0, 0, 0) + cx + iX(W, 0, 0)) / 2} y={(cy + iY(0, 0, 0) + cy + iY(W, 0, 0)) / 2 + 22} textAnchor="middle" fontSize={9} fontWeight={700} fontFamily={FM3} fill={T.acc}>L {realW}</text>
+    <text x={cx + iX(0, H / 2, 0) - 22} y={cy + iY(0, H / 2, 0) + 3} textAnchor="middle" fontSize={9} fontWeight={700} fontFamily={FM3} fill={T.acc}>H {realH}</text>
+    <text x={170} y={270} textAnchor="middle" fontSize={8} fill={T.sub} fontFamily={FF3}>Tap su una faccia per disegnare</text>
+  </svg>);
+}
+
+function FaceCanvas3D({ T, faceKey, realW, realH, elements, onUpdateElements, activeTool }: any) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [ds, setDs] = useState<any>(null); const [dc, setDc] = useState<any>(null); const [selId, setSelId] = useState<string | null>(null);
+  const face = FA3[faceKey]; const sc = Math.min(0.16, 280 / Math.max(realW, realH));
+  const W = realW * sc, H = realH * sc, pad = 35, svgW = W + pad * 2 + 20, svgH = H + pad * 2 + 20;
+  const gpt = (e: any) => { const r = svgRef.current?.getBoundingClientRect(); const ct = e.touches ? e.touches[0] : e; return r ? { x: (ct.clientX - r.left - pad) / sc, y: (ct.clientY - r.top - pad) / sc } : { x: 0, y: 0 }; };
+  const hDown = (e: any) => { if (!activeTool || activeTool === "select") { const pt = gpt(e); const hit = [...(elements || [])].reverse().find((el: any) => pt.x >= el.x && pt.x <= el.x + el.w && pt.y >= el.y && pt.y <= el.y + el.h); setSelId(hit?.id || null); return; } setDs(gpt(e)); setDc(gpt(e)); };
+  const hMove = (e: any) => { if (ds) { const ct = e.touches ? e.touches[0] : e; setDc(gpt(e)); } };
+  const hUp = () => { if (!ds || !dc || !activeTool) { setDs(null); setDc(null); return; } const x = Math.min(ds.x, dc.x), y = Math.min(ds.y, dc.y), w = Math.abs(dc.x - ds.x), h = Math.abs(dc.y - ds.y); if (w < 10 && h < 10) { setDs(null); setDc(null); return; } onUpdateElements([...(elements || []), { id: `el_${Date.now()}`, type: activeTool, x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h), face: faceKey }]); setDs(null); setDc(null); };
+  const els = (elements || []).map((el: any) => ({ ...el, _sel: el.id === selId }));
+  return (<div>
+    <div style={{ display: "flex", alignItems: "center", padding: "6px 10px", gap: 6, background: `${T.purple}06`, borderBottom: `1px solid ${T.bdr}` }}>
+      <span style={{ fontSize: 12 }}>{face.icon}</span><span style={{ fontSize: 11, fontWeight: 800, color: T.purple, flex: 1 }}>{face.label}</span><span style={{ fontSize: 8, color: T.sub, fontFamily: FM3 }}>{realW}x{realH}mm</span>
+      {elements?.length > 0 && <span style={{ padding: "1px 6px", borderRadius: 4, background: `${T.grn || "#1A9E73"}18`, fontSize: 8, fontWeight: 800, color: T.grn || "#1A9E73" }}>{elements.length} el.</span>}
+      {selId && <span onClick={() => { onUpdateElements((elements || []).filter((el: any) => el.id !== selId)); setSelId(null); }} style={{ padding: "2px 6px", borderRadius: 4, background: `${T.red || "#DC4444"}15`, fontSize: 8, fontWeight: 700, color: T.red || "#DC4444", cursor: "pointer" }}>🗑 Elimina</span>}
+    </div>
+    <div style={{ display: "flex", justifyContent: "center", padding: 6, background: "#FAFAF7" }}>
+      <svg ref={svgRef} width={svgW} height={svgH} onPointerDown={hDown} onPointerMove={hMove} onPointerUp={hUp} style={{ background: "#fff", borderRadius: 6, border: `1px solid ${T.bdr}`, cursor: activeTool && activeTool !== "select" ? "crosshair" : "default", touchAction: "none", maxWidth: "100%" }}>
+        {Array.from({ length: Math.ceil(W / 20) + 1 }).map((_, i) => <line key={`v${i}`} x1={pad + i * 20} y1={pad} x2={pad + i * 20} y2={pad + H} stroke="#F0F0F0" strokeWidth={0.5} />)}
+        {Array.from({ length: Math.ceil(H / 20) + 1 }).map((_, i) => <line key={`h${i}`} x1={pad} y1={pad + i * 20} x2={pad + W} y2={pad + i * 20} stroke="#F0F0F0" strokeWidth={0.5} />)}
+        <rect x={pad} y={pad} width={W} height={H} fill="#F8F7F4" stroke="#3A3A3C" strokeWidth={1.5} rx={1} />
+        {els.map((el: any) => renderEl3D(el, sc, pad, pad))}
+        {ds && dc && activeTool && (() => { const x = Math.min(ds.x, dc.x) * sc + pad, y = Math.min(ds.y, dc.y) * sc + pad, w = Math.abs(dc.x - ds.x) * sc, h = Math.abs(dc.y - ds.y) * sc; const et = EL3D.find(t => t.id === activeTool); return <rect x={x} y={y} width={w} height={h} fill={(et?.color || "#666") + "15"} stroke={et?.color || "#666"} strokeWidth={1} strokeDasharray="4,2" />; })()}
+      </svg>
+    </div>
+  </div>);
+}
+
+function RenderPreview3D({ T, realW, realH, faceData }: any) {
+  const sc = Math.min(0.15, 280 / Math.max(realW, realH)), W = realW * sc, H = realH * sc, pad = 30; const els = faceData["front"]?.elements || [];
+  return (<div style={{ padding: 8 }}>
+    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, marginBottom: 6, textTransform: "uppercase" }}>RENDERING PROSPETTO</div>
+    <svg width={W + pad * 2} height={H + pad * 2 + 10} style={{ background: "#fff", borderRadius: 8, border: `1px solid ${T.bdr}`, boxShadow: "0 2px 12px rgba(0,0,0,0.08)", maxWidth: "100%" }}>
+      <defs><linearGradient id="sky3d" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#87CEEB" /><stop offset="100%" stopColor="#E0F0FF" /></linearGradient></defs>
+      <rect x={0} y={0} width={W + pad * 2} height={pad + 5} fill="url(#sky3d)" rx={8} />
+      <rect x={pad} y={pad} width={W} height={H} fill="#F5F0E8" stroke="#8B7D6B" strokeWidth={2} rx={2} />
+      {els.map((el: any) => { const x = pad + el.x * sc, y = pad + el.y * sc, w = el.w * sc, h = el.h * sc;
+        if (el.type === "vetro" || el.type === "anta") return <g key={el.id}><rect x={x} y={y} width={w} height={h} fill="#A8D8EA" stroke="#5B8FA8" strokeWidth={1.5} rx={2} /></g>;
+        if (el.type === "porta") return <g key={el.id}><rect x={x} y={y} width={w} height={h} fill="#C4A882" stroke="#8B7D6B" strokeWidth={2} rx={2} /><circle cx={x + w * .15} cy={y + h * .5} r={2} fill="#8B7D6B" /></g>;
+        if (el.type === "scorrevole") return <g key={el.id}><rect x={x} y={y} width={w} height={h} fill="#B0D8EA90" stroke="#5B8FA8" strokeWidth={1} rx={1} /><line x1={x + w / 2} y1={y} x2={x + w / 2} y2={y + h} stroke="#5B8FA860" strokeWidth={1} /></g>;
+        if (el.type === "telaio") return <rect key={el.id} x={x} y={y} width={w} height={h} fill="none" stroke="#5B5B5B" strokeWidth={2} rx={1} />;
+        return <rect key={el.id} x={x} y={y} width={w} height={h} fill="#DDD" stroke="#AAA" strokeWidth={0.5} />; })}
+      <rect x={0} y={pad + H - 2} width={W + pad * 2} height={pad + 12} fill="#D4C8B0" />
+    </svg>
+    {els.length === 0 && <div style={{ textAlign: "center", padding: 12, fontSize: 10, color: T.sub }}>Disegna elementi sul Prospetto per il rendering</div>}
+  </div>);
+}
+
+function FDataPanel3D({ T, faceKey, faceData, setFaceData, onClose }: any) {
+  const face = FA3[faceKey], data = faceData[faceKey]?.fields || {}, fields = getFields3D(faceKey);
+  const setF = (k: string, v: any) => setFaceData((prev: any) => ({ ...prev, [faceKey]: { ...(prev[faceKey] || {}), fields: { ...(prev[faceKey]?.fields || {}), [k]: v } } }));
+  return (<div style={{ borderTop: `1.5px solid ${T.purple}40`, background: T.card || "#fff", padding: "8px 12px" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}><span style={{ fontSize: 12 }}>{face.icon}</span><span style={{ fontSize: 11, fontWeight: 800, color: T.purple }}>{face.label} - Dati</span><span style={{ flex: 1 }} /><span onClick={onClose} style={{ fontSize: 11, cursor: "pointer", color: T.sub }}>✕</span></div>
+    {fields.map((f: any) => (<div key={f.k} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+      <span style={{ fontSize: 9, fontWeight: 700, color: T.sub, minWidth: 72 }}>{f.l}</span>
+      {f.type === "text" ? <input value={data[f.k] || ""} placeholder="..." onChange={(e: any) => setF(f.k, e.target.value)} style={{ flex: 1, padding: "4px 8px", border: `1px solid ${T.bdr}`, borderRadius: 5, fontSize: 10, fontFamily: FF3, color: T.text }} />
+        : <div style={{ display: "flex", alignItems: "center", gap: 2 }}><input type="number" value={data[f.k] || ""} placeholder="—" onChange={(e: any) => setF(f.k, parseInt(e.target.value) || 0)} style={{ width: 56, padding: "4px", border: `1px solid ${T.bdr}`, borderRadius: 5, fontSize: 10, fontWeight: 700, fontFamily: FM3, textAlign: "center", color: T.text }} />{f.u && <span style={{ fontSize: 8, color: T.sub }}>{f.u}</span>}</div>}
+    </div>))}
+  </div>);
+}
+
+function View3D({ T, realW, realH, vanoDisegno, onUpdate }: any) {
+  const [mode3d, setMode3d] = useState("3d");
+  const [activeFace, setActiveFace] = useState<string | null>(null);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [faceData, setFaceData] = useState<any>(vanoDisegno?.faceData || {});
+  const [showFields, setShowFields] = useState(false);
+
+  useEffect(() => { const t = setTimeout(() => { const all: any[] = []; FK3.forEach(fk => { (faceData[fk]?.elements || []).forEach((el: any) => all.push({ ...el, face: fk })); }); onUpdate({ ...(vanoDisegno || {}), faceData, elements: (vanoDisegno?.elements || []) }); }, 500); return () => clearTimeout(t); }, [faceData]);
+
+  const pm = vanoDisegno?.profMuro || 350;
+  const totalEls = FK3.reduce((s, fk) => s + (faceData[fk]?.elements?.length || 0), 0);
+  const updateFaceEls = (fk: string, els: any[]) => setFaceData((prev: any) => ({ ...prev, [fk]: { ...(prev[fk] || {}), elements: els } }));
+  const openFace = (fk: string) => { setActiveFace(fk); setMode3d("face"); setActiveTool(null); };
+  const G = T.grn || "#1A9E73";
+
+  return (<div>
+    {/* Sub-tabs */}
+    <div style={{ display: "flex", borderBottom: `1px solid ${T.bdr}`, background: `${T.acc}06` }}>
+      {[{ id: "3d", l: "🧊 Isometrica" }, { id: "face", l: `🪟 ${activeFace ? FA3[activeFace].label : "Faccia"}` }, { id: "render", l: "🖼 Render" }].map(m => (
+        <div key={m.id} onClick={() => setMode3d(m.id)} style={{ flex: 1, padding: "6px 0", textAlign: "center", cursor: "pointer", fontSize: 10, fontWeight: mode3d === m.id ? 800 : 500, color: mode3d === m.id ? T.acc : T.sub, borderBottom: `2px solid ${mode3d === m.id ? T.acc : "transparent"}` }}>{m.l}</div>
+      ))}
+    </div>
+    {/* 3D Iso */}
+    {mode3d === "3d" && <div style={{ display: "flex", justifyContent: "center", padding: "8px 4px" }}><Iso3D T={T} realW={realW} realH={realH} profMuro={pm} faceData={faceData} activeFace={activeFace} onSelectFace={openFace} /></div>}
+    {/* Face Canvas */}
+    {mode3d === "face" && activeFace && (<>
+      <div style={{ padding: "6px 8px", display: "flex", gap: 3, flexWrap: "wrap", borderBottom: `1px solid ${T.bdr}`, background: T.bg || "#F2F1EC" }}>
+        {EL3D.map(et => (<div key={et.id} onClick={() => setActiveTool(activeTool === et.id ? null : et.id)} style={{ padding: "4px 7px", borderRadius: 5, border: `1.5px solid ${activeTool === et.id ? et.color : T.bdr}`, background: activeTool === et.id ? et.color + "12" : T.card || "#fff", fontSize: 9, fontWeight: activeTool === et.id ? 800 : 600, color: activeTool === et.id ? et.color : T.text, cursor: "pointer", display: "flex", alignItems: "center", gap: 2 }}><span style={{ fontSize: 10 }}>{et.icon}</span> {et.label}</div>))}
+      </div>
+      <FaceCanvas3D T={T} faceKey={activeFace} realW={realW} realH={realH} elements={faceData[activeFace]?.elements || []} onUpdateElements={(els: any[]) => updateFaceEls(activeFace!, els)} activeTool={activeTool} />
+      <div onClick={() => setShowFields(!showFields)} style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontSize: 9, fontWeight: 700, color: T.purple }}>Dati {FA3[activeFace].label}</span>
+        <span style={{ fontSize: 8, color: T.sub, transform: showFields ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
+      </div>
+      {showFields && <FDataPanel3D T={T} faceKey={activeFace} faceData={faceData} setFaceData={setFaceData} onClose={() => setShowFields(false)} />}
+    </>)}
+    {/* Render */}
+    {mode3d === "render" && <RenderPreview3D T={T} realW={realW} realH={realH} faceData={faceData} />}
+    {/* Face chips */}
+    <div style={{ padding: "6px 10px", borderTop: `1px solid ${T.bdr}`, display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
+      {FK3.map(k => { const els = faceData[k]?.elements || []; const active = activeFace === k && mode3d === "face"; return (
+        <div key={k} onClick={() => openFace(k)} style={{ padding: "3px 7px", borderRadius: 5, border: `1.5px solid ${active ? T.purple : els.length > 0 ? G : T.bdr}`, background: active ? T.purple + "12" : els.length > 0 ? G + "08" : T.card || "#fff", cursor: "pointer", fontSize: 8, fontWeight: 700, color: active ? T.purple : els.length > 0 ? G : T.sub, display: "flex", alignItems: "center", gap: 2 }}>
+          {FA3[k].icon} {FA3[k].s}{els.length > 0 && <span style={{ fontSize: 7, opacity: 0.7 }}>({els.length})</span>}
+        </div>); })}
+    </div>
+  </div>);
+}
+
+// ═══════════════════════════════════════════════════════════
+// FORMA EDITOR — Polygon-based shape builder
+// ═══════════════════════════════════════════════════════════
+const FM2 = "'SF Mono','JetBrains Mono',monospace";
+const distPt = (a: any, b: any) => Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+const segLenPt = (a: any, b: any) => Math.round(distPt(a, b));
+function nearSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
+  const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy;
+  if (len2 === 0) return { t: 0, dist: distPt({ x: px, y: py }, { x: ax, y: ay }), x: ax, y: ay };
+  let t = ((px - ax) * dx + (py - ay) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const cx = ax + t * dx, cy = ay + t * dy;
+  return { t, dist: distPt({ x: px, y: py }, { x: cx, y: cy }), x: cx, y: cy };
+}
+const makeRectPts = (w = 1200, h = 1400) => [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }];
+
+function FormaEditor({ T, realW, realH }: any) {
+  const [pts, setPts] = useState(makeRectPts(realW, realH));
+  const [sel, setSel] = useState<number | null>(null);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [fMode, setFMode] = useState("move");
+  const [dividers, setDividers] = useState<any[]>([]);
+  const [cellTypes, setCellTypes] = useState<any>({});
+  const [selCell, setSelCell] = useState<string | null>(null);
+  const [inputW, setInputW] = useState(realW || 1200);
+  const [inputH, setInputH] = useState(realH || 1400);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  const minX = Math.min(...pts.map((p: any) => p.x)), maxX = Math.max(...pts.map((p: any) => p.x));
+  const minY = Math.min(...pts.map((p: any) => p.y)), maxY = Math.max(...pts.map((p: any) => p.y));
+  const bW = maxX - minX || 1, bH = maxY - minY || 1;
+  const pad = 50, maxSvg = 320;
+  const sc = Math.min((maxSvg - pad * 2) / bW, (maxSvg - pad * 2) / bH, 0.18);
+  const svgW = bW * sc + pad * 2 + 30, svgH = bH * sc + pad * 2 + 30;
+  const ox = pad + 15 - minX * sc, oy = pad + 10 - minY * sc;
+  const toSvg = (p: any) => ({ x: ox + p.x * sc, y: oy + p.y * sc });
+  const toMm = (sx: number, sy: number) => ({ x: Math.round((sx - ox) / sc), y: Math.round((sy - oy) / sc) });
+  const pathD = pts.map((p: any, i: number) => { const s = toSvg(p); return `${i === 0 ? "M" : "L"}${s.x},${s.y}`; }).join(" ") + " Z";
+
+  const getPos = (e: any) => { const svg = svgRef.current; if (!svg) return { x: 0, y: 0 }; const r = svg.getBoundingClientRect(); const ct = e.touches ? e.touches[0] : e; return { x: ct.clientX - r.left, y: ct.clientY - r.top }; };
+
+  const onDown = (e: any) => {
+    e.preventDefault(); const pos = getPos(e);
+    if (fMode === "add") {
+      let bestD = Infinity, bestIdx = -1, bestPt: any = null;
+      for (let i = 0; i < pts.length; i++) {
+        const a = toSvg(pts[i]), b = toSvg(pts[(i + 1) % pts.length]);
+        const n = nearSegment(pos.x, pos.y, a.x, a.y, b.x, b.y);
+        if (n.dist < bestD && n.dist < 30) { bestD = n.dist; bestIdx = i + 1; bestPt = toMm(n.x, n.y); }
+      }
+      if (bestPt && bestIdx >= 0) { const np = [...pts]; np.splice(bestIdx, 0, bestPt); setPts(np); setSel(bestIdx); }
+      return;
+    }
+    if (fMode === "del") {
+      for (let i = 0; i < pts.length; i++) { const s = toSvg(pts[i]); if (distPt(pos, s) < 20 && pts.length > 3) { setPts(pts.filter((_: any, j: number) => j !== i)); setSel(null); return; } }
+      return;
+    }
+    for (let i = 0; i < pts.length; i++) { const s = toSvg(pts[i]); if (distPt(pos, s) < 24) { setDragIdx(i); setSel(i); return; } }
+    setSel(null);
+  };
+
+  const onMove = useCallback((e: any) => {
+    if (dragIdx === null) return; e.preventDefault();
+    const pos = getPos(e); const mm = toMm(pos.x, pos.y);
+    mm.x = Math.round(mm.x / 10) * 10; mm.y = Math.round(mm.y / 10) * 10;
+    setPts((prev: any) => prev.map((p: any, i: number) => i === dragIdx ? mm : p));
+  }, [dragIdx, ox, oy, sc]);
+  const onUp = useCallback(() => setDragIdx(null), []);
+
+  useEffect(() => {
+    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchmove", onMove, { passive: false }); window.addEventListener("touchend", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); window.removeEventListener("touchmove", onMove); window.removeEventListener("touchend", onUp); };
+  }, [onMove, onUp]);
+
+  const applyDims = () => { const sX = inputW / bW, sY = inputH / bH; setPts(pts.map((p: any) => ({ x: Math.round((p.x - minX) * sX + minX), y: Math.round((p.y - minY) * sY + minY) }))); };
+  useEffect(() => { setInputW(bW); setInputH(bH); }, [bW, bH]);
+
+  const resetF = (w?: number, h?: number) => { setPts(makeRectPts(w || inputW, h || inputH)); setDividers([]); setCellTypes({}); setSel(null); setSelCell(null); };
+  const presets = [
+    { n: "Rettangolo", fn: () => resetF(1200, 1400) }, { n: "Portafinestra", fn: () => resetF(900, 2200) },
+    { n: "Quadrato", fn: () => resetF(1000, 1000) },
+    { n: "Forma L", fn: () => { setPts([{x:0,y:0},{x:1200,y:0},{x:1200,y:800},{x:600,y:800},{x:600,y:1400},{x:0,y:1400}]); setDividers([]); setCellTypes({}); }},
+    { n: "Trapezio", fn: () => { setPts([{x:200,y:0},{x:1000,y:0},{x:1200,y:1400},{x:0,y:1400}]); setDividers([]); setCellTypes({}); }},
+    { n: "Pentagono", fn: () => { setPts([{x:600,y:0},{x:1200,y:500},{x:1000,y:1400},{x:200,y:1400},{x:0,y:500}]); setDividers([]); setCellTypes({}); }},
+  ];
+  const AP2 = [{ id:"fisso",l:"Fisso",ic:"▣" },{ id:"anta_dx",l:"Anta DX",ic:"◨" },{ id:"anta_sx",l:"Anta SX",ic:"◧" },{ id:"vasistas",l:"Vasistas",ic:"▽" },{ id:"ar_dx",l:"A+R DX",ic:"⊞" },{ id:"ar_sx",l:"A+R SX",ic:"⊞" }];
+
+  const addDiv = (axis: string) => { const total = axis === "v" ? bW : bH; setDividers((d: any) => [...d, { axis, pos: Math.round(total / 2), id: Date.now() }]); };
+  const vDivs = dividers.filter((d: any) => d.axis === "v").map((d: any) => d.pos + minX).sort((a: number, b: number) => a - b);
+  const hDivs = dividers.filter((d: any) => d.axis === "h").map((d: any) => d.pos + minY).sort((a: number, b: number) => a - b);
+  const colEdges = [minX, ...vDivs, maxX], rowEdges = [minY, ...hDivs, maxY];
+  const fCells: any[] = [];
+  for (let r = 0; r < rowEdges.length - 1; r++) for (let c = 0; c < colEdges.length - 1; c++) fCells.push({ key: `${r}-${c}`, x: colEdges[c], y: rowEdges[r], w: colEdges[c + 1] - colEdges[c], h: rowEdges[r + 1] - rowEdges[r] });
+
+  const bs2 = (active = false) => ({ padding: "5px 9px", borderRadius: 6, border: `1.5px solid ${active ? T.purple : T.bdr}`, background: active ? `${T.purple}12` : T.card, fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" as any, color: active ? T.purple : T.text });
+
+  return (
+    <div>
+      {/* Presets */}
+      <div style={{ display: "flex", gap: 3, padding: "5px 8px", overflowX: "auto" }}>
+        {presets.map(p => <div key={p.n} onClick={p.fn} style={bs2()}>{p.n}</div>)}
+      </div>
+      {/* Mode toolbar */}
+      <div style={{ display: "flex", gap: 3, padding: "3px 8px", borderBottom: `1px solid ${T.bdr}` }}>
+        {[{ id:"move",l:"✋ Sposta",c:T.blue||"#3B7FE0" },{ id:"add",l:"＋ Punto",c:T.grn||"#1A9E73" },{ id:"del",l:"✕ Elimina",c:T.red||"#DC4444" }].map(m => (
+          <div key={m.id} onClick={() => setFMode(m.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 6, textAlign: "center", background: fMode === m.id ? m.c + "15" : T.card, border: `1.5px solid ${fMode === m.id ? m.c : T.bdr}`, fontSize: 10, fontWeight: 700, color: fMode === m.id ? m.c : T.sub, cursor: "pointer" }}>{m.l}</div>
+        ))}
+      </div>
+      {/* SVG */}
+      <div style={{ display: "flex", justifyContent: "center", padding: 6, overflow: "auto", maxHeight: "55vh" }}>
+        <svg ref={svgRef} width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ background: "#fff", touchAction: "none", maxWidth: "100%" }} onMouseDown={onDown} onTouchStart={onDown}>
+          <defs><pattern id="fgrid" width={100*sc} height={100*sc} patternUnits="userSpaceOnUse"><path d={`M ${100*sc} 0 L 0 0 0 ${100*sc}`} fill="none" stroke="#E8E8E5" strokeWidth={0.5}/></pattern></defs>
+          <rect width={svgW} height={svgH} fill="url(#fgrid)"/>
+          <path d={pathD} fill="#DCEEFF" stroke="#5A5A5C" strokeWidth={2.5} strokeLinejoin="round"/>
+          {/* Inner frame line */}
+          {(() => { const center = { x: pts.reduce((s: number, p: any) => s + p.x, 0) / pts.length, y: pts.reduce((s: number, p: any) => s + p.y, 0) / pts.length }; const inner = pts.map((p: any) => { const dx = center.x - p.x, dy = center.y - p.y, d = Math.sqrt(dx*dx+dy*dy)||1; return toSvg({ x: p.x+(dx/d)*65, y: p.y+(dy/d)*65 }); }); const iD = inner.map((p: any,i: number) => `${i===0?"M":"L"}${p.x},${p.y}`).join(" ")+" Z"; return <path d={iD} fill="none" stroke="#5A5A5C" strokeWidth={0.8} strokeDasharray="3,2"/>; })()}
+          {/* Dividers */}
+          {dividers.map((d: any) => d.axis === "v" ? <g key={d.id}><line x1={ox+(d.pos+minX)*sc} y1={oy+minY*sc} x2={ox+(d.pos+minX)*sc} y2={oy+maxY*sc} stroke={T.purple||"#8B5CF6"} strokeWidth={2}/><text x={ox+(d.pos+minX)*sc} y={oy+maxY*sc+14} textAnchor="middle" fontSize={8} fontWeight={700} fontFamily={FM2} fill={T.purple||"#8B5CF6"}>{d.pos}</text></g> : <g key={d.id}><line x1={ox+minX*sc} y1={oy+(d.pos+minY)*sc} x2={ox+maxX*sc} y2={oy+(d.pos+minY)*sc} stroke="#0D9488" strokeWidth={2}/><text x={ox+maxX*sc+8} y={oy+(d.pos+minY)*sc+3} fontSize={8} fontWeight={700} fontFamily={FM2} fill="#0D9488">{d.pos}</text></g>)}
+          {/* Cell labels */}
+          {fCells.map((cell: any) => { const cx2=ox+(cell.x+cell.w/2)*sc, cy2=oy+(cell.y+cell.h/2)*sc, isSel=selCell===cell.key, type=cellTypes[cell.key]||"fisso", ap=AP2.find((a: any)=>a.id===type); return <g key={cell.key} onClick={(e: any)=>{e.stopPropagation();setSelCell(cell.key);setSel(null)}} style={{cursor:"pointer"}}>{isSel&&<rect x={ox+cell.x*sc+2} y={oy+cell.y*sc+2} width={cell.w*sc-4} height={cell.h*sc-4} fill={(T.blue||"#3B7FE0")+"10"} stroke={T.blue||"#3B7FE0"} strokeWidth={1.5} strokeDasharray="4,3" rx={3}/>}<text x={cx2} y={cy2-4} textAnchor="middle" fontSize={14} fill={isSel?T.blue||"#3B7FE0":"#8E8E9380"}>{ap?.ic||"▣"}</text><text x={cx2} y={cy2+10} textAnchor="middle" fontSize={7} fontWeight={700} fontFamily={FM2} fill={isSel?T.blue||"#3B7FE0":"#8E8E93"}>{Math.round(cell.w)}×{Math.round(cell.h)}</text></g>; })}
+          {/* Edge lengths */}
+          {pts.map((p: any, i: number) => { const next=pts[(i+1)%pts.length], a=toSvg(p), b=toSvg(next), mx2=(a.x+b.x)/2, my2=(a.y+b.y)/2, len=segLenPt(p,next), dx=b.x-a.x, dy=b.y-a.y, angle=Math.atan2(dy,dx)*180/Math.PI, nx=-(b.y-a.y), ny=b.x-a.x, nd=Math.sqrt(nx*nx+ny*ny)||1, tx=mx2+(nx/nd)*14, ty=my2+(ny/nd)*14; return <g key={`q${i}`}><text x={tx} y={ty+3} textAnchor="middle" fontSize={9} fontWeight={700} fontFamily={FM2} fill={T.acc} transform={`rotate(${Math.abs(angle)>90?angle+180:angle},${tx},${ty+3})`}>{len}</text></g>; })}
+          {/* Vertices */}
+          {pts.map((p: any, i: number) => { const s=toSvg(p), isSel=sel===i; return <g key={`v${i}`}><circle cx={s.x} cy={s.y} r={isSel?10:7} fill={isSel?T.blue||"#3B7FE0":"#5A5A5C"} stroke="#fff" strokeWidth={2} style={{cursor:fMode==="del"?"not-allowed":"grab"}}/>{isSel&&<text x={s.x} y={s.y-14} textAnchor="middle" fontSize={8} fontWeight={700} fontFamily={FM2} fill={T.blue||"#3B7FE0"}>{p.x},{p.y}</text>}</g>; })}
+        </svg>
+      </div>
+      {/* Dims bar */}
+      <div style={{ display: "flex", gap: 4, padding: "5px 8px", borderTop: `1px solid ${T.bdr}`, alignItems: "center", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: T.acc }}>L</span>
+        <input type="number" value={inputW} onChange={(e: any)=>setInputW(parseInt(e.target.value)||0)} onBlur={applyDims} style={{ width: 52, padding: "4px 2px", border: `1.5px solid ${T.bdr}`, borderRadius: 5, fontSize: 11, fontWeight: 700, fontFamily: FM2, textAlign: "center" }}/>
+        <span style={{ fontSize: 11, color: T.sub }}>×</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: T.acc }}>H</span>
+        <input type="number" value={inputH} onChange={(e: any)=>setInputH(parseInt(e.target.value)||0)} onBlur={applyDims} style={{ width: 52, padding: "4px 2px", border: `1.5px solid ${T.bdr}`, borderRadius: 5, fontSize: 11, fontWeight: 700, fontFamily: FM2, textAlign: "center" }}/>
+        <span style={{ fontSize: 9, color: T.sub, fontFamily: FM2 }}>mm</span>
+        {sel !== null && <div style={{ marginLeft: "auto", display: "flex", gap: 3, alignItems: "center" }}>
+          <span style={{ fontSize: 8, fontWeight: 700, color: T.blue||"#3B7FE0" }}>P{sel+1}</span>
+          <input type="number" value={pts[sel]?.x||0} onChange={(e: any)=>setPts(pts.map((p: any,i: number)=>i===sel?{...p,x:parseInt(e.target.value)||0}:p))} style={{ width: 42, padding: "2px", border: `1px solid ${(T.blue||"#3B7FE0")}40`, borderRadius: 4, fontSize: 9, fontWeight: 700, fontFamily: FM2, textAlign: "center", color: T.blue||"#3B7FE0" }}/>
+          <input type="number" value={pts[sel]?.y||0} onChange={(e: any)=>setPts(pts.map((p: any,i: number)=>i===sel?{...p,y:parseInt(e.target.value)||0}:p))} style={{ width: 42, padding: "2px", border: `1px solid ${(T.blue||"#3B7FE0")}40`, borderRadius: 4, fontSize: 9, fontWeight: 700, fontFamily: FM2, textAlign: "center", color: T.blue||"#3B7FE0" }}/>
+        </div>}
+      </div>
+      {/* Dividers bar */}
+      <div style={{ display: "flex", gap: 3, padding: "4px 8px", borderTop: `1px solid ${T.bdr}`, alignItems: "center", flexWrap: "wrap" }}>
+        <div onClick={()=>addDiv("v")} style={{ padding: "4px 8px", borderRadius: 5, background: (T.purple||"#8B5CF6")+"12", border: `1px solid ${(T.purple||"#8B5CF6")}30`, cursor: "pointer" }}><span style={{ fontSize: 9, fontWeight: 700, color: T.purple||"#8B5CF6" }}>+│ Mont.</span></div>
+        <div onClick={()=>addDiv("h")} style={{ padding: "4px 8px", borderRadius: 5, background: "#0D948812", border: "1px solid #0D948830", cursor: "pointer" }}><span style={{ fontSize: 9, fontWeight: 700, color: "#0D9488" }}>+─ Trav.</span></div>
+        {dividers.map((d: any)=><div key={d.id} style={{ display: "flex", alignItems: "center", gap: 2, padding: "2px 5px", borderRadius: 4, background: (d.axis==="v"?T.purple||"#8B5CF6":"#0D9488")+"10" }}>
+          <input type="number" value={d.pos} onChange={(e: any)=>setDividers(dividers.map((x: any)=>x.id===d.id?{...x,pos:parseInt(e.target.value)||0}:x))} style={{ width: 36, padding: "1px", border: "none", borderRadius: 3, fontSize: 9, fontWeight: 700, fontFamily: FM2, textAlign: "center", background: "transparent", color: d.axis==="v"?T.purple||"#8B5CF6":"#0D9488" }}/>
+          <span onClick={()=>setDividers(dividers.filter((x: any)=>x.id!==d.id))} style={{ fontSize: 9, color: T.red||"#DC4444", cursor: "pointer", fontWeight: 700 }}>×</span>
+        </div>)}
+      </div>
+      {/* Cell type selector */}
+      {selCell !== null && <div style={{ padding: "6px 8px", borderTop: `1.5px solid ${(T.blue||"#3B7FE0")}30` }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: T.blue||"#3B7FE0", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+          <span>CELLA</span>
+          {(()=>{ const c=fCells.find((x: any)=>x.key===selCell); return c?<span style={{ fontSize: 9, color: T.sub, fontFamily: FM2 }}>{Math.round(c.w)}×{Math.round(c.h)} mm</span>:null; })()}
+          <span onClick={()=>setSelCell(null)} style={{ marginLeft: "auto", fontSize: 14, color: T.sub, cursor: "pointer" }}>×</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 3 }}>
+          {AP2.map((a: any) => { const isSel2=(cellTypes[selCell]||"fisso")===a.id; return <div key={a.id} onClick={()=>setCellTypes({...cellTypes,[selCell as string]:a.id})} style={{ padding: "6px 3px", borderRadius: 6, border: `1.5px solid ${isSel2?T.blue||"#3B7FE0":T.bdr}`, background: isSel2?(T.blue||"#3B7FE0")+"12":T.card, textAlign: "center", cursor: "pointer" }}><div style={{ fontSize: 14 }}>{a.ic}</div><div style={{ fontSize: 7, fontWeight: isSel2?800:500, color: isSel2?T.blue||"#3B7FE0":T.sub }}>{a.l}</div></div>; })}
+        </div>
+      </div>}
+      {/* Footer */}
+      <div style={{ padding: "4px 8px", fontSize: 9, color: T.sub, textAlign: "center", borderTop: `1px solid ${T.bdr}` }}>
+        {fMode === "move" ? "Trascina un vertice" : fMode === "add" ? "Tocca un lato per aggiungere punto" : "Tocca un punto per eliminarlo"} · {fCells.length} celle · {pts.length} punti
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════
 export default function DisegnoTecnico({ vanoId, vanoNome, vanoDisegno, realW: propRealW, realH: propRealH, onUpdate, onUpdateField, onClose, T }) {
+  const [viewTab, setViewTab] = React.useState("disegno"); // "disegno" | "forma" | "3d"
   const realW = propRealW || 1200;
   const realH = propRealH || 1000;
                             const dw = vanoDisegno || { elements: [], selectedId: null, drawMode: null, history: [] };
@@ -556,12 +917,34 @@ export default function DisegnoTecnico({ vanoId, vanoNome, vanoDisegno, realW: p
                                 <div style={{ padding: "8px 12px", background: `${T.purple}10`, display: "flex", alignItems: "center", gap: 8 }}>
                                   <span style={{ fontSize: 14 }}>✏️</span>
                                   <span style={{ fontSize: 12, fontWeight: 800, color: T.purple, flex: 1 }}>Disegno — {vanoNome || "Vano"} ({realW}×{realH})</span>
+                                  <span onClick={() => onClose()} style={{ fontSize: 16, cursor: "pointer", color: T.sub, padding: "2px 6px" }}>✕</span>
+                                </div>
+
+                                {/* ═══ TAB BAR ═══ */}
+                                <div style={{ display: "flex", borderBottom: `1px solid ${T.bdr}` }}>
+                                  {[{ id: "disegno", l: "✏️ Disegno", c: T.purple }, { id: "forma", l: "🔷 Forma", c: T.blue || "#3B7FE0" }, { id: "3d", l: "🧊 3D", c: T.acc }].map(tab => (
+                                    <div key={tab.id} onClick={() => setViewTab(tab.id)}
+                                      style={{ flex: 1, padding: "7px 0", textAlign: "center", fontSize: 11, fontWeight: viewTab === tab.id ? 800 : 500, color: viewTab === tab.id ? tab.c : T.sub, borderBottom: viewTab === tab.id ? `2.5px solid ${tab.c}` : "2.5px solid transparent", cursor: "pointer", transition: "all 0.15s" }}>
+                                      {tab.l}
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* ═══ TAB: FORMA ═══ */}
+                                {viewTab === "forma" && <FormaEditor T={T} realW={realW} realH={realH} />}
+
+                                {/* ═══ TAB: 3D ═══ */}
+                                {viewTab === "3d" && <View3D T={T} realW={realW} realH={realH} vanoDisegno={vanoDisegno} onUpdate={onUpdate} />}
+
+                                {/* ═══ TAB: DISEGNO (originale) ═══ */}
+                                {viewTab === "disegno" && <>
+                                {/* Mode indicators */}
+                                <div style={{ padding: "4px 8px 0", display: "flex", gap: 4, flexWrap: "wrap" }}>
                                   {drawMode === "line" && <span style={{ fontSize: 9, background: "#333", color: "#fff", padding: "2px 7px", borderRadius: 4, fontWeight: 800 }}>╱ STRUTTURA</span>}
                                   {drawMode === "apertura" && <span style={{ fontSize: 9, background: T.blue, color: "#fff", padding: "2px 7px", borderRadius: 4, fontWeight: 800 }}>↗ APERTURA</span>}
                                   {(drawMode === "place-anta" || drawMode === "place-vetro" || drawMode === "place-porta" || drawMode === "place-persiana") && <span style={{ fontSize: 9, background: T.grn, color: "#fff", padding: "2px 7px", borderRadius: 4, fontWeight: 800 }}>👆 CLICK su cella</span>}
                                   {(drawMode === "place-mont" || drawMode === "place-trav") && <span style={{ fontSize: 9, background: "#555", color: "#fff", padding: "2px 7px", borderRadius: 4, fontWeight: 800 }}>👆 {drawMode === "place-mont" ? "MONTANTE" : "TRAVERSO"} — click cella</span>}
                                   {drawMode === "place-ap" && <span style={{ fontSize: 9, background: T.blue, color: "#fff", padding: "2px 7px", borderRadius: 4, fontWeight: 800 }}>👆 {placeApType} — click cella</span>}
-                                  <span onClick={() => onClose()} style={{ fontSize: 16, cursor: "pointer", color: T.sub, padding: "2px 6px" }}>✕</span>
                                 </div>
 
                                 {/* Row 1: Struttura */}
@@ -1184,6 +1567,7 @@ export default function DisegnoTecnico({ vanoId, vanoNome, vanoDisegno, realW: p
                                     : drawMode === "place-ap" ? `🔵 Click sulla CELLA per apertura ${placeApType}`
                                     : `${els.length} el. · ${cells.length} celle · Click per selezionare`}
                                 </div>
+                                </>}
                               </div>
                             );
 }

@@ -9,7 +9,12 @@ export default function ClientiPanel() {
     T, S, isDesktop, fs,
     PIPELINE, cantieri, contatti, events, fattureDB, setContatti, setNewCM, setSelectedCM, setTab,
     clientiSearch, setClientiSearch, clientiFilter, setClientiFilter,
+    selectedCliente, setSelectedCliente,
+    showNewCliente, setShowNewCliente, newCliente, setNewCliente,
   } = useMastro();
+
+  const [clienteDetailTab, setClienteDetailTab] = React.useState("info");
+  const [clienteNotes, setClienteNotes] = React.useState<Record<string, string>>({});
 
     const filters = [
       { id: "tutti", l: "Tutti", c: T.acc },

@@ -2,7 +2,7 @@
 // @ts-nocheck
 import React from "react";
 import { useMastro } from "./MastroContext";
-import { FF, FM, ICO, Ico, TIPI_EVENTO, tipoEvColor } from "./mastro-constants";
+import { FF, FM, ICO, Ico, I, TIPI_EVENTO, tipoEvColor } from "./mastro-constants";
 
 export default function AgendaPanel() {
   const {
@@ -15,17 +15,17 @@ export default function AgendaPanel() {
     const tasksWithDate = tasks.filter(t => t.date).map(t => ({ ...t, _isTask: true, color: t.priority === "alta" ? "#FF3B30" : t.priority === "media" ? "#FF9500" : "#8E8E93" }));
     const montaggiItems = (montaggiDB || []).filter(m => m.data).map(m => {
       const sq = (squadreDB || []).find(s => s.id === m.squadraId);
-      return { id: "mag_" + m.id, date: m.data, time: m.orario || "08:00", text: "🔧 Montaggio " + (m.cliente || ""), persona: m.cliente || "", cm: m.cmCode || "", color: "#007aff", durata: (m.giorni || 1) * 480, _isMontaggio: true, _stato: m.stato, _squadra: sq?.nome || "", _vani: m.vani || 0 };
+      return { id: "mag_" + m.id, date: m.data, time: m.orario || "08:00", text: "Montaggio " + (m.cliente || ""), persona: m.cliente || "", cm: m.cmCode || "", color: "#0D7C6B", durata: (m.giorni || 1) * 480, _isMontaggio: true, _stato: m.stato, _squadra: sq?.nome || "", _vani: m.vani || 0 };
     });
     const consegneItems = (ordiniFornDB || []).filter(o => o.consegna?.prevista && o.stato !== "consegnato").map(o => ({
-      id: "cons_" + o.id, date: o.consegna.prevista, time: "09:00", text: "🚚 Consegna " + (o.fornitore?.nome || ""), persona: o.fornitore?.nome || "", cm: o.cmCode || "", color: "#af52de", durata: 60, _isConsegna: true
+      id: "cons_" + o.id, date: o.consegna.prevista, time: "09:00", text: "Consegna " + (o.fornitore?.nome || ""), persona: o.fornitore?.nome || "", cm: o.cmCode || "", color: "#af52de", durata: 60, _isConsegna: true
     }));
     const scadenzeItems = [
       ...(fattureDB || []).filter(f => !f.pagata && f.scadenza).map(f => ({
-        id: "scad_e_" + f.id, date: f.scadenza, time: "", text: "📤 Incasso " + f.cliente, persona: f.cliente, cm: f.cmCode || "", color: "#34c759", _isScadenza: true, _importo: f.importo, _tipo: "incasso"
+        id: "scad_e_" + f.id, date: f.scadenza, time: "", text: "Incasso " + f.cliente, persona: f.cliente, cm: f.cmCode || "", color: "#1A9E73", _isScadenza: true, _importo: f.importo, _tipo: "incasso"
       })),
       ...(fatturePassive || []).filter(f => !f.pagata && f.scadenza).map(f => ({
-        id: "scad_p_" + f.id, date: f.scadenza, time: "", text: "📥 Pagamento " + (f.fornitore || ""), persona: f.fornitore || "", cm: "", color: "#ff9500", _isScadenza: true, _importo: f.importo || 0, _tipo: "pagamento"
+        id: "scad_p_" + f.id, date: f.scadenza, time: "", text: "Pagamento " + (f.fornitore || ""), persona: f.fornitore || "", cm: "", color: "#E8A020", _isScadenza: true, _importo: f.importo || 0, _tipo: "pagamento"
       })),
     ];
     const allItemsRaw = [...events, ...tasksWithDate, ...montaggiItems, ...consegneItems, ...scadenzeItems];
@@ -84,23 +84,23 @@ export default function AgendaPanel() {
         <div style={{ ...S.cardInner, display: "flex", gap: 10 }}>
           {ev._isTask ? (
             <div onClick={(e) => { e.stopPropagation(); toggleTask(ev.id); }} style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${ev.done ? T.grn : T.bdr}`, background: ev.done ? T.grn : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginTop: 2 }}>
-              {ev.done && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
+              {ev.done && <Ico d={ICO.check} s={13} c="#fff" sw={3} />}
             </div>
           ) : ev._isMontaggio ? (
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#007aff15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🔧</div>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#0D7C6B15", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><I d={ICO.wrench} s={16} c="#0D7C6B" /></div>
           ) : ev._isConsegna ? (
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#af52de15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🚚</div>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#af52de15", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><I d={ICO.truck} s={16} c="#af52de" /></div>
           ) : ev._isScadenza ? (
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: (ev._tipo === "incasso" ? "#34c759" : "#ff9500") + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{ev._tipo === "incasso" ? "📤" : "📥"}</div>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: (ev._tipo === "incasso" ? "#1A9E73" : "#E8A020") + "15", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><I d={ev._tipo === "incasso" ? ICO.upload : ICO.download} s={16} c={ev._tipo === "incasso" ? "#1A9E73" : "#E8A020"} /></div>
           ) : (
             <div style={{ width: 3, borderRadius: 2, background: ev.color, flexShrink: 0 }} />
           )}
           {ev.time && <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, minWidth: 38, fontFamily: FM }}>{ev.time}</div>}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, textDecoration: ev._isTask && ev.done ? "line-through" : "none" }}>{ev.text}</div>
-            {ev._isTask && ev.meta && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>📝 {ev.meta}</div>}
-            {!ev._isTask && !ev._isMontaggio && !ev._isConsegna && !ev._isScadenza && ev.addr && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>📍 {ev.addr}</div>}
-            {ev._isMontaggio && <div style={{ fontSize: 10, color: T.sub, marginTop: 2 }}>{ev._squadra} · {ev._vani} vani · {ev._stato === "completato" ? "✅ Completato" : ev._stato === "in_corso" ? "🔄 In corso" : "📋 Programmato"}</div>}
+            {ev._isTask && ev.meta && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}><I d={ICO.fileText} s={11} c={T.sub} /> {ev.meta}</div>}
+            {!ev._isTask && !ev._isMontaggio && !ev._isConsegna && !ev._isScadenza && ev.addr && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}><I d={ICO.mapPin} s={11} c={T.sub} /> {ev.addr}</div>}
+            {ev._isMontaggio && <div style={{ fontSize: 10, color: T.sub, marginTop: 2 }}>{ev._squadra} · {ev._vani} vani · {ev._stato === "completato" ? "Completato" : ev._stato === "in_corso" ? "In corso" : "Programmato"}</div>}
             {ev._isConsegna && <div style={{ fontSize: 10, color: T.sub, marginTop: 2 }}>Materiale per {ev.cm}</div>}
             {ev._isScadenza && <div style={{ fontSize: 10, color: T.sub, marginTop: 2 }}>{ev._tipo === "incasso" ? "Da incassare" : "Da pagare"}: <b style={{ color: ev.color }}>€{(ev._importo || 0).toLocaleString("it-IT")}</b></div>}
             <div style={{ display: "flex", gap: 4, marginTop: 3, flexWrap: "wrap" }}>
@@ -129,11 +129,11 @@ export default function AgendaPanel() {
               </div>
               {ev.persona && <div>
                 <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Assegnato a</div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>👤 {ev.persona}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}><I d={ICO.user} s={11} c={T.purple} /> {ev.persona}</div>
               </div>}
               {ev.addr && <div>
                 <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Luogo</div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>📍 {ev.addr}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}><I d={ICO.mapPin} s={11} c={T.sub} /> {ev.addr}</div>
               </div>}
             </div>
             {ev.cm && (
@@ -144,7 +144,7 @@ export default function AgendaPanel() {
             )}
             <div style={{ display: "flex", gap: 6 }}>
               <div onClick={(e) => { e.stopPropagation(); if (ev.addr) window.open("https://maps.google.com/?q=" + encodeURIComponent(ev.addr)); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.blue }}>🗝º Mappa</div>
-              <div onClick={(e) => { e.stopPropagation(); const tel = contatti.find(ct => ct.nome === ev.persona)?.telefono; if (tel) window.location.href="tel:" + tel; }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.grn }}>📞 Chiama</div>
+              <div onClick={(e) => { e.stopPropagation(); const tel = contatti.find(ct => ct.nome === ev.persona)?.telefono; if (tel) window.location.href="tel:" + tel; }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.card, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.grn }}><I d={ICO.phone} /> Chiama</div>
               <div onClick={(e) => {
                 e.stopPropagation();
                 const cmObj = cantieri.find(c => c.code === ev.cm) || null;
@@ -154,8 +154,8 @@ export default function AgendaPanel() {
 
 Le confermo l'appuntamento:
 
-📅 ${dataFmt}${ev.time ? " alle " + ev.time : ""}
-📍 ${ev.addr || "da concordare"}
+<I d={ICO.calendar} /> ${dataFmt}${ev.time ? " alle " + ev.time : ""}
+<I d={ICO.mapPin} /> ${ev.addr || "da concordare"}
 
 ${ev.text}
 
@@ -166,13 +166,13 @@ Fabio Cozza
 Walter Cozza Serramenti`;
                 setMailBody(tpl);
                 setShowMailModal({ ev, cm: cmObj });
-              }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.accLt, border: `1px solid ${T.acc}30`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.acc }}>✉️ Mail</div>
+              }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.accLt, border: `1px solid ${T.acc}30`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.acc }}><I d={ICO.mail} /> Mail</div>
               <div onClick={(e) => { e.stopPropagation(); deleteEvent(ev.id); setSelectedEvent(null); }} style={{ flex: 1, padding: "8px", borderRadius: 8, background: T.redLt, border: `1px solid ${T.red}30`, textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 600, color: T.red }}>🗝‘</div>
             </div>
             <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              <div onClick={(e) => { e.stopPropagation(); const cmObj = ev.cm ? cantieri.find(c => c.code === ev.cm) : null; if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ flex: 1, padding: "10px 4px", borderRadius: 10, background: "linear-gradient(135deg, #007aff15, #007aff08)", border: "1px solid #007aff25", textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 800, color: "#007aff" }}>{"📁"} Commessa</div>
-              <div onClick={(e) => { e.stopPropagation(); const cmObj = ev.cm ? cantieri.find(c => c.code === ev.cm) : null; if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "misure", vani: [], note: "Misure: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ flex: 1, padding: "10px 4px", borderRadius: 10, background: "linear-gradient(135deg, #ff950015, #ff950008)", border: "1px solid #ff950025", textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 800, color: "#ff9500" }}>{"📏"} Misure</div>
-              <div onClick={(e) => { e.stopPropagation(); const code = "INT-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: "Intervento: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); setSelectedEvent(null); setTab("commesse"); }} style={{ flex: 1, padding: "10px 4px", borderRadius: 10, background: "linear-gradient(135deg, #34c75915, #34c75908)", border: "1px solid #34c75925", textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 800, color: "#34c759" }}>{"🔧"} Intervento</div>
+              <div onClick={(e) => { e.stopPropagation(); const cmObj = ev.cm ? cantieri.find(c => c.code === ev.cm) : null; if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ flex: 1, padding: "10px 4px", borderRadius: 10, background: "linear-gradient(135deg, #0D7C6B15, #0D7C6B08)", border: "1px solid #0D7C6B25", textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 800, color: "#0D7C6B" }}><I d={ICO.folder} s={11} c="#0D7C6B" /> Commessa</div>
+              <div onClick={(e) => { e.stopPropagation(); const cmObj = ev.cm ? cantieri.find(c => c.code === ev.cm) : null; if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "misure", vani: [], note: "Misure: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ flex: 1, padding: "10px 4px", borderRadius: 10, background: "linear-gradient(135deg, #E8A02015, #E8A02008)", border: "1px solid #E8A02025", textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 800, color: "#E8A020" }}><I d={ICO.ruler} s={11} c="#E8A020" /> Misure</div>
+              <div onClick={(e) => { e.stopPropagation(); const code = "INT-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: "Intervento: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); setSelectedEvent(null); setTab("commesse"); }} style={{ flex: 1, padding: "10px 4px", borderRadius: 10, background: "linear-gradient(135deg, #1A9E7315, #1A9E7308)", border: "1px solid #1A9E7325", textAlign: "center", cursor: "pointer", fontSize: 11, fontWeight: 800, color: "#1A9E73" }}><I d={ICO.wrench} s={11} c="#1A9E73" /> Intervento</div>
             </div>
           </div>
         )}
@@ -205,11 +205,11 @@ Walter Cozza Serramenti`;
         {/* ═══ FILTRI AGENDA ═══ */}
         <div style={{ display: "flex", gap: 4, padding: "6px 16px", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           {[
-            { id: "eventi", ico: "📍", l: "Sopralluoghi", col: "#007aff" },
-            { id: "montaggi", ico: "🔧", l: "Montaggi", col: "#5856d6" },
-            { id: "consegne", ico: "🚚", l: "Consegne", col: "#af52de" },
-            { id: "scadenze", ico: "💰", l: "Pagamenti", col: "#ff9500" },
-            { id: "tasks", ico: "✅", l: "Task", col: "#8e8e93" },
+            { id: "eventi", ico: "mapPin", l: "Sopralluoghi", col: "#0D7C6B" },
+            { id: "montaggi", ico: "wrench", l: "Montaggi", col: "#8B5CF6" },
+            { id: "consegne", ico: "truck", l: "Consegne", col: "#af52de" },
+            { id: "scadenze", ico: "wallet", l: "Pagamenti", col: "#E8A020" },
+            { id: "tasks", ico: "checkCircle", l: "Task", col: "#8e8e93" },
           ].map(f => {
             const active = agendaFilters[f.id];
             return <div key={f.id} onClick={() => setAgendaFilters(p => ({...p, [f.id]: !p[f.id]}))}
@@ -217,7 +217,7 @@ Walter Cozza Serramenti`;
                 background: active ? f.col + "18" : T.bg, color: active ? f.col : T.sub + "80",
                 border: "1.5px solid " + (active ? f.col + "60" : T.bdr), opacity: active ? 1 : 0.5,
                 transition: "all 0.15s ease" }}>
-              <span>{f.ico}</span> {f.l}
+              <I d={ICO[f.ico]} s={12} c={active ? f.col : T.sub} /> {f.l}
             </div>;
           })}
         </div>
@@ -251,7 +251,7 @@ Walter Cozza Serramenti`;
           return (
             <div style={{ margin: "0 16px 10px", padding: "10px 12px", borderRadius: 10, background: "#FF950010", border: "1px solid #FF950040", borderLeft: "3px solid #FF9500" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 18 }}>⏰</span>
+                <span style={{ fontSize: 18 }}><I d={ICO.clock} /></span>
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: "#FF9500" }}>
                     {reminderPendenti.length} reminder da inviare
@@ -267,8 +267,8 @@ Walter Cozza Serramenti`;
 
 Le ricordiamo l'appuntamento:
 
-📅 ${dataFmt}${ev.time ? " alle " + ev.time : ""}
-📍 ${ev.addr || "da concordare"}
+<I d={ICO.calendar} /> ${dataFmt}${ev.time ? " alle " + ev.time : ""}
+<I d={ICO.mapPin} /> ${ev.addr || "da concordare"}
 
 ${ev.text}
 
@@ -288,7 +288,7 @@ Walter Cozza Serramenti`;
                       setShowMailModal({ ev: { ...ev, addr: ev.addr || "" }, cm: cmObj || null });
                       setEvents(es => es.map(x => x.id === ev.id ? { ...x, reminderSent: true } : x));
                     }} style={{ padding:"5px 10px", borderRadius:7, background:"#FF9500", color:"#fff", fontSize:11, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap" }}>
-                      ✉️ Invia
+                      <I d={ICO.mail} />️ Invia
                     </div>
                   </div>
                 );
@@ -312,12 +312,12 @@ Walter Cozza Serramenti`;
                         : `${Math.floor(eventiOggi[0].minutiAlEvento/60)}h ${eventiOggi[0].minutiAlEvento%60>0?eventiOggi[0].minutiAlEvento%60+"min":""}`}
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 700 }}>{eventiOggi[0].text}</div>
-                    {eventiOggi[0].addr && <div style={{ fontSize: 11, color: T.sub }}>📍 {eventiOggi[0].addr}</div>}
+                    {eventiOggi[0].addr && <div style={{ fontSize: 11, color: T.sub }}><I d={ICO.mapPin} s={11} c={T.sub} /> {eventiOggi[0].addr}</div>}
                   </div>
                   {eventiOggi[0].addr && (
                     <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(eventiOggi[0].addr))}
                       style={{ padding: "6px 10px", borderRadius: 8, background: T.blueLt, color: T.blue, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                      🗝º Naviga
+                      <I d={ICO.lock} />º Naviga
                     </div>
                   )}
                 </div>
@@ -401,7 +401,7 @@ Walter Cozza Serramenti`;
                           <div style={{ fontSize: 13, fontWeight: 600 }}>{ev.text}</div>
                           <div style={{ display: "flex", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
                             {ev.cm && <span style={S.badge(T.accLt, T.acc)}>{ev.cm}</span>}
-                            {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {ev.persona}</span>}
+                            {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}><I d={ICO.user} s={11} c={T.purple} /> {ev.persona}</span>}
                           </div>
                         </div>
                         <div style={{ textAlign: "right" }}>
@@ -421,16 +421,16 @@ Walter Cozza Serramenti`;
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{selectedEvent.text}</div>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {selectedEvent.time && <span style={S.badge(T.bg, T.sub)}>🕐 {selectedEvent.time}</span>}
+                        {selectedEvent.time && <span style={S.badge(T.bg, T.sub)}><I d={ICO.calendar} s={11} c={T.sub} /> {selectedEvent.time}</span>}
                         {selectedEvent.cm && <span style={S.badge(T.accLt, T.acc)}>{selectedEvent.cm}</span>}
-                        {selectedEvent.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {selectedEvent.persona}</span>}
-                        {selectedEvent.addr && <span style={S.badge(T.grnLt, T.grn)}>📍 {selectedEvent.addr}</span>}
+                        {selectedEvent.persona && <span style={S.badge(T.purpleLt, T.purple)}><I d={ICO.user} s={11} c={T.purple} /> {selectedEvent.persona}</span>}
+                        {selectedEvent.addr && <span style={S.badge(T.grnLt, T.grn)}><I d={ICO.mapPin} s={11} c={T.grn} /> {selectedEvent.addr}</span>}
                       </div>
                     </div>
                     <div onClick={() => setSelectedEvent(null)} style={{ padding: 4, cursor: "pointer", color: T.sub, fontSize: 16 }}>×</div>
                   </div>
                   <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                    {selectedEvent.addr && <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(selectedEvent.addr))} style={{ flex:1, padding:"6px", borderRadius:6, background:T.blueLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.blue }}>🗝º Mappa</div>}
+                    {selectedEvent.addr && <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(selectedEvent.addr))} style={{ flex:1, padding:"6px", borderRadius:6, background:T.blueLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.blue }}><I d={ICO.lock} />º Mappa</div>}
                     <div onClick={() => {
                       const ev = selectedEvent;
                       const cmObj = cantieri.find(c => c.code === ev.cm) || null;
@@ -440,8 +440,8 @@ Walter Cozza Serramenti`;
 
 Le confermo l'appuntamento:
 
-📅 ${dataFmt}${ev.time ? " alle " + ev.time : ""}
-📍 ${ev.addr || "da concordare"}
+<I d={ICO.calendar} /> ${dataFmt}${ev.time ? " alle " + ev.time : ""}
+<I d={ICO.mapPin} /> ${ev.addr || "da concordare"}
 
 ${ev.text}
 
@@ -452,8 +452,8 @@ Fabio Cozza
 Walter Cozza Serramenti`;
                       setMailBody(tpl);
                       setShowMailModal({ ev, cm: cmObj });
-                    }} style={{ flex:1, padding:"6px", borderRadius:6, background:T.accLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.acc }}>✉️ Mail</div>
-                    <div onClick={() => deleteEvent(selectedEvent.id)} style={{ flex:1, padding:"6px", borderRadius:6, background:T.redLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.red }}>🗝‘ Elimina</div>
+                    }} style={{ flex:1, padding:"6px", borderRadius:6, background:T.accLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.acc }}><I d={ICO.mail} />️ Mail</div>
+                    <div onClick={() => deleteEvent(selectedEvent.id)} style={{ flex:1, padding:"6px", borderRadius:6, background:T.redLt, textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:600, color:T.red }}><I d={ICO.lock} />‘ Elimina</div>
                   </div>
                 </div>
               )}

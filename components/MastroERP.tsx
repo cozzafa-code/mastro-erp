@@ -18,7 +18,7 @@ import { validateCommessa, validateVano, validateTask, validateEvento, validateF
 const SYNC_KEYS = ["cantieri","events","contatti","tasks","problemi","team","azienda","pipeline","sistemi","vetri","colori","coprifili","lamiere","libreria","fatture","squadre","montaggi","ordiniForn"];
 
 
-import { getAziendaId, loadAllData, saveCantiere, saveEvent, deleteEventDB, saveContatto, saveTeamMember, saveTask, saveAzienda, saveVanoDB, saveMateriali, savePipeline, FONT, FF, FM, tipoToMinCat, THEMES, PLANS, PIPELINE_DEFAULT, MOTIVI_BLOCCO, AFASE, CANTIERI_INIT, FATTURE_INIT, ORDINI_INIT, MONTAGGI_INIT, TASKS_INIT, AI_INBOX_INIT, MSGS_INIT, TEAM_INIT, CONTATTI_INIT, COLORI_INIT, SISTEMI_INIT, VETRI_INIT, TIPOLOGIE_RAPIDE, SETTORI, SETTORI_DEFAULT, COPRIFILI_INIT, LAMIERE_INIT, Ico, ICO, PUNTI_MISURE, useDragOrder, TIPI_EVENTO, tipoEvColor } from "./mastro-constants";
+import { getAziendaId, loadAllData, saveCantiere, saveEvent, deleteEventDB, saveContatto, saveTeamMember, saveTask, saveAzienda, saveVanoDB, saveMateriali, savePipeline, FONT, FF, FM, tipoToMinCat, THEMES, PLANS, PIPELINE_DEFAULT, MOTIVI_BLOCCO, AFASE, CANTIERI_INIT, FATTURE_INIT, ORDINI_INIT, MONTAGGI_INIT, TASKS_INIT, AI_INBOX_INIT, MSGS_INIT, TEAM_INIT, CONTATTI_INIT, COLORI_INIT, SISTEMI_INIT, VETRI_INIT, TIPOLOGIE_RAPIDE, SETTORI, SETTORI_DEFAULT, COPRIFILI_INIT, LAMIERE_INIT, Ico, I, ICO, PUNTI_MISURE, useDragOrder, TIPI_EVENTO, tipoEvColor } from "./mastro-constants";
 import { MastroContext } from "./MastroContext";
 import SettingsPanel from "./SettingsPanel";
 import PreventivoModal from "./PreventivoModal";
@@ -35,6 +35,7 @@ import ContabilitaPanel from "./ContabilitaPanel";
 import ClientiPanel from "./ClientiPanel";
 import CommessePanel from "./CommessePanel";
 import { OnboardingPanel, FirmaModalPanel } from "./OnboardingPanel";
+import MastroStrutture from "./MastroStrutture";
 
 function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda?: any }) {
   const [theme, setTheme] = useState("chiaro");
@@ -90,6 +91,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   const [selectedProblema, setSelectedProblema] = useState<any>(null);
   const [problemaForm, setProblemaForm] = useState({ titolo: "", descrizione: "", tipo: "materiale", priorita: "media", assegnato: "" });
   const [showProblemiView, setShowProblemiView] = useState(false);
+  const [showStrutture, setShowStrutture] = useState(false);
   // Save problemi to localStorage
   useEffect(() => { try { localStorage.setItem("mastro:problemi", JSON.stringify(problemi)); } catch {} if(syncReady.current&&userId)sync.cloudSave("problemi", problemi); }, [problemi]);
   const [team, setTeam] = useState(TEAM_INIT);
@@ -203,8 +205,8 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   
   // Squadre montaggio
   const [squadreDB, setSquadreDB] = useState<any[]>([
-    { id: "sq1", nome: "Squadra A", membri: ["Mario", "Giuseppe"], colore: "#007aff" },
-    { id: "sq2", nome: "Squadra B", membri: ["Paolo", "Andrea"], colore: "#34c759" },
+    { id: "sq1", nome: "Squadra A", membri: ["Mario", "Giuseppe"], colore: "#0D7C6B" },
+    { id: "sq2", nome: "Squadra B", membri: ["Paolo", "Andrea"], colore: "#1A9E73" },
   ]);
   const [montaggiDB, setMontaggiDB] = useState<any[]>(MONTAGGI_INIT);
   
@@ -326,9 +328,9 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
     const t2 = new Date(t); t2.setDate(t2.getDate() + 2); const t2Str = t2.toISOString().split("T")[0];
     const t3 = new Date(t); t3.setDate(t3.getDate() + 3); const t3Str = t3.toISOString().split("T")[0];
     return [
-      { id: "ev1", date: td, time: "09:00", text: "Sopralluogo Verdi", tipo: "sopralluogo", persona: "Giuseppe Verdi", addr: "Via Garibaldi 12, Rende", cm: "S-0001", color: "#007aff", durata: 60 },
-      { id: "ev2", date: td, time: "15:00", text: "Telefonata Bianchi — preventivo", tipo: "controllo", persona: "Anna Bianchi", addr: "", cm: "S-0002", color: "#ff9500", durata: 30 },
-      { id: "ev3", date: tmStr, time: "10:00", text: "Firma contratto Rossi", tipo: "sopralluogo", persona: "Mario Rossi", addr: "Via Roma 42, Cosenza", cm: "S-0003", color: "#34c759", durata: 45 },
+      { id: "ev1", date: td, time: "09:00", text: "Sopralluogo Verdi", tipo: "sopralluogo", persona: "Giuseppe Verdi", addr: "Via Garibaldi 12, Rende", cm: "S-0001", color: "#0D7C6B", durata: 60 },
+      { id: "ev2", date: td, time: "15:00", text: "Telefonata Bianchi — preventivo", tipo: "controllo", persona: "Anna Bianchi", addr: "", cm: "S-0002", color: "#E8A020", durata: 30 },
+      { id: "ev3", date: tmStr, time: "10:00", text: "Firma contratto Rossi", tipo: "sopralluogo", persona: "Mario Rossi", addr: "Via Roma 42, Cosenza", cm: "S-0003", color: "#1A9E73", durata: 45 },
       { id: "ev4", date: t3Str, time: "08:30", text: "Consegna materiale Esposito", tipo: "consegna", persona: "Laura Esposito", addr: "Viale Trieste 5, Rende", cm: "S-0004", color: "#af52de", durata: 120 },
     ];
   });
@@ -439,8 +441,8 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   const [ripUrgenza, setRipUrgenza] = useState("media");
   // New vano form
   const [vanoInfoOpen, setVanoInfoOpen] = useState(null); // which accordion section is open
-  const [tipCat, setTipCat] = useState("");
-  const [newVano, setNewVano] = useState({ nome: "", tipo: "", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", pezzi: 1 });
+  const [tipCat, setTipCat] = useState("Finestre");
+  const [newVano, setNewVano] = useState({ nome: "", tipo: "F1A", stanza: "Soggiorno", piano: "PT", sistema: "", coloreInt: "", coloreEst: "", bicolore: false, coloreAcc: "", vetro: "", telaio: "", telaioAlaZ: "", rifilato: false, rifilSx: "", rifilDx: "", rifilSopra: "", rifilSotto: "", coprifilo: "", lamiera: "", pezzi: 1 });
   const [customPiani, setCustomPiani] = useState(["S1", "PT", "P1", "P2", "P3"]);
   const [mezziSalita, setMezziSalita] = useState(["Scala interna", "Scala esterna", "Scala aerea", "Scala a mano", "Gru", "Elevatore", "Ponteggio", "Nessuno"]);
   const [showAddPiano, setShowAddPiano] = useState(false);
@@ -478,7 +480,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       const savedVer = localStorage.getItem("mastro:demoVer");
       if (false && savedVer !== DEMO_VER) {
         // FORCE RESET — version changed or first load
-        console.log("🔄 MASTRO: Reset demo →", DEMO_VER);
+        console.log("↻ MASTRO: Reset demo →", DEMO_VER);
         Object.keys(localStorage).filter(k => k.startsWith("mastro:")).forEach(k => {
           try { localStorage.removeItem(k); } catch(e) {}
         });
@@ -840,10 +842,9 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
 
   const addVano = () => {
     if (!selectedCM || !selectedRilievo) return;
-    const vanoTipo = newVano.tipo || tipologieFiltrate[0]?.code || "F1A";
-    const tipObj = TIPOLOGIE_RAPIDE.find(t => t.code === vanoTipo);
-    const nome = newVano.nome.trim() || `${tipObj?.label || vanoTipo} ${(selectedRilievo.vani?.length || 0) + 1}`;
-    const v = { id: Date.now(), nome, tipo: vanoTipo, stanza: newVano.stanza, piano: newVano.piano, sistema: newVano.sistema, pezzi: newVano.pezzi||1, coloreInt: newVano.coloreInt, coloreEst: newVano.coloreEst, bicolore: newVano.bicolore, coloreAcc: newVano.coloreAcc, vetro: newVano.vetro, telaio: newVano.telaio, telaioAlaZ: newVano.telaioAlaZ, rifilato: newVano.rifilato, rifilSx: newVano.rifilSx, rifilDx: newVano.rifilDx, rifilSopra: newVano.rifilSopra, rifilSotto: newVano.rifilSotto, coprifilo: newVano.coprifilo, lamiera: newVano.lamiera, misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } }, settoreData: {} };
+    const tipObj = TIPOLOGIE_RAPIDE.find(t => t.code === newVano.tipo);
+    const nome = newVano.nome.trim() || `${tipObj?.label || newVano.tipo} ${(selectedRilievo.vani?.length || 0) + 1}`;
+    const v = { id: Date.now(), nome, tipo: newVano.tipo, stanza: newVano.stanza, piano: newVano.piano, sistema: newVano.sistema, pezzi: newVano.pezzi||1, coloreInt: newVano.coloreInt, coloreEst: newVano.coloreEst, bicolore: newVano.bicolore, coloreAcc: newVano.coloreAcc, vetro: newVano.vetro, telaio: newVano.telaio, telaioAlaZ: newVano.telaioAlaZ, rifilato: newVano.rifilato, rifilSx: newVano.rifilSx, rifilDx: newVano.rifilDx, rifilSopra: newVano.rifilSopra, rifilSotto: newVano.rifilSotto, coprifilo: newVano.coprifilo, lamiera: newVano.lamiera, misure: {}, foto: {}, note: "", cassonetto: false, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } };
     const updRilievo = { ...selectedRilievo, vani: [...(selectedRilievo.vani || []), v] };
     setCantieri(cs => cs.map(c => c.id === selectedCM.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRilievo : r), aggiornato: "Oggi" } : c));
     setSelectedRilievo(updRilievo);
@@ -855,6 +856,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   };
 
   const updateMisura = (vanoId, key, value) => {
+    if (isStorico) return; // rilievo storico = sola lettura
     const numVal = sanitize.misura(value);
     const mv = validateMisura(key, numVal);
     if (!mv.valid) { toast(mv.errors[0], "warning"); }
@@ -875,6 +877,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
 
   // Batch update: set multiple misure keys at once (no race conditions)
   const updateMisureBatch = (vanoId, updates: Record<string, number>) => {
+    if (isStorico) return; // rilievo storico = sola lettura
     if (selectedRilievo) {
       setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? {
         ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? {
@@ -894,6 +897,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   };
 
   const toggleAccessorio = (vanoId, acc) => {
+    if (isStorico) return; // rilievo storico = sola lettura
     if (selectedRilievo) {
       const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.map(v => v.id === vanoId ? { ...v, accessori: { ...v.accessori, [acc]: { ...v.accessori[acc], attivo: !v.accessori[acc].attivo } } } : v) };
       setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
@@ -913,6 +917,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   };
 
   const updateVanoField = (vanoId, field, value) => {
+    if (isStorico) return; // rilievo storico = sola lettura
     if (selectedRilievo) {
       const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.map(v => v.id === vanoId ? { ...v, [field]: value } : v) };
       setCantieri(cs => cs.map(c => c.id === selectedCM?.id ? { ...c, rilievi: c.rilievi.map(r => r.id === selectedRilievo.id ? updRil : r) } : c));
@@ -925,6 +930,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   // DELETE functions
   const deleteTask = (taskId) => { confirm({ title: "Eliminare task?", message: "Questa azione è irreversibile.", confirmText: "Elimina", danger: true, onConfirm: () => { setTasks(ts => ts.filter(t => t.id !== taskId)); toast("Task eliminato", "success"); } }); };
   const deleteVano = (vanoId) => {
+    if (isStorico) return; // rilievo storico = sola lettura
     confirm({ title: "Eliminare vano?", message: "Il vano e tutte le sue misure verranno eliminati.", confirmText: "Elimina", danger: true, onConfirm: () => {
     if (selectedRilievo) {
       const updRil = { ...selectedRilievo, vani: selectedRilievo.vani.filter(v => v.id !== vanoId) };
@@ -1257,7 +1263,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       setImportLog([...log]);
 
       log.push("");
-      log.push("🎉 IMPORTAZIONE COMPLETATA!");
+      log.push("✨ IMPORTAZIONE COMPLETATA!");
       log.push("I dati sono stati aggiunti al tuo catalogo.");
       log.push("Vai nelle singole sezioni per verificare.");
       setImportLog([...log]);
@@ -1283,9 +1289,9 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
     } else if (settingsModal === "lamiera" && f.nome && f.cod) {
       setLamiereDB(l => [...l, { id: Date.now(), nome: f.nome, cod: f.cod, prezzoMl: parseFloat(f.prezzoMl)||0 }]);
     } else if (settingsModal === "tipologia" && f.code && f.label) {
-      TIPOLOGIE_RAPIDE.push({ code: f.code, label: f.label, icon: f.icon || "🪟", cat: f.cat || "Altro", forma: f.forma || "rettangolare" });
+      TIPOLOGIE_RAPIDE.push({ code: f.code, label: f.label, icon: f.icon || "⊞", cat: f.cat || "Altro", forma: f.forma || "rettangolare" });
     } else if (settingsModal === "membro" && f.nome) {
-      const colori = ["#007aff","#34c759","#af52de","#ff9500","#ff3b30","#5ac8fa"];
+      const colori = ["#0D7C6B","#1A9E73","#af52de","#E8A020","#DC4444","#5ac8fa"];
       setTeam(t => [...t, { id: Date.now(), nome: f.nome, ruolo: f.ruolo || "Posatore", compiti: f.compiti || "", colore: colori[t.length % colori.length] }]);
     } else return;
     setSettingsModal(null); setSettingsForm({});
@@ -1331,7 +1337,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       if (c.id !== cmId) return c;
       const curIdx = faseIndex(c.fase);
       if (targetIdx > curIdx) {
-        return { ...c, fase: targetFase, log: [{ chi: "MASTRO", cosa: `auto → ${PIPELINE.find(p=>p.id===targetFase)?.nome}`, quando: "Adesso", color: PIPELINE.find(p=>p.id===targetFase)?.color || "#007aff" }, ...(c.log||[])] };
+        return { ...c, fase: targetFase, log: [{ chi: "MASTRO", cosa: `auto → ${PIPELINE.find(p=>p.id===targetFase)?.nome}`, quando: "Adesso", color: PIPELINE.find(p=>p.id===targetFase)?.color || "#0D7C6B" }, ...(c.log||[])] };
       }
       return c;
     }));
@@ -1339,8 +1345,8 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       const curIdx = faseIndex(selectedCM.fase);
       if (targetIdx > curIdx) {
         const next = PIPELINE.find(p => p.id === targetFase);
-        setSelectedCM(prev => ({ ...prev, fase: targetFase, log: [{ chi: "MASTRO", cosa: `auto → ${next?.nome}`, quando: "Adesso", color: next?.color || "#007aff" }, ...(prev?.log||[])] }));
-        setFaseNotif({ fase: next?.nome || targetFase, addetto: "Auto", color: next?.color || "#007aff" });
+        setSelectedCM(prev => ({ ...prev, fase: targetFase, log: [{ chi: "MASTRO", cosa: `auto → ${next?.nome}`, quando: "Adesso", color: next?.color || "#0D7C6B" }, ...(prev?.log||[])] }));
+        setFaseNotif({ fase: next?.nome || targetFase, addetto: "Auto", color: next?.color || "#0D7C6B" });
         setTimeout(() => setFaseNotif(null), 3000);
       }
     }
@@ -1435,7 +1441,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
   const exportPDF = () => {
     if (!selectedCM) return;
     const cm = selectedCM;
-    let html = `<html><head><title>MASTRO MISURE — ${cm.code}</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px}h1{color:#0066cc;border-bottom:3px solid #0066cc;padding-bottom:10px}h2{color:#333;margin-top:30px}.vano{border:1px solid #ddd;border-radius:8px;padding:15px;margin:10px 0;page-break-inside:avoid}.misure-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.m-item{background:#f5f5f7;padding:6px 10px;border-radius:4px;font-size:13px}.m-label{color:#666;font-size:11px}.m-val{font-weight:700;color:#1d1d1f}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.info{color:#666;font-size:13px}@media print{body{padding:0}}</style></head><body>`;
+    let html = `<html><head><title>MASTRO MISURE — ${cm.code}</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px}h1{color:#0D7C6B;border-bottom:3px solid #0D7C6B;padding-bottom:10px}h2{color:#333;margin-top:30px}.vano{border:1px solid #ddd;border-radius:8px;padding:15px;margin:10px 0;page-break-inside:avoid}.misure-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.m-item{background:#F2F1EC;padding:6px 10px;border-radius:4px;font-size:13px}.m-label{color:#666;font-size:11px}.m-val{font-weight:700;color:#1d1d1f}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.info{color:#666;font-size:13px}@media print{body{padding:0}}</style></head><body>`;
     html += `<div class="header"><div><h1>MASTRO MISURE</h1><p class="info">Report Misure — ${cm.code}</p></div><div style="text-align:right"><p><strong>${cm.cliente}</strong></p><p class="info">${cm.indirizzo}</p><p class="info">Sistema: ${cm.sistema || "N/D"} | Tipo: ${cm.tipo === "riparazione" ? "Riparazione" : "Nuova"}</p></div></div>`;
     const vaniExport = getVaniAttivi(cm);
     vaniExport.forEach((v, i) => {
@@ -1510,7 +1516,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
             <div key={p.id} style={{ display: "flex", alignItems: "flex-start", flex: i < PIPELINE.length - 1 ? 1 : "none" }}>
               <div style={S.pipeStep(done, current)}>
                 <div style={S.pipeCircle(done, current, p.color)}>
-                  {done ? <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span> : <span>{p.ico}</span>}
+                  {done ? <Ico d={ICO.check} s={13} c="#fff" sw={2.5} /> : <Ico d={ICO[p.ico] || ICO.calendar} s={13} c={current ? "#fff" : p.color} sw={2} />}
                 </div>
                 <div style={S.pipeLabel(current)}>{p.nome}</div>
               </div>
@@ -1600,7 +1606,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
     </div>
   );
 
-  // === 🎯 CARICA DEMO COMPLETO — forza TUTTI i dati per vedere il ciclo ===
+  // === <I d={ICO.target} /> CARICA DEMO COMPLETO — forza TUTTI i dati per vedere il ciclo ===
   const caricaDemoCompleto = () => {
     const oggi = new Date().toISOString().split("T")[0];
     const ieri = (() => { const d = new Date(); d.setDate(d.getDate()-1); return d.toISOString().split("T")[0]; })();
@@ -1645,7 +1651,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       allegati: [], cf: "BNCNNA85C41D086Y", ivaPerc: 10,
       creato: "20 feb", aggiornato: "22 feb",
       log: [
-        { chi: "Fabio", cosa: "completato rilievo — 4 vani", quando: "5 giorni fa", color: "#5856d6" },
+        { chi: "Fabio", cosa: "completato rilievo — 4 vani", quando: "5 giorni fa", color: "#8B5CF6" },
         { chi: "Fabio", cosa: "creato la commessa", quando: "7 giorni fa", color: "#86868b" },
       ],
     };
@@ -1666,8 +1672,8 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       allegati: [], cf: "RSSMRA75D15D086X", ivaPerc: 10,
       creato: "10 feb", aggiornato: "15 feb",
       log: [
-        { chi: "Fabio", cosa: "fattura acconto emessa", quando: "12 giorni fa", color: "#5856d6" },
-        { chi: "Fabio", cosa: "cliente ha firmato", quando: "12 giorni fa", color: "#34c759" },
+        { chi: "Fabio", cosa: "fattura acconto emessa", quando: "12 giorni fa", color: "#8B5CF6" },
+        { chi: "Fabio", cosa: "cliente ha firmato", quando: "12 giorni fa", color: "#1A9E73" },
         { chi: "Fabio", cosa: "creato la commessa", quando: "17 giorni fa", color: "#86868b" },
       ],
     };
@@ -1687,9 +1693,9 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       allegati: [], cf: "SPSLRA82E45D086W", ivaPerc: 10,
       creato: "15 gen", aggiornato: "10 feb",
       log: [
-        { chi: "Fabio", cosa: "montaggio pianificato", quando: "3 giorni fa", color: "#34c759" },
+        { chi: "Fabio", cosa: "montaggio pianificato", quando: "3 giorni fa", color: "#1A9E73" },
         { chi: "Fabio", cosa: "conferma fornitore approvata", quando: "17 giorni fa", color: "#af52de" },
-        { chi: "Fabio", cosa: "ordine inviato", quando: "25 giorni fa", color: "#ff2d55" },
+        { chi: "Fabio", cosa: "ordine inviato", quando: "25 giorni fa", color: "#EF4444" },
         { chi: "Fabio", cosa: "creato la commessa", quando: "43 giorni fa", color: "#86868b" },
       ],
     };
@@ -1754,12 +1760,12 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
 
     // EVENTI calendario
     setEvents([
-      { id: "ev1", date: oggi, time: "09:00", text: "Sopralluogo Verdi", persona: "Giuseppe Verdi", addr: "Via Garibaldi 12, Rende", cm: "S-0001", color: "#007aff", durata: 60 },
-      { id: "ev2", date: oggi, time: "15:00", text: "Telefonata Bianchi — preventivo", persona: "Anna Bianchi", addr: "", cm: "S-0002", color: "#ff9500", durata: 30 },
-      { id: "ev3", date: domani, time: "10:00", text: "Incontro Rossi — firma ordine", persona: "Mario Rossi", addr: "Via Roma 42, Cosenza", cm: "S-0003", color: "#34c759", durata: 45 },
+      { id: "ev1", date: oggi, time: "09:00", text: "Sopralluogo Verdi", persona: "Giuseppe Verdi", addr: "Via Garibaldi 12, Rende", cm: "S-0001", color: "#0D7C6B", durata: 60 },
+      { id: "ev2", date: oggi, time: "15:00", text: "Telefonata Bianchi — preventivo", persona: "Anna Bianchi", addr: "", cm: "S-0002", color: "#E8A020", durata: 30 },
+      { id: "ev3", date: domani, time: "10:00", text: "Incontro Rossi — firma ordine", persona: "Mario Rossi", addr: "Via Roma 42, Cosenza", cm: "S-0003", color: "#1A9E73", durata: 45 },
       { id: "ev4", date: fra3, time: "08:30", text: "Consegna materiale Esposito", persona: "Laura Esposito", addr: "Viale Trieste 5, Rende", cm: "S-0004", color: "#af52de", durata: 120 },
       { id: "ev5", date: fra7, time: "08:00", text: "🔧 MONTAGGIO Esposito — 3 vani", persona: "Squadra A", addr: "Viale Trieste 5, Rende", cm: "S-0004", color: "#ff6b00", durata: 480 },
-      { id: "ev6", date: fra14, time: "09:00", text: "Sopralluogo nuovo cliente", persona: "Sig.ra Ferraro", addr: "Via De Seta 15, Cosenza", color: "#007aff", durata: 60 },
+      { id: "ev6", date: fra14, time: "09:00", text: "Sopralluogo nuovo cliente", persona: "Sig.ra Ferraro", addr: "Via De Seta 15, Cosenza", color: "#0D7C6B", durata: 60 },
     ]);
 
     // TASKS
@@ -1893,7 +1899,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       return (
         <div style={panelStyle}>
           <div onClick={()=>togglePanel("sopralluogo")} style={{...headerStyle,cursor:"pointer",borderBottom:open_sopr?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
-            <span style={{fontSize:16}}>🔍</span>
+            <span style={{display:"inline-flex"}}><Ico d={ICO.search} s={16} c={T.blue} /></span>
             <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Sopralluogo</span>
             <span style={{fontSize:11,fontWeight:700,color:tuttiCompletati?T.grn:T.orange,marginRight:4}}>{vaniCompletati}/{vaniAttivi2.length} vani ✓</span>
             {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
@@ -1923,7 +1929,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       return (
         <div style={panelStyle}>
           <div style={headerStyle}>
-            <span style={{fontSize:16}}>📋</span>
+            <I d={ICO.clipboard} s={16} c="#F5A623" />
             <span style={{fontSize:13,fontWeight:700,color:T.text}}>Preventivo</span>
           </div>
           <div style={{padding:"12px 14px"}}>
@@ -1959,7 +1965,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       return (
         <div style={panelStyle}>
           <div style={headerStyle}>
-            <span style={{fontSize:16}}>✍️</span>
+            <span style={{fontSize:16}}><I d={ICO.edit} />️</span>
             <span style={{fontSize:13,fontWeight:700,color:T.text}}>Conferma Ordine</span>
           </div>
           <div style={{padding:"12px 14px"}}>
@@ -1986,7 +1992,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
           return (
             <div style={panelStyle}>
               <div onClick={()=>togglePanel("misure")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
-                <span style={{fontSize:16}}>📐</span>
+                <span style={{fontSize:16}}><I d={ICO.ruler} /></span>
                 <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Rilievo Misure Definitivo</span>
                 <span style={{fontSize:11,fontWeight:700,color:vaniOk===vaniCalc.length?T.grn:T.orange,marginRight:4}}>{vaniOk}/{vaniCalc.length}</span>
                 {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
@@ -2015,7 +2021,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
           return (
             <div style={panelStyle}>
               <div onClick={()=>togglePanel("ordini")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
-                <span style={{fontSize:16}}>📦</span>
+                <I d={ICO.package} s={16} c={fase?.color || T.acc} />
                 <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Ordini Fornitore</span>
                 {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
                 <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
@@ -2044,7 +2050,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
           return (
             <div style={panelStyle}>
               <div onClick={()=>togglePanel("produzione")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
-                <span style={{fontSize:16}}>🏭</span>
+                <I d={ICO.factory} s={16} c="#F59E0B" />
                 <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Produzione</span>
                 {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
                 <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
@@ -2072,7 +2078,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
           return (
             <div style={panelStyle}>
               <div onClick={()=>togglePanel("posa")} style={{...headerStyle,cursor:"pointer",borderBottom:open?`1px solid ${fase?.color}25`:"none",userSelect:"none"}}>
-                <span style={{fontSize:16}}>🔧</span>
+                <I d={ICO.hammer} s={16} c="#F97316" />
                 <span style={{fontSize:13,fontWeight:700,color:T.text,flex:1}}>Posa in Opera</span>
                 {ndone>0 && <span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block",marginRight:6}}/>}
                 <span style={{fontSize:13,color:T.sub,transform:open?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>▾</span>
@@ -2131,7 +2137,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
             <Chip label="Scheda commessa archiviata" done={c.ck_archiviata} onClick={()=>updateCM("ck_archiviata",!c.ck_archiviata)}/>
             {c.ck_saldo && c.ck_fattura && (
               <div style={{marginTop:8,padding:"12px",borderRadius:8,background:T.grn+"15",border:`1px solid ${T.grn}30`,textAlign:"center"}}>
-                <div style={{fontSize:22}}>🎉</div>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"center" }}><I d={ICO.sparkles} s={22} c={T.acc} /></div>
                 <div style={{fontSize:13,fontWeight:800,color:T.grn,marginTop:4}}>Commessa completata!</div>
                 <div style={{fontSize:11,color:T.sub,marginTop:2}}>{c.code} · {c.cliente} {c.cognome||""}</div>
               </div>
@@ -2439,10 +2445,10 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       const subMq = vani.reduce((s, v) => s + v.mq, 0);
 
       // System header with profile image
-      const sysHeader = `<div style="margin-top:16px;margin-bottom:8px;padding:10px 14px;background:#f5f8fc;border:1.5px solid #0066cc30;border-radius:6px;display:flex;align-items:center;gap:14px;page-break-inside:avoid">
-        ${sys?.immagineProfilo ? `<img src="${sys.immagineProfilo}" style="height:65px;max-width:140px;object-fit:contain;border-radius:4px;background:#fff;padding:4px;border:1px solid #ddd" alt=""/>` : `<div style="width:60px;height:60px;background:#e8f0fe;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:28px">🪟</div>`}
+      const sysHeader = `<div style="margin-top:16px;margin-bottom:8px;padding:10px 14px;background:#f5f8fc;border:1.5px solid #0D7C6B30;border-radius:6px;display:flex;align-items:center;gap:14px;page-break-inside:avoid">
+        ${sys?.immagineProfilo ? `<img src="${sys.immagineProfilo}" style="height:65px;max-width:140px;object-fit:contain;border-radius:4px;background:#fff;padding:4px;border:1px solid #ddd" alt=""/>` : `<div style="width:60px;height:60px;background:#e8f0fe;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:28px"><I d={ICO.grid} /></div>`}
         <div style="flex:1">
-          <div style="font-size:14px;font-weight:900;color:#0066cc;letter-spacing:-0.3px">${sysName}</div>
+          <div style="font-size:14px;font-weight:900;color:#0D7C6B;letter-spacing:-0.3px">${sysName}</div>
           ${sys ? `<div style="font-size:9px;color:#666;margin-top:2px">${sys.euroMq ? "€" + sys.euroMq + "/m² base" : ""} ${sys.uw ? " · Uw " + sys.uw + " W/m²K" : ""}</div>` : ""}
           <div style="font-size:9px;color:#888;margin-top:1px">${vani.length} element${vani.length > 1 ? "i" : "o"} · ${subMq.toFixed(2).replace(".",",")} m²</div>
         </div>
@@ -2457,7 +2463,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
         globalIdx++;
         return `<div style="display:flex;gap:10px;padding:10px 8px;border-bottom:1px solid #eee;page-break-inside:avoid">
           <div style="width:180px;text-align:center;flex-shrink:0">
-            <div style="font-size:22px;font-weight:900;color:#0066cc;margin-bottom:2px">${String(globalIdx).padStart(2,"0")}</div>
+            <div style="font-size:22px;font-weight:900;color:#0D7C6B;margin-bottom:2px">${String(globalIdx).padStart(2,"0")}</div>
             ${drawSVG(v.tipoCode, v.lmm, v.hmm)}
             <div style="font-size:7.5px;color:#999;font-style:italic;margin-top:1px">Vista interna</div>
             <div style="font-size:9px;font-weight:700;color:#333;margin-top:2px">${v.tipoLabel}${(v.pezzi || 1) > 1 ? ` × ${v.pezzi}` : ""}</div>
@@ -2494,7 +2500,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
     }
     if (c.trasporto && parseFloat(c.trasporto) > 0) {
       extraHtml += `<div style="margin-top:8px;padding:10px 14px;background:#f9f9f9;border:1px solid #ddd;border-radius:4px;display:flex;justify-content:space-between;align-items:center">
-        <div><div style="font-size:11px;font-weight:700">🚛 Trasporto</div><div style="font-size:9px;color:#666">${c.trasportoNote || "Trasporto e scarico"}</div></div>
+        <div><div style="font-size:11px;font-weight:700"><I d={ICO.truck} /> Trasporto</div><div style="font-size:9px;color:#666">${c.trasportoNote || "Trasporto e scarico"}</div></div>
         <div style="font-size:12px;font-weight:900">&euro; ${fmt(parseFloat(c.trasporto))}</div>
       </div>`;
     }
@@ -2505,7 +2511,7 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
       const detrPerc = parseInt(detrId);
       const detrVal = imponibile * detrPerc / 100;
       extraHtml += `<div style="margin-top:8px;padding:10px 14px;background:#e8f5e9;border:1px solid #4caf5040;border-radius:4px;display:flex;justify-content:space-between;align-items:center">
-        <div><div style="font-size:11px;font-weight:700;color:#2e7d32">🏛 ${DETR_MAP[detrId]}</div><div style="font-size:9px;color:#666">Importo detraibile su imponibile</div></div>
+        <div><div style="font-size:11px;font-weight:700;color:#2e7d32"><I d={ICO.building} /> ${DETR_MAP[detrId]}</div><div style="font-size:9px;color:#666">Importo detraibile su imponibile</div></div>
         <div style="text-align:right"><div style="font-size:12px;font-weight:900;color:#2e7d32">&minus; &euro; ${fmt(detrVal)}</div><div style="font-size:8px;color:#888">Costo effettivo: &euro; ${fmt(totIva - detrVal)}</div></div>
       </div>`;
     }
@@ -2521,26 +2527,26 @@ function MastroMisureInner({ user, azienda: aziendaInit }: { user?: any, azienda
 body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#1a1a1c;font-size:10px;line-height:1.35;background:#fff}
 .pg{max-width:210mm;margin:0 auto;padding:12px 16px}
 /* HEADER */
-.hd{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;margin-bottom:14px;border-bottom:3px solid #0066cc}
-.an{font-size:20px;font-weight:900;color:#0066cc;letter-spacing:-0.3px}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;margin-bottom:14px;border-bottom:3px solid #0D7C6B}
+.an{font-size:20px;font-weight:900;color:#0D7C6B;letter-spacing:-0.3px}
 .ai{font-size:9px;color:#555;line-height:1.6}
 /* CLIENT */
 .cl-s{margin-bottom:12px;display:flex;justify-content:space-between}
 .cl-l{font-size:9px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
 .cl-n{font-size:13px;font-weight:800}
 .cl-a{font-size:10px;color:#555}
-.pi{font-size:10px;line-height:1.6}.pi b{color:#0066cc}
+.pi{font-size:10px;line-height:1.6}.pi b{color:#0D7C6B}
 .intro{font-size:10px;color:#444;margin:10px 0 8px;font-style:italic}
 /* TABLE */
 .pt{width:100%;border-collapse:collapse;margin-bottom:8px;border:1px solid #ccc}
 .pt thead th{background:#f0f0f0;border:1px solid #ccc;padding:5px 7px;font-size:8.5px;font-weight:700;text-transform:uppercase;color:#444;text-align:center}
 .ir{border-bottom:1px solid #ddd}.ir2{border-bottom:1.5px solid #aaa}
 .cn{width:150px;padding:8px;vertical-align:top;border-right:1px solid #ddd;text-align:center}
-.n0{font-size:26px;font-weight:900;color:#0066cc;margin-bottom:4px}
+.n0{font-size:26px;font-weight:900;color:#0D7C6B;margin-bottom:4px}
 .cv{font-size:7.5px;color:#999;font-style:italic;margin-top:2px}
 .ct{font-size:9px;font-weight:700;color:#333;margin-top:3px;text-transform:uppercase}
 .cs{font-size:8px;color:#888}
-.csys{font-size:8px;font-weight:700;color:#0066cc;margin-top:2px;line-height:1.2}
+.csys{font-size:8px;font-weight:700;color:#0D7C6B;margin-top:2px;line-height:1.2}
 .cd{padding:5px 7px;vertical-align:top;border-bottom:1px solid #eee}
 .dv{font-size:11px;font-weight:700}
 .cp,.cq,.ce{width:70px;padding:5px 7px;text-align:right;vertical-align:top;border-left:1px solid #ddd;font-size:10px}
@@ -2558,7 +2564,7 @@ body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#1a1a1c;font-size:1
 .tl{text-align:right;color:#555;border:1px solid #ddd;background:#fafafa}
 .tv{text-align:right;font-weight:700;border:1px solid #ddd;min-width:85px}
 .tf .tl,.tf .tv{font-size:14px;font-weight:900;background:#f0f0f0;border:2px solid #333}
-.tf .tv{color:#0066cc}
+.tf .tv{color:#0D7C6B}
 /* CONDIZIONI */
 .ct2{font-size:10px;font-weight:800;text-transform:uppercase;text-align:center;margin:14px 0 8px;letter-spacing:.5px}
 .cst{font-size:9px;font-weight:700;text-align:center;margin-bottom:6px;color:#555}
@@ -2567,18 +2573,18 @@ body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#1a1a1c;font-size:1
 .fs{display:flex;gap:36px;margin-top:20px;padding-top:14px;border-top:1.5px solid #ccc}
 .fb{flex:1;text-align:center}.fl{font-size:8.5px;color:#555}
 /* FOOTER */
-.ft{margin-top:14px;padding:10px 0;border-top:2px solid #0066cc;display:flex;justify-content:space-between;font-size:8px;color:#888}
+.ft{margin-top:14px;padding:10px 0;border-top:2px solid #0D7C6B;display:flex;justify-content:space-between;font-size:8px;color:#888}
 .ft b{color:#555}
 /* PRINT */
-.pb{display:block;margin:0 auto 12px;padding:10px 28px;background:#0066cc;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.pb{display:block;margin:0 auto 12px;padding:10px 28px;background:#0D7C6B;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
 @media print{.pb{display:none!important}.pg{padding:0;margin:0}}
 </style></head><body>
 <div class="pg">
-<button class="pb" onclick="window.print()">🖨️ Stampa / Salva PDF</button>
-<div class="no-print" style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #0066cc;padding:10px 16px;display:flex;gap:8px;z-index:999;box-shadow:0 -4px 20px rgba(0,0,0,0.15)">
-  <button onclick="window.print()" style="flex:1;padding:10px;background:#0066cc;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Stampa PDF</button>
-  <button onclick="if(navigator.share){navigator.share({title:'Preventivo ${c.code}',text:'Preventivo per ${c.cliente}',url:window.location.href}).catch(()=>{})}else{navigator.clipboard.writeText(document.title);alert('Link copiato!')}" style="flex:1;padding:10px;background:#34c759;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 Condividi</button>
-  <button onclick="window.close()" style="padding:10px 16px;background:#ff3b30;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+<button class="pb" onclick="window.print()"><I d={ICO.printer} /> Stampa / Salva PDF</button>
+<div class="no-print" style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #0D7C6B;padding:10px 16px;display:flex;gap:8px;z-index:999;box-shadow:0 -4px 20px rgba(0,0,0,0.15)">
+  <button onclick="window.print()" style="flex:1;padding:10px;background:#0D7C6B;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer"><I d={ICO.printer} /> Stampa PDF</button>
+  <button onclick="if(navigator.share){navigator.share({title:'Preventivo ${c.code}',text:'Preventivo per ${c.cliente}',url:window.location.href}).catch(()=>{})}else{navigator.clipboard.writeText(document.title);alert('Link copiato!')}" style="flex:1;padding:10px;background:#1A9E73;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer"><I d={ICO.upload} /> Condividi</button>
+  <button onclick="window.close()" style="padding:10px 16px;background:#DC4444;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
 </div>
 
 <div class="hd">
@@ -2692,7 +2698,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       return `<div style="border:1.5px solid #333;border-radius:6px;padding:12px;margin-bottom:10px;page-break-inside:avoid">
         <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #333;padding-bottom:6px;margin-bottom:8px">
           <div>
-            <span style="font-size:18px;font-weight:900;color:#0066cc">${String(i + 1).padStart(2, "0")}</span>
+            <span style="font-size:18px;font-weight:900;color:#0D7C6B">${String(i + 1).padStart(2, "0")}</span>
             <span style="font-size:14px;font-weight:800;margin-left:8px">${v.nome}</span>
             <span style="font-size:11px;color:#666;margin-left:8px">${tip?.label || v.tipo} · ${v.stanza || ""} · ${v.piano || ""}</span>
           </div>
@@ -2703,8 +2709,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:10px">
           <tr>
-            <td style="border:1px solid #ccc;padding:4px;background:#f0f8ff;font-weight:700;width:50%" colspan="2">📏 LARGHEZZE (mm)</td>
-            <td style="border:1px solid #ccc;padding:4px;background:#fff8f0;font-weight:700;width:50%" colspan="2">📐 ALTEZZE (mm)</td>
+            <td style="border:1px solid #ccc;padding:4px;background:#f0f8ff;font-weight:700;width:50%" colspan="2"><I d={ICO.ruler} /> LARGHEZZE (mm)</td>
+            <td style="border:1px solid #ccc;padding:4px;background:#fff8f0;font-weight:700;width:50%" colspan="2"><I d={ICO.ruler} /> ALTEZZE (mm)</td>
           </tr>
           <tr>
             <td style="border:1px solid #ccc;padding:4px">Alto</td><td style="border:1px solid #ccc;padding:4px;font-weight:700;font-family:monospace">${m.lAlto || "—"}</td>
@@ -2725,7 +2731,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         </table>
         <table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:4px">
           <tr>
-            <td style="border:1px solid #ccc;padding:4px;background:#f0fff0;font-weight:700" colspan="4">⚙️ CONFIGURAZIONE</td>
+            <td style="border:1px solid #ccc;padding:4px;background:#f0fff0;font-weight:700" colspan="4"><I d={ICO.settings} /> CONFIGURAZIONE</td>
           </tr>
           <tr>
             <td style="border:1px solid #ccc;padding:4px">Sistema</td><td style="border:1px solid #ccc;padding:4px;font-weight:700">${v.sistema || "—"}</td>
@@ -2743,11 +2749,11 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
             <td style="border:1px solid #ccc;padding:4px">Lamiera</td><td style="border:1px solid #ccc;padding:4px;font-weight:700">${v.lamiera || "—"}</td>
             <td style="border:1px solid #ccc;padding:4px">Col. Acc.</td><td style="border:1px solid #ccc;padding:4px;font-weight:700">${v.coloreAcc || "= profili"}</td>
           </tr>
-          ${v.rifilato ? `<tr><td style="border:1px solid #ccc;padding:4px;background:#fff8e6" colspan="4">✂️ RIFILATO — Sx: ${v.rifilSx || "—"} · Dx: ${v.rifilDx || "—"} · Sopra: ${v.rifilSopra || "—"} · Sotto: ${v.rifilSotto || "—"}</td></tr>` : ""}
+          ${v.rifilato ? `<tr><td style="border:1px solid #ccc;padding:4px;background:#fff8e6" colspan="4"><I d={ICO.scissors} /> RIFILATO — Sx: ${v.rifilSx || "—"} · Dx: ${v.rifilDx || "—"} · Sopra: ${v.rifilSopra || "—"} · Sotto: ${v.rifilSotto || "—"}</td></tr>` : ""}
         </table>
         <table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:4px">
           <tr>
-            <td style="border:1px solid #ccc;padding:4px;background:#f5f0ff;font-weight:700" colspan="4">🧱 MURATURA</td>
+            <td style="border:1px solid #ccc;padding:4px;background:#f5f0ff;font-weight:700" colspan="4"><I d={ICO.layers} /> MURATURA</td>
           </tr>
           <tr>
             <td style="border:1px solid #ccc;padding:3px">Sp. Sx</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${m.spSx || "—"}</td>
@@ -2764,16 +2770,16 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
           <tr><td style="border:1px solid #ccc;padding:3px">Soglia</td><td style="border:1px solid #ccc;padding:3px;font-weight:700" colspan="3">${m.soglia || "—"}</td></tr>
         </table>
         ${v.controtelaio?.tipo ? `<table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:4px">
-          <tr><td style="border:1px solid #ccc;padding:4px;background:#e8f4fd;font-weight:700" colspan="4">🔲 CONTROTELAIO ${(v.controtelaio.tipo || "").toUpperCase()}</td></tr>
+          <tr><td style="border:1px solid #ccc;padding:4px;background:#e8f4fd;font-weight:700" colspan="4"><I d={ICO.square} /> CONTROTELAIO ${(v.controtelaio.tipo || "").toUpperCase()}</td></tr>
           <tr><td style="border:1px solid #ccc;padding:3px">L</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${v.controtelaio.l || "—"}</td><td style="border:1px solid #ccc;padding:3px">H</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${v.controtelaio.h || "—"}</td></tr>
           ${v.controtelaio.hCass ? `<tr><td style="border:1px solid #ccc;padding:3px">H Cass.</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${v.controtelaio.hCass}</td><td style="border:1px solid #ccc;padding:3px">Sezione</td><td style="border:1px solid #ccc;padding:3px;font-weight:700">${v.controtelaio.sezione || "—"}</td></tr>` : ""}
         </table>` : ""}
         ${v.accessori?.tapparella?.attivo || v.accessori?.persiana?.attivo || v.accessori?.zanzariera?.attivo ? `<div style="font-size:10px;margin-top:4px;padding:4px;background:#f5f5ff;border:1px solid #ddd;border-radius:3px">
-          <b>Accessori:</b> ${v.accessori?.tapparella?.attivo ? "🪟 Tapparella" : ""} ${v.accessori?.persiana?.attivo ? "🏠 Persiana" : ""} ${v.accessori?.zanzariera?.attivo ? "🦟 Zanzariera" : ""}
+          <b>Accessori:</b> ${v.accessori?.tapparella?.attivo ? "⊞ Tapparella" : ""} ${v.accessori?.persiana?.attivo ? "🏠 Persiana" : ""} ${v.accessori?.zanzariera?.attivo ? "🦟 Zanzariera" : ""}
         </div>` : ""}
         ${fotoEntries.length > 0 ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${fotoEntries.slice(0, 6).map(([, f]) => `<img src="${f.dataUrl}" style="width:70px;height:52px;object-fit:cover;border-radius:3px;border:1px solid #ccc" alt=""/>`).join("")}</div>` : ""}
-        ${v.note ? `<div style="font-size:10px;margin-top:4px;padding:4px;background:#fff8e6;border:1px solid #f0e0b0;border-radius:3px">📝 <b>Note:</b> ${v.note}</div>` : ""}
-        ${v.difficoltaSalita ? `<div style="font-size:10px;margin-top:3px;color:#b45309">🏗 Accesso: ${v.difficoltaSalita}${v.mezzoSalita ? " — " + v.mezzoSalita : ""}</div>` : ""}
+        ${v.note ? `<div style="font-size:10px;margin-top:4px;padding:4px;background:#fff8e6;border:1px solid #f0e0b0;border-radius:3px"><I d={ICO.fileText} /> <b>Note:</b> ${v.note}</div>` : ""}
+        ${v.difficoltaSalita ? `<div style="font-size:10px;margin-top:3px;color:#b45309"><I d={ICO.building} /> Accesso: ${v.difficoltaSalita}${v.mezzoSalita ? " — " + v.mezzoSalita : ""}</div>` : ""}
       </div>`;
     }).join("");
 
@@ -2797,12 +2803,12 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         <div style="font-size:9px;color:#666">${az.indirizzo || ""} ${az.citta || ""} · ${az.tel || ""}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:20px;font-weight:900;color:#5856d6">SCHEDA MISURE</div>
+        <div style="font-size:20px;font-weight:900;color:#8B5CF6">SCHEDA MISURE</div>
         <div style="font-size:11px;color:#333;margin-top:2px"><b>${c.code}</b></div>
         <div style="font-size:10px;color:#666">${new Date().toLocaleDateString("it-IT")}</div>
       </div>
     </div>
-    <div style="display:flex;gap:16px;margin-bottom:12px;padding:10px;background:#f5f5f7;border-radius:6px">
+    <div style="display:flex;gap:16px;margin-bottom:12px;padding:10px;background:#F2F1EC;border-radius:6px">
       <div style="flex:1"><div style="font-size:8px;color:#999;text-transform:uppercase">Cliente</div><div style="font-size:13px;font-weight:800">${c.cliente}</div></div>
       <div style="flex:1"><div style="font-size:8px;color:#999;text-transform:uppercase">Indirizzo</div><div style="font-size:11px">${c.indirizzo || "—"}</div></div>
       <div><div style="font-size:8px;color:#999;text-transform:uppercase">Vani</div><div style="font-size:13px;font-weight:800">${vani.length}</div></div>
@@ -2811,14 +2817,14 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     ${vaniHtml}
     <div style="margin-top:12px;padding:10px;background:#f9f9f9;border:1px solid #ddd;border-radius:6px;font-size:10px;color:#666;text-align:center">
       Documento generato da MASTRO ERP — ${new Date().toLocaleDateString("it-IT")} ${new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
-      <br><b style="color:#333">⚠ DOCUMENTO PER USO INTERNO / PRODUZIONE — NON VALIDO COME PREVENTIVO</b>
+      <br><b style="color:#333"><I d={ICO.alertTriangle} /> DOCUMENTO PER USO INTERNO / PRODUZIONE — NON VALIDO COME PREVENTIVO</b>
     </div>
-    <div class="no-print" style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #5856d6;padding:10px 16px;display:flex;gap:8px;z-index:999;box-shadow:0 -4px 20px rgba(0,0,0,0.15)">
-      <button onclick="window.print()" style="flex:1;padding:10px;background:#5856d6;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Stampa PDF</button>
-      <button onclick="if(navigator.share){navigator.share({title:document.title,text:'Report misure',url:window.location.href}).catch(()=>{})}else{alert('Usa Stampa → Salva come PDF')}" style="flex:1;padding:10px;background:#34c759;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 Condividi</button>
-      <button onclick="window.close()" style="padding:10px 16px;background:#ff3b30;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+    <div class="no-print" style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #8B5CF6;padding:10px 16px;display:flex;gap:8px;z-index:999;box-shadow:0 -4px 20px rgba(0,0,0,0.15)">
+      <button onclick="window.print()" style="flex:1;padding:10px;background:#8B5CF6;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer"><I d={ICO.printer} /> Stampa PDF</button>
+      <button onclick="if(navigator.share){navigator.share({title:document.title,text:'Report misure',url:window.location.href}).catch(()=>{})}else{alert('Usa Stampa → Salva come PDF')}" style="flex:1;padding:10px;background:#1A9E73;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer"><I d={ICO.upload} /> Condividi</button>
+      <button onclick="window.close()" style="padding:10px 16px;background:#DC4444;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
     </div>
-    <button class="no-print" onclick="window.print()" style="position:fixed;bottom:70px;right:20px;padding:12px 24px;background:#5856d6;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(88,86,214,0.3)">🖨️ Stampa / Salva PDF</button>
+    <button class="no-print" onclick="window.print()" style="position:fixed;bottom:70px;right:20px;padding:12px 24px;background:#8B5CF6;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(88,86,214,0.3)"><I d={ICO.printer} /> Stampa / Salva PDF</button>
     </body></html>`;
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
@@ -2895,13 +2901,13 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         ${az.pec ? `<div style="font-size:10px;color:#666">PEC: ${az.pec}</div>` : ""}
       </div>
       <div style="text-align:right">
-        <div style="font-size:24px;font-weight:900;color:#007aff">FATTURA</div>
+        <div style="font-size:24px;font-weight:900;color:#0D7C6B">FATTURA</div>
         <div style="font-size:14px;font-weight:700">N. ${fat.numero}/${fat.anno}</div>
         <div style="font-size:11px;color:#666">Data: ${fat.data}</div>
         <div style="font-size:10px;color:#999;margin-top:4px">${fat.tipo === "acconto" ? "ACCONTO" : fat.tipo === "saldo" ? "SALDO" : "FATTURA"}</div>
       </div>
     </div>
-    <div style="background:#f5f5f7;padding:14px;border-radius:8px;margin-bottom:16px">
+    <div style="background:#F2F1EC;padding:14px;border-radius:8px;margin-bottom:16px">
       <div style="font-size:9px;color:#999;text-transform:uppercase;margin-bottom:4px">Destinatario</div>
       <div style="font-size:14px;font-weight:800">${fat.cliente} ${fat.cognome}</div>
       <div style="font-size:11px">${fat.indirizzo || ""}</div>
@@ -2926,7 +2932,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     <div style="text-align:right;margin-top:12px;padding:12px;background:#f0f8ff;border-radius:8px">
       <div style="font-size:10px;color:#666">Imponibile: &euro; ${fmt(fat.imponibile)}</div>
       <div style="font-size:10px;color:#666">IVA ${fat.iva}%: &euro; ${fmt(fat.ivaAmt)}</div>
-      <div class="totale" style="margin-top:6px;color:#007aff">TOTALE: &euro; ${fmt(fat.importo)}</div>
+      <div class="totale" style="margin-top:6px;color:#0D7C6B">TOTALE: &euro; ${fmt(fat.importo)}</div>
     </div>
     <div style="margin-top:16px;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:10px;color:#666">
       <b>Modalità pagamento:</b> Bonifico bancario<br>
@@ -2935,12 +2941,12 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       ${fat.note ? `<b>Note:</b> ${fat.note}` : ""}
     </div>
     <div style="margin-top:20px;text-align:center;font-size:9px;color:#999">Documento generato da MASTRO ERP</div>
-    <div class="no-print" style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #007aff;padding:10px 16px;display:flex;gap:8px;z-index:999;box-shadow:0 -4px 20px rgba(0,0,0,0.15)">
-      <button onclick="window.print()" style="flex:1;padding:10px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Stampa PDF</button>
-      <button onclick="if(navigator.share){navigator.share({title:document.title,text:'Ordine fornitore',url:window.location.href}).catch(()=>{})}else{alert('Usa Stampa → Salva come PDF')}" style="flex:1;padding:10px;background:#34c759;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📤 Condividi</button>
-      <button onclick="window.close()" style="padding:10px 16px;background:#ff3b30;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+    <div class="no-print" style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #0D7C6B;padding:10px 16px;display:flex;gap:8px;z-index:999;box-shadow:0 -4px 20px rgba(0,0,0,0.15)">
+      <button onclick="window.print()" style="flex:1;padding:10px;background:#0D7C6B;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer"><I d={ICO.printer} /> Stampa PDF</button>
+      <button onclick="if(navigator.share){navigator.share({title:document.title,text:'Ordine fornitore',url:window.location.href}).catch(()=>{})}else{alert('Usa Stampa → Salva come PDF')}" style="flex:1;padding:10px;background:#1A9E73;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer"><I d={ICO.upload} /> Condividi</button>
+      <button onclick="window.close()" style="padding:10px 16px;background:#DC4444;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
     </div>
-    <button class="no-print" onclick="window.print()" style="position:fixed;bottom:70px;right:20px;padding:12px 24px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Stampa / Salva PDF</button>
+    <button class="no-print" onclick="window.print()" style="position:fixed;bottom:70px;right:20px;padding:12px 24px;background:#0D7C6B;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer"><I d={ICO.printer} /> Stampa / Salva PDF</button>
     </body></html>`;
     const blob = new Blob([html], { type: "text/html" });
     window.open(URL.createObjectURL(blob), "_blank");
@@ -3148,7 +3154,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #1a1a1c}
       .title{font-size:20px;font-weight:800;letter-spacing:-0.3px}
       table{width:100%;border-collapse:collapse;margin:16px 0}
-      th{background:#f5f5f7;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #ddd}
+      th{background:#F2F1EC;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #ddd}
       td{padding:8px 10px;border-bottom:1px solid #eee}
       .total-row td{font-weight:700;border-top:2px solid #1a1a1c;border-bottom:none}
       .box{background:#f9f9fb;border-radius:8px;padding:14px;margin-bottom:12px}
@@ -3164,7 +3170,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         <div style="font-size:10px;color:#666;margin-top:2px">${az.indirizzo || ""}<br>${az.tel || ""} · ${az.email || ""}<br>${az.piva ? "P.IVA " + az.piva : ""}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:16px;font-weight:800;color:#007aff">ORDINE FORNITORE</div>
+        <div style="font-size:16px;font-weight:800;color:#0D7C6B">ORDINE FORNITORE</div>
         <div style="font-size:12px;font-weight:700">N. ${ord.numero}/${ord.anno}</div>
         <div style="font-size:10px;color:#666">Data: ${new Date(ord.dataOrdine).toLocaleDateString("it-IT")}</div>
         <div style="font-size:10px;color:#666">Rif. Commessa: ${ord.cmCode}</div>
@@ -3183,8 +3189,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       <div class="box" style="flex:1">
         <div style="font-size:9px;text-transform:uppercase;color:#888;letter-spacing:1px;margin-bottom:6px">Consegna</div>
         <div style="font-size:12px;font-weight:600">${ord.consegna.luogo || "Da definire"}</div>
-        ${ord.consegna.prevista ? `<div>📅 Prevista: ${new Date(ord.consegna.prevista).toLocaleDateString("it-IT")}</div>` : ""}
-        ${ord.consegna.settimane ? `<div>⏱ Produzione: ${ord.consegna.settimane} settimane</div>` : ""}
+        ${ord.consegna.prevista ? `<div><I d={ICO.calendar} /> Prevista: ${new Date(ord.consegna.prevista).toLocaleDateString("it-IT")}</div>` : ""}
+        ${ord.consegna.settimane ? `<div><I d={ICO.clock} /> Produzione: ${ord.consegna.settimane} settimane</div>` : ""}
         <div style="margin-top:4px;font-size:10px;color:#888">Pagamento: ${ord.pagamento.termini === "anticipato" ? "Anticipato" : ord.pagamento.termini === "30gg_fm" ? "30gg FM" : ord.pagamento.termini === "60gg_fm" ? "60gg FM" : ord.pagamento.termini === "90gg_fm" ? "90gg FM" : "A ricevimento merce"}</div>
       </div>
     </div>
@@ -3202,7 +3208,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         <td style="text-align:right">&euro;${fmt(r.qta * r.prezzoUnit)}</td>
         <td style="font-size:9px;color:#666">${r.note || ""}</td>
       </tr>`).join("")}
-      ${scontoPerc > 0 ? `<tr><td colspan="5" style="text-align:right;font-weight:600">Sconto ${scontoPerc}%</td><td style="text-align:right;color:#ff3b30">-&euro;${fmt(ord.righe.reduce((s, r) => s + r.qta * r.prezzoUnit, 0) * scontoPerc / 100)}</td><td></td></tr>` : ""}
+      ${scontoPerc > 0 ? `<tr><td colspan="5" style="text-align:right;font-weight:600">Sconto ${scontoPerc}%</td><td style="text-align:right;color:#DC4444">-&euro;${fmt(ord.righe.reduce((s, r) => s + r.qta * r.prezzoUnit, 0) * scontoPerc / 100)}</td><td></td></tr>` : ""}
       <tr><td colspan="5" style="text-align:right">Imponibile</td><td style="text-align:right">&euro;${fmt(imponibile)}</td><td></td></tr>
       <tr><td colspan="5" style="text-align:right">IVA ${ord.iva}%</td><td style="text-align:right">&euro;${fmt(ivaVal)}</td><td></td></tr>
       <tr class="total-row"><td colspan="5" style="text-align:right;font-size:13px">TOTALE</td><td style="text-align:right;font-size:13px">&euro;${fmt(ord.totaleIva)}</td><td></td></tr>
@@ -3230,10 +3236,10 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#1a1a1c;padding:30px;max-width:800px;margin:0 auto}
-      .stamp{border:3px solid #34c759;border-radius:12px;padding:16px;margin:20px 0;text-align:center}
+      .stamp{border:3px solid #1A9E73;border-radius:12px;padding:16px;margin:20px 0;text-align:center}
     </style></head><body>
     <div style="text-align:center;margin-bottom:20px">
-      <div style="font-size:18px;font-weight:800;color:#34c759">✅ CONFERMA ORDINE APPROVATA</div>
+      <div style="font-size:18px;font-weight:800;color:#1A9E73">✅ CONFERMA ORDINE APPROVATA</div>
       <div style="font-size:12px;color:#666;margin-top:4px">Ordine N. ${ord.numero}/${ord.anno} — ${ord.fornitore.nome}</div>
     </div>
 
@@ -3247,17 +3253,17 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     <div style="margin:14px 0"><b>Rif. Commessa:</b> ${ord.cmCode} — ${ord.cliente}</div>
 
     <table style="width:100%;border-collapse:collapse">
-      <tr><th style="background:#34c75920;padding:8px;text-align:left;border-bottom:2px solid #34c759">#</th><th style="background:#34c75920;padding:8px;text-align:left;border-bottom:2px solid #34c759">Descrizione</th><th style="background:#34c75920;padding:8px;border-bottom:2px solid #34c759">Misure</th><th style="background:#34c75920;padding:8px;border-bottom:2px solid #34c759">Qtà</th><th style="background:#34c75920;padding:8px;text-align:right;border-bottom:2px solid #34c759">Prezzo</th></tr>
+      <tr><th style="background:#1A9E7320;padding:8px;text-align:left;border-bottom:2px solid #1A9E73">#</th><th style="background:#1A9E7320;padding:8px;text-align:left;border-bottom:2px solid #1A9E73">Descrizione</th><th style="background:#1A9E7320;padding:8px;border-bottom:2px solid #1A9E73">Misure</th><th style="background:#1A9E7320;padding:8px;border-bottom:2px solid #1A9E73">Qtà</th><th style="background:#1A9E7320;padding:8px;text-align:right;border-bottom:2px solid #1A9E73">Prezzo</th></tr>
       ${ord.righe.map((r, i) => `<tr><td style="padding:6px;border-bottom:1px solid #eee">${i + 1}</td><td style="padding:6px;border-bottom:1px solid #eee">${r.desc}</td><td style="padding:6px;border-bottom:1px solid #eee">${r.misure}</td><td style="padding:6px;border-bottom:1px solid #eee;text-align:center">${r.qta}</td><td style="padding:6px;border-bottom:1px solid #eee;text-align:right">&euro;${fmt(r.qta * r.prezzoUnit)}</td></tr>`).join("")}
     </table>
     <div style="text-align:right;font-size:14px;font-weight:800;margin-top:8px">TOTALE: &euro;${fmt(ord.totaleIva)}</div>
 
     <div class="stamp">
-      <div style="font-size:14px;font-weight:800;color:#34c759">CONFERMATO E APPROVATO</div>
+      <div style="font-size:14px;font-weight:800;color:#1A9E73">CONFERMATO E APPROVATO</div>
       <div style="font-size:11px;color:#666;margin-top:4px">Data conferma: ${ord.conferma.dataFirma ? new Date(ord.conferma.dataFirma).toLocaleDateString("it-IT") : new Date().toLocaleDateString("it-IT")}</div>
       <div style="font-size:11px;color:#666">Consegna prevista: ${ord.consegna.prevista ? new Date(ord.consegna.prevista).toLocaleDateString("it-IT") : "Da concordare"}</div>
       <div style="font-size:11px;color:#666">Pagamento: ${ord.pagamento.termini === "anticipato" ? "Anticipato" : ord.pagamento.termini.replace("_", " ").toUpperCase()}</div>
-      ${ord.conferma.differenze ? `<div style="margin-top:8px;font-size:10px;color:#ff9500;font-weight:600">⚠️ Note: ${ord.conferma.differenze}</div>` : ""}
+      ${ord.conferma.differenze ? `<div style="margin-top:8px;font-size:10px;color:#E8A020;font-weight:600"><I d={ICO.alertTriangle} /> Note: ${ord.conferma.differenze}</div>` : ""}
     </div>
 
     <div style="display:flex;justify-content:space-between;margin-top:40px">
@@ -3292,12 +3298,12 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
 
   // Stati ordine con colori
   const ORDINE_STATI = [
-    { id: "bozza", label: "Bozza", icon: "📝", color: "#8e8e93" },
-    { id: "inviato", label: "Inviato", icon: "📤", color: "#007aff" },
-    { id: "confermato", label: "Confermato", icon: "✅", color: "#34c759" },
-    { id: "in_produzione", label: "In Produzione", icon: "🏭", color: "#ff9500" },
-    { id: "spedito", label: "Spedito", icon: "🚛", color: "#5856d6" },
-    { id: "consegnato", label: "Consegnato", icon: "📦", color: "#30b0c7" },
+    { id: "bozza", label: "Bozza", icon: "fileText", color: "#8e8e93" },
+    { id: "inviato", label: "Inviato", icon: "send", color: "#0D7C6B" },
+    { id: "confermato", label: "Confermato", icon: "checkCircle", color: "#1A9E73" },
+    { id: "in_produzione", label: "In Produzione", icon: "factory", color: "#E8A020" },
+    { id: "spedito", label: "Spedito", icon: "truck", color: "#8B5CF6" },
+    { id: "consegnato", label: "Consegnato", icon: "package", color: "#30b0c7" },
   ];
 
   // === PIANIFICAZIONE MONTAGGIO ===
@@ -3377,7 +3383,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               <div key={i} style={{
                 padding: "6px 2px", textAlign: "center", fontWeight: 700,
                 color: isToday ? "#fff" : isSun ? T.red : T.text,
-                background: isToday ? T.acc : isSun ? "#ff3b3010" : "transparent",
+                background: isToday ? T.acc : isSun ? "#DC444410" : "transparent",
                 borderBottom: `1px solid ${T.bdr}`,
                 borderRight: i < 6 ? `1px solid ${T.bdr}` : "none",
               }}>
@@ -3408,7 +3414,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                   }} style={{
                     padding: "4px 3px", borderBottom: `1px solid ${T.bdr}`,
                     borderRight: i < 6 ? `1px solid ${T.bdr}` : "none",
-                    background: occ ? sq.colore + "20" : isPast ? T.bg + "80" : isSun ? "#ff3b3005" : canClick ? "#34c75908" : "transparent",
+                    background: occ ? sq.colore + "20" : isPast ? T.bg + "80" : isSun ? "#DC444405" : canClick ? "#1A9E7308" : "transparent",
                     cursor: canClick ? "pointer" : "default",
                     minHeight: 36, position: "relative" as any,
                   }}>
@@ -3419,7 +3425,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                       </div>
                     )}
                     {canClick && !occ && (
-                      <div style={{ position: "absolute" as any, inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#34c75950" }}>+</div>
+                      <div style={{ position: "absolute" as any, inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#1A9E7350" }}>+</div>
                     )}
                   </div>
                 );
@@ -3437,7 +3443,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
             </span>
           ))}
           <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-            <div style={{ width: 8, height: 8, borderRadius: 2, background: "#ff9500" }} />
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: "#E8A020" }} />
             Consegne: {ordiniFornDB.filter(o => o.dataConsegnaPrev && o.stato !== "consegnato").length} attese
           </span>
         </div>
@@ -3451,18 +3457,18 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
           });
           if (weekDeliveries.length === 0) return null;
           return (
-            <div style={{ padding: "8px 12px", borderTop: `1px solid ${T.bdr}`, background: "#ff950008" }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: "#ff9500", marginBottom: 4 }}>🚛 Consegne questa settimana:</div>
+            <div style={{ padding: "8px 12px", borderTop: `1px solid ${T.bdr}`, background: "#E8A02008" }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "#E8A020", marginBottom: 4 }}><I d={ICO.truck} s={9} c="#E8A020" /> Consegne questa settimana:</div>
               {weekDeliveries.map(o => {
                 const cm = cantieri.find(cc => cc.id === o.cmId);
                 const isLate = new Date(o.dataConsegnaPrev) < new Date();
                 return (
                   <div key={o.id} style={{ fontSize: 10, color: isLate ? T.red : T.text, padding: "2px 0", display: "flex", gap: 8 }}>
-                    <span style={{ fontWeight: 700, width: 30, color: "#ff9500" }}>{new Date(o.dataConsegnaPrev).toLocaleDateString("it-IT", { weekday: "short" })}</span>
+                    <span style={{ fontWeight: 700, width: 30, color: "#E8A020" }}>{new Date(o.dataConsegnaPrev).toLocaleDateString("it-IT", { weekday: "short" })}</span>
                     <span style={{ fontWeight: 600 }}>{o.fornitore}</span>
                     <span style={{ color: T.sub }}>→ {cm?.cliente || o.cmId}</span>
                     {o.costo > 0 && <span style={{ color: T.sub }}>€{o.costo.toLocaleString("it-IT")}</span>}
-                    {isLate && <span style={{ color: T.red, fontWeight: 700 }}>⚠️ RITARDO</span>}
+                    {isLate && <span style={{ color: T.red, fontWeight: 700 }}><I d={ICO.alertTriangle} />️ RITARDO</span>}
                   </div>
                 );
               })}
@@ -3487,7 +3493,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1d1d1f;max-width:600px;margin:0 auto;padding:16px;background:#f5f5f7}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1d1d1f;max-width:600px;margin:0 auto;padding:16px;background:#F2F1EC}
       .card{background:#fff;border-radius:14px;padding:18px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
       .header{text-align:center;margin-bottom:16px}
       .logo{max-height:50px;margin-bottom:8px}
@@ -3495,12 +3501,12 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       .sub{font-size:12px;color:#86868b}
       .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
       .row:last-child{border:none}
-      .total{font-size:18px;font-weight:800;color:#007aff;text-align:right;padding:12px 0}
+      .total{font-size:18px;font-weight:800;color:#0D7C6B;text-align:right;padding:12px 0}
       .btn{width:100%;padding:16px;border-radius:12px;border:none;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;font-family:inherit}
-      .btn-green{background:#34c759;color:#fff}
-      .btn-outline{background:#fff;color:#007aff;border:2px solid #007aff}
+      .btn-green{background:#1A9E73;color:#fff}
+      .btn-outline{background:#fff;color:#0D7C6B;border:2px solid #0D7C6B}
       canvas{border:1px solid #e5e5ea;border-radius:10px;background:#fff;touch-action:none}
-      .firma-done{background:#f0fdf4;border:2px solid #34c759;border-radius:12px;padding:16px;text-align:center}
+      .firma-done{background:#f0fdf4;border:2px solid #1A9E73;border-radius:12px;padding:16px;text-align:center}
     </style></head><body>
     <div class="header">
       ${az.logo ? `<img src="${az.logo}" class="logo"/><br>` : ""}
@@ -3547,7 +3553,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       </div>
       <div id="firma-done" class="firma-done" style="display:none">
         <div style="font-size:24px;margin-bottom:6px">✅</div>
-        <div style="font-size:16px;font-weight:700;color:#34c759">Preventivo Firmato!</div>
+        <div style="font-size:16px;font-weight:700;color:#1A9E73">Preventivo Firmato!</div>
         <div style="font-size:12px;color:#86868b;margin-top:4px">Grazie per la conferma. Riceverà aggiornamenti sull'avanzamento del suo ordine.</div>
         <img id="firma-img" style="max-height:60px;margin-top:10px" alt=""/>
       </div>
@@ -3742,7 +3748,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     return extracted;
   };
 
-  // === 📥 INBOX UNIVERSALE — Classifica qualsiasi documento ===
+  // === <I d={ICO.download} /> INBOX UNIVERSALE — Classifica qualsiasi documento ===
   const apriInboxDocumento = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -3916,7 +3922,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       setCantieri(cs => cs.map(cm => cm.id === cmId ? {
         ...cm, firmaCliente: true, dataFirma: new Date().toISOString().split("T")[0],
         firmaDocumento: allegato, allegati: [...(cm.allegati || []), allegato],
-        log: [{ chi: "Fabio", cosa: `📥 documento firmato caricato da inbox`, quando: "Adesso", color: "#34c759" }, ...(cm.log || [])]
+        log: [{ chi: "Fabio", cosa: `📥 documento firmato caricato da inbox`, quando: "Adesso", color: "#1A9E73" }, ...(cm.log || [])]
       } : cm));
       if (selectedCM?.id === cmId) setSelectedCM(prev => ({ ...prev, firmaCliente: true, dataFirma: new Date().toISOString().split("T")[0] }));
     } else if (tipo === "ricevuta") {
@@ -3927,12 +3933,12 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       }
       setCantieri(cs => cs.map(cm => cm.id === cmId ? {
         ...cm, allegati: [...(cm.allegati || []), allegato],
-        log: [{ chi: "Fabio", cosa: `📥 ricevuta pagamento caricata da inbox`, quando: "Adesso", color: "#007aff" }, ...(cm.log || [])]
+        log: [{ chi: "Fabio", cosa: `📥 ricevuta pagamento caricata da inbox`, quando: "Adesso", color: "#0D7C6B" }, ...(cm.log || [])]
       } : cm));
     } else if (tipo === "foto") {
       setCantieri(cs => cs.map(cm => cm.id === cmId ? {
         ...cm, allegati: [...(cm.allegati || []), allegato],
-        log: [{ chi: "Fabio", cosa: `📥 foto cantiere caricata da inbox`, quando: "Adesso", color: "#5856d6" }, ...(cm.log || [])]
+        log: [{ chi: "Fabio", cosa: `📥 foto cantiere caricata da inbox`, quando: "Adesso", color: "#8B5CF6" }, ...(cm.log || [])]
       } : cm));
     } else {
       // Generic: just add as allegato
@@ -3948,12 +3954,19 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
   // === TRACKING CLIENTE (pagina pubblica) ===
   const generaTrackingCliente = (c) => {
     const az = aziendaDB;
+    const TRACK_SVG = {
+      package: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+      factory: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20V8l6 4V8l6 4V8l6 4v12H2z"/><path d="M2 20h20"/></svg>',
+      checkCircle: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+      truck: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+      hammer: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12l-8.5 8.5c-.83.83-2.17.83-3 0a2.12 2.12 0 010-3L12 9"/><path d="M17.64 15L22 10.64"/><path d="M20.91 11.7l-1.25-1.25c-.6-.6-.93-1.4-.93-2.25V6.5L14.5 2.23a.5.5 0 00-.8.14l-1.02 2.45a2 2 0 00.44 2.17l5.08 4.56"/></svg>',
+    };
     const trackSteps = [
-      { id: "ordinato", label: "Ordinato", icon: "📦", desc: "Il materiale è stato ordinato al fornitore" },
-      { id: "produzione", label: "In Produzione", icon: "🏭", desc: "I serramenti sono in fase di produzione" },
-      { id: "pronto", label: "Pronto", icon: "✅", desc: "Il materiale è pronto per la consegna" },
-      { id: "consegnato", label: "Consegnato", icon: "🚛", desc: "Il materiale è stato consegnato" },
-      { id: "montato", label: "Montato", icon: "🔧", desc: "L'installazione è completata" },
+      { id: "ordinato", label: "Ordinato", icon: "package", desc: "Il materiale è stato ordinato al fornitore" },
+      { id: "produzione", label: "In Produzione", icon: "factory", desc: "I serramenti sono in fase di produzione" },
+      { id: "pronto", label: "Pronto", icon: "checkCircle", desc: "Il materiale è pronto per la consegna" },
+      { id: "consegnato", label: "Consegnato", icon: "truck", desc: "Il materiale è stato consegnato" },
+      { id: "montato", label: "Montato", icon: "hammer", desc: "L'installazione è completata" },
     ];
     const curIdx = trackSteps.findIndex(s => s.id === c.trackingStato);
     const fatture = fattureDB.filter(f => f.cmId === c.id);
@@ -3966,14 +3979,14 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     <title>Tracking Ordine ${c.code} — ${az.nome || "MASTRO"}</title>
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f7;color:#1a1a1c;padding:16px;max-width:480px;margin:0 auto}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#F2F1EC;color:#1a1a1c;padding:16px;max-width:480px;margin:0 auto}
       .card{background:#fff;border-radius:16px;padding:20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
       .step{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid #f0f0f2}
       .step:last-child{border-bottom:none}
       .dot{width:36px;height:36px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-      .active .dot{background:#007aff20} .done .dot{background:#34c75920} .pending .dot{background:#f0f0f2}
+      .active .dot{background:#0D7C6B20} .done .dot{background:#1A9E7320} .pending .dot{background:#f0f0f2}
       .line{width:2px;height:20px;margin:0 17px;background:#e0e0e2}
-      .done .line{background:#34c759} .active .line{background:#007aff}
+      .done .line{background:#1A9E73} .active .line{background:#0D7C6B}
       .badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700}
       h2{font-size:20px;font-weight:800;letter-spacing:-0.3px}
     </style></head><body>
@@ -3988,8 +4001,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
       <h2>${c.code}</h2>
       <div style="font-size:13px;color:#8e8e93;margin-top:2px">${c.cliente} ${c.cognome || ""}</div>
       <div style="font-size:12px;color:#8e8e93">${c.indirizzo || ""}</div>
-      ${c.dataPrevConsegna ? `<div style="margin-top:10px;padding:8px 12px;background:#007aff10;border-radius:8px;font-size:12px;color:#007aff;font-weight:600">📅 Consegna prevista: ${new Date(c.dataPrevConsegna).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>` : ""}
-      ${montaggio?.data ? `<div style="margin-top:6px;padding:8px 12px;background:#30b0c710;border-radius:8px;font-size:12px;color:#30b0c7;font-weight:600">🔧 Montaggio programmato: ${new Date(montaggio.data).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })} ore ${montaggio.oraInizio || "08:00"}</div>` : ""}
+      ${c.dataPrevConsegna ? `<div style="margin-top:10px;padding:8px 12px;background:#0D7C6B10;border-radius:8px;font-size:12px;color:#0D7C6B;font-weight:600"><I d={ICO.calendar} /> Consegna prevista: ${new Date(c.dataPrevConsegna).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>` : ""}
+      ${montaggio?.data ? `<div style="margin-top:6px;padding:8px 12px;background:#30b0c710;border-radius:8px;font-size:12px;color:#30b0c7;font-weight:600"><I d={ICO.wrench} /> Montaggio programmato: ${new Date(montaggio.data).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })} ore ${montaggio.oraInizio || "08:00"}</div>` : ""}
     </div>
 
     <div class="card">
@@ -4000,14 +4013,14 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         const cls = isDone ? "done" : isActive ? "active" : "pending";
         return `<div class="step ${cls}">
           <div>
-            <div class="dot">${st.icon}</div>
+            <div class="dot">${TRACK_SVG[st.icon] || st.icon}</div>
             ${i < trackSteps.length - 1 ? `<div class="line"></div>` : ""}
           </div>
           <div style="padding-top:6px">
-            <div style="font-size:14px;font-weight:700;color:${isDone ? "#34c759" : isActive ? "#007aff" : "#c7c7cc"}">${st.label}</div>
+            <div style="font-size:14px;font-weight:700;color:${isDone ? "#1A9E73" : isActive ? "#0D7C6B" : "#c7c7cc"}">${st.label}</div>
             <div style="font-size:11px;color:#8e8e93;margin-top:2px">${st.desc}</div>
-            ${isDone && c["tracking_" + st.id + "_data"] ? `<div style="font-size:10px;color:#34c759;margin-top:2px">✅ ${c["tracking_" + st.id + "_data"]}</div>` : ""}
-            ${isActive ? `<span class="badge" style="background:#007aff20;color:#007aff;margin-top:4px">In corso</span>` : ""}
+            ${isDone && c["tracking_" + st.id + "_data"] ? `<div style="font-size:10px;color:#1A9E73;margin-top:2px">✅ ${c["tracking_" + st.id + "_data"]}</div>` : ""}
+            ${isActive ? `<span class="badge" style="background:#0D7C6B20;color:#0D7C6B;margin-top:4px">In corso</span>` : ""}
           </div>
         </div>`;
       }).join("")}
@@ -4022,12 +4035,12 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         </div>
         <div style="text-align:right">
           <div style="font-size:14px;font-weight:800">&euro;${fmt(f.importo)}</div>
-          <div style="font-size:10px;color:${f.pagata ? "#34c759" : "#ff3b30"};font-weight:600">${f.pagata ? "✅ Pagata" : "⏳ Da pagare"}</div>
+          <div style="font-size:10px;color:${f.pagata ? "#1A9E73" : "#DC4444"};font-weight:600">${f.pagata ? "✅ Pagata" : "🕐 Da pagare"}</div>
         </div>
       </div>`).join("")}
       <div style="display:flex;justify-content:space-between;padding:10px 0 0;margin-top:4px">
         <span style="font-size:12px;color:#8e8e93">Totale: &euro;${fmt(totFat)}</span>
-        <span style="font-size:12px;font-weight:700;color:${totPag >= totFat ? "#34c759" : "#ff9500"}">${totPag >= totFat ? "✅ Saldato" : `Da pagare: €${fmt(totFat - totPag)}`}</span>
+        <span style="font-size:12px;font-weight:700;color:${totPag >= totFat ? "#1A9E73" : "#E8A020"}">${totPag >= totFat ? "✅ Saldato" : `Da pagare: €${fmt(totFat - totPag)}`}</span>
       </div>
     </div>` : ""}
 
@@ -4123,6 +4136,10 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
 
 
   // === CTX — condivide tutto con i componenti estratti ===
+  // ═══ IS STORICO — rilievo vecchio = sola lettura ═══
+  const lastRilievoGlobal = selectedCM?.rilievi?.length > 0 ? selectedCM.rilievi[selectedCM.rilievi.length - 1] : null;
+  const isStorico = selectedRilievo && lastRilievoGlobal && selectedRilievo.id !== lastRilievoGlobal.id;
+
   const ctx = {
     T, S, theme, setTheme, isDesktop, isTablet, fs, PIPELINE, tipologieFiltrate,
     tab, setTab, subPlan, setSubPlan, showPaywall, setShowPaywall,
@@ -4162,6 +4179,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     showFatturaModal, setShowFatturaModal, fatturaEdit, setFatturaEdit,
     squadreDB, setSquadreDB, montaggiDB, setMontaggiDB,
     settoriAttivi, setSettoriAttivi, showOnboarding, setShowOnboarding,
+    showStrutture, setShowStrutture,
     pianoAttivo, setPianoAttivo,
     calMontaggiWeek, setCalMontaggiWeek, showCalMontaggi, setShowCalMontaggi,
     calMontaggiTarget, setCalMontaggiTarget,
@@ -4176,7 +4194,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     sistemiDB, coloriDB, vetriDB,
     montGiorni, setMontGiorni, docViewer, setDocViewer,
     ccExpandStep, setCcExpandStep, confSett, setConfSett,
-    selectedCM, setSelectedCM, selectedRilievo, setSelectedRilievo,
+    selectedCM, setSelectedCM, selectedRilievo, setSelectedRilievo, isStorico,
     showNuovoRilievo, setShowNuovoRilievo, nuovoRilTipo, setNuovoRilTipo,
     nuovoRilData, setNuovoRilData, selectedVano, setSelectedVano,
     filterFase, setFilterFase, searchQ, setSearchQ,
@@ -4256,6 +4274,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
     generaPreventivoPDF, generaPDFMisure, creaFattura, generaFatturaPDF, inviaWhatsApp, inviaEmail, creaOrdineFornitore, ricalcolaOrdine, updateOrdine, calcolaScadenzaPagamento, generaOrdinePDF, generaConfermaFirmataPDF, inviaOrdineFornitore, creaMontaggio, getWeekDays, generaPreventivoCondivisibile, uploadConfermaFornitore, estraiDatiPDF, confermaInboxDoc, assegnaDocUniversale, generaTrackingCliente, generaXmlSDI, nextNumFattura,
  ORDINE_STATI, activePlan, trialDaysLeft, drag,
     clientiSearch, setClientiSearch, clientiFilter, setClientiFilter,
+    selectedCliente, setSelectedCliente,
+    showNewCliente, setShowNewCliente, newCliente, setNewCliente,
   };
 
 
@@ -4284,7 +4304,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         {/* FAB — Quick Actions */}
         {/* FAB — Compose menu */}
         <style>{`
-          @keyframes fabPulse { 0%,100% { box-shadow: 0 4px 20px rgba(0,122,255,0.4); } 50% { box-shadow: 0 4px 30px rgba(0,122,255,0.6); } }
+          @keyframes fabPulse { 0%,100% { box-shadow: 0 4px 20px rgba(13,124,107,0.4); } 50% { box-shadow: 0 4px 30px rgba(13,124,107,0.6); } }
           @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         `}</style>
         {/* EVENT POPUP OVERLAY — Google Calendar style */}
@@ -4306,23 +4326,23 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                   <div onClick={() => setSelectedEvent(null)} style={{ cursor: "pointer", fontSize: 22, color: T.sub, padding: "0 4px" }}>{"✕"}</div>
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
-                  {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}>{"👤"} {ev.persona}</span>}
-                  {ev.addr && <span style={{ fontSize: 11, color: T.sub, background: T.blueLt, padding: "3px 8px", borderRadius: 6 }}>{"📍"} {ev.addr}</span>}
-                  {ev.cm && <span style={S.badge(T.blueLt, T.blue)}>{"📁"} {ev.cm}</span>}
+                  {ev.persona && <span style={S.badge(T.purpleLt, T.purple)}><I d={ICO.user} /> {ev.persona}</span>}
+                  {ev.addr && <span style={{ fontSize: 11, color: T.sub, background: T.blueLt, padding: "3px 8px", borderRadius: 6 }}><I d={ICO.mapPin} s={11} c={T.blue} /> {ev.addr}</span>}
+                  {ev.cm && <span style={S.badge(T.blueLt, T.blue)}><Ico d={ICO.folder} s={14} c="currentColor" /> {ev.cm}</span>}
                   <select defaultValue={ev.tipo || "sopralluogo"} onChange={(e) => { setEvents(prev => prev.map(x => x.id === ev.id ? { ...x, tipo: e.target.value } : x)); setSelectedEvent({ ...ev, tipo: e.target.value }); }} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: `1px solid ${T.bdr}`, background: tipoEvColor(ev.tipo || "sopralluogo") + "18", color: tipoEvColor(ev.tipo || "sopralluogo"), fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                     {TIPI_EVENTO.map(t => <option key={t.id} value={t.id}>{t.l}</option>)}
                   </select>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 8 }}>
-                  {ev.addr && <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(ev.addr))} style={{ padding: "12px 4px", borderRadius: 10, background: T.blueLt, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.blue }}>{"📍"} Mappa</div>}
-                  <div onClick={() => { const tel = cmObj?.telefono || contatti.find(c => c.nome === ev.persona)?.telefono; if (tel) window.location.href="tel:" + tel; }} style={{ padding: "12px 4px", borderRadius: 10, background: T.grnLt, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.grn }}>{"📞"} Chiama</div>
+                  {ev.addr && <div onClick={() => window.open("https://maps.google.com/?q=" + encodeURIComponent(ev.addr))} style={{ padding: "12px 4px", borderRadius: 10, background: T.blueLt, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.blue }}><I d={ICO.mapPin} s={12} c={T.blue} /> Mappa</div>}
+                  <div onClick={() => { const tel = cmObj?.telefono || contatti.find(c => c.nome === ev.persona)?.telefono; if (tel) window.location.href="tel:" + tel; }} style={{ padding: "12px 4px", borderRadius: 10, background: T.grnLt, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.grn }}><Ico d={ICO.phone} s={14} c={T.grn} /> Chiama</div>
                   <div onClick={() => { const cliente = cmObj ? `${cmObj.cliente} ${cmObj.cognome||""}`.trim() : (ev.persona || "Cliente"); const dataFmt = new Date(ev.date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" }); setMailBody(`Gentile ${cliente},\n\nLe confermo l'appuntamento:\n\n${dataFmt}${ev.time ? " alle " + ev.time : ""}\n${ev.addr || ""}\n\n${ev.text}\n\nCordiali saluti,\nFabio Cozza`); setShowMailModal({ ev, cm: cmObj }); setSelectedEvent(null); }} style={{ padding: "12px 4px", borderRadius: 10, background: T.accLt, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.acc }}>{"✉️"} Mail</div>
-                  <div onClick={() => { deleteEvent(ev.id); setSelectedEvent(null); }} style={{ padding: "12px 4px", borderRadius: 10, background: T.redLt, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.red }}>{"🗑️"} Elimina</div>
+                  <div onClick={() => { deleteEvent(ev.id); setSelectedEvent(null); }} style={{ padding: "12px 4px", borderRadius: 10, background: T.redLt, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.red }}><Ico d={ICO.trash} s={14} c={T.red} /> Elimina</div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  <div onClick={() => { if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #007aff15, #007aff08)", border: "1px solid #007aff25", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#007aff" }}>{"📁"} Commessa</div>
-                  <div onClick={() => { if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: "Misure: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #ff950015, #ff950008)", border: "1px solid #ff950025", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#ff9500" }}>{"📏"} Misure</div>
-                  <div onClick={() => { const code = "INT-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: "Intervento: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #34c75915, #34c75908)", border: "1px solid #34c75925", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#34c759" }}>{"🔧"} Intervento</div>
+                  <div onClick={() => { if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #0D7C6B15, #0D7C6B08)", border: "1px solid #0D7C6B25", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#0D7C6B" }}><Ico d={ICO.folder} s={14} c="currentColor" /> Commessa</div>
+                  <div onClick={() => { if (cmObj) { setSelectedCM(cmObj); } else { const code = "CM-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "Nuovo", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: "Misure: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); } setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #E8A02015, #E8A02008)", border: "1px solid #E8A02025", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#E8A020" }}><I d={ICO.ruler} s={12} c="#E8A020" /> Misure</div>
+                  <div onClick={() => { const code = "INT-" + Date.now().toString().slice(-4); const nc = { id: "c" + Date.now(), code, cliente: ev.persona || "", cognome: "", indirizzo: ev.addr || "", telefono: "", tipo: "nuova", fase: "sopralluogo", vani: [], note: "Intervento: " + ev.text }; setCantieri(prev => [...prev, nc]); setSelectedCM(nc); setSelectedEvent(null); setTab("commesse"); }} style={{ padding: "12px 4px", borderRadius: 12, background: "linear-gradient(135deg, #1A9E7315, #1A9E7308)", border: "1px solid #1A9E7325", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#1A9E73" }}><I d={ICO.wrench} s={12} c="#1A9E73" /> Intervento</div>
                 </div>
               </div>
             </div>
@@ -4332,7 +4352,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         {selectedTask && (() => {
           const t = tasks.find(x => x.id === selectedTask.id) || selectedTask;
           const prioColor = t.priority === "alta" ? "#FF3B30" : t.priority === "media" ? "#FF9500" : "#8E8E93";
-          const prioLabel = t.priority === "alta" ? "🔴 Urgente" : t.priority === "media" ? "🟠 Normale" : "⚪ Bassa";
+          const prioLabel = t.priority === "alta" ? "⚠ Urgente" : t.priority === "media" ? "⚠ Normale" : "● Bassa";
           return (
             <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setSelectedTask(null)}>
               <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.3)" }} />
@@ -4341,20 +4361,20 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 9, fontWeight: 800, color: prioColor, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, fontFamily: FM }}>✅ TASK · {prioLabel}</div>
                     <div style={{ fontSize: 18, fontWeight: 800, color: T.text, textDecoration: t.done ? "line-through" : "none", opacity: t.done ? 0.6 : 1 }}>{t.text}</div>
-                    {t.date && <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>📅 {new Date(t.date + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}{t.time ? " alle " + t.time : ""}</div>}
+                    {t.date && <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}><I d={ICO.calendar} /> {new Date(t.date + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}{t.time ? " alle " + t.time : ""}</div>}
                   </div>
                   <div onClick={() => setSelectedTask(null)} style={{ cursor: "pointer", fontSize: 22, color: T.sub, padding: "0 4px" }}>✕</div>
                 </div>
-                {t.meta && <div style={{ fontSize: 13, color: T.sub, marginBottom: 12, padding: "8px 12px", background: T.bgSec, borderRadius: 8, border: `1px solid ${T.bdr}` }}>📝 {t.meta}</div>}
+                {t.meta && <div style={{ fontSize: 13, color: T.sub, marginBottom: 12, padding: "8px 12px", background: T.bgSec, borderRadius: 8, border: `1px solid ${T.bdr}` }}><Ico d={ICO.fileText} s={12} c={T.sub} /> {t.meta}</div>}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
                   <span style={S.badge(prioColor + "18", prioColor)}>{prioLabel}</span>
-                  {t.cm && <span onClick={() => { const cm = cantieri.find(c => c.code === t.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); setSelectedTask(null); } }} style={{ ...S.badge(T.accLt, T.acc), cursor: "pointer" }}>📁 {t.cm}</span>}
-                  {t.persona && <span style={S.badge(T.purpleLt, T.purple)}>👤 {t.persona}</span>}
+                  {t.cm && <span onClick={() => { const cm = cantieri.find(c => c.code === t.cm); if (cm) { setSelectedCM(cm); setTab("commesse"); setSelectedTask(null); } }} style={{ ...S.badge(T.accLt, T.acc), cursor: "pointer" }}><Ico d={ICO.folder} s={12} c={T.acc} /> {t.cm}</span>}
+                  {t.persona && <span style={S.badge(T.purpleLt, T.purple)}><I d={ICO.user} /> {t.persona}</span>}
                   {t.done && <span style={S.badge(T.grnLt, T.grn)}>✅ Completato</span>}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   <div onClick={() => { toggleTask(t.id); setSelectedTask({ ...t, done: !t.done }); }} style={{ padding: "14px", borderRadius: 12, background: t.done ? T.bg : T.grn, color: t.done ? T.sub : "#fff", textAlign: "center", cursor: "pointer", fontSize: 14, fontWeight: 800, border: `1px solid ${t.done ? T.bdr : T.grn}` }}>{t.done ? "↩ Riapri" : "✓ Completa"}</div>
-                  <div onClick={() => { setTasks(ts => ts.filter(x => x.id !== t.id)); setSelectedTask(null); }} style={{ padding: "14px", borderRadius: 12, background: "#FF3B3010", color: "#FF3B30", textAlign: "center", cursor: "pointer", fontSize: 14, fontWeight: 800, border: "1px solid #FF3B3020" }}>🗑 Elimina</div>
+                  <div onClick={() => { setTasks(ts => ts.filter(x => x.id !== t.id)); setSelectedTask(null); }} style={{ padding: "14px", borderRadius: 12, background: "#FF3B3010", color: "#FF3B30", textAlign: "center", cursor: "pointer", fontSize: 14, fontWeight: 800, border: "1px solid #FF3B3020" }}><><Ico d={ICO.trash} s={14} c="#FF3B30" /></> Elimina</div>
                 </div>
               </div>
             </div>
@@ -4363,15 +4383,15 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         {fabOpen && <div onClick={() => setFabOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", backdropFilter: "blur(4px)", zIndex: 89 }} />}
         {(() => {
           const lastCM = lastOpenedCMId ? cantieri.find(c => c.id === lastOpenedCMId) : (cantieri.find(c => c.fase === "sopralluogo") || cantieri.find(c => c.fase !== "chiusura") || cantieri[0]);
-          const fabItems: Array<{id:string;ico:string;l:string;c:string;action:()=>void}> = [
-            { id: "evento", ico: "📅", l: "Appuntamento", c: "#007aff", action: () => { setFabOpen(false); setShowNewEvent(true); } },
-            { id: "cliente", ico: "👤", l: "Nuovo cliente", c: "#34c759", action: () => { setFabOpen(false); setShowModal("contatto"); } },
-            { id: "commessa", ico: "📁", l: "Nuova commessa", c: "#ff9500", action: () => { setFabOpen(false); setShowModal("commessa"); } },
-            { id: "messaggio", ico: "💬", l: "Messaggio", c: "#5856d6", action: () => { setFabOpen(false); setShowCompose(true); } },
+          const fabItems: Array<{id:string;ico:any;l:string;c:string;action:()=>void}> = [
+            { id: "evento", ico: <Ico d={ICO.calendar} s={20} c="#fff" />, l: "Appuntamento", c: "#0D7C6B", action: () => { setFabOpen(false); setShowNewEvent(true); } },
+            { id: "cliente", ico: <Ico d={ICO.user} s={20} c="#fff" />, l: "Nuovo cliente", c: "#1A9E73", action: () => { setFabOpen(false); setShowModal("contatto"); } },
+            { id: "commessa", ico: <Ico d={ICO.folder} s={20} c="#fff" />, l: "Nuova commessa", c: "#E8A020", action: () => { setFabOpen(false); setShowModal("commessa"); } },
+            { id: "messaggio", ico: <Ico d={ICO.messageCircle} s={20} c="#fff" />, l: "Messaggio", c: "#8B5CF6", action: () => { setFabOpen(false); setShowCompose(true); } },
           ];
           if (lastCM) {
             const p = PIPELINE.find(x => x.id === lastCM.fase);
-            fabItems.push({ id: "ultima", ico: p?.ico || "📁", l: `${lastCM.code} · ${lastCM.cliente}`, c: p?.color || T.acc, action: () => { setFabOpen(false); setSelectedCM(lastCM); setTab("commesse"); } });
+            fabItems.push({ id: "ultima", ico: <Ico d={ICO[p?.ico || "folder"]} s={22} c="#fff" />, l: `${lastCM.code} · ${lastCM.cliente}`, c: p?.color || T.acc, action: () => { setFabOpen(false); setSelectedCM(lastCM); setTab("commesse"); } });
           }
           return fabItems.map((item, i) => (
             <div key={item.id} onClick={item.action} style={{
@@ -4392,20 +4412,21 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         })()}
         <div onClick={() => setFabOpen(!fabOpen)} style={{
           position: "fixed", bottom: 90, right: 20, zIndex: 91,
-          width: 56, height: 56, borderRadius: "50%",
-          background: fabOpen ? T.sub : "linear-gradient(135deg, #007aff, #5856d6)",
+          width: 60, height: 60, borderRadius: "50%",
+          background: T.acc,
           display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: fabOpen ? "0 4px 16px rgba(0,0,0,0.2)" : "0 4px 20px rgba(0,122,255,0.4)",
+          boxShadow: `0 6px 24px ${T.acc}50`,
           cursor: "pointer", transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
-          animation: fabOpen ? "none" : "fabPulse 2s infinite",
         }}>
-          <div style={{ fontSize: 24, color: "#fff", transition: "transform 0.3s ease", transform: fabOpen ? "rotate(45deg)" : "rotate(0deg)" }}>✏️</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.3s ease", transform: fabOpen ? "rotate(360deg)" : "rotate(0deg)" }}>
+            <span style={{ fontSize: 26, color: "#fff", fontWeight: 800, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>{fabOpen ? "F" : "M"}</span>
+          </div>
         </div>
 
         {/* MESSAGE DETAIL OVERLAY */}
         {selectedMsg && (() => {
-          const chIco = { email: "📧", whatsapp: "💬", sms: "📱", telegram: "✈️" };
           const chCol = { email: T.blue, whatsapp: "#25d366", sms: T.orange, telegram: "#0088cc" };
+          const chIco = { email: <Ico d={ICO.mail} s={16} c={chCol.email} />, whatsapp: <Ico d={ICO.messageCircle} s={16} c={chCol.whatsapp} />, sms: <Ico d={ICO.phone} s={16} c={chCol.sms} />, telegram: <Ico d={ICO.send} s={16} c={chCol.telegram} /> };
           const [replyChannel, setReplyChannelX] = [selectedMsg._replyChannel || selectedMsg.canale, (ch) => setSelectedMsg(p => ({...p, _replyChannel: ch}))];
           return (
           <div style={{ position: "fixed", inset: 0, background: T.bg, zIndex: 150, display: "flex", flexDirection: "column" }}>
@@ -4419,14 +4440,14 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               </div>
               {selectedMsg.cm && (
                 <div onClick={() => { const cm = cantieri.find(c => c.code === selectedMsg.cm); if (cm) { setSelectedMsg(null); setSelectedCM(cm); setTab("commesse"); } }} style={{ padding: "4px 10px", borderRadius: 6, background: T.accLt, fontSize: 10, fontWeight: 700, color: T.acc, cursor: "pointer" }}>
-                  📂 {selectedMsg.cm}
+                  <I d={ICO.folder} /> {selectedMsg.cm}
                 </div>
               )}
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
               {(selectedMsg.thread || []).map((msg, i) => {
                 const isMe = msg.who === "Tu";
-                const mChIco = chIco[msg.canale] || chIco[selectedMsg.canale] || "💬";
+                const mChIco = chIco[msg.canale] || chIco[selectedMsg.canale] || chIco.whatsapp;
                 return (
                   <div key={i} style={{ marginBottom: 12, display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
                     <div style={{ fontSize: 9, color: T.sub, marginBottom: 3, fontWeight: 600 }}>{mChIco} {msg.who} · {msg.date} {msg.time}</div>
@@ -4447,9 +4468,9 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               </div>
               <div style={{ padding: "8px 16px 20px", display: "flex", gap: 8, alignItems: "center" }}>
                 <div style={{ display: "flex", gap: 4 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>📎</div>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>🎤</div>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>📷</div>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Ico d={ICO.paperclip} s={16} c={T.sub} /></div>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Ico d={ICO.mic} s={16} c={T.sub} /></div>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Ico d={ICO.camera} s={16} c={T.sub} /></div>
                 </div>
                 <input
                   style={{ flex: 1, padding: "10px 14px", fontSize: 13, border: `1px solid ${T.bdr}`, borderRadius: 20, background: T.bg, outline: "none", fontFamily: FF }}
@@ -4539,7 +4560,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               {settingsModal === "tipologia" && (<>
                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                   <div style={{ flex: 1 }}><label style={S.fieldLabel}>Codice</label><input style={S.input} placeholder="es. F4A" value={settingsForm.code || ""} onChange={e => setSettingsForm(f => ({ ...f, code: e.target.value }))} /></div>
-                  <div style={{ width: 60 }}><label style={S.fieldLabel}>Icona</label><input style={S.input} placeholder="🪟" value={settingsForm.icon || ""} onChange={e => setSettingsForm(f => ({ ...f, icon: e.target.value }))} /></div>
+                  <div style={{ width: 60 }}><label style={S.fieldLabel}>Icona</label><input style={S.input} placeholder="⊞" value={settingsForm.icon || ""} onChange={e => setSettingsForm(f => ({ ...f, icon: e.target.value }))} /></div>
                 </div>
                 <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Descrizione</label><input style={S.input} placeholder="es. Finestra 4 ante" value={settingsForm.label || ""} onChange={e => setSettingsForm(f => ({ ...f, label: e.target.value }))} /></div>
                 <div style={{ marginBottom: 10 }}><label style={S.fieldLabel}>Categoria</label>
@@ -4578,27 +4599,27 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         {showProblemaModal && selectedCM && (() => {
           const c = selectedCM;
           const TIPI_PROB = [
-            { id: "materiale", l: "📦 Materiale", c: "#FF9500" },
-            { id: "misure", l: "📏 Misure errate", c: "#5856d6" },
-            { id: "installazione", l: "🔧 Installazione", c: "#34c759" },
-            { id: "cliente", l: "👤 Cliente", c: "#007aff" },
-            { id: "fornitore", l: "🏭 Fornitore", c: "#FF6B00" },
-            { id: "qualita", l: "⚠️ Qualità", c: "#FF3B30" },
-            { id: "altro", l: "📋 Altro", c: "#8E8E93" },
+            { id: "materiale", l: "Materiale", ico: "package", c: "#FF9500" },
+            { id: "misure", l: "Misure errate", ico: "ruler", c: "#8B5CF6" },
+            { id: "installazione", l: "Installazione", ico: "hammer", c: "#1A9E73" },
+            { id: "cliente", l: "Cliente", ico: "user", c: "#0D7C6B" },
+            { id: "fornitore", l: "Fornitore", ico: "factory", c: "#FF6B00" },
+            { id: "qualita", l: "Qualità", ico: "alert", c: "#FF3B30" },
+            { id: "altro", l: "Altro", ico: "clipboard", c: "#8E8E93" },
           ];
           const PRIO = [
-            { id: "alta", l: "🔴 Alta", c: "#FF3B30" },
-            { id: "media", l: "🟠 Media", c: "#FF9500" },
-            { id: "bassa", l: "⚪ Bassa", c: "#8E8E93" },
+            { id: "alta", l: "⚠ Alta", c: "#FF3B30" },
+            { id: "media", l: "⚠ Media", c: "#FF9500" },
+            { id: "bassa", l: "● Bassa", c: "#8E8E93" },
           ];
           return (
             <div style={S.modal} onClick={e => e.target === e.currentTarget && setShowProblemaModal(false)}>
               <div style={{ ...S.modalInner, maxHeight: "85vh", overflow: "auto" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#FF3B30" }}>🚨 Segnala problema</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#FF3B30" }}><I d={ICO.alertTriangle} /> Segnala problema</div>
                   <div onClick={() => setShowProblemaModal(false)} style={{ cursor: "pointer", fontSize: 20, color: T.sub }}>✕</div>
                 </div>
-                <div style={{ fontSize: 11, color: T.sub, marginBottom: 14, padding: "8px 12px", background: T.accLt, borderRadius: 8 }}>📁 {c.code} · {c.cliente} · Fase: <b>{c.fase}</b></div>
+                <div style={{ fontSize: 11, color: T.sub, marginBottom: 14, padding: "8px 12px", background: T.accLt, borderRadius: 8 }}><Ico d={ICO.folder} s={12} c={T.acc} /> {c.code} · {c.cliente} · Fase: <b>{c.fase}</b></div>
 
                 <label style={S.fieldLabel}>Titolo *</label>
                 <input style={S.input} placeholder="Es: Profilo arrivato danneggiato" value={problemaForm.titolo} onChange={e => setProblemaForm(f => ({ ...f, titolo: e.target.value }))} />
@@ -4654,7 +4675,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                   setSelectedCM(prev => ({ ...prev, log: [...(prev.log || []), { chi: np.segnalatoDa, cosa: `🚨 Problema segnalato: ${np.titolo}`, quando: "Adesso", color: "#FF3B30" }] }));
                   setShowProblemaModal(false);
                 }} style={{ width: "100%", padding: "14px", borderRadius: 12, border: "none", background: "#FF3B30", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF, marginTop: 16 }}>
-                  🚨 Crea segnalazione
+                  <I d={ICO.alertTriangle} /> Crea segnalazione
                 </button>
               </div>
             </div>
@@ -4665,8 +4686,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         {showProblemiView && (() => {
           const cmFilter = selectedCM?.id;
           const list = cmFilter ? problemi.filter(p => p.commessaId === cmFilter) : problemi;
-          const TIPI_PROB_MAP = { materiale: { l: "📦 Materiale", c: "#FF9500" }, misure: { l: "📏 Misure", c: "#5856d6" }, installazione: { l: "🔧 Install.", c: "#34c759" }, cliente: { l: "👤 Cliente", c: "#007aff" }, fornitore: { l: "🏭 Fornitore", c: "#FF6B00" }, qualita: { l: "⚠️ Qualità", c: "#FF3B30" }, altro: { l: "📋 Altro", c: "#8E8E93" } };
-          const STATO_MAP = { aperto: { l: "🔴 Aperto", c: "#FF3B30" }, in_corso: { l: "🟠 In corso", c: "#FF9500" }, risolto: { l: "✅ Risolto", c: "#34c759" } };
+          const TIPI_PROB_MAP = { materiale: { l: "Materiale", ico: "package", c: "#FF9500" }, misure: { l: "Misure", ico: "ruler", c: "#8B5CF6" }, installazione: { l: "Install.", ico: "hammer", c: "#1A9E73" }, cliente: { l: "Cliente", ico: "user", c: "#0D7C6B" }, fornitore: { l: "Fornitore", ico: "factory", c: "#FF6B00" }, qualita: { l: "Qualità", ico: "alert", c: "#FF3B30" }, altro: { l: "Altro", ico: "clipboard", c: "#8E8E93" } };
+          const STATO_MAP = { aperto: { l: "Aperto", c: "#FF3B30" }, in_corso: { l: "In corso", c: "#FF9500" }, risolto: { l: "Risolto", c: "#1A9E73" } };
           const aperti = list.filter(p => p.stato === "aperto").length;
           const inCorso = list.filter(p => p.stato === "in_corso").length;
           const risolti = list.filter(p => p.stato === "risolto").length;
@@ -4674,7 +4695,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
             <div style={S.modal} onClick={e => e.target === e.currentTarget && setShowProblemiView(false)}>
               <div style={{ ...S.modalInner, maxWidth: 500, maxHeight: "90vh", overflow: "auto" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: T.text }}>🚨 Problemi {cmFilter ? `· ${selectedCM.code}` : "— Tutti"}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.text }}><I d={ICO.alertTriangle} /> Problemi {cmFilter ? `· ${selectedCM.code}` : "— Tutti"}</div>
                   <div onClick={() => setShowProblemiView(false)} style={{ cursor: "pointer", fontSize: 20, color: T.sub }}>✕</div>
                 </div>
 
@@ -4688,9 +4709,9 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                     <div style={{ fontSize: 20, fontWeight: 900, color: "#FF9500" }}>{inCorso}</div>
                     <div style={{ fontSize: 10, color: "#FF9500", fontWeight: 600 }}>In corso</div>
                   </div>
-                  <div style={{ flex: 1, padding: "10px", borderRadius: 10, background: "#34c75910", textAlign: "center" }}>
-                    <div style={{ fontSize: 20, fontWeight: 900, color: "#34c759" }}>{risolti}</div>
-                    <div style={{ fontSize: 10, color: "#34c759", fontWeight: 600 }}>Risolti</div>
+                  <div style={{ flex: 1, padding: "10px", borderRadius: 10, background: "#1A9E7310", textAlign: "center" }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: "#1A9E73" }}>{risolti}</div>
+                    <div style={{ fontSize: 10, color: "#1A9E73", fontWeight: 600 }}>Risolti</div>
                   </div>
                 </div>
 
@@ -4703,7 +4724,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                 ) : list.map(p => {
                   const tp = TIPI_PROB_MAP[p.tipo] || TIPI_PROB_MAP.altro;
                   const st = STATO_MAP[p.stato] || STATO_MAP.aperto;
-                  const prio = p.priorita === "alta" ? { l: "🔴", c: "#FF3B30" } : p.priorita === "media" ? { l: "🟠", c: "#FF9500" } : { l: "⚪", c: "#8E8E93" };
+                  const prio = p.priorita === "alta" ? { l: "⚠", c: "#FF3B30" } : p.priorita === "media" ? { l: "⚠", c: "#FF9500" } : { l: "●", c: "#8E8E93" };
                   return (
                     <div key={p.id} style={{ background: T.card, borderRadius: 12, border: `1px solid ${T.bdr}`, padding: "12px 14px", marginBottom: 8, borderLeft: `3px solid ${st.c}` }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
@@ -4716,18 +4737,18 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                       {p.descrizione && <div style={{ fontSize: 11, color: T.sub, marginBottom: 8, lineHeight: 1.5 }}>{p.descrizione}</div>}
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
                         <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: tp.c + "18", color: tp.c, fontWeight: 600 }}>{tp.l}</span>
-                        {p.assegnatoA && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: T.purpleLt, color: T.purple, fontWeight: 600 }}>👤 {p.assegnatoA}</span>}
+                        {p.assegnatoA && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: T.purpleLt, color: T.purple, fontWeight: 600 }}><I d={ICO.user} /> {p.assegnatoA}</span>}
                         <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: T.bg, color: T.sub }}>{new Date(p.dataApertura).toLocaleDateString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
                       </div>
                       {/* Azioni */}
                       <div style={{ display: "flex", gap: 6 }}>
                         {p.stato === "aperto" && (
                           <button onClick={() => setProblemi(prev => prev.map(x => x.id === p.id ? { ...x, stato: "in_corso" } : x))} style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1px solid #FF9500`, background: "#FF950010", color: "#FF9500", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>
-                            🟠 Prendi in carico
+                            <I d={ICO.alertTriangle} /> Prendi in carico
                           </button>
                         )}
                         {p.stato === "in_corso" && (
-                          <button onClick={() => setProblemi(prev => prev.map(x => x.id === p.id ? { ...x, stato: "risolto", dataRisoluzione: new Date().toISOString() } : x))} style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1px solid #34c759`, background: "#34c75910", color: "#34c759", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>
+                          <button onClick={() => setProblemi(prev => prev.map(x => x.id === p.id ? { ...x, stato: "risolto", dataRisoluzione: new Date().toISOString() } : x))} style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1px solid #1A9E73`, background: "#1A9E7310", color: "#1A9E73", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>
                             ✅ Risolvi
                           </button>
                         )}
@@ -4737,7 +4758,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                           </button>
                         )}
                         <button onClick={() => { if (confirm("Eliminare questo problema?")) setProblemi(prev => prev.filter(x => x.id !== p.id)); }} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid #FF3B3030`, background: "#FF3B3008", color: "#FF3B30", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FF }}>
-                          🗑
+                          <I d={ICO.trash} />
                         </button>
                       </div>
                     </div>
@@ -4757,19 +4778,19 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
 
             {/* STEP 1: WELCOME */}
             {tutoStep === 1 && (<div style={{ textAlign:"center" }}>
-              <div style={{ width:64, height:64, borderRadius:16, background:T.acc, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, fontWeight:900, color:"#fff", margin:"0 auto 16px" }}>M</div>
+              <div style={{ width:64, height:64, borderRadius:16, background:T.acc, display:"flex", alignItems:"center", justifyContent:"center", fontSize:32, fontWeight:900, color:"#fff", fontFamily:FM, letterSpacing:"-0.04em", margin:"0 auto 16px" }}>M</div>
               <div style={{ fontSize:22, fontWeight:900, color:"#1A1A1C", marginBottom:6 }}>Benvenuto in MASTRO</div>
               <div style={{ fontSize:13, color:"#6B6B6B", lineHeight:1.6, marginBottom:24 }}>Il gestionale pensato per chi fa serramenti sul campo. Ti faccio vedere come funziona in 30 secondi.</div>
               <div style={{ display:"flex", flexDirection:"column", gap:10, textAlign:"left", marginBottom:24 }}>
                 {[
-                  {e:"🏠",t:"Home",d:"Riepilogo della giornata: appuntamenti, allerte, calendario"},
-                  {e:"📅",t:"Agenda",d:"Tutti i tuoi impegni in vista giorno, settimana o mese"},
-                  {e:"📁",t:"Commesse",d:"Il cuore: ogni lavoro dalla richiesta alla posa"},
-                  {e:"📨",t:"Messaggi",d:"Tutte le comunicazioni in un posto"},
-                  {e:"⚙️",t:"Impostazioni",d:"Listini, colori, team e dati azienda"},
+                  {e:"home",t:"Home",d:"Riepilogo della giornata: appuntamenti, allerte, calendario"},
+                  {e:"calendar",t:"Agenda",d:"Tutti i tuoi impegni in vista giorno, settimana o mese"},
+                  {e:"folder",t:"Commesse",d:"Il cuore: ogni lavoro dalla richiesta alla posa"},
+                  {e:"inbox",t:"Messaggi",d:"Tutte le comunicazioni in un posto"},
+                  {e:"settings",t:"Impostazioni",d:"Listini, colori, team e dati azienda"},
                 ].map((s,i) => (
                   <div key={i} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
-                    <div style={{ fontSize:18, width:28, textAlign:"center", flexShrink:0 }}>{s.e}</div>
+                    <div style={{ width:28, textAlign:"center", flexShrink:0 }}><I d={ICO[s.e]} s={18} c={T.acc} /></div>
                     <div><div style={{ fontSize:13, fontWeight:700, color:"#1A1A1C" }}>{s.t}</div><div style={{ fontSize:11, color:"#8E8E93" }}>{s.d}</div></div>
                   </div>
                 ))}
@@ -4781,7 +4802,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
             {/* STEP 2: HOME TAB */}
             {tutoStep === 2 && (<div>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                <div style={{ fontSize:22 }}>🏠</div>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"center" }}><I d={ICO.home} s={22} c={T.acc} /></div>
                 <div style={{ fontSize:16, fontWeight:800, color:"#1A1A1C" }}>Home</div>
                 <div style={{ marginLeft:"auto", fontSize:10, color:"#8E8E93", background:"#f5f5f5", padding:"3px 8px", borderRadius:8 }}>1/6</div>
               </div>
@@ -4796,7 +4817,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
             {/* STEP 3: AGENDA */}
             {tutoStep === 3 && (<div>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                <div style={{ fontSize:22 }}>📅</div>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"center" }}><I d={ICO.calendar} s={22} c={T.acc} /></div>
                 <div style={{ fontSize:16, fontWeight:800, color:"#1A1A1C" }}>Agenda</div>
                 <div style={{ marginLeft:"auto", fontSize:10, color:"#8E8E93", background:"#f5f5f5", padding:"3px 8px", borderRadius:8 }}>2/6</div>
               </div>
@@ -4811,14 +4832,14 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
             {/* STEP 4: COMMESSE */}
             {tutoStep === 4 && (<div>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                <div style={{ fontSize:22 }}>📁</div>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"center" }}><I d={ICO.folder} s={22} c={T.acc} /></div>
                 <div style={{ fontSize:16, fontWeight:800, color:"#1A1A1C" }}>Commesse</div>
                 <div style={{ marginLeft:"auto", fontSize:10, color:"#8E8E93", background:"#f5f5f5", padding:"3px 8px", borderRadius:8 }}>3/6</div>
               </div>
               <div style={{ fontSize:12, color:"#6B6B6B", lineHeight:1.6, marginBottom:8 }}>Ogni commessa è un <b>lavoro completo</b> con il suo ciclo di vita:</div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:10 }}>
                 {["Sopralluogo","Preventivo","Conferma","Misure","Ordini","Produzione","Posa","Chiusura"].map((f,i) => (
-                  <div key={i} style={{ fontSize:9, fontWeight:700, padding:"3px 7px", borderRadius:6, background:i===0?"#007aff15":i<4?"#ff950015":"#34c75915", color:i===0?"#007aff":i<4?"#ff9500":"#34c759" }}>{f}</div>
+                  <div key={i} style={{ fontSize:9, fontWeight:700, padding:"3px 7px", borderRadius:6, background:i===0?"#0D7C6B15":i<4?"#E8A02015":"#1A9E7315", color:i===0?"#0D7C6B":i<4?"#E8A020":"#1A9E73" }}>{f}</div>
                 ))}
               </div>
               <div style={{ fontSize:12, color:"#6B6B6B", lineHeight:1.6, marginBottom:12 }}>Dentro ogni commessa gestisci <b>vani</b> (finestre, porte), <b>misure</b>, <b>rilievi</b> e generi il <b>preventivo PDF</b>. Tocca + per creare la tua prima commessa!</div>
@@ -4832,7 +4853,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
             {/* STEP 5: MESSAGGI */}
             {tutoStep === 5 && (<div>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                <div style={{ fontSize:22 }}>📨</div>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"center" }}><I d={ICO.inbox} s={22} c={T.acc} /></div>
                 <div style={{ fontSize:16, fontWeight:800, color:"#1A1A1C" }}>Messaggi</div>
                 <div style={{ marginLeft:"auto", fontSize:10, color:"#8E8E93", background:"#f5f5f5", padding:"3px 8px", borderRadius:8 }}>4/6</div>
               </div>
@@ -4847,7 +4868,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
             {/* STEP 6: IMPOSTAZIONI */}
             {tutoStep === 6 && (<div>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                <div style={{ fontSize:22 }}>⚙️</div>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"center" }}><I d={ICO.settings} s={22} c={T.acc} /></div>
                 <div style={{ fontSize:16, fontWeight:800, color:"#1A1A1C" }}>Impostazioni</div>
                 <div style={{ marginLeft:"auto", fontSize:10, color:"#8E8E93", background:"#f5f5f5", padding:"3px 8px", borderRadius:8 }}>5/6</div>
               </div>
@@ -4861,7 +4882,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
 
             {/* STEP 7: FINAL */}
             {tutoStep === 7 && (<div style={{ textAlign:"center" }}>
-              <div style={{ fontSize:40, marginBottom:12 }}>🚀</div>
+              <div style={{ fontSize:40, marginBottom:12 }}><I d={ICO.rocket} /></div>
               <div style={{ fontSize:18, fontWeight:900, color:"#1A1A1C", marginBottom:6 }}>Tutto pronto!</div>
               <div style={{ fontSize:12, color:"#6B6B6B", lineHeight:1.7, marginBottom:8 }}>Ecco come iniziare:</div>
               <div style={{ textAlign:"left", marginBottom:20 }}>
@@ -4877,7 +4898,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                   </div>
                 ))}
               </div>
-              <div onClick={closeTuto} style={{ padding:"14px 32px", fontSize:15, fontWeight:800, color:"#fff", background:T.acc, borderRadius:14, cursor:"pointer", display:"inline-block" }}>Inizia a lavorare! 💪</div>
+              <div onClick={closeTuto} style={{ padding:"14px 32px", fontSize:15, fontWeight:800, color:"#fff", background:T.acc, borderRadius:14, cursor:"pointer", display:"inline-block" }}>Inizia a lavorare! <I d={ICO.zap} /></div>
             </div>)}
           </div>
         </div>
@@ -4926,14 +4947,14 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                 </div>
               ) : (
                 <>
-                  <div style={S.modalTitle}>📧 Invia Commessa — {selectedCM.code}</div>
+                  <div style={S.modalTitle}><I d={ICO.mail} /> Invia Commessa — {selectedCM.code}</div>
                   <div style={{ fontSize: 12, color: T.sub, marginBottom: 14 }}>Scegli cosa includere nell'invio:</div>
                   {[
-                    { key: "misure", label: "Misure tutti i vani", ico: "📐" },
-                    { key: "foto", label: "Foto scattate", ico: "📷" },
-                    { key: "disegno", label: "Disegni mano libera", ico: "✏️" },
-                    { key: "accessori", label: "Accessori (tapparelle, zanzariere...)", ico: "🪟" },
-                    { key: "note", label: "Note e annotazioni", ico: "📝" },
+                    { key: "misure", label: "Misure tutti i vani", ico: <I d={ICO.ruler} /> },
+                    { key: "foto", label: "Foto scattate", ico: <I d={ICO.camera} /> },
+                    { key: "disegno", label: "Disegni mano libera", ico: <I d={ICO.edit} /> },
+                    { key: "accessori", label: "Accessori (tapparelle, zanzariere...)", ico: <I d={ICO.grid} /> },
+                    { key: "note", label: "Note e annotazioni", ico: <I d={ICO.fileText} /> },
                   ].map(opt => (
                     <div key={opt.key} onClick={() => setSendOpts(o => ({ ...o, [opt.key]: !o[opt.key] }))} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: sendOpts[opt.key] ? T.accLt : T.card, border: `1px solid ${sendOpts[opt.key] ? T.acc : T.bdr}`, borderRadius: 10, marginBottom: 6, cursor: "pointer" }}>
                       <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${sendOpts[opt.key] ? T.acc : T.bdr}`, background: sendOpts[opt.key] ? T.acc : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700 }}>
@@ -4947,8 +4968,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                     <label style={S.fieldLabel}>Invia a (email)</label>
                     <input style={S.input} placeholder="email@destinatario.com" />
                   </div>
-                  <button onClick={sendCommessa} style={{ ...S.btn, background: "linear-gradient(135deg, #007aff, #0055cc)", marginTop: 4 }}>
-                    📧 Invia commessa completa
+                  <button onClick={sendCommessa} style={{ ...S.btn, background: "linear-gradient(135deg, #0D7C6B, #0055cc)", marginTop: 4 }}>
+                    <I d={ICO.mail} /> Invia commessa completa
                   </button>
                   <button style={S.btnCancel} onClick={() => setShowSendModal(false)}>Annulla</button>
                 </>
@@ -4979,7 +5000,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               <div style={{ marginBottom: 14 }}>
                 <label style={S.fieldLabel}>Tipo</label>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {[{ id: "task", l: "✅ Task", c: T.orange }, ...TIPI_EVENTO].map(t => (
+                  {[{ id: "task", l: "Task", ico: "checkCircle", c: T.orange }, ...TIPI_EVENTO].map(t => (
                     <div key={t.id} onClick={() => setNewEvent(ev => ({ ...ev, tipo: t.id }))} style={{ padding: "8px 10px", borderRadius: 8, border: `1px solid ${newEvent.tipo === t.id ? t.c : T.bdr}`, background: newEvent.tipo === t.id ? t.c + "18" : "transparent", textAlign: "center", fontSize: 11, fontWeight: 600, color: newEvent.tipo === t.id ? t.c : T.sub, cursor: "pointer" }}>
                       {t.l}
                     </div>
@@ -4991,7 +5012,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               <div style={{ marginBottom: 14 }}>
                 <label style={S.fieldLabel}>Priorità</label>
                 <div style={{ display: "flex", gap: 6 }}>
-                  {[{ id: "alta", l: "🔴 Alta", c: "#FF3B30" }, { id: "media", l: "🟠 Media", c: "#FF9500" }, { id: "bassa", l: "⚪ Bassa", c: "#8E8E93" }].map(p => (
+                  {[{ id: "alta", l: "⚠ Alta", c: "#FF3B30" }, { id: "media", l: "⚠ Media", c: "#FF9500" }, { id: "bassa", l: "● Bassa", c: "#8E8E93" }].map(p => (
                     <div key={p.id} onClick={() => setNewEvent(ev => ({ ...ev, _taskPriority: p.id } as any))} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: `1px solid ${((newEvent as any)._taskPriority || "media") === p.id ? p.c : T.bdr}`, background: ((newEvent as any)._taskPriority || "media") === p.id ? p.c + "18" : "transparent", textAlign: "center", fontSize: 12, fontWeight: 600, color: ((newEvent as any)._taskPriority || "media") === p.id ? p.c : T.sub, cursor: "pointer" }}>
                       {p.l}
                     </div>
@@ -5028,11 +5049,11 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                 }}>
                   <option value="">— Seleziona cliente —</option>
                   {contatti.filter(ct => ct.tipo === "cliente").map(ct => <option key={ct.id || ct.nome} value={ct.nome}>{ct.nome}{ct.cognome ? " " + ct.cognome : ""}</option>)}
-                  <option value="__new__">➕ Nuovo cliente...</option>
+                  <option value="__new__"><I d={ICO.plus} /> Nuovo cliente...</option>
                 </select>
                 {(newEvent as any)._newCliente && (
                   <div style={{ background: T.bgSec, borderRadius: 10, padding: 12, marginTop: 8, border: `1px solid ${T.bdr}` }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 8 }}>👤 Nuovo cliente</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 8 }}><I d={ICO.user} /> Nuovo cliente</div>
                     <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                       <input style={{ ...S.input, flex: 1 }} placeholder="Nome" value={(newEvent as any)._nomeCliente || ""} onChange={e => setNewEvent(ev => ({ ...ev, _nomeCliente: e.target.value } as any))} />
                       <input style={{ ...S.input, flex: 1 }} placeholder="Cognome" value={(newEvent as any)._cognomeCliente || ""} onChange={e => setNewEvent(ev => ({ ...ev, _cognomeCliente: e.target.value } as any))} />
@@ -5063,7 +5084,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               </div>
               {/* Reminder */}
               <div style={{ marginBottom: 16 }}>
-                <label style={S.fieldLabel}>⏰ Reminder al cliente</label>
+                <label style={S.fieldLabel}><I d={ICO.clock} /> Reminder al cliente</label>
                 <div style={{ display: "flex", gap: 6 }}>
                   {[
                     { id: "", l: "Nessuno" },
@@ -5082,7 +5103,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                 </div>
                 {newEvent.reminder && (
                   <div style={{ marginTop: 6, fontSize: 10, color: T.sub, padding: "5px 8px", background: T.accLt, borderRadius: 6 }}>
-                    📧 MASTRO ti avviserà di inviare il reminder — lo farai con 1 click dal banner in agenda
+                    <I d={ICO.mail} /> MASTRO ti avviserà di inviare il reminder — lo farai con 1 click dal banner in agenda
                   </div>
                 )}
               </div>
@@ -5097,7 +5118,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         {faseNotif && (
           <div style={{ position: "fixed", top: 60, left: "50%", transform: "translateX(-50%)", maxWidth: 380, width: "90%", padding: "12px 16px", borderRadius: 12, background: T.card, border: `1px solid ${faseNotif.color}40`, boxShadow: `0 4px 20px ${faseNotif.color}30`, zIndex: 300, display: "flex", alignItems: "center", gap: 10, animation: "fadeIn 0.3s ease" }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: faseNotif.color + "20", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 18 }}>📧</span>
+              <span style={{ fontSize: 18 }}><I d={ICO.mail} /></span>
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Avanzato a {faseNotif.fase}</div>
@@ -5111,14 +5132,14 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         {showCompose && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={e => e.target === e.currentTarget && setShowCompose(false)}>
             <div style={{ background: T.card, borderRadius: 16, width: "100%", maxWidth: 420, padding: 20, maxHeight: "80vh", overflowY: "auto" }}>
-              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>✏️ Nuovo messaggio</div>
+              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}><I d={ICO.edit} /> Nuovo messaggio</div>
               <div style={{ marginBottom: 12 }}>
                 <label style={S.fieldLabel}>Invia via</label>
                 <div style={{ display: "flex", gap: 4 }}>
                   {[
                     { id: "whatsapp", l: "💬 WhatsApp", c: "#25d366" },
                     { id: "email", l: "📧 Email", c: T.blue },
-                    { id: "sms", l: "📱 SMS", c: T.orange },
+                    { id: "sms", l: "📞 SMS", c: T.orange },
                     { id: "telegram", l: "✈️ Telegram", c: "#0088cc" },
                   ].map(ch => (
                     <div key={ch.id} onClick={() => setComposeMsg(c => ({ ...c, canale: ch.id }))} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: `1.5px solid ${composeMsg.canale === ch.id ? ch.c : T.bdr}`, background: composeMsg.canale === ch.id ? ch.c + "15" : T.card, textAlign: "center", cursor: "pointer", fontSize: 10, fontWeight: 600, color: composeMsg.canale === ch.id ? ch.c : T.sub }}>
@@ -5143,9 +5164,9 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                 <textarea style={{ width: "100%", padding: 12, fontSize: 13, border: `1px solid ${T.bdr}`, borderRadius: 10, background: T.bg, minHeight: 80, resize: "vertical", fontFamily: FF, boxSizing: "border-box" }} placeholder="Scrivi il messaggio..." value={composeMsg.text} onChange={e => setComposeMsg(c => ({ ...c, text: e.target.value }))} />
               </div>
               <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-                {[{ ico: "📎", l: "File" }, { ico: "📷", l: "Foto" }, { ico: "🎤", l: "Audio" }, { ico: "📍", l: "Posizione" }].map((b, i) => (
+                {[{ ico: "paperclip", l: "File" }, { ico: "camera", l: "Foto" }, { ico: "mic", l: "Audio" }, { ico: "mapPin", l: "Posizione" }].map((b, i) => (
                   <div key={i} style={{ flex: 1, padding: "8px 4px", background: T.bg, borderRadius: 8, border: `1px solid ${T.bdr}`, textAlign: "center", cursor: "pointer" }}>
-                    <div style={{ fontSize: 16 }}>{b.ico}</div>
+                    <div><I d={ICO[b.ico]} s={16} c={T.sub} /></div>
                     <div style={{ fontSize: 9, fontWeight: 600, color: T.sub, marginTop: 1 }}>{b.l}</div>
                   </div>
                 ))}
@@ -5175,7 +5196,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
             <div style={{ background: T.card, borderRadius: 16, width: "100%", maxWidth: 380, padding: 20 }}>
               {showAllegatiModal === "nota" && (
                 <>
-                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>📝 Nuova nota</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}><I d={ICO.fileText} /> Nuova nota</div>
                   <textarea style={{ width: "100%", padding: 12, fontSize: 13, border: `1px solid ${T.bdr}`, borderRadius: 10, background: T.bg, minHeight: 100, resize: "vertical", fontFamily: FF, boxSizing: "border-box" }} placeholder="Scrivi la nota..." value={allegatiText} onChange={e => setAllegatiText(e.target.value)} autoFocus />
                   <button onClick={() => { if (allegatiText.trim()) { addAllegato("nota", allegatiText.trim()); setShowAllegatiModal(null); setAllegatiText(""); } }} style={{ ...S.btn, marginTop: 10, opacity: allegatiText.trim() ? 1 : 0.5 }}>Salva nota</button>
                 </>
@@ -5183,8 +5204,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               {showAllegatiModal === "vocale" && (
                 <>
                   <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #ff3b30, #ff6b6b)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontSize: 16, color: "#fff" }}>🎤</span>
+                    <span style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #DC4444, #ff6b6b)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 16, color: "#fff" }}><I d={ICO.mic} /></span>
                     </span>
                     <span>Nota Vocale</span>
                   </div>
@@ -5194,7 +5215,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                       {Array.from({ length: 32 }).map((_, i) => (
                         <div key={i} style={{
                           width: 3, borderRadius: 2,
-                          background: isRecording ? "#ff3b30" : T.bdr,
+                          background: isRecording ? "#DC4444" : T.bdr,
                           height: isRecording ? (Math.sin(Date.now() / 200 + i * 0.5) * 0.5 + 0.5) * 40 + 8 : 8,
                           transition: "height 0.15s",
                           animation: isRecording ? `audioWave 0.6s ease-in-out infinite` : "none",
@@ -5212,7 +5233,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                     <div onClick={() => {
                       if (!isRecording) { startMediaRecording("vocale"); }
                       else { stopMediaRecording("vocale"); }
-                    }} style={{ width: 70, height: 70, borderRadius: "50%", background: isRecording ? "linear-gradient(135deg, #ff3b30, #cc0000)" : "linear-gradient(135deg, #ff3b30, #ff6b6b)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", cursor: "pointer", boxShadow: isRecording ? "0 0 24px rgba(255,59,48,0.5)" : "0 4px 16px rgba(255,59,48,0.3)" }}>
+                    }} style={{ width: 70, height: 70, borderRadius: "50%", background: isRecording ? "linear-gradient(135deg, #DC4444, #cc0000)" : "linear-gradient(135deg, #DC4444, #ff6b6b)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", cursor: "pointer", boxShadow: isRecording ? "0 0 24px rgba(255,59,48,0.5)" : "0 4px 16px rgba(255,59,48,0.3)" }}>
                       <span style={{ fontSize: 28, color: "#fff" }}>{isRecording ? "⏹" : "🎤"}</span>
                     </div>
                     <div style={{ fontSize: 12, color: isRecording ? T.red : T.sub, marginTop: 10, fontWeight: isRecording ? 700 : 400 }}>
@@ -5224,8 +5245,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               {showAllegatiModal === "video" && (
                 <>
                   <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #007aff, #5856d6)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontSize: 16, color: "#fff" }}>🎬</span>
+                    <span style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #0D7C6B, #8B5CF6)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 16, color: "#fff" }}><I d={ICO.clapperboard} /></span>
                     </span>
                     <span>Registra Video</span>
                   </div>
@@ -5236,7 +5257,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                       {/* REC badge */}
                       {isRecording && (
                         <div style={{ position: "absolute" as const, top: 10, left: 10, display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.6)", borderRadius: 6, padding: "4px 10px" }}>
-                          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s infinite" }} />
+                          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#DC4444", animation: "pulse 1s infinite" }} />
                           <span style={{ fontSize: 13, fontWeight: 700, fontFamily: FM, color: "#fff" }}>
                             {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
                           </span>
@@ -5245,7 +5266,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                       {/* Camera switch hint */}
                       {!isRecording && (
                         <div style={{ position: "absolute" as const, bottom: 10, left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.5)", borderRadius: 6, padding: "4px 12px" }}>
-                          <span style={{ fontSize: 10, color: "#fff", fontWeight: 600 }}>📹 Camera posteriore</span>
+                          <span style={{ fontSize: 10, color: "#fff", fontWeight: 600 }}><I d={ICO.camera} /> Camera posteriore</span>
                         </div>
                       )}
                     </div>
@@ -5254,10 +5275,10 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                       <div onClick={() => {
                         if (!isRecording) { startMediaRecording("video"); }
                         else { stopMediaRecording("video"); }
-                      }} style={{ width: 64, height: 64, borderRadius: "50%", border: "4px solid " + (isRecording ? "#ff3b30" : "#007aff"), background: isRecording ? "#ff3b30" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s" }}>
+                      }} style={{ width: 64, height: 64, borderRadius: "50%", border: "4px solid " + (isRecording ? "#DC4444" : "#0D7C6B"), background: isRecording ? "#DC4444" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s" }}>
                         {isRecording
                           ? <div style={{ width: 22, height: 22, borderRadius: 4, background: "#fff" }} />
-                          : <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#ff3b30" }} />
+                          : <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#DC4444" }} />
                         }
                       </div>
                     </div>
@@ -5282,7 +5303,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                 <span style={{ fontSize: 14, color: "#fff", fontWeight: 700 }}>
                   {cameraMode === "foto" ? "📷 Scatta Foto" : "🎬 Registra Video"}
                 </span>
-                {pendingFotoCat && <span style={{ fontSize: 10, color: "#ff9500", fontWeight: 700, background: "rgba(255,149,0,0.2)", padding: "2px 8px", borderRadius: 4 }}>{pendingFotoCat}</span>}
+                {pendingFotoCat && <span style={{ fontSize: 10, color: "#E8A020", fontWeight: 700, background: "rgba(255,149,0,0.2)", padding: "2px 8px", borderRadius: 4 }}>{pendingFotoCat}</span>}
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 {/* Switch mode */}
@@ -5293,7 +5314,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                 {/* Import from gallery */}
                 <div onClick={() => { fotoVanoRef.current?.click(); }}
                   style={{ padding: "4px 10px", borderRadius: 6, background: "rgba(255,255,255,0.15)", fontSize: 10, color: "#fff", fontWeight: 600, cursor: "pointer" }}>
-                  🖼 Galleria
+                  <I d={ICO.image} /> Galleria
                 </div>
                 <div onClick={closeCamera}
                   style={{ padding: "4px 10px", borderRadius: 6, background: "rgba(255,59,48,0.3)", fontSize: 10, color: "#ff6b6b", fontWeight: 700, cursor: "pointer" }}>
@@ -5307,7 +5328,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               {/* REC indicator for video */}
               {cameraMode === "video" && isRecording && (
                 <div style={{ position: "absolute", top: 16, left: 16, display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,0.6)", borderRadius: 8, padding: "6px 12px" }}>
-                  <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff3b30", animation: "pulse 1s infinite" }} />
+                  <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#DC4444", animation: "pulse 1s infinite" }} />
                   <span style={{ fontSize: 16, fontWeight: 700, fontFamily: FM, color: "#fff" }}>
                     {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
                   </span>
@@ -5317,7 +5338,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               {cameraMode === "foto" && (
                 <div style={{ position: "absolute", top: 16, right: 16, background: "rgba(0,0,0,0.6)", borderRadius: 8, padding: "6px 12px" }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>
-                    📷 {Object.values(selectedVano?.foto || {}).filter(f => f.tipo === "foto" && (!pendingFotoCat || f.categoria === pendingFotoCat)).length} scattate
+                    <I d={ICO.camera} /> {Object.values(selectedVano?.foto || {}).filter(f => f.tipo === "foto" && (!pendingFotoCat || f.categoria === pendingFotoCat)).length} scattate
                   </span>
                 </div>
               )}
@@ -5333,8 +5354,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                 <div onClick={() => { if (!isRecording) startCameraVideoRec(); else stopCameraVideoRec(); }}
                   style={{ width: 72, height: 72, borderRadius: "50%", border: "4px solid #fff", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                   {isRecording
-                    ? <div style={{ width: 26, height: 26, borderRadius: 4, background: "#ff3b30" }} />
-                    : <div style={{ width: 58, height: 58, borderRadius: "50%", background: "#ff3b30" }} />
+                    ? <div style={{ width: 26, height: 26, borderRadius: 4, background: "#DC4444" }} />
+                    : <div style={{ width: 58, height: 58, borderRadius: "50%", background: "#DC4444" }} />
                   }
                 </div>
               )}
@@ -5351,7 +5372,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
               {aiPhotoStep === 0 && (
                 <>
                   <div style={{ textAlign: "center", marginBottom: 16 }}>
-                    <div style={{ width: 60, height: 60, borderRadius: 16, background: "linear-gradient(135deg, #af52de, #007aff)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 28 }}>🤖</div>
+                    <div style={{ width: 60, height: 60, borderRadius: 16, background: "linear-gradient(135deg, #af52de, #0D7C6B)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 28 }}><I d={ICO.cpu} /></div>
                     <div style={{ fontSize: 17, fontWeight: 800, color: "#af52de" }}>AI Misure da Foto</div>
                     <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>Inquadra il vano "{selectedVano?.nome}" e l'AI analizzerà l'immagine</div>
                   </div>
@@ -5359,10 +5380,10 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                     <div style={{ position: "absolute", inset: 20, border: "2px solid #af52de80", borderRadius: 8 }} />
                     <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: "#af52de30" }} />
                     <div style={{ position: "absolute", top: "50%", left: 0, right: 0, height: 1, background: "#af52de30" }} />
-                    <div style={{ color: "#af52de", fontSize: 12, fontWeight: 600, textAlign: "center", zIndex: 1 }}>📷 Simulazione fotocamera<br /><span style={{ fontSize: 10, color: "#af52de80" }}>Inquadra il serramento</span></div>
+                    <div style={{ color: "#af52de", fontSize: 12, fontWeight: 600, textAlign: "center", zIndex: 1 }}><I d={ICO.camera} /> Simulazione fotocamera<br /><span style={{ fontSize: 10, color: "#af52de80" }}>Inquadra il serramento</span></div>
                   </div>
-                  <button onClick={() => { setAiPhotoStep(1); setTimeout(() => setAiPhotoStep(2), 2000 + Math.random() * 1500); }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: "linear-gradient(135deg, #af52de, #007aff)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF, marginBottom: 8 }}>
-                    📸 Scatta e analizza
+                  <button onClick={() => { setAiPhotoStep(1); setTimeout(() => setAiPhotoStep(2), 2000 + Math.random() * 1500); }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: "linear-gradient(135deg, #af52de, #0D7C6B)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF, marginBottom: 8 }}>
+                    <I d={ICO.camera} /> Scatta e analizza
                   </button>
                   <button onClick={() => setShowAIPhoto(false)} style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FF, color: T.sub }}>Annulla</button>
                 </>
@@ -5392,7 +5413,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                     ))}
                   </div>
                   <div style={{ padding: "8px 12px", borderRadius: 8, background: "#fff3e0", border: "1px solid #ffe0b2", marginBottom: 12, fontSize: 10, color: "#e65100" }}>
-                    ⚠️ Le misure AI sono approssimative. Usa sempre il metro laser per le misure definitive.
+                    <I d={ICO.alertTriangle} />️ Le misure AI sono approssimative. Usa sempre il metro laser per le misure definitive.
                   </div>
                   <button onClick={() => {
                     if (selectedVano) {
@@ -5404,7 +5425,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                       updateMisura(selectedVano.id, "hDx", _aiBaseH - Math.floor(Math.random() * 4));
                     }
                     setShowAIPhoto(false);
-                  }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: "linear-gradient(135deg, #af52de, #007aff)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF, marginBottom: 8 }}>
+                  }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: "linear-gradient(135deg, #af52de, #0D7C6B)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FF, marginBottom: 8 }}>
                     ✅ Applica misure suggerite
                   </button>
                   <button onClick={() => setShowAIPhoto(false)} style={{ width: "100%", padding: 10, borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FF, color: T.sub }}>Solo anteprima, non applicare</button>
@@ -5418,7 +5439,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
         <div onClick={() => setShowPaywall(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: T.card, borderRadius: 16, maxWidth: 360, width: "100%", overflow: "hidden" }}>
             <div style={{ padding: "20px 20px 12px", textAlign: "center" as const }}>
-              <div style={{ fontSize: 40, marginBottom: 8 }}>💎</div>
+              <div style={{ fontSize: 40, marginBottom: 8 }}><I d={ICO.gem} /></div>
               <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 6 }}>Passa a un piano superiore</div>
               <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.5 }}>{showPaywall}</div>
             </div>
@@ -5435,7 +5456,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
           </div>
         </div>
       )}
-      {/* === 📥 INBOX DOCUMENTI — Modal globale === */}
+      {/* === <I d={ICO.download} /> INBOX DOCUMENTI — Modal globale === */}
       {showContabilita && <PanelErrorBoundary name="Contabilità">{renderContabilita()}</PanelErrorBoundary>}
         {showInboxDoc && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
@@ -5443,14 +5464,14 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
           <div style={{ background: T.card, borderRadius: "20px 20px 0 0", maxWidth: 500, width: "100%", maxHeight: "85vh", overflowY: "auto", padding: "20px 20px 30px" }}>
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: T.text }}>📥 Documento in Arrivo</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: T.text }}><I d={ICO.download} /> Documento in Arrivo</div>
               <div onClick={() => { setShowInboxDoc(false); setInboxResult(null); }} style={{ width: 30, height: 30, borderRadius: "50%", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>✕</div>
             </div>
 
             {/* Loading */}
             {inboxResult?.stato === "caricamento" && (
               <div style={{ textAlign: "center", padding: 30 }}>
-                <div style={{ fontSize: 36, animation: "spin 1s linear infinite", display: "inline-block" }}>📄</div>
+                <div style={{ fontSize: 36, animation: "spin 1s linear infinite", display: "inline-block" }}><I d={ICO.fileText} /></div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginTop: 8 }}>Caricamento...</div>
                 <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>{inboxResult.file}</div>
               </div>
@@ -5459,7 +5480,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
             {/* AI Analysis */}
             {inboxResult?.stato === "analisi" && (
               <div style={{ textAlign: "center", padding: 30 }}>
-                <div style={{ fontSize: 36, animation: "spin 1s linear infinite", display: "inline-block" }}>🤖</div>
+                <div style={{ fontSize: 36, animation: "spin 1s linear infinite", display: "inline-block" }}><I d={ICO.cpu} /></div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "#af52de", marginTop: 8 }}>AI sta leggendo il documento...</div>
                 <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>Estraggo: totale, consegna, pagamento, articoli</div>
               </div>
@@ -5473,19 +5494,19 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                   <div style={{ fontSize: 28 }}>{inboxResult.tipo?.includes("pdf") ? "📄" : "📷"}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{inboxResult.file}</div>
-                    {inboxResult.fileUrl && <div onClick={() => window.open(inboxResult.fileUrl, "_blank")} style={{ fontSize: 10, color: "#007aff", cursor: "pointer", marginTop: 2 }}>🔗 Apri originale</div>}
+                    {inboxResult.fileUrl && <div onClick={() => window.open(inboxResult.fileUrl, "_blank")} style={{ fontSize: 10, color: "#0D7C6B", cursor: "pointer", marginTop: 2 }}><I d={ICO.link} /> Apri originale</div>}
                   </div>
                 </div>
 
                 {/* AI Classification badge */}
                 {(() => {
-                  const tipoLabels: any = { firma: "✍️ Preventivo Firmato", conferma: "📄 Conferma Fornitore", fattura: "💰 Fattura", ricevuta: "🏦 Ricevuta Pagamento", foto: "📷 Foto Cantiere", sconosciuto: "❓ Documento" };
-                  const tipoColors: any = { firma: "#34c759", conferma: "#af52de", fattura: "#007aff", ricevuta: "#ff9500", foto: "#5856d6", sconosciuto: "#86868b" };
+                  const tipoLabels: any = { firma: "Preventivo Firmato", conferma: "Conferma Fornitore", fattura: "Fattura", ricevuta: "Ricevuta Pagamento", foto: "Foto Cantiere", sconosciuto: "Documento" };
+                  const tipoColors: any = { firma: "#1A9E73", conferma: "#af52de", fattura: "#0D7C6B", ricevuta: "#E8A020", foto: "#8B5CF6", sconosciuto: "#86868b" };
                   const col = tipoColors[inboxResult.docTipo] || "#86868b";
                   return (
                     <div style={{ ...S.card, padding: 12, marginBottom: 12, background: col + "10", border: `2px solid ${col}30` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                        <span style={{ fontSize: 11, fontWeight: 800, color: col, textTransform: "uppercase" }}>🤖 MASTRO ha classificato:</span>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: col, textTransform: "uppercase" }}><I d={ICO.cpu} /> MASTRO ha classificato:</span>
                         <span style={{ fontSize: 10, color: T.sub }}>{inboxResult.confidence}% sicuro</span>
                       </div>
                       <div style={{ fontSize: 16, fontWeight: 900, color: col }}>{tipoLabels[inboxResult.docTipo] || "Documento"}</div>
@@ -5501,7 +5522,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                 {/* Extracted data (for conferma) */}
                 {inboxResult.dati && (inboxResult.dati.fornitoreNome || inboxResult.dati.totale > 0 || inboxResult.dati.settimane > 0) && (
                   <div style={{ ...S.card, padding: 12, marginBottom: 12, background: "#af52de08", border: `1px solid #af52de20` }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: "#af52de", textTransform: "uppercase", marginBottom: 8 }}>🤖 Dati Estratti</div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "#af52de", textTransform: "uppercase", marginBottom: 8 }}><I d={ICO.cpu} /> Dati Estratti</div>
                     {inboxResult.dati.fornitoreNome && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: T.sub }}>Fornitore</span><b>{inboxResult.dati.fornitoreNome}</b></div>}
                     {inboxResult.dati.totale > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: T.sub }}>Totale</span><b style={{ color: "#af52de" }}>€{inboxResult.dati.totale.toLocaleString("it-IT", { minimumFractionDigits: 2 })}</b></div>}
                     {inboxResult.dati.settimane > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" }}><span style={{ color: T.sub }}>Produzione</span><b>{inboxResult.dati.settimane} settimane</b></div>}
@@ -5511,11 +5532,11 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
 
                 {/* === CONFERMA type: assign to ordine === */}
                 {inboxResult.docTipo === "conferma" && inboxResult.matchedOrdine && (
-                  <div style={{ ...S.card, padding: 12, marginBottom: 12, background: "#34c75908", border: `2px solid #34c759` }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: "#34c759", marginBottom: 6 }}>✅ ORDINE TROVATO</div>
+                  <div style={{ ...S.card, padding: 12, marginBottom: 12, background: "#1A9E7308", border: `2px solid #1A9E73` }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "#1A9E73", marginBottom: 6 }}>✅ ORDINE TROVATO</div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{inboxResult.matchedCommessa?.code} — {inboxResult.matchedCommessa?.cliente}</div>
                     <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{inboxResult.matchedOrdine.fornitore?.nome || "—"} · €{(inboxResult.matchedOrdine.totaleIva || 0).toLocaleString("it-IT")}</div>
-                    <button onClick={() => confermaInboxDoc(inboxResult.matchedOrdine.id)} style={{ width: "100%", marginTop: 10, padding: 14, borderRadius: 12, border: "none", background: "#34c759", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                    <button onClick={() => confermaInboxDoc(inboxResult.matchedOrdine.id)} style={{ width: "100%", marginTop: 10, padding: 14, borderRadius: 12, border: "none", background: "#1A9E73", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
                       ✅ ASSEGNA A QUESTO ORDINE
                     </button>
                   </div>
@@ -5539,11 +5560,11 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                 {(inboxResult.docTipo === "firma" || inboxResult.docTipo === "ricevuta" || inboxResult.docTipo === "foto" || inboxResult.docTipo === "sconosciuto") && (
                   <div>
                     {inboxResult.matchedCommessa && (
-                      <div style={{ ...S.card, padding: 12, marginBottom: 12, background: "#34c75908", border: `2px solid #34c759` }}>
-                        <div style={{ fontSize: 11, fontWeight: 800, color: "#34c759", marginBottom: 6 }}>✅ COMMESSA TROVATA</div>
+                      <div style={{ ...S.card, padding: 12, marginBottom: 12, background: "#1A9E7308", border: `2px solid #1A9E73` }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: "#1A9E73", marginBottom: 6 }}>✅ COMMESSA TROVATA</div>
                         <div style={{ fontSize: 14, fontWeight: 700 }}>{inboxResult.matchedCommessa.code} — {inboxResult.matchedCommessa.cliente} {inboxResult.matchedCommessa.cognome || ""}</div>
                         <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{inboxResult.matchedCommessa.indirizzo || "—"}</div>
-                        <button onClick={() => assegnaDocUniversale(inboxResult.matchedCommessa.id, inboxResult.docTipo)} style={{ width: "100%", marginTop: 10, padding: 14, borderRadius: 12, border: "none", background: "#34c759", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                        <button onClick={() => assegnaDocUniversale(inboxResult.matchedCommessa.id, inboxResult.docTipo)} style={{ width: "100%", marginTop: 10, padding: 14, borderRadius: 12, border: "none", background: "#1A9E73", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
                           ✅ ASSEGNA QUI
                         </button>
                       </div>
@@ -5569,10 +5590,10 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                   <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, marginBottom: 6 }}>Classificazione sbagliata? Scegli il tipo:</div>
                   <div style={{ display: "flex", gap: 4, justifyContent: "center", flexWrap: "wrap" as any }}>
                     {[
-                      { id: "firma", label: "✍️ Firma", col: "#34c759" },
+                      { id: "firma", label: "✏️ Firma", col: "#1A9E73" },
                       { id: "conferma", label: "📄 Conferma", col: "#af52de" },
-                      { id: "ricevuta", label: "🏦 Ricevuta", col: "#ff9500" },
-                      { id: "foto", label: "📷 Foto", col: "#5856d6" },
+                      { id: "ricevuta", label: "🏭 Ricevuta", col: "#E8A020" },
+                      { id: "foto", label: "📷 Foto", col: "#8B5CF6" },
                     ].map(t => (
                       <span key={t.id} onClick={() => setInboxResult(prev => ({ ...prev, docTipo: t.id, confidence: 100 }))} style={{
                         padding: "6px 10px", borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: "pointer",
@@ -5596,7 +5617,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
           <div onClick={e => e.stopPropagation()} style={{ background: T.card, borderRadius: 16, width: "100%", maxWidth: 500, maxHeight: "80vh", overflow: "auto" }}>
             {/* Header */}
             <div style={{ padding: "16px 20px", borderBottom: `1px solid ${T.bdr}`, display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 20 }}>📋</span>
+              <I d={ICO.clipboard} s={20} c={T.acc} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: T.text }}>{docViewer.title}</div>
                 <div style={{ fontSize: 11, color: T.sub }}>{docViewer.docs.length} document{docViewer.docs.length !== 1 ? "i" : "o"}</div>
@@ -5606,18 +5627,18 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
             {/* Document list */}
             <div style={{ padding: 12 }}>
               {docViewer.docs.map((doc, di) => {
-                const tipoColors: any = { firma: "#34c759", fattura: "#007aff", ordine: "#ff9500", conferma: "#af52de", rilievo: "#5856d6", preventivo: "#ff2d55", montaggio: "#007aff", verbale: "#34c759" };
+                const tipoColors: any = { firma: "#1A9E73", fattura: "#0D7C6B", ordine: "#E8A020", conferma: "#af52de", rilievo: "#8B5CF6", preventivo: "#EF4444", montaggio: "#0D7C6B", verbale: "#1A9E73" };
                 const col = tipoColors[doc.tipo] || T.acc;
                 return (
                   <div key={di} style={{ padding: 14, marginBottom: 8, borderRadius: 12, border: `1px solid ${T.bdr}`, background: T.bg }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                       <div style={{ width: 40, height: 40, borderRadius: 10, background: col + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                        {doc.tipo === "firma" ? "✍️" : doc.tipo === "fattura" ? "💰" : doc.tipo === "ordine" ? "📦" : doc.tipo === "conferma" ? "📄" : doc.tipo === "rilievo" ? "📐" : doc.tipo === "preventivo" ? "📋" : doc.tipo === "montaggio" ? "🔧" : "📎"}
+                        <I d={ICO[doc.tipo === "firma" ? "signatureEdit" : doc.tipo === "fattura" ? "wallet" : doc.tipo === "ordine" ? "package" : doc.tipo === "conferma" ? "fileText" : doc.tipo === "rilievo" ? "ruler" : doc.tipo === "preventivo" ? "clipboard" : doc.tipo === "montaggio" ? "hammer" : "paperclip"]} s={14} c={T.sub} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 2 }}>{doc.nome}</div>
                         <div style={{ fontSize: 11, color: T.sub }}>{doc.detail || ""}</div>
-                        {doc.data && <div style={{ fontSize: 10, color: T.sub, marginTop: 2 }}>📅 {doc.data}</div>}
+                        {doc.data && <div style={{ fontSize: 10, color: T.sub, marginTop: 2 }}><I d={ICO.calendar} /> {doc.data}</div>}
                       </div>
                       <span style={{ fontSize: 10, fontWeight: 700, color: col, background: col + "15", padding: "2px 8px", borderRadius: 6, textTransform: "uppercase" as any }}>{doc.tipo}</span>
                     </div>
@@ -5629,14 +5650,14 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                         </a>
                       ) : (
                         <button onClick={() => { alert(`In produzione questo aprirà il file "${doc.nome}" da Supabase Storage.\n\nNella demo i documenti sono simulati.`); }} style={{ flex: 1, padding: 8, borderRadius: 8, border: `1px solid ${col}`, background: col + "08", color: col, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                          👁 Visualizza
+                          <I d={ICO.eye} /> Visualizza
                         </button>
                       )}
                       <button onClick={() => {
                         const tel = (selectedCM?.telefono || "").replace(/\D/g, "");
                         window.open(`https://wa.me/${tel.startsWith("39") ? tel : "39" + tel}?text=${encodeURIComponent(`Ecco il documento: ${doc.nome}`)}`, "_blank");
                       }} style={{ flex: 1, padding: 8, borderRadius: 8, border: `1px solid #25d366`, background: "#25d36608", color: "#25d366", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                        💬 WhatsApp
+                        <I d={ICO.messageCircle} /> WhatsApp
                       </button>
                     </div>
                   </div>
@@ -5648,7 +5669,7 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
                 {/* ═══ CRONOLOGIA ═══ */}
                 <div style={{ marginTop: 12 }}>
                   <div onClick={() => setShowCronologia(!showCronologia)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "8px 0" }}>
-                    <span style={{ fontSize: 11 }}>📜</span>
+                    <span style={{ fontSize: 11 }}><I d={ICO.scroll} /></span>
                     <span style={{ fontSize: 11, fontWeight: 700, color: T.text }}>Cronologia ({(c.log || []).length})</span>
                     <span style={{ marginLeft: "auto", fontSize: 10, color: T.sub }}>{showCronologia ? "▲" : "▼"}</span>
                   </div>
@@ -5662,10 +5683,10 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
 
                 {selectedCM && (selectedCM.allegati || []).length > 0 && (
               <div style={{ padding: "0 12px 16px" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 6 }}>📎 TUTTI GLI ALLEGATI COMMESSA ({selectedCM.allegati.length})</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 6 }}><I d={ICO.paperclip} /> TUTTI GLI ALLEGATI COMMESSA ({selectedCM.allegati.length})</div>
                 {(selectedCM.allegati || []).map((a: any, ai: number) => (
                   <div key={ai} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: ai < selectedCM.allegati.length - 1 ? `1px solid ${T.bdr}` : "none" }}>
-                    <span style={{ fontSize: 14 }}>{a.tipo === "firma" ? "✍️" : a.tipo === "fattura" ? "💰" : a.tipo === "ordine" ? "📦" : "📎"}</span>
+                    <span><I d={ICO[a.tipo === "firma" ? "signatureEdit" : a.tipo === "fattura" ? "wallet" : a.tipo === "ordine" ? "package" : "paperclip"]} s={14} c={T.sub} /></span>
                     <div style={{ flex: 1, fontSize: 11, color: T.text, fontWeight: 600 }}>{a.nome}</div>
                     <span style={{ fontSize: 10, color: T.sub }}>{a.data}</span>
                   </div>
@@ -5675,6 +5696,8 @@ ${az.indirizzo ? (az.indirizzo.split(",").pop()?.trim() || "") + ", " : ""}${ogg
           </div>
         </div>
       )}
+    {/* === CONFIGURATORE STRUTTURE === */}
+    {showStrutture && <MastroStrutture onClose={() => setShowStrutture(false)} />}
     </>
     </MastroContext.Provider>
   );

@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════
 import React from "react";
 import { useMastro } from "./MastroContext";
-import { FM, ICO, Ico } from "./mastro-constants";
+import { FM, ICO, Ico, I } from "./mastro-constants";
 
 export default function RilieviListPanel() {
   const {
@@ -32,7 +32,7 @@ export default function RilieviListPanel() {
     calcolaVanoPrezzo, getVaniAttivi, deleteCommessa, setFaseTo,
     PipelineBar, ORDINE_STATI,
     // Business logic
-    generaPreventivoPDF, creaFattura, creaOrdineFornitore,
+    generaPreventivoPDF, generaPreventivoCondivisibile, creaFattura, creaOrdineFornitore,
     apriInboxDocumento,
   } = useMastro();
 
@@ -42,18 +42,32 @@ export default function RilieviListPanel() {
 
     const salvaRilievo = () => {
       const n = rilievi.length + 1;
+      // ═══ EREDITA VANI dal rilievo precedente (deep clone) ═══
+      const prevRilievo = rilievi.length > 0 ? rilievi[rilievi.length - 1] : null;
+      const vaniEreditati = prevRilievo?.vani?.length > 0
+        ? prevRilievo.vani.map(v => ({
+            ...JSON.parse(JSON.stringify(v)),
+            id: Date.now() + Math.random() * 10000, // nuovo ID
+            _ereditatoDa: v.id, // riferimento al vano originale per il report differenze
+          }))
+        : [];
       const nr = {
         id: Date.now(), n,
         data: nuovoRilData.data || new Date().toISOString().split("T")[0],
-        ora: nuovoRilData.ora || "",
-        rilevatore: nuovoRilData.rilevatore || "",
-        tipo: nuovoRilTipo,
+        ora: nuovoRilData.ora || new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
+        rilevatore: nuovoRilData.rilevatore || "Fabio",
+        tipo: autoTipo,
         motivoModifica: nuovoRilData.motivoModifica || "",
         note: nuovoRilData.note || "",
         stato: "nuovo",
-        vani: [],
+        vani: vaniEreditati,
+        _ereditatiCount: vaniEreditati.length, // per il log
       };
-      const updCM = { ...c, rilievi: [...rilievi, nr], aggiornato: "Oggi" };
+      // Log commessa
+      const logEntry = autoTipo === "modifica" 
+        ? { chi: nr.rilevatore || "Fabio", cosa: `modifica misure: ${nuovoRilData.motivoModifica || "nuove misure"}`, quando: "Adesso", color: "#ff9500" }
+        : { chi: nr.rilevatore || "Fabio", cosa: `rilievo #${n} creato${vaniEreditati.length > 0 ? ` (${vaniEreditati.length} vani ereditati da R${n-1})` : ""}`, quando: "Adesso", color: T.acc };
+      const updCM = { ...c, rilievi: [...rilievi, nr], aggiornato: "Oggi", log: [logEntry, ...(c.log || [])] };
       setCantieri(cs => cs.map(x => x.id === c.id ? updCM : x));
       setSelectedCM(updCM);
       setShowNuovoRilievo(false);
@@ -62,8 +76,22 @@ export default function RilieviListPanel() {
       setSelectedRilievo(nr);
     };
 
+    // ═══ AUTO-TIPO LOGIC ═══
+    // Il tipo si calcola dal punto in cui sei nella pipeline
+    const hasFirma = !!c.firmaCliente;
+    const hasVaniMisurati = rilievi.some(r => (r.vani || []).some(v => Object.values(v.misure || {}).filter(x => (x as number) > 0).length > 0));
+    const autoTipo = !hasFirma 
+      ? (rilievi.length === 0 ? "rilievo" : "rilievo")  // pre-firma → sempre indicativo
+      : "modifica";  // post-firma → è una modifica
+
     // == WIZARD NUOVO RILIEVO ==
-    if (showNuovoRilievo) return (
+    if (showNuovoRilievo) {
+      // Pre-fill data e ora se vuoti
+      const oggi = new Date().toISOString().split("T")[0];
+      const oraAdesso = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+      if (!nuovoRilData.data) setTimeout(() => setNuovoRilData(d => ({ ...d, data: d.data || oggi, ora: d.ora || oraAdesso })), 0);
+
+      return (
       <div style={{ paddingBottom: 80 }}>
         <div style={S.header}>
           <div onClick={() => setShowNuovoRilievo(false)} style={{ cursor: "pointer", padding: 4 }}><Ico d={ICO.back} s={20} c={T.sub} /></div>
@@ -73,56 +101,98 @@ export default function RilieviListPanel() {
           </div>
         </div>
         <div style={{ padding: 16 }}>
-          {/* Tipo */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Tipo di visita</div>
-          {[
-            { k: "rilievo",    ico: "📐", l: "Rilievo misure",    d: "Misuri i vani del cantiere" },
-            { k: "definitiva", ico: "✅", l: "Misure definitive", d: "Conferma finale — si va in produzione" },
-            { k: "modifica",   ico: "🔧", l: "Modifica",          d: "Cliente cambia configurazione o aggiunge vani" },
-          ].map(t => (
-            <div key={t.k} onClick={() => setNuovoRilTipo(t.k)}
-              style={{ ...S.card, padding: "12px 14px", marginBottom: 8, cursor: "pointer",
-                border: `1.5px solid ${nuovoRilTipo === t.k ? T.acc : T.bdr}`,
-                background: nuovoRilTipo === t.k ? T.accLt : T.card,
-                display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize: 22 }}>{t.ico}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: nuovoRilTipo === t.k ? T.acc : T.text }}>{t.l}</div>
-                <div style={{ fontSize: 11, color: T.sub }}>{t.d}</div>
+
+          {/* ═══ STATO AUTOMATICO ═══ */}
+          {autoTipo === "rilievo" && (
+            <div style={{ padding: "14px 16px", borderRadius: 12, marginBottom: 16, border: `1.5px solid ${T.acc}40`, background: `${T.acc}08` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 22 }}>📐</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: T.acc }}>Rilievo {rilievi.length === 0 ? "iniziale" : `#${rilievi.length + 1}`}</div>
+                  <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>
+                    {rilievi.length === 0 
+                      ? "Prima visita al cantiere — le misure saranno indicative fino alla firma del cliente"
+                      : `Rilievo aggiuntivo — hai già ${rilievi.length} rilievi. Le misure restano indicative fino alla firma`}
+                  </div>
+                </div>
+                <span style={{ padding: "4px 10px", borderRadius: 8, background: "#ff950020", color: "#ff9500", fontSize: 10, fontWeight: 800 }}>⚠ INDICATIVO</span>
               </div>
-              {nuovoRilTipo === t.k && <div style={{ width: 18, height: 18, borderRadius: "50%", background: T.acc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11 }}>✓</div>}
-            </div>
-          ))}
-          {nuovoRilTipo === "modifica" && (
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>MOTIVO MODIFICA</div>
-              <input style={S.input} placeholder="Es: cliente cambia 3 balconi in finestre..." value={nuovoRilData.motivoModifica} onChange={e => setNuovoRilData(d => ({...d, motivoModifica: e.target.value}))} />
             </div>
           )}
-          {/* Dati */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, marginBottom: 8, marginTop: 16, textTransform: "uppercase", letterSpacing: 0.5 }}>Data e rilevatore</div>
+
+          {autoTipo === "modifica" && (
+            <div style={{ padding: "14px 16px", borderRadius: 12, marginBottom: 16, border: "1.5px solid #ff950060", background: "#ff950008" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <span style={{ fontSize: 22 }}>🔧</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#ff9500" }}>Modifica post-firma</div>
+                  <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>
+                    ⚠️ Il cliente ha già firmato il preventivo. Questa modifica potrebbe richiedere un nuovo preventivo e ritardare la produzione.
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginBottom: 5 }}>MOTIVO DELLA MODIFICA *</div>
+              <input style={{ ...S.input, borderColor: !nuovoRilData.motivoModifica ? "#ff9500" : T.bdr }} placeholder="Es: cliente cambia 3 balconi in finestre..." value={nuovoRilData.motivoModifica} onChange={e => setNuovoRilData(d => ({...d, motivoModifica: e.target.value}))} />
+            </div>
+          )}
+
+          {/* ═══ VANI EREDITATI (se ci sono rilievi precedenti) ═══ */}
+          {rilievi.length > 0 && (() => {
+            const prevR = rilievi[rilievi.length - 1];
+            const prevVani = prevR?.vani || [];
+            return prevVani.length > 0 ? (
+              <div style={{ padding: "12px 14px", borderRadius: 12, marginBottom: 16, border: `1.5px solid #34c75940`, background: "#34c75908" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 16 }}>📋</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#34c759" }}>{prevVani.length} vani ereditati da R{prevR.n}</div>
+                    <div style={{ fontSize: 11, color: T.sub }}>Continui a misurare gli stessi vani. Puoi aggiungerne di nuovi o rimuoverne.</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {prevVani.slice(0, 8).map((v, i) => (
+                    <span key={i} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 6, background: "#34c75915", color: "#34c759", fontWeight: 700 }}>
+                      {v.nome || `Vano ${i+1}`}
+                    </span>
+                  ))}
+                  {prevVani.length > 8 && <span style={{ fontSize: 10, color: T.sub }}>+{prevVani.length - 8} altri</span>}
+                </div>
+              </div>
+            ) : null;
+          })()}
+
+          {/* ═══ DATA + ORA (pre-compilati) ═══ */}
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>DATA</div>
-              <input style={S.input} type="date" value={nuovoRilData.data} onChange={e => setNuovoRilData(d => ({...d, data: e.target.value}))} />
+              <input style={S.input} type="date" value={nuovoRilData.data || oggi} onChange={e => setNuovoRilData(d => ({...d, data: e.target.value}))} />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>ORA</div>
-              <input style={S.input} type="time" value={nuovoRilData.ora} onChange={e => setNuovoRilData(d => ({...d, ora: e.target.value}))} />
+              <input style={S.input} type="time" value={nuovoRilData.ora || oraAdesso} onChange={e => setNuovoRilData(d => ({...d, ora: e.target.value}))} />
             </div>
           </div>
+
+          {/* Rilevatore + Note (collassabili) */}
           <div style={{ marginBottom: 10 }}>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>RILEVATORE</div>
             <input style={S.input} placeholder="Chi esegue il rilievo..." value={nuovoRilData.rilevatore} onChange={e => setNuovoRilData(d => ({...d, rilevatore: e.target.value}))} />
           </div>
           <div>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>NOTE</div>
-            <textarea style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="Note preliminari..." value={nuovoRilData.note} onChange={e => setNuovoRilData(d => ({...d, note: e.target.value}))} />
+            <textarea style={{ ...S.input, minHeight: 50, resize: "vertical" }} placeholder="Note preliminari (opzionale)..." value={nuovoRilData.note} onChange={e => setNuovoRilData(d => ({...d, note: e.target.value}))} />
           </div>
-          <button onClick={salvaRilievo} style={{ ...S.btn, width: "100%", marginTop: 20, background: T.grn }}>✓ Crea Rilievo</button>
+
+          {/* CTA */}
+          <button 
+            onClick={() => { if (autoTipo === "modifica" && !nuovoRilData.motivoModifica) { alert("Inserisci il motivo della modifica"); return; } salvaRilievo(); }}
+            style={{ ...S.btn, width: "100%", marginTop: 20, padding: "16px", fontSize: 15, background: autoTipo === "modifica" ? "#ff9500" : T.grn }}>
+            {autoTipo === "modifica" ? "🔧 Crea Rilievo Modifica →" : `📐 Crea Rilievo #${rilievi.length + 1} →`}
+          </button>
         </div>
       </div>
     );
+    }
 
     // == REPORT DIFFERENZE ==
     const renderReportDiff = () => {
@@ -810,20 +880,28 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
 
           const steps = [
             { id: "rilievo", icon: "📐", label: "Rilievo", done: hasRilievi,
+              hint: "Vai al cantiere, crea il rilievo e aggiungi i vani da misurare",
               detail: hasRilievi ? `${rilievi.length} rilievo · ${vani.length} vani · ${rilievi[0]?.data || ""}` : null },
             { id: "misure", icon: "📏", label: "Misure e Preventivo", done: hasVani && vaniConPrezzo.length > 0,
+              hint: "Completa le misure di ogni vano e imposta i prezzi per generare il preventivo",
               detail: vaniConPrezzo.length > 0 ? `${vaniConPrezzo.length}/${vani.length} vani prezzati · Totale €${fmt(totPreventivo)}` : hasVani ? `${vaniConMisure.length}/${vani.length} vani misurati` : null },
             { id: "firma", icon: "✍️", label: "Firma Cliente", done: hasFirma,
+              hint: "Invia il preventivo al cliente e carica il documento firmato per confermare",
               detail: hasFirma ? `Firmato il ${c.dataFirma || "—"} · €${fmt(totIva)} IVA incl.` : null },
             { id: "fattura", icon: "💰", label: "Fattura Acconto", done: hasFattura,
+              hint: "Emetti la fattura di acconto (30-60%) o fattura unica prima di ordinare",
               detail: hasFattura ? fattureCommessa.map(f => `${f.tipo} €${fmt(f.importo)} ${f.pagata ? "✅ pagata" : "⏳ in attesa"}`).join(" · ") : null },
             { id: "ordine", icon: "📦", label: "Ordine Fornitore", done: hasOrdine,
+              hint: "Invia l'ordine al fornitore con le specifiche di tutti i vani",
               detail: hasOrdine ? `${ordiniCommessa[0]?.fornitore?.nome || "Fornitore da inserire"} · €${fmt(ordiniCommessa[0]?.totaleIva || 0)} · ${ordiniCommessa[0]?.stato || "bozza"}` : null },
             { id: "conferma", icon: "📄", label: "Conferma Fornitore", done: confermaFirmata,
+              hint: "Carica la conferma d'ordine del fornitore con i tempi di consegna",
               detail: ordineConfermato ? `Ricevuta · ${ordiniCommessa[0]?.consegna?.settimane || "?"} sett. · consegna ${ordiniCommessa[0]?.consegna?.prevista ? new Date(ordiniCommessa[0].consegna.prevista).toLocaleDateString("it-IT") : "da definire"}` : null },
             { id: "montaggio", icon: "🔧", label: "Montaggio", done: hasMontaggio,
+              hint: "Pianifica data, squadra e durata del montaggio al cantiere",
               detail: hasMontaggio ? `${montaggiCommessa[0]?.data ? new Date(montaggiCommessa[0].data).toLocaleDateString("it-IT") : "Da pianificare"} · Squadra ${squadreDB.find(s => s.id === montaggiCommessa[0]?.squadraId)?.nome || "—"}` : null },
             { id: "saldo", icon: "💶", label: "Chiusura", done: tuttoChiuso,
+              hint: "Fattura il saldo, verifica l'incasso e chiudi la commessa",
               detail: tuttoChiuso ? `Incassato €${fmt(incassato)} · ✅ Completata` : null },
           ];
 
@@ -843,6 +921,18 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
                 <div style={{ height: 6, background: T.bg, borderRadius: 3, overflow: "hidden" }}>
                   <div style={{ height: "100%", background: `linear-gradient(90deg, #34c759, ${T.acc})`, width: `${progress}%`, borderRadius: 3, transition: "width 0.5s" }} />
                 </div>
+                {/* Stato misure automatico */}
+                {rilievi.length > 0 && (
+                  <div style={{ marginTop: 6, padding: "6px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, textAlign: "center",
+                    background: hasFirma ? "#34c75912" : "#ff950012",
+                    color: hasFirma ? "#34c759" : "#ff9500",
+                    border: `1px solid ${hasFirma ? "#34c75930" : "#ff950030"}`,
+                  }}>
+                    {hasFirma 
+                      ? "✅ Misure definitive — cliente ha firmato il preventivo" 
+                      : "⚠ Misure indicative — in attesa di firma cliente"}
+                  </div>
+                )}
                 {/* Success flash */}
                 {ccDone && (
                   <div style={{ marginTop: 6, padding: "10px 12px", borderRadius: 8, background: "#34c75918", border: "1px solid #34c75940", fontSize: 13, fontWeight: 700, color: "#34c759", textAlign: "center", animation: "fadeIn 0.3s" }}>
@@ -889,7 +979,7 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
                       borderLeft: `4px solid ${borderColor}`,
                       borderBottom: idx < steps.length - 1 ? `1px solid ${T.bg}` : "none",
                       background: isExpanded ? "#34c75908" : isCurrent ? `${T.acc}06` : "transparent",
-                      opacity: isFuture ? 0.4 : 1,
+                      opacity: isFuture ? 0.55 : 1,
                       cursor: step.done ? "pointer" : "default",
                     }}
                     onClick={() => { if (step.done && stepDocs.length > 0) setCcExpandStep(isExpanded ? null : step.id); }}
@@ -897,7 +987,13 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
                       {/* Step header */}
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ fontSize: isCurrent ? 18 : 14 }}>{step.icon}</span>
-                        <span style={{ fontSize: isCurrent ? 14 : 12, fontWeight: 700, color: T.text, flex: 1 }}>{step.label}</span>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: isCurrent ? 14 : 12, fontWeight: 700, color: T.text }}>{step.label}</span>
+                          {/* Hint per step futuri */}
+                          {isFuture && step.hint && (
+                            <div style={{ fontSize: 10, color: T.sub, marginTop: 1, lineHeight: 1.3 }}>{step.hint}</div>
+                          )}
+                        </div>
                         {step.done && (
                             <span style={{ fontSize: 10, fontWeight: 700, color: "#34c759", background: "#34c75912", padding: "2px 8px", borderRadius: 6 }}>
                               ✅ Fatto {stepDocs.length > 0 && <span style={{ fontSize: 8 }}>📎{stepDocs.length}</span>}
@@ -966,7 +1062,7 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
                           <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 8 }}>
                             Preventivo: €{fmt(totPreventivo)} + IVA {ivaPerc}% = <b>€{fmt(totIva)}</b>
                           </div>
-                          {/* Sub-step 1: Invia preventivo */}
+                          {/* Sub-step 1: Genera e invia preventivo con firma */}
                           {firmaStep === 0 && (
                             <div>
                               <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
@@ -977,13 +1073,18 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
                                   👁 Anteprima
                                 </button>
                               </div>
-                              <button onClick={() => {
-                                const tel = (c.telefono || "").replace(/\D/g, "");
-                                window.open(`https://wa.me/${tel.startsWith("39") ? tel : "39" + tel}?text=${encodeURIComponent(`Gentile ${c.cliente}, in allegato il preventivo per la commessa ${c.code}.\nTotale: €${fmt(totIva)} IVA inclusa.\nPrego firmare e rinviare. Grazie!`)}`, "_blank");
+                              <button onClick={async () => {
+                                // 1. Genera PDF scaricabile
+                                generaPreventivoPDF(c);
+                                // 2. Genera pagina con firma elettronica + invia WhatsApp
+                                await generaPreventivoCondivisibile(c);
                                 setFirmaStep(1);
                               }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", background: "#25d366", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
-                                📤 INVIA PREVENTIVO AL CLIENTE →
+                                📤 GENERA PDF + INVIA CON FIRMA →
                               </button>
+                              <div style={{ fontSize: 10, color: T.sub, textAlign: "center", marginTop: 4, lineHeight: 1.5 }}>
+                                Scarica il PDF e invia via WhatsApp il link per la firma elettronica
+                              </div>
                               <div style={{ textAlign: "center", marginTop: 6 }}>
                                 <span onClick={() => setFirmaStep(1)} style={{ fontSize: 11, color: T.sub, cursor: "pointer", textDecoration: "underline" }}>Già inviato? Vai al caricamento firma</span>
                               </div>
@@ -1790,8 +1891,7 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
               <div style={{ textAlign: "center", padding: "32px 16px" }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 6 }}>Nessun rilievo ancora</div>
-                <div style={{ fontSize: 12, color: T.sub, marginBottom: 20 }}>Crea il primo rilievo per iniziare a misurare i vani</div>
-                <button onClick={() => setShowNuovoRilievo(true)} style={{ ...S.btn, margin: "0 auto" }}>+ Crea primo rilievo</button>
+                <div style={{ fontSize: 12, color: T.sub }}>Usa il Centro Comando sopra per creare il primo rilievo</div>
               </div>
             )}
             {[...rilievi].reverse().map((r, idx) => {
@@ -1800,6 +1900,12 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
               const colore = tipoColor[r.tipo] || T.blue;
               const ico = tipoIco[r.tipo] || "📐";
               const isUltimo = idx === 0;
+              // Badge stato automatico basato sulla firma
+              const statoBadge = r.tipo === "modifica" 
+                ? { label: "MODIFICA", bg: "#ff9500", color: "#fff" }
+                : c.firmaCliente 
+                  ? { label: "✅ DEFINITIVO", bg: "#34c75920", color: "#34c759" }
+                  : { label: "⚠ INDICATIVO", bg: "#ff950020", color: "#ff9500" };
               return (
                 <div key={r.id} onClick={() => { setSelectedRilievo(r); setCmSubTab("sopralluoghi"); }}
                   style={{ ...S.card, marginBottom: 10, cursor: "pointer", overflow: "hidden",
@@ -1812,11 +1918,12 @@ ${msgsCm.length > 0 ? "<h2>💬 Comunicazioni (" + msgsCm.length + " conversazio
                       <div style={{ fontSize: 14 }}>{ico}</div>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2, flexWrap: "wrap" }}>
                         <div style={{ fontSize: 14, fontWeight: 700 }}>
                           {new Date(r.data + "T12:00:00").toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}
                         </div>
                         {isUltimo && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: colore, color: "#fff" }}>ULTIMO</span>}
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: statoBadge.bg, color: statoBadge.color }}>{statoBadge.label}</span>
                       </div>
                       <div style={{ fontSize: 11, color: T.sub }}>
                         {r.ora && `🕐 ${r.ora} · `}👤 {r.rilevatore || "—"}

@@ -76,13 +76,14 @@ export const tipoToMinCat = (tipo: string): string => {
 export const THEMES = {
   chiaro: {
     name: "Chiaro", emoji: "☀️",
-    bg: "#f5f5f7", bg2: "#ffffff", card: "#ffffff", card2: "#f8f8fa",
-    bdr: "#e5e5ea", bdrL: "#d1d1d6", text: "#1d1d1f", sub: "#86868b", sub2: "#aeaeb2",
-    acc: "#0066cc", accD: "#0055aa", accLt: "rgba(0,102,204,0.08)", accBg: "linear-gradient(135deg,#0066cc,#0055aa)",
-    grn: "#34c759", grnLt: "rgba(52,199,89,0.08)",
-    red: "#ff3b30", redLt: "rgba(255,59,48,0.08)",
-    orange: "#ff9500", orangeLt: "rgba(255,149,0,0.08)",
-    blue: "#007aff", blueLt: "rgba(0,122,255,0.08)",
+    bg: "#F2F1EC", bg2: "#EDECE7", card: "#ffffff", card2: "#f8f8fa",
+    bdr: "#E5E4DF", bdrL: "#EDECE7", text: "#1A1A1C", sub: "#7A7A7A", sub2: "#AAAAAA",
+    pri: "#0D7C6B",
+    acc: "#0D7C6B", accD: "#0a6b5c", accLt: "rgba(13,124,107,0.08)", accBg: "linear-gradient(135deg,#0D7C6B,#0a6b5c)",
+    grn: "#1A9E73", grnLt: "rgba(26,158,115,0.08)",
+    red: "#DC4444", redLt: "rgba(220,68,68,0.08)",
+    orange: "#E8A020", orangeLt: "rgba(232,160,32,0.08)",
+    blue: "#3B7FE0", blueLt: "rgba(59,127,224,0.08)",
     purple: "#af52de", purpleLt: "rgba(175,82,222,0.08)",
     cyan: "#32ade6", cyanLt: "rgba(50,173,230,0.08)",
     cardSh: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
@@ -93,11 +94,12 @@ export const THEMES = {
     name: "Scuro", emoji: "🌙",
     bg: "#000000", bg2: "#1c1c1e", card: "#1c1c1e", card2: "#2c2c2e",
     bdr: "#38383a", bdrL: "#48484a", text: "#f2f2f7", sub: "#8e8e93", sub2: "#636366",
-    acc: "#0a84ff", accD: "#0070e0", accLt: "rgba(10,132,255,0.12)", accBg: "linear-gradient(135deg,#0a84ff,#0070e0)",
+    pri: "#14B8A0",
+    acc: "#14B8A0", accD: "#0D9E8A", accLt: "rgba(20,184,160,0.12)", accBg: "linear-gradient(135deg,#14B8A0,#0D9E8A)",
     grn: "#30d158", grnLt: "rgba(48,209,88,0.12)",
     red: "#ff453a", redLt: "rgba(255,69,58,0.12)",
     orange: "#ff9f0a", orangeLt: "rgba(255,159,10,0.12)",
-    blue: "#0a84ff", blueLt: "rgba(10,132,255,0.12)",
+    blue: "#4A9AFF", blueLt: "rgba(74,154,255,0.12)",
     purple: "#bf5af2", purpleLt: "rgba(191,90,242,0.12)",
     cyan: "#64d2ff", cyanLt: "rgba(100,210,255,0.12)",
     cardSh: "0 1px 3px rgba(0,0,0,0.3)",
@@ -108,7 +110,8 @@ export const THEMES = {
     name: "Oceano", emoji: "🌊",
     bg: "#0f1923", bg2: "#162231", card: "#1a2a3a", card2: "#1f3040",
     bdr: "#2a3f55", bdrL: "#345070", text: "#e8ecf0", sub: "#7a90a5", sub2: "#4a6070",
-    acc: "#4fc3f7", accD: "#29b6f6", accLt: "rgba(79,195,247,0.12)", accBg: "linear-gradient(135deg,#4fc3f7,#29b6f6)",
+    pri: "#4DD4C0",
+    acc: "#4DD4C0", accD: "#38C4B0", accLt: "rgba(77,212,192,0.12)", accBg: "linear-gradient(135deg,#4DD4C0,#38C4B0)",
     grn: "#66bb6a", grnLt: "rgba(102,187,106,0.12)",
     red: "#ef5350", redLt: "rgba(239,83,80,0.12)",
     orange: "#ffa726", orangeLt: "rgba(255,167,38,0.12)",
@@ -131,14 +134,14 @@ export const PLANS = {
 
 /* == PIPELINE 7+1 FASI == */
 export const PIPELINE_DEFAULT = [
-  { id: "sopralluogo", nome: "Sopralluogo", ico: "🔍", color: "#007aff", attiva: true, desc: "Vai al cantiere, prendi misure, foto, note" },
-  { id: "preventivo", nome: "Preventivo", ico: "📋", color: "#ff9500", attiva: true, desc: "Rivedi misure, calcola prezzi, sconti, condizioni" },
-  { id: "conferma", nome: "Conferma", ico: "✍️", color: "#af52de", attiva: true, desc: "Cliente accetta, misure definitive, firma contratto" },
-  { id: "ordini", nome: "Ordini", ico: "📦", color: "#ff2d55", attiva: true, desc: "Ordina materiali ai fornitori" },
-  { id: "produzione", nome: "Produzione", ico: "🏭", color: "#ff9500", attiva: true, desc: "In lavorazione, attesa materiali" },
-  { id: "posa", nome: "Posa", ico: "🔧", color: "#34c759", attiva: true, desc: "Montaggio al cantiere" },
-  { id: "collaudo", nome: "Collaudo", ico: "🔎", color: "#5856d6", attiva: true, desc: "Verifica lavoro, foto finale" },
-  { id: "chiusura", nome: "Chiusura", ico: "✅", color: "#30b0c7", attiva: true, desc: "Fattura saldo, documenti, archivia" },
+  { id: "sopralluogo", nome: "Sopralluogo", ico: "search", color: "#3B7FE0", attiva: true, desc: "Vai al cantiere, prendi misure, foto, note" },
+  { id: "preventivo", nome: "Preventivo", ico: "clipboard", color: "#F5A623", attiva: true, desc: "Rivedi misure, calcola prezzi, sconti, condizioni" },
+  { id: "conferma", nome: "Conferma", ico: "signatureEdit", color: "#0D7C6B", attiva: true, desc: "Firma del cliente, conferma ordine, acconto" },
+  { id: "ordini", nome: "Ordini", ico: "package", color: "#EF4444", attiva: true, desc: "Ordina materiali ai fornitori" },
+  { id: "produzione", nome: "Produzione", ico: "factory", color: "#F59E0B", attiva: true, desc: "In lavorazione, attesa materiali" },
+  { id: "posa", nome: "Posa", ico: "hammer", color: "#F97316", attiva: true, desc: "Montaggio al cantiere" },
+  { id: "collaudo", nome: "Collaudo", ico: "shieldCheck", color: "#8B5CF6", attiva: true, desc: "Verifica lavoro, foto finale" },
+  { id: "chiusura", nome: "Chiusura", ico: "checkCircle", color: "#10B981", attiva: true, desc: "Fattura saldo, documenti, archivia" },
 ];
 
 /* == MOTIVI BLOCCO SOPRALLUOGO == */
@@ -153,14 +156,14 @@ export const MOTIVI_BLOCCO = [
 
 /* == AZIONE SUGGERITA PER FASE == */
 export const AFASE = {
-  sopralluogo: { i: "🔍", t: "Vai al cantiere — misure, foto, note",  c: "#007aff" },
-  preventivo:  { i: "📋", t: "Prepara preventivo — prezzi, sconti, condizioni",  c: "#ff9500" },
-  conferma:    { i: "✍️", t: "Attendi conferma cliente — firma contratto",   c: "#af52de" },
-  ordini:      { i: "📦", t: "Ordina materiali ai fornitori",          c: "#ff2d55" },
-  produzione:  { i: "🏭", t: "Monitora produzione",      c: "#ff9500" },
-  posa:        { i: "🔧", t: "Schedula montaggio",            c: "#34c759" },
-  collaudo:    { i: "🔎", t: "Verifica lavoro, foto finale",   c: "#5856d6" },
-  chiusura:    { i: "✅", t: "Fattura saldo e chiudi",    c: "#30b0c7" },
+  sopralluogo: { i: "search", t: "Vai al cantiere — misure, foto, note",  c: "#3B7FE0" },
+  preventivo:  { i: "clipboard", t: "Prepara preventivo — prezzi, sconti, condizioni",  c: "#F5A623" },
+  conferma:    { i: "signatureEdit", t: "Attendi conferma cliente — firma contratto",   c: "#E85BAF" },
+  ordini:      { i: "package", t: "Ordina materiali ai fornitori",          c: "#EF4444" },
+  produzione:  { i: "building", t: "Monitora produzione",      c: "#F59E0B" },
+  posa:        { i: "wrench", t: "Schedula montaggio",            c: "#F97316" },
+  collaudo:    { i: "search", t: "Verifica lavoro, foto finale",   c: "#8B5CF6" },
+  chiusura:    { i: "check", t: "Fattura saldo e chiudi",    c: "#10B981" },
 };
 
 // ═══ 20 COMMESSE DEMO REALISTICHE ═══
@@ -195,7 +198,7 @@ export const CANTIERI_INIT = [
     }],
     allegati: [], creato: "20 feb", aggiornato: "22 feb",
     cf: "BNCNNA85C41D086Y", piva: "", sdi: "0000000", pec: "anna.bianchi@pec.it", ivaPerc: 10,
-    log: [{ chi: "Fabio", cosa: "completato rilievo misure — 4 vani", quando: "5 giorni fa", color: "#5856d6" }],
+    log: [{ chi: "Fabio", cosa: "completato rilievo misure — 4 vani", quando: "5 giorni fa", color: "#8B5CF6" }],
   },
   // ═══ 3. ORDINI — firmato, deve ordinare ═══
   {
@@ -221,8 +224,8 @@ export const CANTIERI_INIT = [
     creato: "03 feb", aggiornato: "15 feb",
     cf: "RSSMRA75B15D086X", piva: "", sdi: "", pec: "", ivaPerc: 10,
     log: [
-      { chi: "Fabio", cosa: "cliente ha firmato il preventivo", quando: "17 giorni fa", color: "#34c759" },
-      { chi: "Fabio", cosa: "completato rilievo misure — 4 vani", quando: "22 giorni fa", color: "#5856d6" },
+      { chi: "Fabio", cosa: "cliente ha firmato il preventivo", quando: "17 giorni fa", color: "#1A9E73" },
+      { chi: "Fabio", cosa: "completato rilievo misure — 4 vani", quando: "22 giorni fa", color: "#8B5CF6" },
     ],
   },
   // ═══ 4. PRODUZIONE — ordinato, attesa materiale ═══
@@ -255,8 +258,8 @@ export const CANTIERI_INIT = [
       { id: "di2", tipo: "CF", nome: "CF_Laura_Esposito.jpg", data: "20/01/2026" },
     ],
     log: [
-      { chi: "Fabio", cosa: "ricevuta conferma ordine Aluplast", quando: "1 mese fa", color: "#34c759" },
-      { chi: "Fabio", cosa: "inviato ordine ad Aluplast", quando: "1 mese fa", color: "#ff2d55" },
+      { chi: "Fabio", cosa: "ricevuta conferma ordine Aluplast", quando: "1 mese fa", color: "#1A9E73" },
+      { chi: "Fabio", cosa: "inviato ordine ad Aluplast", quando: "1 mese fa", color: "#EF4444" },
     ],
   },
   // ═══ 5. CHIUSURA — completata con tutto ═══
@@ -300,16 +303,16 @@ export const CANTIERI_INIT = [
       { id: "df3", nome: "Bonifico_parlante.pdf", data: "18/02/2026" },
     ],
     log: [
-      { chi: "Fabio", cosa: "commessa completata e chiusa", quando: "9 giorni fa", color: "#34c759" },
-      { chi: "Fabio", cosa: "montaggio completato", quando: "10 giorni fa", color: "#007aff" },
-      { chi: "Fabio", cosa: "emessa fattura saldo", quando: "7 giorni fa", color: "#ff9500" },
+      { chi: "Fabio", cosa: "commessa completata e chiusa", quando: "9 giorni fa", color: "#1A9E73" },
+      { chi: "Fabio", cosa: "montaggio completato", quando: "10 giorni fa", color: "#3B7FE0" },
+      { chi: "Fabio", cosa: "emessa fattura saldo", quando: "7 giorni fa", color: "#E8A020" },
     ],
   },
   // ═══ 6. POSA — pronto per montaggio ═══
-  { id: 1006, code: "S-0006", cliente: "Francesca", cognome: "Romano", indirizzo: "Via Popilia 156, Cosenza (CS)", telefono: "340 777 3333", email: "f.romano@outlook.it", fase: "posa", sistema: "Rehau Geneo", tipo: "nuova", difficoltaSalita: "facile", note: "Villa bifamiliare PT+1°, 8 vani totali.", prezzoMq: 250, euro: 6400, firmaCliente: true, dataFirma: "2026-01-05", rilievi: [{ id: 2006, n: 1, data: "2025-12-20", ora: "10:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3040, nome: "F1 Cucina PT", tipo: "F2A", stanza: "Cucina", piano: "PT", sistema: "Rehau Geneo", pezzi: 1, misure: { lAlto: 1210, lCentro: 1200, lBasso: 1195, hSx: 1010, hCentro: 1000, hDx: 1005 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }, { id: 3041, nome: "PF Soggiorno PT", tipo: "PF2A", stanza: "Soggiorno", piano: "PT", sistema: "Rehau Geneo", pezzi: 1, misure: { lAlto: 1810, lCentro: 1800, lBasso: 1798, hSx: 2310, hCentro: 2300, hDx: 2305 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: true }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9920, tipo: "firma", nome: "Preventivo_S-0006.pdf", data: "05/01/2026" }, { id: 9921, tipo: "ordine", nome: "Ordine_Rehau.pdf", data: "10/01/2026" }, { id: 9922, tipo: "conferma", nome: "Conferma_Rehau_9987.pdf", data: "14/01/2026" }], creato: "15 dic", aggiornato: "14 gen", cf: "RMNFNC88M41D086T", ivaPerc: 10, praticaFiscale: "Detraz. 50%", docIdentita: [{ id: "di6", tipo: "CI", nome: "CI_Romano_fronte.jpg", data: "05/01/2026" }, { id: "di7", tipo: "CF", nome: "CF_Romano.jpg", data: "05/01/2026" }], log: [{ chi: "Fabio", cosa: "materiale arrivato, programmare montaggio", quando: "2 sett fa", color: "#34c759" }] },
+  { id: 1006, code: "S-0006", cliente: "Francesca", cognome: "Romano", indirizzo: "Via Popilia 156, Cosenza (CS)", telefono: "340 777 3333", email: "f.romano@outlook.it", fase: "posa", sistema: "Rehau Geneo", tipo: "nuova", difficoltaSalita: "facile", note: "Villa bifamiliare PT+1°, 8 vani totali.", prezzoMq: 250, euro: 6400, firmaCliente: true, dataFirma: "2026-01-05", rilievi: [{ id: 2006, n: 1, data: "2025-12-20", ora: "10:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3040, nome: "F1 Cucina PT", tipo: "F2A", stanza: "Cucina", piano: "PT", sistema: "Rehau Geneo", pezzi: 1, misure: { lAlto: 1210, lCentro: 1200, lBasso: 1195, hSx: 1010, hCentro: 1000, hDx: 1005 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }, { id: 3041, nome: "PF Soggiorno PT", tipo: "PF2A", stanza: "Soggiorno", piano: "PT", sistema: "Rehau Geneo", pezzi: 1, misure: { lAlto: 1810, lCentro: 1800, lBasso: 1798, hSx: 2310, hCentro: 2300, hDx: 2305 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: true }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9920, tipo: "firma", nome: "Preventivo_S-0006.pdf", data: "05/01/2026" }, { id: 9921, tipo: "ordine", nome: "Ordine_Rehau.pdf", data: "10/01/2026" }, { id: 9922, tipo: "conferma", nome: "Conferma_Rehau_9987.pdf", data: "14/01/2026" }], creato: "15 dic", aggiornato: "14 gen", cf: "RMNFNC88M41D086T", ivaPerc: 10, praticaFiscale: "Detraz. 50%", docIdentita: [{ id: "di6", tipo: "CI", nome: "CI_Romano_fronte.jpg", data: "05/01/2026" }, { id: "di7", tipo: "CF", nome: "CF_Romano.jpg", data: "05/01/2026" }], log: [{ chi: "Fabio", cosa: "materiale arrivato, programmare montaggio", quando: "2 sett fa", color: "#1A9E73" }] },
   // ═══ 7-20 — commesse aggiuntive in vari stadi ═══
   { id: 1007, code: "S-0007", cliente: "Marco", cognome: "Ferraro", indirizzo: "Via dei Mille 33, Rende (CS)", telefono: "335 444 9999", email: "m.ferraro@gmail.com", fase: "sopralluogo", sistema: "", tipo: "nuova", note: "Nuovo cliente da passaparola De Luca. 6 finestre.", rilievi: [], allegati: [], creato: "27 feb", aggiornato: "27 feb", log: [{ chi: "Fabio", cosa: "creato da passaparola", quando: "oggi", color: "#86868b" }] },
-  { id: 1008, code: "S-0008", cliente: "Lucia", cognome: "Greco", indirizzo: "Piazza XV Marzo 8, Cosenza (CS)", telefono: "328 111 2222", email: "lucia.greco@pec.it", fase: "sopralluogo", sistema: "Aluplast Ideal 8000", tipo: "nuova", difficoltaSalita: "difficile", mezzoSalita: "Autoscala", pianoEdificio: "5°", note: "5° piano, serve autoscala. Condominio storico.", prezzoMq: 200, rilievi: [{ id: 2008, n: 1, data: "2026-02-15", ora: "08:00", rilevatore: "Fabio", tipo: "rilievo", stato: "parziale", vani: [{ id: 3050, nome: "F1 Salone", tipo: "F2A", stanza: "Salone", piano: "5°", sistema: "Aluplast Ideal 8000", pezzi: 1, misure: { lAlto: 1010, lCentro: 1000, lBasso: 998, hSx: 1510, hCentro: 1500, hDx: 1505 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [], creato: "10 feb", aggiornato: "15 feb", cf: "GRCLCU92P65D086S", log: [{ chi: "Fabio", cosa: "rilievo parziale — tornare per 3 vani", quando: "12 giorni fa", color: "#ff9500" }] },
+  { id: 1008, code: "S-0008", cliente: "Lucia", cognome: "Greco", indirizzo: "Piazza XV Marzo 8, Cosenza (CS)", telefono: "328 111 2222", email: "lucia.greco@pec.it", fase: "sopralluogo", sistema: "Aluplast Ideal 8000", tipo: "nuova", difficoltaSalita: "difficile", mezzoSalita: "Autoscala", pianoEdificio: "5°", note: "5° piano, serve autoscala. Condominio storico.", prezzoMq: 200, rilievi: [{ id: 2008, n: 1, data: "2026-02-15", ora: "08:00", rilevatore: "Fabio", tipo: "rilievo", stato: "parziale", vani: [{ id: 3050, nome: "F1 Salone", tipo: "F2A", stanza: "Salone", piano: "5°", sistema: "Aluplast Ideal 8000", pezzi: 1, misure: { lAlto: 1010, lCentro: 1000, lBasso: 998, hSx: 1510, hCentro: 1500, hDx: 1505 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [], creato: "10 feb", aggiornato: "15 feb", cf: "GRCLCU92P65D086S", log: [{ chi: "Fabio", cosa: "rilievo parziale — tornare per 3 vani", quando: "12 giorni fa", color: "#E8A020" }] },
   { id: 1009, code: "S-0009", cliente: "Roberto", cognome: "Mancini", indirizzo: "Contrada San Vito, Mendicino (CS)", telefono: "347 888 1111", email: "", fase: "produzione", sistema: "Aluplast Ideal 4000", tipo: "nuova", note: "Villa in campagna, 8 vani. Materiale in produzione.", prezzoMq: 180, euro: 5760, firmaCliente: true, dataFirma: "2026-01-25", rilievi: [{ id: 2009, n: 1, data: "2026-01-18", ora: "09:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3060, nome: "F1", tipo: "F2A", stanza: "Cucina", piano: "PT", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 1210, lCentro: 1200, lBasso: 1195, hSx: 1010, hCentro: 1000, hDx: 1005 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }, { id: 3061, nome: "F2", tipo: "F2A", stanza: "Camera", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 1010, lCentro: 1000, lBasso: 998, hSx: 1210, hCentro: 1200, hDx: 1205 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9930, tipo: "firma", nome: "Prev_S-0009_firmato.pdf", data: "25/01/2026" }, { id: 9931, tipo: "ordine", nome: "Ordine_Aluplast_S0009.pdf", data: "28/01/2026" }], creato: "15 gen", aggiornato: "28 gen", cf: "MNCRRT68S20D086R", ivaPerc: 10, log: [] },
   { id: 1010, code: "S-0010", cliente: "Francesco", cognome: "Greco", indirizzo: "Via Calabria 77, Cosenza (CS)", telefono: "339 555 6666", email: "f.greco@gmail.com", fase: "posa", sistema: "Schüco AWS 75", tipo: "nuova", note: "Ufficio commerciale, 6 finestre grandi.", prezzoMq: 300, euro: 7200, firmaCliente: true, dataFirma: "2026-01-08", rilievi: [{ id: 2010, n: 1, data: "2025-12-15", ora: "14:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3070, nome: "F1 Ufficio", tipo: "F2A", stanza: "Ufficio 1", piano: "PT", sistema: "Schüco AWS 75", pezzi: 1, misure: { lAlto: 1810, lCentro: 1800, lBasso: 1798, hSx: 1610, hCentro: 1600, hDx: 1605 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9940, tipo: "firma", nome: "Prev_S-0010.pdf", data: "08/01/2026" }], creato: "10 dic", aggiornato: "20 feb", cf: "", piva: "03456789012", ivaPerc: 22, log: [] },
   { id: 1011, code: "S-0011", cliente: "Lucia", cognome: "Ferraro", indirizzo: "Via Panebianco 200, Cosenza (CS)", telefono: "366 999 4444", email: "l.ferraro@alice.it", fase: "conferma", sistema: "Aluplast Ideal 4000", tipo: "nuova", note: "Preventivo da firmare. 2 vasistas bagno.", prezzoMq: 180, rilievi: [{ id: 2011, n: 1, data: "2026-02-22", ora: "11:00", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3080, nome: "VAS Bagno 1", tipo: "VAS", stanza: "Bagno", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 605, lCentro: 600, lBasso: 598, hSx: 505, hCentro: 500, hDx: 502 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }, { id: 3081, nome: "VAS Bagno 2", tipo: "VAS", stanza: "Bagno ospiti", piano: "1°", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 505, lCentro: 500, lBasso: 498, hSx: 505, hCentro: 500, hDx: 502 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [], creato: "22 feb", aggiornato: "24 feb", log: [] },
@@ -320,7 +323,7 @@ export const CANTIERI_INIT = [
   { id: 1015, code: "S-0015", cliente: "Vincenzo", cognome: "Pinto", indirizzo: "Contrada Donnici, Cosenza (CS)", telefono: "338 888 0000", fase: "chiusura", sistema: "Aluplast Ideal 4000", tipo: "nuova", note: "Villa campagna. 10 vani. Completata.", prezzoMq: 180, euro: 7200, firmaCliente: true, allegati: [{ id: 9980, tipo: "verbale", nome: "Verbale_S-0015.pdf", data: "20/01/2026" }], rilievi: [{ id: 2015, n: 1, data: "2025-09-15", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3120, nome: "F1", tipo: "F2A", stanza: "Cucina", piano: "PT", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 1010, lCentro: 1000, lBasso: 998, hSx: 1010, hCentro: 1000, hDx: 1005 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], creato: "10 set", aggiornato: "20 gen", praticaFiscale: "Superbonus", docIdentita: [{ id: "di14", tipo: "CI", nome: "CI_Pinto.jpg", data: "15/09/2025" }, { id: "di15", tipo: "CF", nome: "CF_Pinto.jpg", data: "15/09/2025" }], docFiscali: [{ id: "df6", nome: "APE_ante.pdf" }, { id: "df7", nome: "APE_post.pdf" }, { id: "df8", nome: "ENEA_trasmissione.pdf" }, { id: "df9", nome: "Visto_conformita.pdf" }], log: [] },
   { id: 1016, code: "S-0016", cliente: "Giovanna", cognome: "Ferrara", indirizzo: "Viale Mancini 12, Cosenza (CS)", telefono: "333 111 2233", fase: "chiusura", sistema: "Schüco CT70", tipo: "ristrutturazione", note: "2 portefinestre salone. Completata.", prezzoMq: 280, euro: 2240, firmaCliente: true, allegati: [{ id: 9990, tipo: "verbale", nome: "Verbale_S-0016.pdf", data: "10/02/2026" }], rilievi: [{ id: 2016, n: 1, data: "2025-11-20", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3130, nome: "PF Salone", tipo: "PF2A", stanza: "Salone", piano: "2°", sistema: "Schüco CT70", pezzi: 1, misure: { lAlto: 1410, lCentro: 1400, lBasso: 1398, hSx: 2210, hCentro: 2200, hDx: 2205 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], creato: "15 nov", aggiornato: "10 feb", log: [] },
   // ═══ 17-20 — ATTIVE (vari stadi) ═══
-  { id: 1017, code: "S-0017", cliente: "Carmela", cognome: "Aiello", indirizzo: "Via Marconi 55, Montalto Uffugo (CS)", telefono: "347 333 4455", fase: "sopralluogo", tipo: "riparazione", note: "Tapparella bloccata + guarnizioni da sostituire.", rilievi: [], allegati: [], creato: "26 feb", aggiornato: "26 feb", log: [{ chi: "Fabio", cosa: "richiesta riparazione ricevuta", quando: "ieri", color: "#ff9500" }] },
+  { id: 1017, code: "S-0017", cliente: "Carmela", cognome: "Aiello", indirizzo: "Via Marconi 55, Montalto Uffugo (CS)", telefono: "347 333 4455", fase: "sopralluogo", tipo: "riparazione", note: "Tapparella bloccata + guarnizioni da sostituire.", rilievi: [], allegati: [], creato: "26 feb", aggiornato: "26 feb", log: [{ chi: "Fabio", cosa: "richiesta riparazione ricevuta", quando: "ieri", color: "#E8A020" }] },
   { id: 1018, code: "S-0018", cliente: "Antonio", cognome: "Scalia", indirizzo: "Corso Umberto 120, Cosenza (CS)", telefono: "320 555 8899", email: "a.scalia@studio.it", fase: "preventivo", sistema: "Schüco ASS 70", tipo: "nuova", note: "Studio legale, 4 finestre anti-rumore.", prezzoMq: 320, rilievi: [{ id: 2018, n: 1, data: "2026-02-24", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3140, nome: "F Studio", tipo: "F2A", stanza: "Studio", piano: "1°", sistema: "Schüco ASS 70", pezzi: 1, misure: { lAlto: 1610, lCentro: 1600, lBasso: 1598, hSx: 1410, hCentro: 1400, hDx: 1405 }, foto: {}, accessori: { tapparella: { attivo: false }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [], creato: "20 feb", aggiornato: "24 feb", piva: "04567890123", ivaPerc: 22, log: [] },
   { id: 1019, code: "S-0019", cliente: "Maria Rosa", cognome: "Pellegrini", indirizzo: "Via Casali 8, Castrolibero (CS)", telefono: "349 777 1122", fase: "ordini", sistema: "Aluplast Ideal 4000", tipo: "nuova", note: "Villetta, 5 finestre + 2 portefinestre.", prezzoMq: 180, euro: 4500, firmaCliente: true, dataFirma: "2026-02-18", rilievi: [{ id: 2019, n: 1, data: "2026-02-10", rilevatore: "Fabio", tipo: "rilievo", stato: "completato", vani: [{ id: 3150, nome: "F1 Cucina", tipo: "F2A", stanza: "Cucina", piano: "PT", sistema: "Aluplast Ideal 4000", pezzi: 1, misure: { lAlto: 1210, lCentro: 1200, lBasso: 1195, hSx: 1010, hCentro: 1000, hDx: 1005 }, foto: {}, accessori: { tapparella: { attivo: true }, persiana: { attivo: false }, zanzariera: { attivo: false } } }] }], allegati: [{ id: 9995, tipo: "firma", nome: "Prev_S-0019.pdf", data: "18/02/2026" }], creato: "05 feb", aggiornato: "18 feb", cf: "PLLMRS65R41D086P", praticaFiscale: "Detraz. 50%", docIdentita: [{ id: "di16", tipo: "CI", nome: "CI_Pellegrini.jpg", data: "18/02/2026" }, { id: "di17", tipo: "CF", nome: "CF_Pellegrini.jpg", data: "18/02/2026" }], log: [] },
   { id: 1020, code: "S-0020", cliente: "Domenico", cognome: "Cosenza", indirizzo: "Via dei Normanni 30, Cosenza (CS)", telefono: "340 888 9900", email: "d.cosenza@gmail.com", fase: "sopralluogo", sistema: "", tipo: "nuova", note: "Condominio 12 appartamenti, sopralluogo esplorativo per offerta.", rilievi: [], allegati: [], creato: "27 feb", aggiornato: "27 feb", log: [{ chi: "Fabio", cosa: "primo contatto telefonico", quando: "oggi", color: "#86868b" }] },
@@ -429,7 +432,7 @@ export const MSGS_INIT = [
 ];
 
 export const TEAM_INIT = [
-  { id: 1, nome: "", ruolo: "Titolare", compiti: "Gestione commesse, preventivi, rapporti clienti", colore: "#007aff" },
+  { id: 1, nome: "", ruolo: "Titolare", compiti: "Gestione commesse, preventivi, rapporti clienti", colore: "#0D7C6B" },
 ];
 
 export const CONTATTI_INIT = [
@@ -590,6 +593,7 @@ export const SETTORI = [
   { id: "tende", label: "Tende da Sole", icon: "☀️", desc: "Bracci, caduta, cappottine, pergole, ZIP, veneziane" },
   { id: "boxdoccia", label: "Box Doccia", icon: "🚿", desc: "Nicchia, angolari, walk-in, pareti vasca" },
   { id: "cancelli", label: "Cancelli e Recinzioni", icon: "🏗️", desc: "Battenti, scorrevoli, recinzioni, ringhiere, automazioni" },
+  { id: "strutture", label: "Strutture", icon: "🏛️", desc: "Pergole, verande, pensiline, box alluminio, ferro" },
 ];
 
 export const SETTORI_DEFAULT = ["serramenti", "persiane", "tapparelle", "zanzariere"]; // serramentista classico
@@ -614,28 +618,110 @@ export const LAMIERE_INIT = [
 export const Ico = ({ d, s = 20, c = "#888", sw = 1.8 }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">{d}</svg>
 );
+// Inline icon helper (replaces emoji spans) — usage: <I d={ICO.package} c="#0D7C6B" />
+export const I = ({ d, s = 16, c = "currentColor", sw = 2 }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"middle",flexShrink:0}}>{d}</svg>
+);
 export const ICO = {
+  // Navigation
   home: <><path d="M2 12L12 3l10 9"/><path d="M5 9.5V20a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V9.5"/></>,
   calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><rect x="7" y="14" width="2" height="2" rx="0.5" fill="currentColor"/><rect x="11" y="14" width="2" height="2" rx="0.5" fill="currentColor"/><rect x="15" y="14" width="2" height="2" rx="0.5" fill="currentColor"/></>,
   chat: <><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M7 8h10M7 12h6"/></>,
   settings: <><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></>,
   back: <><polyline points="15 18 9 12 15 6"/></>,
+  // Actions
   plus: <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
   check: <><polyline points="20 6 9 17 4 12"/></>,
+  checkCircle: <><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>,
+  x: <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
+  // Communication
   phone: <><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></>,
-  map: <><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></>,
-  camera: <><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>,
-  file: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>,
+  mail: <><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></>,
   send: <><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>,
+  messageCircle: <><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></>,
+  // Files & Docs
+  file: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>,
+  fileText: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></>,
+  folder: <><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></>,
+  clipboard: <><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></>,
+  paperclip: <><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></>,
+  // Media
+  camera: <><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>,
+  image: <><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></>,
+  video: <><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></>,
+  mic: <><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></>,
+  // Tools & Work
   pen: <><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></>,
   trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>,
+  wrench: <><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></>,
+  hammer: <><path d="M15 12l-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 010-3L12 9"/><path d="M17.64 15L22 10.64"/><path d="M20.91 11.7l-1.25-1.25c-.6-.6-.93-1.4-.93-2.25V6.5L14.5 2.23a.5.5 0 00-.8.14l-1.02 2.45a2 2 0 00.44 2.17l5.08 4.56"/></>,
+  // People
   user: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
   users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
+  // Location & Map
+  map: <><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></>,
+  mapPin: <><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></>,
+  // Status & Alerts
   star: <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></>,
   alert: <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>,
+  alertCircle: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
+  info: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>,
+  // Search & Filter
   search: <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
   filter: <><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 10h8M5 6h14M11 14h2M10 18h4"/></>,
+  // Business
+  package: <><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>,
+  truck: <><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>,
+  wallet: <><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1" fill="currentColor"/></>,
+  factory: <><path d="M2 20V8l6 4V8l6 4V8l6 4v12H2z"/><path d="M2 20h20"/></>,
+  printer: <><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>,
+  // Measurements
+  ruler: <><path d="M21.73 18l-8-14a2 2 0 00-3.48 0l-8 14A2 2 0 004 21h16a2 2 0 001.73-3z"/><path d="M12 17V9"/><path d="M8 17V13"/><path d="M16 17V13"/></>,
+  maximize: <><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></>,
+  // Misc
+  eye: <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
+  download: <><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
+  upload: <><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>,
+  inbox: <><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></>,
+  lock: <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></>,
+  sparkles: <><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M19 13l.75 2.25L22 16l-2.25.75L19 19l-.75-2.25L16 16l2.25-.75L19 13z"/></>,
+  shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>,
+  creditCard: <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
+  barChart: <><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></>,
+  grid: <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></>,
+  layers: <><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>,
+  sun: <><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>,
+  door: <><path d="M18 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2z"/><path d="M15 13a1 1 0 100-2 1 1 0 000 2z" fill="currentColor"/></>,
+  columns: <><path d="M12 3v18"/><rect x="2" y="3" width="20" height="18" rx="2"/></>,
   ai: <><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></>,
+  paint: <><path d="M19 3H5a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2z"/><path d="M12 11v6a2 2 0 01-2 2H8a2 2 0 01-2-2v-1"/></>,
+  signatureEdit: <><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/><path d="M2 22h20"/></>,
+  building: <><path d="M6 22V4a2 2 0 012-2h8a2 2 0 012 2v18"/><path d="M2 22h20"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></>,
+  shieldCheck: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></>,
+  zap: <><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>,
+  // Additional icons for emoji replacement
+  clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+  edit: <><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></>,
+  refreshCw: <><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></>,
+  alertTriangle: <><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>,
+  cpu: <><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></>,
+  palette: <><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12" r="1.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.04-.24-.3-.39-.65-.39-1.04 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-5.17-4.36-8.92-10-8.92z"/></>,
+  sparkles: <><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/></>,
+  target: <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>,
+  save: <><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>,
+  tag: <><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>,
+  link: <><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></>,
+  gem: <><polygon points="12 2 22 8.5 12 22 2 8.5 12 2"/></>,
+  rocket: <><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></>,
+  scroll: <><path d="M8 21h12a2 2 0 002-2v-2H10v2a2 2 0 11-4 0V5a2 2 0 012-2h14v14"/></>,
+  euro: <><path d="M4 10h12M4 14h12M6 6a8 8 0 100 12"/></>,
+  square: <><rect x="3" y="3" width="18" height="18" rx="2"/></>,
+  box: <><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>,
+  bug: <><rect x="8" y="6" width="8" height="14" rx="4"/><path d="M19 9h2M3 9h2M19 15h2M3 15h2M17 3l-2 4M7 3l2 4"/></>,
+  scissors: <><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></>,
+  hardHat: <><path d="M2 18a1 1 0 001 1h18a1 1 0 001-1v-2a1 1 0 00-1-1H3a1 1 0 00-1 1v2z"/><path d="M10 15V6a1 1 0 011-1h2a1 1 0 011 1v9"/><path d="M4 15v-3a8 8 0 0116 0v3"/></>,
+  clapperboard: <><path d="M4 11v8a2 2 0 002 2h12a2 2 0 002-2v-8H4z"/><path d="M4 11l3.5-7H20l-3.5 7H4z"/><line x1="8" y1="4" x2="12" y2="11"/><line x1="14" y1="4" x2="18" y2="11"/></>,
+  barChart: <><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></>,
 };
 
 /* == MISURE PUNTI == */
@@ -672,19 +758,19 @@ export function useDragOrder(init) {
 
 // === TIPI EVENTO (module-level) ===
 export const TIPI_EVENTO = [
-  { id: "sopralluogo", l: "📐 Sopralluogo", c: "#007aff" },
-  { id: "misure", l: "📏 Misure", c: "#5856d6" },
-  { id: "preventivo", l: "📋 Preventivo", c: "#af52de" },
-  { id: "posa", l: "🔧 Posa", c: "#34c759" },
-  { id: "consegna", l: "📦 Consegna", c: "#ff9500" },
-  { id: "riparazione", l: "🛠 Riparazione", c: "#FF3B30" },
-  { id: "collaudo", l: "✔️ Collaudo", c: "#30b0c7" },
-  { id: "telefonata", l: "📞 Telefonata", c: "#007aff" },
-  { id: "riunione", l: "🤝 Riunione", c: "#8E8E93" },
-  { id: "manutenzione", l: "🔩 Manutenzione", c: "#FF6B00" },
-  { id: "altro", l: "📅 Altro", c: "#D08008" },
-  { id: "impegno", l: "📌 Impegno", c: "#636366" },
-  { id: "controllo", l: "🏗 Controllo cantiere", c: "#5856d6" },
+  { id: "sopralluogo", l: "Sopralluogo", ico: "search", c: "#3B7FE0" },
+  { id: "misure", l: "Misure", ico: "ruler", c: "#8B5CF6" },
+  { id: "preventivo", l: "Preventivo", ico: "clipboard", c: "#F5A623" },
+  { id: "posa", l: "Posa", ico: "hammer", c: "#F97316" },
+  { id: "consegna", l: "Consegna", ico: "package", c: "#EF4444" },
+  { id: "riparazione", l: "Riparazione", ico: "wrench", c: "#DC4444" },
+  { id: "collaudo", l: "Collaudo", ico: "shieldCheck", c: "#10B981" },
+  { id: "telefonata", l: "Telefonata", ico: "phone", c: "#3B7FE0" },
+  { id: "riunione", l: "Riunione", ico: "users", c: "#7A7A7A" },
+  { id: "manutenzione", l: "Manutenzione", ico: "wrench", c: "#F97316" },
+  { id: "altro", l: "Altro", ico: "calendar", c: "#E8A020" },
+  { id: "impegno", l: "Impegno", ico: "mapPin", c: "#636366" },
+  { id: "controllo", l: "Controllo cantiere", ico: "building", c: "#8B5CF6" },
 ];
 export const tipoEvColor = (tipo) => {
   const t = TIPI_EVENTO.find(x => x.id === tipo);

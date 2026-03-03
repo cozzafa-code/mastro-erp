@@ -2,7 +2,7 @@
 // @ts-nocheck
 import React from "react";
 import { useMastro } from "./MastroContext";
-import { FF, FM, ICO, Ico } from "./mastro-constants";
+import { FF, FM, ICO, Ico, I } from "./mastro-constants";
 
 export default function MessaggiPanel() {
   const {
@@ -10,8 +10,8 @@ export default function MessaggiPanel() {
     aiInbox, cantieri, contatti, fornitori, gmailLoading, gmailMessages, gmailNextPage, gmailReply, gmailSearch, gmailSelected, gmailSending, gmailStatus, msgFilter, msgSearch, msgSubTab, msgs, rubricaFilter, rubricaSearch, selectedAiMsg, setAiInbox, setComposeMsg, setContatti, setGmailMessages, setGmailReply, setGmailSearch, setGmailSelected, setGmailStatus, setMailBody, setMsgFilter, setMsgSearch, setMsgSubTab, setMsgs, setNewCM, setNewEvent, setNewTask, setRubricaFilter, setRubricaSearch, setSelectedAiMsg, setSelectedCM, setSelectedMsg, setShowCompose, setShowMailModal, setShowModal, setShowNewEvent, setTab, team, gmailFetchMessages, gmailSendReply, gmailMatchCommessa,
   } = useMastro();
 
-    const chIco = { email: "📧", whatsapp: "💬", sms: "📱", telegram: "✈️" };
     const chCol = { email: T.blue, whatsapp: "#25d366", sms: T.orange, telegram: "#0088cc" };
+    const chIco = { email: <Ico d={ICO.mail} s={14} c={chCol.email} />, whatsapp: <Ico d={ICO.messageCircle} s={14} c={chCol.whatsapp} />, sms: <Ico d={ICO.phone} s={14} c={chCol.sms} />, telegram: <Ico d={ICO.send} s={14} c={chCol.telegram} /> };
     const chBg = { email: T.blueLt, whatsapp: "#25d36618", sms: T.orangeLt, telegram: "#0088cc18" };
     const filteredMsgs = msgs.filter(m => {
       const matchFilter = msgFilter === "tutti" || m.canale === msgFilter;
@@ -41,13 +41,13 @@ export default function MessaggiPanel() {
         {/* Sub-tabs: Chat / Rubrica / AI */}
         <div style={{ display: "flex", margin: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, overflow: "hidden" }}>
           {[
-            { id: "chat", l: "💬 Chat", count: unread },
-            { id: "email", l: "✉️ Email", count: gmailMessages.filter(m => m.unread).length },
-            { id: "ai", l: "🤖 AI", count: aiInbox.filter(m => !m.read).length },
-            { id: "rubrica", l: "📒 Rubrica", count: 0 }
+            { id: "chat", l: "Chat", ico: ICO.messageCircle, count: unread },
+            { id: "email", l: "Email", ico: ICO.mail, count: gmailMessages.filter(m => m.unread).length },
+            { id: "ai", l: "AI", ico: ICO.cpu, count: aiInbox.filter(m => !m.read).length },
+            { id: "rubrica", l: "Rubrica", ico: ICO.users, count: 0 }
           ].map(st => (
             <div key={st.id} onClick={() => setMsgSubTab(st.id)} style={{ flex: 1, padding: "10px 4px", textAlign: "center", fontSize: 12, fontWeight: 700, cursor: "pointer", background: msgSubTab === st.id ? T.acc : T.card, color: msgSubTab === st.id ? "#fff" : T.sub, transition: "all 0.2s", position: "relative" }}>
-              {st.l}
+              <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Ico d={st.ico} s={13} c={msgSubTab === st.id ? "#fff" : T.sub} /> {st.l}</span>
               {st.count > 0 && <span style={{ marginLeft: 4, fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 8, background: msgSubTab === st.id ? "rgba(255,255,255,0.3)" : T.red, color: "#fff" }}>{st.count}</span>}
             </div>
           ))}
@@ -65,15 +65,15 @@ export default function MessaggiPanel() {
           <div style={{ display: "flex", gap: 4, padding: "0 16px 10px", overflowX: "auto" }}>
             {[
               { id: "tutti", l: "Tutti", c: T.acc },
-              { id: "whatsapp", l: "💬 WhatsApp", c: "#25d366" },
-              { id: "email", l: "📧 Email", c: T.blue },
-              { id: "sms", l: "📱 SMS", c: T.orange },
-              { id: "telegram", l: "✈️ Telegram", c: "#0088cc" },
+              { id: "whatsapp", l: "WhatsApp", ico: ICO.messageCircle, c: "#25d366" },
+              { id: "email", l: "Email", ico: ICO.mail, c: T.blue },
+              { id: "sms", l: "SMS", ico: ICO.phone, c: T.orange },
+              { id: "telegram", l: "Telegram", ico: ICO.send, c: "#0088cc" },
             ].map(f => {
               const unr = f.id === "tutti" ? unread : msgs.filter(m => m.canale === f.id && !m.read).length;
               return (
                 <div key={f.id} onClick={() => setMsgFilter(f.id)} style={{ padding: "6px 12px", borderRadius: 20, border: `1px solid ${msgFilter === f.id ? f.c : T.bdr}`, background: msgFilter === f.id ? f.c + "15" : T.card, fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", color: msgFilter === f.id ? f.c : T.sub, display: "flex", alignItems: "center", gap: 4 }}>
-                  {f.l}
+                  {f.ico && <Ico d={f.ico} s={12} c={msgFilter === f.id ? f.c : T.sub} />}{f.l}
                   {unr > 0 && <span style={{ width: 16, height: 16, borderRadius: "50%", background: f.c, color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{unr}</span>}
                 </div>
               );
@@ -110,14 +110,14 @@ export default function MessaggiPanel() {
         {msgSubTab === "email" && (<>
           {!gmailStatus.connected ? (
             <div style={{ margin: "20px 16px", textAlign: "center" }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>✉️</div>
+              <div style={{ fontSize: 48, marginBottom: 12 }}><I d={ICO.mail} /></div>
               <div style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 8 }}>Collega la tua email</div>
               <div style={{ fontSize: 12, color: T.sub, marginBottom: 20, lineHeight: 1.6 }}>
                 Collegando Gmail, riceverai le email dei clienti e fornitori direttamente nell'Inbox di MASTRO.
                 Le email vengono automaticamente associate alle commesse.
               </div>
               <div onClick={() => window.location.href = "/api/gmail/auth"} style={{ display: "inline-block", padding: "14px 32px", borderRadius: 12, background: "#ea4335", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
-                <span style={{ marginRight: 8 }}>📧</span> Collega Gmail
+                <span style={{ marginRight: 8 }}><I d={ICO.mail} /></span> Collega Gmail
               </div>
               <div style={{ fontSize: 10, color: T.sub, marginTop: 12 }}>Supporta Gmail e Google Workspace. I dati restano sul tuo dispositivo.</div>
             </div>
@@ -140,14 +140,14 @@ export default function MessaggiPanel() {
                 {/* Commessa match */}
                 {(() => { const match = gmailMatchCommessa(gmailSelected); return match ? (
                   <div onClick={() => { setSelectedCM(match); setTab("commesse"); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 8, background: T.acc + "10", border: `1px solid ${T.acc}30`, cursor: "pointer", marginTop: 4 }}>
-                    <span style={{ fontSize: 12 }}>📁</span>
+                    <span style={{ fontSize: 12 }}><I d={ICO.folder} /></span>
                     <span style={{ fontSize: 11, fontWeight: 700, color: T.acc }}>{match.code} — {match.cliente} {match.cognome || ""}</span>
                   </div>
                 ) : null; })()}
                 {/* Attachments */}
                 {gmailSelected.attachments?.length > 0 && (
                   <div style={{ marginTop: 8 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, marginBottom: 4 }}>📎 ALLEGATI ({gmailSelected.attachments.length})</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, marginBottom: 4 }}><I d={ICO.paperclip} /> ALLEGATI ({gmailSelected.attachments.length})</div>
                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                       {gmailSelected.attachments.map((a, i) => (
                         <div key={i} style={{ padding: "4px 8px", borderRadius: 6, background: T.bg, border: `1px solid ${T.bdr}`, fontSize: 10, color: T.text }}>
@@ -165,11 +165,11 @@ export default function MessaggiPanel() {
               </div>
               {/* Quick actions */}
               <div style={{ background: T.card, borderRadius: 12, padding: 12, marginBottom: 10, border: `1px solid ${T.bdr}` }}>
-                <div style={{ fontSize: 9, fontWeight: 800, color: T.sub, textTransform: "uppercase", marginBottom: 8 }}>⚡ Azioni rapide</div>
+                <div style={{ fontSize: 9, fontWeight: 800, color: T.sub, textTransform: "uppercase", marginBottom: 8 }}><I d={ICO.zap} /> Azioni rapide</div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {/* Link a commessa esistente */}
                   {(() => { const match = gmailMatchCommessa(gmailSelected); return match ? (
-                    <div onClick={() => { setSelectedCM(match); setTab("commesse"); }} style={{ padding: "8px 14px", borderRadius: 8, background: T.acc + "15", color: T.acc, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>📁 Apri {match.code}</div>
+                    <div onClick={() => { setSelectedCM(match); setTab("commesse"); }} style={{ padding: "8px 14px", borderRadius: 8, background: T.acc + "15", color: T.acc, fontSize: 11, fontWeight: 700, cursor: "pointer" }}><I d={ICO.folder} /> Apri {match.code}</div>
                   ) : null; })()}
                   {/* Crea nuova commessa */}
                   <div onClick={() => {
@@ -180,7 +180,7 @@ export default function MessaggiPanel() {
                     setGmailSelected(null);
                     setTab("commesse");
                   }} style={{ padding: "8px 14px", borderRadius: 8, background: "#34c75915", color: "#34c759", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                    📋 Nuova commessa
+                    <I d={ICO.clipboard} /> Nuova commessa
                   </div>
                   {/* Crea evento/appuntamento */}
                   <div onClick={() => {
@@ -190,7 +190,7 @@ export default function MessaggiPanel() {
                     setGmailSelected(null);
                     setTab("agenda");
                   }} style={{ padding: "8px 14px", borderRadius: 8, background: "#5856d615", color: "#5856d6", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                    📅 Crea evento
+                    <I d={ICO.calendar} /> Crea evento
                   </div>
                   {/* Crea task */}
                   <div onClick={() => {
@@ -212,12 +212,12 @@ export default function MessaggiPanel() {
                     setContatti(prev => [...prev, { id: Date.now(), nome: parts[0] || fromName, cognome: parts.slice(1).join(" ") || "", email: fromEmail, telefono: "", tipo: "cliente", preferito: false }]);
                     alert("✅ " + fromName + " aggiunto alla rubrica!");
                   }} style={{ padding: "8px 14px", borderRadius: 8, background: "#af52de15", color: "#af52de", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                    📒 Rubrica
+                    <I d={ICO.users} /> Rubrica
                   </div>
                   {/* Copia email */}
-                  <div onClick={() => { const fromEmail = gmailSelected.from?.match(/<(.+)>/)?.[1] || gmailSelected.from; navigator.clipboard?.writeText(fromEmail); alert("Email copiata!"); }} style={{ padding: "8px 14px", borderRadius: 8, background: T.bg, color: T.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${T.bdr}` }}>📋 Copia email</div>
+                  <div onClick={() => { const fromEmail = gmailSelected.from?.match(/<(.+)>/)?.[1] || gmailSelected.from; navigator.clipboard?.writeText(fromEmail); alert("Email copiata!"); }} style={{ padding: "8px 14px", borderRadius: 8, background: T.bg, color: T.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${T.bdr}` }}><I d={ICO.clipboard} /> Copia email</div>
                   {/* Seleziona tutto il testo */}
-                  <div onClick={() => { navigator.clipboard?.writeText(gmailSelected.body || gmailSelected.snippet || ""); alert("Testo email copiato!"); }} style={{ padding: "8px 14px", borderRadius: 8, background: T.bg, color: T.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${T.bdr}` }}>📄 Copia testo</div>
+                  <div onClick={() => { navigator.clipboard?.writeText(gmailSelected.body || gmailSelected.snippet || ""); alert("Testo email copiato!"); }} style={{ padding: "8px 14px", borderRadius: 8, background: T.bg, color: T.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${T.bdr}` }}><I d={ICO.fileText} /> Copia testo</div>
                 </div>
               </div>
               {/* Reply */}
@@ -230,7 +230,7 @@ export default function MessaggiPanel() {
                     const to = gmailSelected.from?.match(/<(.+)>/)?.[1] || gmailSelected.from;
                     gmailSendReply(to, gmailSelected.subject, gmailReply, gmailSelected.threadId);
                   }} style={{ flex: 1, padding: 12, borderRadius: 10, border: "none", background: gmailReply.trim() ? "#007aff" : T.bdr, color: "#fff", fontSize: 13, fontWeight: 700, cursor: gmailReply.trim() ? "pointer" : "default", fontFamily: "inherit", opacity: gmailSending ? 0.6 : 1 }}>
-                    {gmailSending ? "Invio..." : "✉️ Invia risposta"}
+                    {gmailSending ? "Invio..." : "📧 Invia risposta"}
                   </button>
                 </div>
               </div>
@@ -241,17 +241,17 @@ export default function MessaggiPanel() {
               {/* Connected status + search */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}` }}>
-                  <span style={{ fontSize: 14 }}>🔍</span>
+                  <span style={{ fontSize: 14 }}><I d={ICO.search} /></span>
                   <input value={gmailSearch} onChange={e => setGmailSearch(e.target.value)} onKeyDown={e => { if (e.key === "Enter") gmailFetchMessages(gmailSearch); }}
                     placeholder="Cerca email..." style={{ flex: 1, border: "none", background: "transparent", fontSize: 12, color: T.text, outline: "none", fontFamily: FF }} />
                   {gmailSearch && <div onClick={() => { setGmailSearch(""); gmailFetchMessages(); }} style={{ cursor: "pointer", fontSize: 14, color: T.sub }}>✕</div>}
                 </div>
                 <div onClick={() => gmailFetchMessages(gmailSearch)} style={{ padding: "8px 12px", borderRadius: 10, background: T.acc, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                  🔄
+                  <I d={ICO.refreshCw} />
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <div style={{ fontSize: 10, color: T.sub }}>📧 {gmailStatus.email} · {gmailMessages.length} email</div>
+                <div style={{ fontSize: 10, color: T.sub }}><I d={ICO.mail} /> {gmailStatus.email} · {gmailMessages.length} email</div>
                 <div onClick={async () => { if(confirm("Disconnettere Gmail?")) { await fetch("/api/gmail/disconnect", { method: "POST" }); setGmailStatus({ connected: false }); setGmailMessages([]); }}} style={{ fontSize: 10, color: T.red, cursor: "pointer" }}>Disconnetti</div>
               </div>
 
@@ -274,8 +274,8 @@ export default function MessaggiPanel() {
                         <div style={{ fontSize: 11, fontWeight: m.unread ? 700 : 400, color: T.text, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as any }}>{m.subject || "(senza oggetto)"}</div>
                         <div style={{ fontSize: 10, color: T.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as any }}>{m.snippet}</div>
                         <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                          {match && <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.acc + "15", color: T.acc, fontWeight: 700 }}>📁 {match.code}</span>}
-                          {m.attachments?.length > 0 && <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.bg, color: T.sub, fontWeight: 700 }}>📎 {m.attachments.length}</span>}
+                          {match && <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.acc + "15", color: T.acc, fontWeight: 700 }}><I d={ICO.folder} /> {match.code}</span>}
+                          {m.attachments?.length > 0 && <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.bg, color: T.sub, fontWeight: 700 }}><I d={ICO.paperclip} /> {m.attachments.length}</span>}
                           {m.unread && <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.acc + "15", color: T.acc, fontWeight: 700 }}>NUOVA</span>}
                         </div>
                       </div>
@@ -296,7 +296,7 @@ export default function MessaggiPanel() {
         {msgSubTab === "ai" && (<>
           {/* Header spiegazione */}
           <div style={{ margin: "0 16px 10px", padding: "10px 12px", borderRadius: 10, background: "linear-gradient(135deg, #1A1A1C, #2A2008)", border: `1px solid ${T.acc}30`, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 22 }}>🤖</span>
+            <span style={{ fontSize: 22 }}><I d={ICO.cpu} /></span>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>AI classifica le tue email</div>
               <div style={{ fontSize: 10, color: "#888", marginTop: 1 }}>Collegata al tuo indirizzo mail — suggerisce dove archiviare ogni messaggio</div>
@@ -328,7 +328,7 @@ export default function MessaggiPanel() {
                           {m.ai.emoji} {m.ai.label}
                         </span>
                         <span style={{ fontSize: 9, fontWeight: 700, color: T.sub }}>
-                          🤖 {m.ai.confidenza}% sicuro
+                          <I d={ICO.cpu} /> {m.ai.confidenza}% sicuro
                         </span>
                         {m.ai.cmSuggerita && <span style={{ ...S.badge(T.accLt, T.acc) }}>{m.ai.cmSuggerita}</span>}
                         {m.archiviata && <span style={{ fontSize: 9, fontWeight: 700, color: T.grn }}>✓ Archiviata</span>}
@@ -347,7 +347,7 @@ export default function MessaggiPanel() {
 
                       {/* Analisi AI */}
                       <div style={{ background: m.ai.color + "10", border: `1px solid ${m.ai.color}30`, borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
-                        <div style={{ fontSize: 10, fontWeight: 800, color: m.ai.color, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>🤖 Analisi AI</div>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: m.ai.color, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}><I d={ICO.cpu} /> Analisi AI</div>
                         <div style={{ fontSize: 12, color: T.text, marginBottom: 4 }}><strong>Tipo:</strong> {m.ai.emoji} {m.ai.label} ({m.ai.confidenza}% confidenza)</div>
                         <div style={{ fontSize: 12, color: T.text, marginBottom: 4 }}><strong>Azione suggerita:</strong> {m.ai.azione}</div>
                         {m.ai.note && <div style={{ fontSize: 11, color: T.sub, fontStyle: "italic" }}>"{m.ai.note}"</div>}
@@ -356,11 +356,11 @@ export default function MessaggiPanel() {
                       {/* Dati estratti (se nuova commessa) */}
                       {m.ai.estratto && (
                         <div style={{ background: T.grnLt, border: `1px solid ${T.grn}30`, borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
-                          <div style={{ fontSize: 10, fontWeight: 800, color: T.grn, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>📋 Dati estratti automaticamente</div>
-                          {m.ai.estratto.cliente && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>👤 <strong>Cliente:</strong> {m.ai.estratto.cliente}</div>}
-                          {m.ai.estratto.indirizzo && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>📍 <strong>Indirizzo:</strong> {m.ai.estratto.indirizzo}</div>}
-                          {m.ai.estratto.email && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}>✉️ <strong>Email:</strong> {m.ai.estratto.email}</div>}
-                          {m.ai.estratto.note && <div style={{ fontSize: 12, color: T.text }}>📝 <strong>Note:</strong> {m.ai.estratto.note}</div>}
+                          <div style={{ fontSize: 10, fontWeight: 800, color: T.grn, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}><I d={ICO.clipboard} /> Dati estratti automaticamente</div>
+                          {m.ai.estratto.cliente && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}><I d={ICO.user} /> <strong>Cliente:</strong> {m.ai.estratto.cliente}</div>}
+                          {m.ai.estratto.indirizzo && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}><I d={ICO.mapPin} /> <strong>Indirizzo:</strong> {m.ai.estratto.indirizzo}</div>}
+                          {m.ai.estratto.email && <div style={{ fontSize: 12, color: T.text, marginBottom: 3 }}><I d={ICO.mail} /> <strong>Email:</strong> {m.ai.estratto.email}</div>}
+                          {m.ai.estratto.note && <div style={{ fontSize: 12, color: T.text }}><I d={ICO.fileText} /> <strong>Note:</strong> {m.ai.estratto.note}</div>}
                         </div>
                       )}
 
@@ -375,7 +375,7 @@ export default function MessaggiPanel() {
                               if (cm) { setSelectedCM(cm); setTab("commesse"); }
                             }
                           }} style={{ flex: 2, padding: "10px", borderRadius: 9, background: m.ai.color, color: "#fff", textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
-                            {m.ai.cmNuova ? "➕ Crea Commessa" : `🔗 ${m.ai.azione.split(" ").slice(0,3).join(" · ")}`}
+                            {m.ai.cmNuova ? <><I d={ICO.plus} /> Crea Commessa</> : <><I d={ICO.link} /> {m.ai.azione.split(" ").slice(0,3).join(" · ")}</>}
                           </div>
                           <div onClick={() => {
                             setAiInbox(ai => ai.map(x => x.id === m.id ? { ...x, archiviata: true, read: true } : x));
@@ -393,7 +393,7 @@ Grazie per il suo messaggio.
                             setMailBody(tpl);
                             setShowMailModal({ ev: { text: m.subject, date: new Date().toISOString().slice(0,10), time: "", addr: "" }, cm: null, emailOverride: dest });
                           }} style={{ flex: 1, padding: "10px", borderRadius: 9, background: T.accLt, border: `1px solid ${T.acc}30`, color: T.acc, textAlign: "center", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
-                            ✉️
+                            <I d={ICO.mail} />
                           </div>
                         </div>
                       )}
@@ -423,7 +423,7 @@ Grazie per il suo messaggio.
             {[
               { id: "tutti", l: "Tutti", c: T.acc },
               { id: "preferiti", l: "⭐ Preferiti", c: "#ff9500" },
-              { id: "team", l: "👥 Team", c: "#34c759" },
+              { id: "team", l: "● Team", c: "#34c759" },
               { id: "clienti", l: "🏠 Clienti", c: T.blue },
               { id: "fornitori", l: "🏭 Fornitori", c: "#af52de" },
             ].map(f => (
@@ -455,10 +455,10 @@ Grazie per il suo messaggio.
                     </div>
                     <div style={{ display: "flex", gap: 4 }}>
                       {(c.canali || []).includes("whatsapp") && (
-                        <div onClick={() => { setComposeMsg(m => ({ ...m, canale: "whatsapp", to: c.nome })); setShowCompose(true); }} style={{ width: 32, height: 32, borderRadius: "50%", background: "#25d36618", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>💬</div>
+                        <div onClick={() => { setComposeMsg(m => ({ ...m, canale: "whatsapp", to: c.nome })); setShowCompose(true); }} style={{ width: 32, height: 32, borderRadius: "50%", background: "#25d36618", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}><I d={ICO.messageCircle} /></div>
                       )}
                       {(c.canali || []).includes("email") && (
-                        <div onClick={() => { setComposeMsg(m => ({ ...m, canale: "email", to: c.nome })); setShowCompose(true); }} style={{ width: 32, height: 32, borderRadius: "50%", background: T.blueLt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>📧</div>
+                        <div onClick={() => { setComposeMsg(m => ({ ...m, canale: "email", to: c.nome })); setShowCompose(true); }} style={{ width: 32, height: 32, borderRadius: "50%", background: T.blueLt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}><I d={ICO.mail} /></div>
                       )}
                       <div onClick={() => { setContatti(cs => cs.map(x => x.id === c.id ? { ...x, preferito: !x.preferito } : x)); }} style={{ width: 32, height: 32, borderRadius: "50%", background: c.preferito ? "#ff950018" : T.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer" }}>
                         {c.preferito ? "⭐" : "☆"}

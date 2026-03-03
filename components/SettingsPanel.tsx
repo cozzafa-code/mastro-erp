@@ -59,7 +59,20 @@ export default function SettingsPanel() {
     setSubPlan, setTutoStep, setAiInbox,
     // Business logic
     generaFatturaPDF,
+    // Strutture configuratore
+    showStrutture, setShowStrutture,
   } = ctx;
+
+  // DS v2.0 — primary from theme (teal for chiaro)
+  const PRI = T.acc || "#0D7C6B";
+  const PRI08 = T.accLt || "rgba(13,124,107,0.08)";
+  const PRI15 = T.accLt || "rgba(13,124,107,0.15)";
+
+  // Aggiungi settore Strutture se non presente in constants
+  const SETTORI_FULL = [
+    ...SETTORI,
+    ...(!SETTORI.find((s: any) => s.id === "strutture") ? [{ id: "strutture", label: "Strutture", icon: "🏗️", desc: "Pergole, verande, pensiline, box, cancelli, ferro" }] : []),
+  ];
 
   return (
     <div style={{ paddingBottom: 80 }}>
@@ -96,10 +109,12 @@ export default function SettingsPanel() {
             ...(settoriAttivi.includes("boxdoccia") ? [{ id: "bd_vetri", l: "🚿 Vetri Doccia" }, { id: "bd_profili", l: "🔧 Profili Doccia" }] : []),
             // Cancelli — nuovo
             ...(settoriAttivi.includes("cancelli") ? [{ id: "canc_mat", l: "🏗️ Mat. Cancelli" }, { id: "canc_auto", l: "⚡ Automazioni" }] : []),
+            // Strutture — Configuratore
+            ...(settoriAttivi.includes("strutture") ? [{ id: "strutture", l: "🏗 Strutture" }] : []),
             // Sempre visibili
             { id: "tipologie", l: "📐 Tipologie" }, { id: "salita", l: "🪜 Salita" }, { id: "pipeline", l: "📊 Pipeline" }, { id: "libreria", l: "📦 Libreria" }, { id: "importa", l: "📥 Importa" }, { id: "guida", l: "📖 Guida" }, { id: "kit", l: "🔧 Kit" }, { id: "marketplace", l: "🏪 Fornitori" }, { id: "temi", l: "🎨 Temi" },
           ].map(t => (
-            <div key={t.id} onClick={() => setSettingsTab(t.id)} style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 600, background: settingsTab === t.id ? T.acc : T.card, color: settingsTab === t.id ? "#fff" : T.sub, cursor: "pointer", whiteSpace: "nowrap" }}>
+            <div key={t.id} onClick={() => setSettingsTab(t.id)} style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 600, background: settingsTab === t.id ? PRI : T.card, color: settingsTab === t.id ? "#fff" : T.sub, cursor: "pointer", whiteSpace: "nowrap", borderRadius: 6 }}>
               {t.l}
             </div>
           ))}
@@ -113,35 +128,58 @@ export default function SettingsPanel() {
         {settingsTab === "settore" && (
           <>
             <div style={{ fontSize: 12, color: T.sub, padding: "0 4px 10px", lineHeight: 1.5 }}>Seleziona i settori in cui operi. MASTRO mostrerà solo le tipologie e funzioni rilevanti per il tuo lavoro.</div>
-            {SETTORI.map(s => {
+            {SETTORI_FULL.map(s => {
               const isOn = settoriAttivi.includes(s.id);
               const count = TIPOLOGIE_RAPIDE.filter(t => t.settore === s.id).length;
               return (
-                <div key={s.id} onClick={() => {
-                  setSettoriAttivi(prev => isOn ? prev.filter(x => x !== s.id) : [...prev, s.id]);
-                }} style={{
-                  padding: "14px 16px", borderRadius: 14, cursor: "pointer", marginBottom: 8,
-                  border: `2px solid ${isOn ? "#007aff" : T.bdr}`,
-                  background: isOn ? "#007aff08" : T.card,
-                  display: "flex", alignItems: "center", gap: 12,
-                }}>
-                  <div style={{ fontSize: 28, width: 36, textAlign: "center" }}>{s.icon}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: isOn ? "#007aff" : T.text }}>{s.label}</div>
-                    <div style={{ fontSize: 10, color: T.sub }}>{s.desc}</div>
-                    <div style={{ fontSize: 9, color: T.sub, marginTop: 2 }}>{count} tipologie disponibili</div>
-                  </div>
-                  <div style={{
-                    width: 48, height: 28, borderRadius: 14, padding: 2,
-                    background: isOn ? "#007aff" : T.bdr,
-                    display: "flex", alignItems: "center", transition: "all .2s",
+                <div key={s.id} style={{ marginBottom: 8 }}>
+                  <div onClick={() => {
+                    setSettoriAttivi(prev => isOn ? prev.filter(x => x !== s.id) : [...prev, s.id]);
+                  }} style={{
+                    padding: "14px 16px", borderRadius: isOn && s.id === "strutture" ? "14px 14px 0 0" : 14, cursor: "pointer",
+                    border: `2px solid ${isOn ? (T.pri || "#0D7C6B") : T.bdr}`,
+                    borderBottom: isOn && s.id === "strutture" ? "none" : undefined,
+                    background: isOn ? (T.pri || "#0D7C6B") + "08" : T.card,
+                    display: "flex", alignItems: "center", gap: 12,
                   }}>
+                    <div style={{ fontSize: 28, width: 36, textAlign: "center" }}>{s.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: isOn ? (T.pri || "#0D7C6B") : T.text }}>{s.label}</div>
+                      <div style={{ fontSize: 10, color: T.sub }}>{s.desc}</div>
+                      <div style={{ fontSize: 9, color: T.sub, marginTop: 2 }}>{count} tipologie disponibili</div>
+                    </div>
                     <div style={{
-                      width: 24, height: 24, borderRadius: 12, background: "#fff",
-                      transform: isOn ? "translateX(20px)" : "translateX(0px)",
-                      transition: "all .2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                    }} />
+                      width: 48, height: 28, borderRadius: 14, padding: 2,
+                      background: isOn ? (T.pri || "#0D7C6B") : T.bdr,
+                      display: "flex", alignItems: "center", transition: "all .2s",
+                    }}>
+                      <div style={{
+                        width: 24, height: 24, borderRadius: 12, background: "#fff",
+                        transform: isOn ? "translateX(20px)" : "translateX(0px)",
+                        transition: "all .2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                      }} />
+                    </div>
                   </div>
+                  {/* Strutture: expanded configuratore card */}
+                  {isOn && s.id === "strutture" && (
+                    <div onClick={(e) => { e.stopPropagation(); setShowStrutture(true); }} style={{
+                      padding: 16, cursor: "pointer",
+                      border: `2px solid ${T.pri || "#0D7C6B"}`, borderTop: "none",
+                      borderRadius: "0 0 14px 14px",
+                      background: T.card, textAlign: "center",
+                    }}>
+                      <div style={{ fontSize: 28, marginBottom: 6 }}>🏗️</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>Configuratore Strutture</div>
+                      <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>Pianta → Lati → 3D per Pergole, Verande, Box Doccia, Ferro</div>
+                      <div style={{
+                        marginTop: 10, padding: "8px 20px", borderRadius: 8,
+                        background: T.pri || "#0D7C6B", color: "#fff",
+                        fontSize: 12, fontWeight: 700, display: "inline-block",
+                      }}>
+                        Apri Configuratore →
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -154,7 +192,7 @@ export default function SettingsPanel() {
 
         {settingsTab === "azienda" && (
           <div style={{background:"#fff",borderRadius:12,overflow:"hidden",border:`1px solid ${T.bdr}`}}>
-            <div style={{padding:"12px 14px",background:T.acc,color:"#fff"}}>
+            <div style={{padding:"12px 14px",background:PRI,color:"#fff"}}>
               <div style={{fontSize:13,fontWeight:800}}>Dati Azienda</div>
               <div style={{fontSize:10,opacity:0.8,marginTop:2}}>Questi dati appaiono sul PDF del preventivo</div>
             </div>
@@ -174,9 +212,9 @@ export default function SettingsPanel() {
                   <div style={{flex:1}}>
                     <div style={{fontSize:12,fontWeight:600,color:T.text,marginBottom:4}}>Logo caricato ✓</div>
                     <div style={{display:"flex",gap:6}}>
-                      <div onClick={()=>logoInputRef.current?.click()} style={{fontSize:11,color:T.acc,fontWeight:700,cursor:"pointer"}}>Cambia</div>
+                      <div onClick={()=>logoInputRef.current?.click()} style={{fontSize:11,color:PRI,fontWeight:700,cursor:"pointer"}}>Cambia</div>
                       <span style={{color:T.bdr}}>·</span>
-                      <div onClick={()=>setAziendaInfo(a=>({...a,logo:null}))} style={{fontSize:11,color:"#ff3b30",fontWeight:700,cursor:"pointer"}}>Rimuovi</div>
+                      <div onClick={()=>setAziendaInfo(a=>({...a,logo:null}))} style={{fontSize:11,color:"#DC4444",fontWeight:700,cursor:"pointer"}}>Rimuovi</div>
                     </div>
                   </div>
                 </div>
@@ -211,7 +249,7 @@ export default function SettingsPanel() {
             ))}
 
             {/* CONDIZIONI PREVENTIVO */}
-            <div style={{padding:"14px",borderTop:`2px solid ${T.acc}`,marginTop:8}}>
+            <div style={{padding:"14px",borderTop:`2px solid ${PRI}`,marginTop:8}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                 <span style={{fontSize:16}}>📋</span>
                 <div>
@@ -265,7 +303,7 @@ export default function SettingsPanel() {
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 {aziendaInfo.logo
                   ? <img src={aziendaInfo.logo} style={{width:48,height:48,borderRadius:"50%",objectFit:"cover",border:`1px solid ${T.bdr}`}} alt="logo"/>
-                  : <div style={{ width: 48, height: 48, borderRadius: "50%", background: T.acc, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 18, fontWeight: 700 }}>FC</div>
+                  : <div style={{ width: 48, height: 48, borderRadius: "50%", background: PRI, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 18, fontWeight: 700 }}>FC</div>
                 }
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 700 }}>Fabio Cozza</div>
@@ -277,7 +315,7 @@ export default function SettingsPanel() {
               <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>TEMA</div>
               <div style={{ display: "flex", gap: 6 }}>
                 {[["chiaro", "☀️"], ["scuro", "🌙"], ["oceano", "🌊"]].map(([id, ico]) => (
-                  <div key={id} onClick={() => setTheme(id)} style={{ flex: 1, padding: "10px 4px", borderRadius: 8, border: `1.5px solid ${theme === id ? T.acc : T.bdr}`, textAlign: "center", cursor: "pointer" }}>
+                  <div key={id} onClick={() => setTheme(id)} style={{ flex: 1, padding: "10px 4px", borderRadius: 8, border: `1.5px solid ${theme === id ? PRI : T.bdr}`, textAlign: "center", cursor: "pointer" }}>
                     <div style={{ fontSize: 18 }}>{ico}</div>
                     <div style={{ fontSize: 10, fontWeight: 600, textTransform: "capitalize", marginTop: 2 }}>{id}</div>
                   </div>
@@ -287,7 +325,7 @@ export default function SettingsPanel() {
             <div style={{ ...S.card, marginTop: 8 }}><div style={S.cardInner}>
               <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>STATISTICHE</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 12 }}>
-                <div><div style={{ fontSize: 20, fontWeight: 700, color: T.acc }}>{cantieri.length}</div>Commesse</div>
+                <div><div style={{ fontSize: 20, fontWeight: 700, color: PRI }}>{cantieri.length}</div>Commesse</div>
                 <div><div style={{ fontSize: 20, fontWeight: 700, color: T.blue }}>{countVani()}</div>Vani</div>
                 <div><div style={{ fontSize: 20, fontWeight: 700, color: T.grn }}>{tasks.filter(t => t.done).length}/{tasks.length}</div>Task</div>
               </div>
@@ -300,16 +338,16 @@ export default function SettingsPanel() {
           <>
             {/* Current plan banner */}
             <div style={{ ...S.card, marginBottom: 12 }}>
-              <div style={{ padding: 16, background: `linear-gradient(135deg, ${T.acc}15, ${T.acc}05)`, borderRadius: T.r }}>
+              <div style={{ padding: 16, background: `linear-gradient(135deg, ${PRI}15, ${PRI}05)`, borderRadius: T.r }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                   <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: T.acc, textTransform: "uppercase" as const, letterSpacing: 1 }}>Piano attuale</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: PRI, textTransform: "uppercase" as const, letterSpacing: 1 }}>Piano attuale</div>
                     <div style={{ fontSize: 24, fontWeight: 800, color: T.text, marginTop: 2 }}>
-                      {plan.nome} {activePlan === "trial" && <span style={{ fontSize: 12, fontWeight: 600, color: trialDaysLeft <= 3 ? T.red : T.acc }}>({trialDaysLeft}gg rimasti)</span>}
+                      {plan.nome} {activePlan === "trial" && <span suppressHydrationWarning style={{ fontSize: 12, fontWeight: 600, color: trialDaysLeft <= 3 ? T.red : PRI }}>({trialDaysLeft}gg rimasti)</span>}
                     </div>
                   </div>
                   {plan.prezzo > 0 && <div style={{ textAlign: "right" as const }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: T.acc, fontFamily: FM }}>€{plan.prezzo}</div>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: PRI, fontFamily: FM }}>€{plan.prezzo}</div>
                     <div style={{ fontSize: 10, color: T.sub }}>/mese</div>
                   </div>}
                 </div>
@@ -326,15 +364,15 @@ export default function SettingsPanel() {
             <div style={{ fontSize: 14, fontWeight: 700, color: T.text, padding: "0 16px", marginBottom: 8 }}>Confronta piani</div>
             {(Object.entries(PLANS) as [string, any][]).filter(([k]) => k !== "trial" && k !== "free").map(([key, pl]) => (
               <div key={key} onClick={() => { if (key !== activePlan) setSubPlan(key); }}
-                style={{ ...S.card, marginBottom: 8, border: key === activePlan ? `2px solid ${T.acc}` : `1px solid ${T.bdr}`, cursor: "pointer", position: "relative" as const, overflow: "hidden" }}>
-                {key === "pro" && <div style={{ position: "absolute" as const, top: 0, right: 0, background: T.acc, color: "#fff", fontSize: 8, fontWeight: 800, padding: "3px 10px", borderBottomLeftRadius: 8, textTransform: "uppercase" as const, letterSpacing: 1 }}>Consigliato</div>}
+                style={{ ...S.card, marginBottom: 8, border: key === activePlan ? `2px solid ${PRI}` : `1px solid ${T.bdr}`, cursor: "pointer", position: "relative" as const, overflow: "hidden" }}>
+                {key === "pro" && <div style={{ position: "absolute" as const, top: 0, right: 0, background: PRI, color: "#fff", fontSize: 8, fontWeight: 800, padding: "3px 10px", borderBottomLeftRadius: 8, textTransform: "uppercase" as const, letterSpacing: 1 }}>Consigliato</div>}
                 <div style={{ padding: 14 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                     <div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: key === "pro" ? T.acc : T.text }}>{pl.nome}</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: key === "pro" ? PRI : T.text }}>{pl.nome}</div>
                     </div>
                     <div style={{ textAlign: "right" as const }}>
-                      <span style={{ fontSize: 26, fontWeight: 800, color: key === "pro" ? T.acc : T.text, fontFamily: FM }}>€{pl.prezzo}</span>
+                      <span style={{ fontSize: 26, fontWeight: 800, color: key === "pro" ? PRI : T.text, fontFamily: FM }}>€{pl.prezzo}</span>
                       <span style={{ fontSize: 11, color: T.sub }}>/mese</span>
                     </div>
                   </div>
@@ -348,9 +386,9 @@ export default function SettingsPanel() {
                     <div style={{ fontSize: 11, color: T.text }}>📂 {pl.maxCataloghi === 99 ? "Illimitati" : pl.maxCataloghi} catalog{pl.maxCataloghi > 1 ? "hi" : "o"}</div>
                   </div>
                   {key === activePlan ? (
-                    <div style={{ marginTop: 10, padding: "8px 0", textAlign: "center" as const, borderRadius: 8, background: T.acc + "15", fontSize: 12, fontWeight: 700, color: T.acc }}>✓ Piano attivo</div>
+                    <div style={{ marginTop: 10, padding: "8px 0", textAlign: "center" as const, borderRadius: 8, background: PRI + "15", fontSize: 12, fontWeight: 700, color: PRI }}>✓ Piano attivo</div>
                   ) : (
-                    <div style={{ marginTop: 10, padding: "8px 0", textAlign: "center" as const, borderRadius: 8, background: T.acc, fontSize: 12, fontWeight: 700, color: "#fff" }}>
+                    <div style={{ marginTop: 10, padding: "8px 0", textAlign: "center" as const, borderRadius: 8, background: PRI, fontSize: 12, fontWeight: 700, color: "#fff" }}>
                       {pl.prezzo > (plan.prezzo || 0) ? `Passa a ${pl.nome} — €${pl.prezzo}/mese` : `Passa a ${pl.nome}`}
                     </div>
                   )}
@@ -380,7 +418,7 @@ export default function SettingsPanel() {
                 <Ico d={ICO.pen} s={14} c={T.sub} />
               </div></div>
             ))}
-            <div onClick={() => { setSettingsModal("membro"); setSettingsForm({ nome: "", ruolo: "Posatore", compiti: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.bdr}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600 }}>+ Aggiungi membro</div>
+            <div onClick={() => { setSettingsModal("membro"); setSettingsForm({ nome: "", ruolo: "Posatore", compiti: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.bdr}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600 }}>+ Aggiungi membro</div>
           </>
         )}
 
@@ -392,7 +430,7 @@ export default function SettingsPanel() {
               <div key={s.id} style={{ ...S.card, marginBottom: 8 }}><div style={S.cardInner}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: T.acc }}>{s.marca}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: PRI }}>{s.marca}</div>
                     <div style={{ fontSize: 12, fontWeight: 600 }}>{s.sistema}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
@@ -401,7 +439,7 @@ export default function SettingsPanel() {
                       <input type="number" defaultValue={s.euroMq || ""} onBlur={e => setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, euroMq: parseFloat(e.target.value)||0, prezzoMq: parseFloat(e.target.value)||0 } : x))} style={{ width: 60, padding: "3px 6px", borderRadius: 4, border: `1px solid ${T.bdr}`, fontSize: 13, fontWeight: 700, color: T.grn, textAlign: "right", fontFamily: FM }} />
                     </div>
                     <div style={{ fontSize: 9, color: T.sub }}>+{s.sovRAL}% RAL · +{s.sovLegno}% Legno</div>
-                    {s.griglia?.length > 0 && <div style={{ fontSize: 9, color: T.acc, fontWeight: 600, marginTop: 2 }}>📊 Griglia {s.griglia.length} prezzi</div>}
+                    {s.griglia?.length > 0 && <div style={{ fontSize: 9, color: PRI, fontWeight: 600, marginTop: 2 }}>📊 Griglia {s.griglia.length} prezzi</div>}
                   </div>
                 </div>
                 {/* Profile image upload */}
@@ -413,7 +451,7 @@ export default function SettingsPanel() {
                       <div onClick={() => setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, immagineProfilo: undefined } : x))} style={{ fontSize: 10, color: T.red, cursor: "pointer", fontWeight: 600 }}>✕ Rimuovi</div>
                     </div>
                   ) : (
-                    <label style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 6, background: T.acc + "15", color: T.acc, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                    <label style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 6, background: PRI + "15", color: PRI, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
                       📷 Carica PNG
                       <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
                         const file = e.target.files?.[0]; if (!file) return;
@@ -429,7 +467,7 @@ export default function SettingsPanel() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                     <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase" }}>Griglia prezzi L×H {s.griglia?.length > 0 ? `(${s.griglia.length} prezzi)` : ""}</div>
                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                      <label style={{ padding: "3px 8px", borderRadius: 4, background: T.acc + "15", color: T.acc, fontSize: 9, fontWeight: 600, cursor: "pointer" }}>
+                      <label style={{ padding: "3px 8px", borderRadius: 4, background: PRI + "15", color: PRI, fontSize: 9, fontWeight: 600, cursor: "pointer" }}>
                         📄 CSV / TXT
                         <input type="file" accept=".csv,.txt" style={{ display: "none" }} onChange={e => {
                           const file = e.target.files?.[0]; if (!file) return;
@@ -490,7 +528,7 @@ export default function SettingsPanel() {
                           setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, griglia: newGrid } : x));
                           alert(`✅ ${added} prezzi aggiunti!`);
                         }
-                      }} style={{ padding: "3px 8px", borderRadius: 4, background: "#5856d615", color: "#5856d6", fontSize: 9, fontWeight: 600, cursor: "pointer" }}>📋 Incolla</div>
+                      }} style={{ padding: "3px 8px", borderRadius: 4, background: "#8B5CF615", color: "#8B5CF6", fontSize: 9, fontWeight: 600, cursor: "pointer" }}>📋 Incolla</div>
                       <div onClick={() => {
                         const l = prompt("Larghezza (mm):", "1000");
                         const h = prompt("Altezza (mm):", "1200");
@@ -504,7 +542,7 @@ export default function SettingsPanel() {
                         const blob = new Blob([csv], { type: "text/csv" });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement("a"); a.href = url; a.download = `listino_${s.nome.replace(/\s/g,"_")}.csv`; a.click();
-                      }} style={{ padding: "3px 8px", borderRadius: 4, background: "#ff950015", color: "#ff9500", fontSize: 9, fontWeight: 600, cursor: "pointer" }}>📥 Esporta</div>}
+                      }} style={{ padding: "3px 8px", borderRadius: 4, background: "#E8A02015", color: "#E8A020", fontSize: 9, fontWeight: 600, cursor: "pointer" }}>📥 Esporta</div>}
                     </div>
                   </div>
                   {s.griglia?.length > 0 ? (() => {
@@ -522,11 +560,11 @@ export default function SettingsPanel() {
                           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9 }}>
                             <thead><tr style={{ background: T.bg }}>
                               <th style={{ padding: "3px 4px", fontWeight: 700, color: T.sub, position: "sticky", left: 0, background: T.bg, borderRight: `1px solid ${T.bdr}`, fontSize: 8 }}>L→<br/>H↓</th>
-                              {uniqueL.map(l => <th key={l} style={{ padding: "3px 4px", fontWeight: 700, color: T.acc, textAlign: "center", fontSize: 8, minWidth: 40 }}>{l}</th>)}
+                              {uniqueL.map(l => <th key={l} style={{ padding: "3px 4px", fontWeight: 700, color: PRI, textAlign: "center", fontSize: 8, minWidth: 40 }}>{l}</th>)}
                             </tr></thead>
                             <tbody>{uniqueH.map(h => (
                               <tr key={h} style={{ borderTop: `1px solid ${T.bdr}15` }}>
-                                <td style={{ padding: "2px 4px", fontWeight: 700, color: T.acc, position: "sticky", left: 0, background: T.card, borderRight: `1px solid ${T.bdr}`, fontSize: 8 }}>{h}</td>
+                                <td style={{ padding: "2px 4px", fontWeight: 700, color: PRI, position: "sticky", left: 0, background: T.card, borderRight: `1px solid ${T.bdr}`, fontSize: 8 }}>{h}</td>
                                 {uniqueL.map(l => {
                                   const g = s.griglia.find(x => x.l === l && x.h === h);
                                   return <td key={l} style={{ padding: "2px 4px", textAlign: "center", fontWeight: g ? 700 : 400, color: g ? T.grn : T.bdr, fontSize: 8 }}>
@@ -582,7 +620,7 @@ export default function SettingsPanel() {
                     ].map(cat => {
                       const isActive = (s.minimiMq?.[cat.key] || 0) > 0;
                       return (
-                        <div key={cat.key} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, background: isActive ? T.acc + "10" : T.card, border: `1px solid ${isActive ? T.acc + "40" : T.bdr}`, opacity: isActive ? 1 : 0.6 }}>
+                        <div key={cat.key} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, background: isActive ? PRI + "10" : T.card, border: `1px solid ${isActive ? PRI + "40" : T.bdr}`, opacity: isActive ? 1 : 0.6 }}>
                           <div onClick={() => {
                             if (isActive) {
                               setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, minimiMq: { ...(x.minimiMq || {}), [cat.key]: 0 } } : x));
@@ -590,7 +628,7 @@ export default function SettingsPanel() {
                               const def = { "1anta": 1.5, "2ante": 2.0, "3ante": 2.8, "scorrevole": 3.5, "fisso": 1.0 }[cat.key] || 1.5;
                               setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, minimiMq: { ...(x.minimiMq || {}), [cat.key]: def } } : x));
                             }
-                          }} style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${isActive ? T.acc : T.bdr}`, background: isActive ? T.acc : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 900, flexShrink: 0 }}>
+                          }} style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${isActive ? PRI : T.bdr}`, background: isActive ? PRI : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 900, flexShrink: 0 }}>
                             {isActive && "✓"}
                           </div>
                           <span style={{ fontSize: 10, fontWeight: 600, color: T.text, minWidth: 52 }}>{cat.label}</span>
@@ -599,7 +637,7 @@ export default function SettingsPanel() {
                               <input type="number" step="0.1" defaultValue={s.minimiMq?.[cat.key] || ""} onBlur={e => {
                                 const val = parseFloat(e.target.value) || 0;
                                 setSistemiDB(prev => prev.map(x => x.id === s.id ? { ...x, minimiMq: { ...(x.minimiMq || {}), [cat.key]: val } } : x));
-                              }} style={{ width: 45, padding: "2px 4px", borderRadius: 4, border: `1px solid ${T.acc}40`, fontSize: 11, fontWeight: 700, color: T.acc, textAlign: "center", fontFamily: FM }} />
+                              }} style={{ width: 45, padding: "2px 4px", borderRadius: 4, border: `1px solid ${PRI}40`, fontSize: 11, fontWeight: 700, color: PRI, textAlign: "center", fontFamily: FM }} />
                               <span style={{ fontSize: 9, color: T.sub }}>mq</span>
                             </>
                           )}
@@ -625,7 +663,7 @@ export default function SettingsPanel() {
                 </div>
               </div></div>
             ))}
-            <div onClick={() => { setSettingsModal("sistema"); setSettingsForm({ marca: "", sistema: "", euroMq: "", sovRAL: "", sovLegno: "", sottosistemi: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600 }}>+ Aggiungi sistema</div>
+            <div onClick={() => { setSettingsModal("sistema"); setSettingsForm({ marca: "", sistema: "", euroMq: "", sovRAL: "", sovLegno: "", sottosistemi: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600 }}>+ Aggiungi sistema</div>
           </>
         )}
 
@@ -644,7 +682,7 @@ export default function SettingsPanel() {
                 <div onClick={() => deleteSettingsItem("colore", c.id)} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
-            <div onClick={() => { setSettingsModal("colore"); setSettingsForm({ nome: "", code: "", hex: "#888888", tipo: "RAL" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600 }}>+ Aggiungi colore</div>
+            <div onClick={() => { setSettingsModal("colore"); setSettingsForm({ nome: "", code: "", hex: "#888888", tipo: "RAL" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600 }}>+ Aggiungi colore</div>
           </>
         )}
 
@@ -664,7 +702,7 @@ export default function SettingsPanel() {
                 </div>
               </div></div>
             ))}
-            <div onClick={() => { setSettingsModal("vetro"); setSettingsForm({ nome: "", code: "", ug: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600 }}>+ Aggiungi vetro</div>
+            <div onClick={() => { setSettingsModal("vetro"); setSettingsForm({ nome: "", code: "", ug: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600 }}>+ Aggiungi vetro</div>
           </>
         )}
 
@@ -677,19 +715,19 @@ export default function SettingsPanel() {
               return (
                 <div key={t.code} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", gap: 8, padding: "8px 14px" }}>
                   <div onClick={() => setFavTipologie(fav => isFav ? fav.filter(f => f !== t.code) : [...fav, t.code])} style={{ cursor: "pointer" }}>
-                    <span style={{ fontSize: 16, color: isFav ? "#ff9500" : T.bdr }}>{isFav ? "⭐" : "☆"}</span>
+                    <span style={{ fontSize: 16, color: isFav ? "#E8A020" : T.bdr }}>{isFav ? "⭐" : "☆"}</span>
                   </div>
                   <span style={{ fontSize: 16 }}>{t.icon}</span>
                   <div style={{ flex: 1 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, fontFamily: FM }}>{t.code}</span>
                     <span style={{ fontSize: 11, color: T.sub, marginLeft: 6 }}>{t.label}</span>
-                    {t.forma && t.forma !== "rettangolare" && <span style={{ fontSize: 9, color: T.acc, marginLeft: 6, background: T.accLt, padding: "1px 5px", borderRadius: 4 }}>{t.forma}</span>}
+                    {t.forma && t.forma !== "rettangolare" && <span style={{ fontSize: 9, color: PRI, marginLeft: 6, background: PRILt, padding: "1px 5px", borderRadius: 4 }}>{t.forma}</span>}
                   </div>
                   <Ico d={ICO.pen} s={14} c={T.sub} />
                 </div></div>
               );
             })}
-            <div onClick={() => { setSettingsModal("tipologia"); setSettingsForm({ code: "", label: "", icon: "🪟", cat: "Altro", forma: "rettangolare" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipologia</div>
+            <div onClick={() => { setSettingsModal("tipologia"); setSettingsForm({ code: "", label: "", icon: "🪟", cat: "Altro", forma: "rettangolare" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipologia</div>
           </>
         )}
 
@@ -700,13 +738,13 @@ export default function SettingsPanel() {
             {coprifiliDB.map(c => (
               <div key={c.id} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
                 <div>
-                  <span style={{ fontSize: 12, fontWeight: 700, fontFamily: FM, color: T.acc }}>{c.cod}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, fontFamily: FM, color: PRI }}>{c.cod}</span>
                   <span style={{ fontSize: 12, marginLeft: 8 }}>{c.nome}</span>
                 </div>
                 <div onClick={() => deleteSettingsItem("coprifilo", c.id)} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
-            <div onClick={() => { setSettingsModal("coprifilo"); setSettingsForm({ nome: "", cod: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi coprifilo</div>
+            <div onClick={() => { setSettingsModal("coprifilo"); setSettingsForm({ nome: "", cod: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi coprifilo</div>
           </>
         )}
 
@@ -723,7 +761,7 @@ export default function SettingsPanel() {
                 <div onClick={() => deleteSettingsItem("lamiera", l.id)} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
-            <div onClick={() => { setSettingsModal("lamiera"); setSettingsForm({ nome: "", cod: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi lamiera</div>
+            <div onClick={() => { setSettingsModal("lamiera"); setSettingsForm({ nome: "", cod: "" }); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi lamiera</div>
           </>
         )}
 
@@ -738,7 +776,7 @@ export default function SettingsPanel() {
                 <div onClick={() => setTipoMisuraTappDB(prev => prev.filter(x => x.id !== tm.id))} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
-            <div onClick={() => { let n; try{n=window.prompt("Nuovo tipo misura tapparella:");}catch(e){} if (n?.trim()) setTipoMisuraTappDB(prev => [...prev, { id: "tmt" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipo misura</div>
+            <div onClick={() => { let n; try{n=window.prompt("Nuovo tipo misura tapparella:");}catch(e){} if (n?.trim()) setTipoMisuraTappDB(prev => [...prev, { id: "tmt" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipo misura</div>
           </>
         )}
 
@@ -752,7 +790,7 @@ export default function SettingsPanel() {
                 <div onClick={() => setTipoMisuraZanzDB(prev => prev.filter(x => x.id !== tm.id))} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
-            <div onClick={() => { let n; try{n=window.prompt("Nuovo tipo misura zanzariera:");}catch(e){} if (n?.trim()) setTipoMisuraZanzDB(prev => [...prev, { id: "tmz" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipo misura</div>
+            <div onClick={() => { let n; try{n=window.prompt("Nuovo tipo misura zanzariera:");}catch(e){} if (n?.trim()) setTipoMisuraZanzDB(prev => [...prev, { id: "tmz" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipo misura</div>
           </>
         )}
 
@@ -766,7 +804,7 @@ export default function SettingsPanel() {
                 <div onClick={() => setTelaiPersianaDB(prev => prev.filter(x => x.id !== tp.id))} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
-            <div onClick={() => { let n; try{n=window.prompt("Nuova tipologia telaio (es. Z 35):");}catch(e){} if (n?.trim()) setTelaiPersianaDB(prev => [...prev, { id: "tp" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4, marginBottom: 16 }}>+ Aggiungi telaio</div>
+            <div onClick={() => { let n; try{n=window.prompt("Nuova tipologia telaio (es. Z 35):");}catch(e){} if (n?.trim()) setTelaiPersianaDB(prev => [...prev, { id: "tp" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600, marginTop: 4, marginBottom: 16 }}>+ Aggiungi telaio</div>
             <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>📐 4° Lato / Posizionamento</div>
             {posPersianaDB.map(pp => (
               <div key={pp.id} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
@@ -774,7 +812,7 @@ export default function SettingsPanel() {
                 <div onClick={() => setPosPersianaDB(prev => prev.filter(x => x.id !== pp.id))} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
-            <div onClick={() => { let n; try{n=window.prompt("Nuovo posizionamento (es. A muro):");}catch(e){} if (n?.trim()) setPosPersianaDB(prev => [...prev, { id: "pp" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi posizionamento</div>
+            <div onClick={() => { let n; try{n=window.prompt("Nuovo posizionamento (es. A muro):");}catch(e){} if (n?.trim()) setPosPersianaDB(prev => [...prev, { id: "pp" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi posizionamento</div>
             <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginTop: 16, marginBottom: 8 }}>📏 Tipo Misura</div>
             {tipoMisuraDB.map(tm => (
               <div key={tm.id} style={{ ...S.card, marginBottom: 4 }}><div style={{ ...S.cardInner, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
@@ -782,7 +820,7 @@ export default function SettingsPanel() {
                 <div onClick={() => setTipoMisuraDB(prev => prev.filter(x => x.id !== tm.id))} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
-            <div onClick={() => { let n; try{n=window.prompt("Nuovo tipo misura (es. Luce netta):");}catch(e){} if (n?.trim()) setTipoMisuraDB(prev => [...prev, { id: "tm" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipo misura</div>
+            <div onClick={() => { let n; try{n=window.prompt("Nuovo tipo misura (es. Luce netta):");}catch(e){} if (n?.trim()) setTipoMisuraDB(prev => [...prev, { id: "tm" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipo misura</div>
           </>
         )}
 
@@ -800,7 +838,7 @@ export default function SettingsPanel() {
                 </div>
               ))}
             </div>
-            <div onClick={() => { let n; try{n=window.prompt("Nuova profondità (mm):");}catch(e){} if (n?.trim()) setCtProfDB(prev => [...prev, { id: "cp" + Date.now(), code: n.trim() }]); }} style={{ padding: "10px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>+ Aggiungi profondità</div>
+            <div onClick={() => { let n; try{n=window.prompt("Nuova profondità (mm):");}catch(e){} if (n?.trim()) setCtProfDB(prev => [...prev, { id: "cp" + Date.now(), code: n.trim() }]); }} style={{ padding: "10px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>+ Aggiungi profondità</div>
 
             <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>📐 Sezioni controtelaio</div>
             {ctSezioniDB.map(s => (
@@ -809,7 +847,7 @@ export default function SettingsPanel() {
                 <div onClick={() => setCtSezioniDB(prev => prev.filter(x => x.id !== s.id))} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
-            <div onClick={() => { let n; try{n=window.prompt("Nuova sezione (es. 56×40):");}catch(e){} if (n?.trim()) setCtSezioniDB(prev => [...prev, { id: "cs" + Date.now(), code: n.trim() }]); }} style={{ padding: "10px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>+ Aggiungi sezione</div>
+            <div onClick={() => { let n; try{n=window.prompt("Nuova sezione (es. 56×40):");}catch(e){} if (n?.trim()) setCtSezioniDB(prev => [...prev, { id: "cs" + Date.now(), code: n.trim() }]); }} style={{ padding: "10px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>+ Aggiungi sezione</div>
 
             <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>🔲 Modelli cielino</div>
             {ctCieliniDB.map(c => (
@@ -818,7 +856,7 @@ export default function SettingsPanel() {
                 <div onClick={() => setCtCieliniDB(prev => prev.filter(x => x.id !== c.id))} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
-            <div onClick={() => { let n; try{n=window.prompt("Nuovo modello cielino:");}catch(e){} if (n?.trim()) setCtCieliniDB(prev => [...prev, { id: "cc" + Date.now(), code: n.trim() }]); }} style={{ padding: "10px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>+ Aggiungi cielino</div>
+            <div onClick={() => { let n; try{n=window.prompt("Nuovo modello cielino:");}catch(e){} if (n?.trim()) setCtCieliniDB(prev => [...prev, { id: "cc" + Date.now(), code: n.trim() }]); }} style={{ padding: "10px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>+ Aggiungi cielino</div>
 
             <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>⚡ Offset calcolo infisso</div>
             <div style={{ fontSize: 10, color: T.sub, marginBottom: 6 }}>Millimetri da sottrarre per lato (L e H) quando si calcola l'infisso dal controtelaio</div>
@@ -839,7 +877,7 @@ export default function SettingsPanel() {
                 <div onClick={() => setTipoCassonettoDB(prev => prev.filter(x => x.id !== tc.id))} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
-            <div onClick={() => { let n; try{n=window.prompt("Nuovo tipo cassonetto:");}catch(e){} if (n?.trim()) setTipoCassonettoDB(prev => [...prev, { id: "tc" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipo cassonetto</div>
+            <div onClick={() => { let n; try{n=window.prompt("Nuovo tipo cassonetto:");}catch(e){} if (n?.trim()) setTipoCassonettoDB(prev => [...prev, { id: "tc" + Date.now(), code: n.trim() }]); }} style={{ padding: "12px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi tipo cassonetto</div>
           </>
         )}
 
@@ -855,7 +893,7 @@ export default function SettingsPanel() {
                 <div onClick={() => { if ((()=>{try{return window.confirm(`Eliminare "${m}"?`);}catch(e){return false;}})()) setMezziSalita(ms => ms.filter((_, j) => j !== i)); }} style={{ cursor: "pointer" }}><Ico d={ICO.trash} s={14} c={T.sub} /></div>
               </div></div>
             ))}
-            <div onClick={() => { let n; try{n=window.prompt("Nome mezzo di salita:");}catch(e){} if (n?.trim()) setMezziSalita(ms => [...ms, n.trim()]); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi mezzo salita</div>
+            <div onClick={() => { let n; try{n=window.prompt("Nome mezzo di salita:");}catch(e){} if (n?.trim()) setMezziSalita(ms => [...ms, n.trim()]); }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600, marginTop: 4 }}>+ Aggiungi mezzo salita</div>
           </>
         )}
 
@@ -889,7 +927,7 @@ export default function SettingsPanel() {
                   </div>
                   {/* Campi editabili */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <input style={{ width: "100%", padding: "4px 6px", fontSize: 13, fontWeight: 700, border: `1px solid transparent`, borderRadius: 4, background: "transparent", marginBottom: 3 }} defaultValue={item.nome || ""} placeholder="Nome prodotto..." onFocus={e => e.target.style.borderColor = T.acc} onBlur={e => { e.target.style.borderColor = "transparent"; setLibreriaDB(prev => prev.map(x => x.id === item.id ? { ...x, nome: e.target.value } : x)); }} />
+                    <input style={{ width: "100%", padding: "4px 6px", fontSize: 13, fontWeight: 700, border: `1px solid transparent`, borderRadius: 4, background: "transparent", marginBottom: 3 }} defaultValue={item.nome || ""} placeholder="Nome prodotto..." onFocus={e => e.target.style.borderColor = PRI} onBlur={e => { e.target.style.borderColor = "transparent"; setLibreriaDB(prev => prev.map(x => x.id === item.id ? { ...x, nome: e.target.value } : x)); }} />
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                         <span style={{ fontSize: 9, color: T.sub }}>Cat:</span>
@@ -918,7 +956,7 @@ export default function SettingsPanel() {
             ))}
             <div onClick={() => {
               setLibreriaDB(prev => [...prev, { id: Date.now(), nome: "", categoria: "", prezzo: 0, unita: "pz" }]);
-            }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${T.acc}`, textAlign: "center", cursor: "pointer", color: T.acc, fontSize: 12, fontWeight: 600 }}>+ Aggiungi prodotto alla libreria</div>
+            }} style={{ padding: "14px", borderRadius: T.r, border: `1px dashed ${PRI}`, textAlign: "center", cursor: "pointer", color: PRI, fontSize: 12, fontWeight: 600 }}>+ Aggiungi prodotto alla libreria</div>
           </>
         )}
 
@@ -938,7 +976,7 @@ export default function SettingsPanel() {
                 <div style={{ fontSize: 9, color: T.sub, marginTop: 4 }}>Montaggi assegnati: {montaggiDB.filter(m => m.squadraId === sq.id).length}</div>
               </div>
             ))}
-            <button onClick={() => setSquadreDB(prev => [...prev, { id: "sq" + Date.now(), nome: "Nuova Squadra", membri: [], colore: "#ff9500" }])} style={{ width: "100%", padding: 12, borderRadius: 10, border: `1.5px dashed ${T.bdr}`, background: "transparent", color: T.acc, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Aggiungi squadra</button>
+            <button onClick={() => setSquadreDB(prev => [...prev, { id: "sq" + Date.now(), nome: "Nuova Squadra", membri: [], colore: "#E8A020" }])} style={{ width: "100%", padding: 12, borderRadius: 10, border: `1.5px dashed ${T.bdr}`, background: "transparent", color: PRI, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Aggiungi squadra</button>
           </>
         )}
 
@@ -958,11 +996,11 @@ export default function SettingsPanel() {
                   </div>
                   <div style={{ flex: 1, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: 10, textAlign: "center" }}>
                     <div style={{ fontSize: 8, color: T.sub, textTransform: "uppercase" }}>Incassato</div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: "#34c759" }}>€{fattureDB.filter(f => f.pagata).reduce((s, f) => s + f.importo, 0).toLocaleString("it-IT")}</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: "#1A9E73" }}>€{fattureDB.filter(f => f.pagata).reduce((s, f) => s + f.importo, 0).toLocaleString("it-IT")}</div>
                   </div>
                   <div style={{ flex: 1, background: T.card, borderRadius: T.r, border: `1px solid ${T.bdr}`, padding: 10, textAlign: "center" }}>
                     <div style={{ fontSize: 8, color: T.sub, textTransform: "uppercase" }}>Da incassare</div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: "#ff3b30" }}>€{fattureDB.filter(f => !f.pagata).reduce((s, f) => s + f.importo, 0).toLocaleString("it-IT")}</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: "#DC4444" }}>€{fattureDB.filter(f => !f.pagata).reduce((s, f) => s + f.importo, 0).toLocaleString("it-IT")}</div>
                   </div>
                 </div>
                 {fattureDB.sort((a, b) => b.numero - a.numero).map(f => (
@@ -970,13 +1008,13 @@ export default function SettingsPanel() {
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 700 }}>N. {f.numero}/{f.anno} — {f.tipo.toUpperCase()}</div>
                       <div style={{ fontSize: 10, color: T.sub }}>{f.cliente} · {f.cmCode} · {f.data}</div>
-                      <div style={{ fontSize: 9, color: f.pagata ? "#34c759" : (f.scadenza < new Date().toISOString().split("T")[0] ? "#ff3b30" : T.sub) }}>
+                      <div style={{ fontSize: 9, color: f.pagata ? "#1A9E73" : (f.scadenza < new Date().toISOString().split("T")[0] ? "#DC4444" : T.sub) }}>
                         {f.pagata ? `✅ Pagata il ${f.dataPagamento}` : `⏳ Scadenza: ${f.scadenza}`}
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ fontSize: 14, fontWeight: 900, color: T.text }}>€{f.importo.toLocaleString("it-IT")}</div>
-                      <div onClick={() => setFattureDB(prev => prev.map(x => x.id === f.id ? { ...x, pagata: !x.pagata, dataPagamento: !x.pagata ? new Date().toLocaleDateString("it-IT") : null } : x))} style={{ padding: "4px 8px", borderRadius: 6, background: f.pagata ? "#34c75920" : "#ff3b3020", color: f.pagata ? "#34c759" : "#ff3b30", fontSize: 9, fontWeight: 700, cursor: "pointer" }}>
+                      <div onClick={() => setFattureDB(prev => prev.map(x => x.id === f.id ? { ...x, pagata: !x.pagata, dataPagamento: !x.pagata ? new Date().toLocaleDateString("it-IT") : null } : x))} style={{ padding: "4px 8px", borderRadius: 6, background: f.pagata ? "#1A9E7320" : "#DC444420", color: f.pagata ? "#1A9E73" : "#DC4444", fontSize: 9, fontWeight: 700, cursor: "pointer" }}>
                         {f.pagata ? "✅" : "💰"}
                       </div>
                       <div onClick={() => generaFatturaPDF(f)} style={{ fontSize: 16, cursor: "pointer" }}>📄</div>
@@ -991,11 +1029,11 @@ export default function SettingsPanel() {
 
         {settingsTab === "pipeline" && (
           <>
-            <div style={{fontSize:12,color:T.sub,padding:"0 4px 10px",lineHeight:1.5}}>Personalizza il flusso di lavoro. Ogni fase controlla <b style={{color:T.acc}}>ERP + Messaggi + Montaggi</b> automaticamente.</div>
+            <div style={{fontSize:12,color:T.sub,padding:"0 4px 10px",lineHeight:1.5}}>Personalizza il flusso di lavoro. Ogni fase controlla <b style={{color:PRI}}>ERP + Messaggi + Montaggi</b> automaticamente.</div>
             
             {/* LEGENDA ECOSISTEMA */}
             <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
-              {[{e:"📋",l:"ERP",c:"#007aff"},{e:"📧",l:"Messaggi",c:"#34c759"},{e:"🔧",l:"Montaggi",c:"#ff9500"},{e:"⚡",l:"Automazioni",c:"#af52de"}].map(b=>(
+              {[{e:"📋",l:"ERP",c:PRI},{e:"📧",l:"Messaggi",c:"#1A9E73"},{e:"🔧",l:"Montaggi",c:"#E8A020"},{e:"⚡",l:"Automazioni",c:"#af52de"}].map(b=>(
                 <div key={b.l} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:20,background:b.c+"15",border:`1px solid ${b.c}30`}}>
                   <span style={{fontSize:10}}>{b.e}</span><span style={{fontSize:10,fontWeight:700,color:b.c}}>{b.l}</span>
                 </div>
@@ -1016,7 +1054,7 @@ export default function SettingsPanel() {
                     <span style={{fontSize:20,flexShrink:0}}>{p.ico}</span>
                     <input value={p.nome} onChange={e=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,nome:e.target.value}:x))}
                       onClick={(e)=>e.stopPropagation()} style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:700,color:T.text,fontFamily:FF,outline:"none",padding:0}}/>
-                    <div onClick={(e)=>{e.stopPropagation();setExpandedPipelinePhase(isExp?null:p.id);setPipelinePhaseTab("email");}} style={{width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",background:isExp?T.acc+"18":"#f0f0f0",cursor:"pointer",flexShrink:0,marginLeft:4}}><span style={{fontSize:12,color:isExp?T.acc:"#999",transform:isExp?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}>▾</span></div><div style={{width:12,height:12,borderRadius:"50%",background:p.color,flexShrink:0}}/>
+                    <div onClick={(e)=>{e.stopPropagation();setExpandedPipelinePhase(isExp?null:p.id);setPipelinePhaseTab("email");}} style={{width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",background:isExp?PRI+"18":"#f0f0f0",cursor:"pointer",flexShrink:0,marginLeft:4}}><span style={{fontSize:12,color:isExp?PRI:"#999",transform:isExp?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}>▾</span></div><div style={{width:12,height:12,borderRadius:"50%",background:p.color,flexShrink:0}}/>
                     <div onClick={(e)=>{e.stopPropagation(); if(p.id==="chiusura") return; setPipelineDB(db=>db.map((x,j)=>j===i?{...x,attiva:x.attiva===false?true:false}:x)); }}
                       style={{width:36,height:20,borderRadius:10,background:p.attiva===false?T.bdr:T.grn,cursor:p.id==="chiusura"?"default":"pointer",transition:"background 0.2s",position:"relative",flexShrink:0}}>
                       <div style={{position:"absolute",top:2,left:p.attiva===false?2:18,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
@@ -1026,8 +1064,8 @@ export default function SettingsPanel() {
                   </div>
                   {!isExp && (p.emailTemplate || (p.checklistMontaggio||[]).length>0 || (p.automazioni||[]).length>0) && (
                     <div style={{display:"flex",gap:4,padding:"0 12px 8px",flexWrap:"wrap"}}>
-                      {p.emailTemplate && <span style={{fontSize:8,padding:"2px 6px",borderRadius:10,background:"#34c75915",color:"#34c759",fontWeight:700}}>📧 Email</span>}
-                      {(p.checklistMontaggio||[]).length>0 && <span style={{fontSize:8,padding:"2px 6px",borderRadius:10,background:"#ff950015",color:"#ff9500",fontWeight:700}}>✅ {p.checklistMontaggio.length} check</span>}
+                      {p.emailTemplate && <span style={{fontSize:8,padding:"2px 6px",borderRadius:10,background:"#1A9E7315",color:"#1A9E73",fontWeight:700}}>📧 Email</span>}
+                      {(p.checklistMontaggio||[]).length>0 && <span style={{fontSize:8,padding:"2px 6px",borderRadius:10,background:"#E8A02015",color:"#E8A020",fontWeight:700}}>✅ {p.checklistMontaggio.length} check</span>}
                       {(p.automazioni||[]).length>0 && <span style={{fontSize:8,padding:"2px 6px",borderRadius:10,background:"#af52de15",color:"#af52de",fontWeight:700}}>⚡ {p.automazioni.length} auto</span>}
                     </div>
                   )}
@@ -1036,7 +1074,7 @@ export default function SettingsPanel() {
                 {isExp && (
                   <div style={{background:T.card,border:`1px solid ${T.bdr}`,borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"hidden"}}>
                     <div style={{display:"flex",borderBottom:`1px solid ${T.bdr}`}}>
-                      {[{id:"email",l:"📧 Email",c:"#34c759"},{id:"checklist",l:"✅ Checklist",c:"#ff9500"},{id:"auto",l:"⚡ Auto",c:"#af52de"},{id:"gate",l:"🚪 Gate",c:"#007aff"}].map(tab=>(
+                      {[{id:"email",l:"📧 Email",c:"#1A9E73"},{id:"checklist",l:"✅ Checklist",c:"#E8A020"},{id:"auto",l:"⚡ Auto",c:"#af52de"},{id:"gate",l:"🚪 Gate",c:PRI}].map(tab=>(
                         <div key={tab.id} onClick={()=>setPipelinePhaseTab(tab.id)}
                           style={{flex:1,padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:700,cursor:"pointer",
                             color:pTab===tab.id?tab.c:T.sub,borderBottom:pTab===tab.id?`2px solid ${tab.c}`:"2px solid transparent",
@@ -1062,7 +1100,7 @@ export default function SettingsPanel() {
                               style={{width:32,height:18,borderRadius:9,background:p.emailTemplate?.attiva?T.grn:T.bdr,cursor:"pointer",position:"relative"}}>
                               <div style={{position:"absolute",top:2,left:p.emailTemplate?.attiva?16:2,width:14,height:14,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
                             </div>
-                            <span style={{fontSize:10,color:p.emailTemplate?.attiva?"#34c759":T.sub,fontWeight:600}}>Invio auto</span>
+                            <span style={{fontSize:10,color:p.emailTemplate?.attiva?"#1A9E73":T.sub,fontWeight:600}}>Invio auto</span>
                           </div>
                           <select value={p.emailTemplate?.destinatario||"cliente"}
                             onChange={e=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,emailTemplate:{...(x.emailTemplate||{}),destinatario:e.target.value}}:x))}
@@ -1086,14 +1124,14 @@ export default function SettingsPanel() {
                           </div>
                         ))}
                         <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,checklistMontaggio:[...(x.checklistMontaggio||[]),""]}:x))}
-                          style={{padding:"8px",borderRadius:8,border:`1px dashed ${T.acc}`,textAlign:"center",cursor:"pointer",color:T.acc,fontSize:11,fontWeight:600}}>+ Aggiungi voce</div>
+                          style={{padding:"8px",borderRadius:8,border:`1px dashed ${PRI}`,textAlign:"center",cursor:"pointer",color:PRI,fontSize:11,fontWeight:600}}>+ Aggiungi voce</div>
                         {(p.checklistMontaggio||[]).length>0 && (
                           <div style={{display:"flex",alignItems:"center",gap:4,marginTop:8}}>
                             <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,checklistObbligatoria:!x.checklistObbligatoria}:x))}
                               style={{width:32,height:18,borderRadius:9,background:p.checklistObbligatoria?T.grn:T.bdr,cursor:"pointer",position:"relative"}}>
                               <div style={{position:"absolute",top:2,left:p.checklistObbligatoria?16:2,width:14,height:14,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
                             </div>
-                            <span style={{fontSize:10,color:p.checklistObbligatoria?"#34c759":T.sub,fontWeight:600}}>Obbligatoria (blocca avanzamento)</span>
+                            <span style={{fontSize:10,color:p.checklistObbligatoria?"#1A9E73":T.sub,fontWeight:600}}>Obbligatoria (blocca avanzamento)</span>
                           </div>
                         )}
                       </div>)}
@@ -1120,7 +1158,7 @@ export default function SettingsPanel() {
                           </div>
                         ))}
                         <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,automazioni:[...(x.automazioni||[]),{tipo:"notifica_team",attiva:true}]}:x))}
-                          style={{padding:"8px",borderRadius:8,border:`1px dashed ${T.acc}`,textAlign:"center",cursor:"pointer",color:T.acc,fontSize:11,fontWeight:600}}>+ Aggiungi automazione</div>
+                          style={{padding:"8px",borderRadius:8,border:`1px dashed ${PRI}`,textAlign:"center",cursor:"pointer",color:PRI,fontSize:11,fontWeight:600}}>+ Aggiungi automazione</div>
                       </div>)}
         
                       {/* GATE TAB */}
@@ -1145,13 +1183,13 @@ export default function SettingsPanel() {
                           </div>
                         ))}
                         <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,gateRequisiti:[...(x.gateRequisiti||[]),{tipo:"preventivo_approvato"}]}:x))}
-                          style={{padding:"8px",borderRadius:8,border:`1px dashed ${T.acc}`,textAlign:"center",cursor:"pointer",color:T.acc,fontSize:11,fontWeight:600}}>+ Aggiungi requisito</div>
+                          style={{padding:"8px",borderRadius:8,border:`1px dashed ${PRI}`,textAlign:"center",cursor:"pointer",color:PRI,fontSize:11,fontWeight:600}}>+ Aggiungi requisito</div>
                         <div style={{display:"flex",alignItems:"center",gap:4,marginTop:8}}>
                           <div onClick={()=>setPipelineDB(db=>db.map((x,j)=>j===i?{...x,gateBloccante:!x.gateBloccante}:x))}
-                            style={{width:32,height:18,borderRadius:9,background:p.gateBloccante?"#ff3b30":T.bdr,cursor:"pointer",position:"relative"}}>
+                            style={{width:32,height:18,borderRadius:9,background:p.gateBloccante?"#DC4444":T.bdr,cursor:"pointer",position:"relative"}}>
                             <div style={{position:"absolute",top:2,left:p.gateBloccante?16:2,width:14,height:14,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
                           </div>
-                          <span style={{fontSize:10,color:p.gateBloccante?"#ff3b30":T.sub,fontWeight:600}}>Gate bloccante</span>
+                          <span style={{fontSize:10,color:p.gateBloccante?"#DC4444":T.sub,fontWeight:600}}>Gate bloccante</span>
                         </div>
                       </div>)}
         
@@ -1163,7 +1201,7 @@ export default function SettingsPanel() {
             })}
         
             <div onClick={()=>{ let nome; try{nome=window.prompt("Nome nuova fase:");}catch(e){} if(nome?.trim()) setPipelineDB(db=>[...db.slice(0,-1),{id:"custom_"+Date.now(),nome:nome.trim(),ico:"⭐",color:"#8e8e93",attiva:true,custom:true},...db.slice(-1)]); }}
-              style={{...S.card,marginTop:4,textAlign:"center",padding:"10px",cursor:"pointer",color:T.acc,fontSize:13,fontWeight:700}}>+ Aggiungi fase personalizzata</div>
+              style={{...S.card,marginTop:4,textAlign:"center",padding:"10px",cursor:"pointer",color:PRI,fontSize:13,fontWeight:700}}>+ Aggiungi fase personalizzata</div>
             <div onClick={()=>{ if(!confirm("ATTENZIONE: Sei sicuro di voler ripristinare tutti i dati?")) return; if(!confirm("ULTIMA CONFERMA: Tutti i dati torneranno ai dati demo. Confermi?")) return; localStorage.removeItem("mastro_erp_data"); if((()=>{try{return window.confirm("Ripristinare le fasi predefinite?");}catch(e){return false;}})())setPipelineDB(PIPELINE_DEFAULT);}}
               style={{textAlign:"center",padding:"10px 0 4px",fontSize:11,color:T.sub,cursor:"pointer"}}>Ripristina predefinita</div>
           </>
@@ -1174,7 +1212,7 @@ export default function SettingsPanel() {
         {settingsTab === "importa" && (
           <>
             <div style={{background:T.card,borderRadius:12,overflow:"hidden",border:`1px solid ${T.bdr}`,marginBottom:12}}>
-              <div style={{padding:"16px",borderBottom:`1px solid ${T.bdr}`,background:T.accLt}}>
+              <div style={{padding:"16px",borderBottom:`1px solid ${T.bdr}`,background:PRILt}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
                   <span style={{fontSize:24}}>📥</span>
                   <div>
@@ -1188,20 +1226,20 @@ export default function SettingsPanel() {
                   Scarica il template Excel, compilalo con i tuoi sistemi, colori, vetri, prezzi e tutto il catalogo. Poi caricalo qui per importare tutto automaticamente.
                 </div>
                 <div style={{display:"flex",gap:8,marginBottom:16}}>
-                  <a href="/MASTRO_Catalogo_Template.xlsx" download style={{flex:1,padding:"12px",borderRadius:10,border:`1.5px solid ${T.acc}`,background:T.accLt,color:T.acc,fontSize:12,fontWeight:700,textAlign:"center",textDecoration:"none",cursor:"pointer"}}>
+                  <a href="/MASTRO_Catalogo_Template.xlsx" download style={{flex:1,padding:"12px",borderRadius:10,border:`1.5px solid ${PRI}`,background:PRILt,color:PRI,fontSize:12,fontWeight:700,textAlign:"center",textDecoration:"none",cursor:"pointer"}}>
                     📄 Scarica Template Excel
                   </a>
                 </div>
                 <div style={{position:"relative",marginBottom:12}}>
                   <input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files?.[0]; if(f) importExcelCatalog(f);}} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer",zIndex:2}} />
-                  <div style={{padding:"20px",borderRadius:12,border:`2px dashed ${T.acc}`,background:T.accLt,textAlign:"center",cursor:"pointer"}}>
+                  <div style={{padding:"20px",borderRadius:12,border:`2px dashed ${PRI}`,background:PRILt,textAlign:"center",cursor:"pointer"}}>
                     <div style={{fontSize:28,marginBottom:6}}>📂</div>
-                    <div style={{fontSize:13,fontWeight:700,color:T.acc}}>Carica file Excel compilato</div>
+                    <div style={{fontSize:13,fontWeight:700,color:PRI}}>Carica file Excel compilato</div>
                     <div style={{fontSize:10,color:T.sub,marginTop:4}}>Trascina qui o tocca per selezionare (.xlsx)</div>
                   </div>
                 </div>
                 {importStatus && (
-                  <div style={{background:importStatus.ok?"#f0fdf4":"#fefce8",borderRadius:10,padding:"12px 14px",border:`1.5px solid ${importStatus.ok?"#34c759":"#ff9500"}`,marginBottom:10}}>
+                  <div style={{background:importStatus.ok?"#f0fdf4":"#fefce8",borderRadius:10,padding:"12px 14px",border:`1.5px solid ${importStatus.ok?"#1A9E73":"#E8A020"}`,marginBottom:10}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                       <span style={{fontSize:16}}>{importStatus.ok?"✅":importStatus.step==="error"?"❌":"⏳"}</span>
                       <span style={{fontSize:12,fontWeight:700,color:importStatus.ok?"#1a9e40":importStatus.step==="error"?"#dc2626":"#7a4500"}}>{importStatus.msg}</span>
@@ -1239,7 +1277,7 @@ export default function SettingsPanel() {
         
         {settingsTab === "kit" && <div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}><div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Kit Accessori</div>
-            <div onClick={() => setKitAccessori(p => [...p, { id: Date.now(), nome: "Nuovo Kit", items: [], prezzo: 0 }])} style={{ padding: "6px 12px", borderRadius: 8, background: T.acc, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Kit</div></div>
+            <div onClick={() => setKitAccessori(p => [...p, { id: Date.now(), nome: "Nuovo Kit", items: [], prezzo: 0 }])} style={{ padding: "6px 12px", borderRadius: 8, background: PRI, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Kit</div></div>
           {kitAccessori.map((kit, ki) => <div key={kit.id} style={{ background: T.card, borderRadius: T.r, border: "1px solid " + T.bdr, padding: 12, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <input value={kit.nome} onChange={e => setKitAccessori(p => p.map((k,i) => i===ki ? {...k, nome: e.target.value} : k))} style={{ fontSize: 13, fontWeight: 700, color: T.text, background: "transparent", border: "none", outline: "none", flex: 1 }} />
@@ -1250,7 +1288,7 @@ export default function SettingsPanel() {
               <span onClick={() => setKitAccessori(p => p.map((k,i) => i===ki ? {...k, items: kit.items.filter((_,j)=>j!==ii)} : k))} style={{ color: T.red, cursor: "pointer", fontSize: 10 }}>✕</span>
             </div>)}
             <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-              <span onClick={() => setKitAccessori(p => p.map((k,i) => i===ki ? {...k, items: [...kit.items, "Nuovo"]} : k))} style={{ fontSize: 10, color: T.acc, cursor: "pointer" }}>+ comp.</span>
+              <span onClick={() => setKitAccessori(p => p.map((k,i) => i===ki ? {...k, items: [...kit.items, "Nuovo"]} : k))} style={{ fontSize: 10, color: PRI, cursor: "pointer" }}>+ comp.</span>
               <input type="number" value={kit.prezzo} onChange={e => setKitAccessori(p => p.map((k,i) => i===ki ? {...k, prezzo: parseFloat(e.target.value)||0} : k))} style={{ width: 60, fontSize: 10, color: T.text, background: T.bg, border: "1px solid " + T.bdr, borderRadius: 6, padding: "2px 6px" }} />
             </div>
           </div>)}
@@ -1260,12 +1298,12 @@ export default function SettingsPanel() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>🏪 Anagrafica Fornitori</div>
             <div onClick={() => { setFornitoreEdit({ id: "f_" + Date.now(), nome: "", ragioneSociale: "", piva: "", cf: "", tipo: "", categoria: "profili", indirizzo: "", cap: "", citta: "", provincia: "", telefono: "", cellulare: "", email: "", pec: "", sito: "", referente: "", telReferente: "", emailReferente: "", banca: "", iban: "", pagamento: "30gg_fm", scontoBase: 0, tempoConsegna: 14, sistemiTrattati: "", note: "", rating: 0, preferito: false, attivo: true }); setShowFornitoreForm(true); }}
-              style={{ padding: "8px 16px", borderRadius: 8, background: T.acc, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+ Nuovo</div>
+              style={{ padding: "8px 16px", borderRadius: 8, background: PRI, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+ Nuovo</div>
           </div>
           {/* Filtri categoria */}
           <div style={{ display: "flex", gap: 4, marginBottom: 10, overflowX: "auto", paddingBottom: 4 }}>
             {[{id:"tutti",l:"Tutti"},{id:"profili",l:"🏗 Profili"},{id:"vetri",l:"🪟 Vetri"},{id:"ferramenta",l:"🔩 Ferramenta"},{id:"accessori",l:"⚙️ Accessori"},{id:"altro",l:"📦 Altro"}].map(c => (
-              <span key={c.id} onClick={() => setSettingsForm(f => ({...f, _filtroForn: c.id}))} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", cursor: "pointer", background: (settingsForm._filtroForn || "tutti") === c.id ? T.accLt : T.bg, color: (settingsForm._filtroForn || "tutti") === c.id ? T.acc : T.sub, border: "1px solid " + ((settingsForm._filtroForn || "tutti") === c.id ? T.acc + "40" : T.bdr) }}>{c.l}</span>
+              <span key={c.id} onClick={() => setSettingsForm(f => ({...f, _filtroForn: c.id}))} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", cursor: "pointer", background: (settingsForm._filtroForn || "tutti") === c.id ? PRILt : T.bg, color: (settingsForm._filtroForn || "tutti") === c.id ? PRI : T.sub, border: "1px solid " + ((settingsForm._filtroForn || "tutti") === c.id ? PRI + "40" : T.bdr) }}>{c.l}</span>
             ))}
           </div>
           {fornitori.filter(f => !settingsForm._filtroForn || settingsForm._filtroForn === "tutti" || f.categoria === settingsForm._filtroForn).map(f => (
@@ -1275,7 +1313,7 @@ export default function SettingsPanel() {
                   <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>{f.preferito ? "⭐ " : ""}{f.nome}</div>
                   <div style={{ fontSize: 10, color: T.sub }}>{f.ragioneSociale || f.tipo}</div>
                   <div style={{ display: "flex", gap: 4, marginTop: 4, flexWrap: "wrap" as any }}>
-                    <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.accLt, color: T.acc, fontWeight: 700 }}>{f.categoria || f.tipo}</span>
+                    <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: PRILt, color: PRI, fontWeight: 700 }}>{f.categoria || f.tipo}</span>
                     <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.orangeLt, color: T.orange, fontWeight: 700 }}>⏱ {f.tempoConsegna || "?"} gg</span>
                     <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.purpleLt, color: T.purple, fontWeight: 700 }}>💳 {f.pagamento?.replace("_"," ") || "?"}</span>
                     {f.scontoBase > 0 && <span style={{ fontSize: 8, padding: "2px 6px", borderRadius: 4, background: T.grnLt, color: T.grn, fontWeight: 700 }}>-{f.scontoBase}%</span>}
@@ -1285,7 +1323,7 @@ export default function SettingsPanel() {
               </div>
               <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                 <div onClick={(e) => { e.stopPropagation(); window.open("tel:" + (f.telefono || f.cellulare)); }} style={{ flex: 1, padding: 6, borderRadius: 6, background: T.grnLt, color: T.grn, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>📞 Chiama</div>
-                <div onClick={(e) => { e.stopPropagation(); window.open("mailto:" + f.email); }} style={{ flex: 1, padding: 6, borderRadius: 6, background: T.accLt, color: T.acc, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>✉️ Email</div>
+                <div onClick={(e) => { e.stopPropagation(); window.open("mailto:" + f.email); }} style={{ flex: 1, padding: 6, borderRadius: 6, background: PRILt, color: PRI, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>✉️ Email</div>
                 {f.pec && <div onClick={(e) => { e.stopPropagation(); window.open("mailto:" + f.pec); }} style={{ flex: 1, padding: 6, borderRadius: 6, background: T.purpleLt, color: T.purple, fontSize: 10, fontWeight: 700, textAlign: "center", cursor: "pointer" }}>📧 PEC</div>}
               </div>
             </div>
@@ -1298,9 +1336,9 @@ export default function SettingsPanel() {
             const PAGAMENTI: Record<string,string> = { "anticipato": "Anticipato", "30gg_fm": "30 gg FM", "60gg_fm": "60 gg FM", "90gg_fm": "90 gg FM", "riba_30": "RiBa 30 gg", "riba_60": "RiBa 60 gg", "ricevuta_merce": "Alla consegna" };
             return <div style={{ position: "fixed", inset: 0, zIndex: 10003, background: T.bg, overflow: "auto" }}>
               <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", background: T.card, borderBottom: "1px solid " + T.bdr, position: "sticky", top: 0, zIndex: 5 }}>
-                <div onClick={() => setShowFornitoreDetail(null)} style={{ cursor: "pointer", color: T.acc, fontWeight: 700, fontSize: 14 }}>← Indietro</div>
+                <div onClick={() => setShowFornitoreDetail(null)} style={{ cursor: "pointer", color: PRI, fontWeight: 700, fontSize: 14 }}>← Indietro</div>
                 <div style={{ flex: 1, textAlign: "center", fontSize: 14, fontWeight: 800, color: T.text }}>{f.nome}</div>
-                <div onClick={() => { setFornitoreEdit({...f}); setShowFornitoreForm(true); setShowFornitoreDetail(null); }} style={{ cursor: "pointer", color: T.acc, fontWeight: 700, fontSize: 12 }}>✏️ Modifica</div>
+                <div onClick={() => { setFornitoreEdit({...f}); setShowFornitoreForm(true); setShowFornitoreDetail(null); }} style={{ cursor: "pointer", color: PRI, fontWeight: 700, fontSize: 12 }}>✏️ Modifica</div>
               </div>
               <div style={{ padding: 16 }}>
                 {/* DATI AZIENDA */}
@@ -1310,7 +1348,7 @@ export default function SettingsPanel() {
                   {f.piva && <div style={{ fontSize: 11, color: T.sub }}>P.IVA: <b>{f.piva}</b></div>}
                   {f.cf && <div style={{ fontSize: 11, color: T.sub }}>CF: {f.cf}</div>}
                   {f.indirizzo && <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>📍 {f.indirizzo}, {f.cap} {f.citta} ({f.provincia})</div>}
-                  {f.sito && <div onClick={() => window.open("https://" + f.sito.replace("https://","").replace("http://",""))} style={{ fontSize: 11, color: T.acc, cursor: "pointer", marginTop: 2 }}>🌐 {f.sito}</div>}
+                  {f.sito && <div onClick={() => window.open("https://" + f.sito.replace("https://","").replace("http://",""))} style={{ fontSize: 11, color: PRI, cursor: "pointer", marginTop: 2 }}>🌐 {f.sito}</div>}
                 </div>
                 {/* CONTATTI */}
                 <div style={{ background: T.card, borderRadius: 12, border: "1px solid " + T.bdr, padding: 16, marginBottom: 12 }}>
@@ -1318,13 +1356,13 @@ export default function SettingsPanel() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                     {f.telefono && <div onClick={() => window.open("tel:" + f.telefono)} style={{ padding: 10, borderRadius: 8, background: T.grnLt, textAlign: "center", cursor: "pointer" }}><div style={{ fontSize: 16 }}>📞</div><div style={{ fontSize: 10, fontWeight: 700, color: T.grn }}>{f.telefono}</div><div style={{ fontSize: 8, color: T.sub }}>Ufficio</div></div>}
                     {f.cellulare && <div onClick={() => window.open("tel:" + f.cellulare)} style={{ padding: 10, borderRadius: 8, background: T.grnLt, textAlign: "center", cursor: "pointer" }}><div style={{ fontSize: 16 }}>📱</div><div style={{ fontSize: 10, fontWeight: 700, color: T.grn }}>{f.cellulare}</div><div style={{ fontSize: 8, color: T.sub }}>Cellulare</div></div>}
-                    {f.email && <div onClick={() => window.open("mailto:" + f.email)} style={{ padding: 10, borderRadius: 8, background: T.accLt, textAlign: "center", cursor: "pointer" }}><div style={{ fontSize: 16 }}>✉️</div><div style={{ fontSize: 10, fontWeight: 700, color: T.acc, wordBreak: "break-all" }}>{f.email}</div></div>}
+                    {f.email && <div onClick={() => window.open("mailto:" + f.email)} style={{ padding: 10, borderRadius: 8, background: PRILt, textAlign: "center", cursor: "pointer" }}><div style={{ fontSize: 16 }}>✉️</div><div style={{ fontSize: 10, fontWeight: 700, color: PRI, wordBreak: "break-all" }}>{f.email}</div></div>}
                     {f.pec && <div onClick={() => window.open("mailto:" + f.pec)} style={{ padding: 10, borderRadius: 8, background: T.purpleLt, textAlign: "center", cursor: "pointer" }}><div style={{ fontSize: 16 }}>📧</div><div style={{ fontSize: 10, fontWeight: 700, color: T.purple, wordBreak: "break-all" }}>{f.pec}</div><div style={{ fontSize: 8, color: T.sub }}>PEC</div></div>}
                   </div>
                   {f.referente && <div style={{ marginTop: 8, padding: 10, borderRadius: 8, background: T.bg }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: T.text }}>👤 Referente: {f.referente}</div>
                     {f.telReferente && <div style={{ fontSize: 10, color: T.sub }}>{f.telReferente}</div>}
-                    {f.emailReferente && <div style={{ fontSize: 10, color: T.acc }}>{f.emailReferente}</div>}
+                    {f.emailReferente && <div style={{ fontSize: 10, color: PRI }}>{f.emailReferente}</div>}
                   </div>}
                 </div>
                 {/* CONDIZIONI COMMERCIALI */}
@@ -1333,7 +1371,7 @@ export default function SettingsPanel() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     <div style={{ padding: 10, borderRadius: 8, background: T.orangeLt, textAlign: "center" }}><div style={{ fontSize: 8, fontWeight: 700, color: T.sub }}>PAGAMENTO</div><div style={{ fontSize: 12, fontWeight: 900, color: T.orange }}>{PAGAMENTI[f.pagamento] || f.pagamento}</div></div>
                     <div style={{ padding: 10, borderRadius: 8, background: T.grnLt, textAlign: "center" }}><div style={{ fontSize: 8, fontWeight: 700, color: T.sub }}>SCONTO BASE</div><div style={{ fontSize: 12, fontWeight: 900, color: T.grn }}>{f.scontoBase}%</div></div>
-                    <div style={{ padding: 10, borderRadius: 8, background: T.accLt, textAlign: "center" }}><div style={{ fontSize: 8, fontWeight: 700, color: T.sub }}>TEMPI CONSEGNA</div><div style={{ fontSize: 12, fontWeight: 900, color: T.acc }}>{f.tempoConsegna} gg</div></div>
+                    <div style={{ padding: 10, borderRadius: 8, background: PRILt, textAlign: "center" }}><div style={{ fontSize: 8, fontWeight: 700, color: T.sub }}>TEMPI CONSEGNA</div><div style={{ fontSize: 12, fontWeight: 900, color: PRI }}>{f.tempoConsegna} gg</div></div>
                     {f.rating > 0 && <div style={{ padding: 10, borderRadius: 8, background: T.bg, textAlign: "center" }}><div style={{ fontSize: 8, fontWeight: 700, color: T.sub }}>RATING</div><div style={{ fontSize: 12, fontWeight: 900, color: T.text }}>⭐ {f.rating}</div></div>}
                   </div>
                   {f.banca && <div style={{ marginTop: 8, padding: 8, borderRadius: 8, background: T.bg }}><div style={{ fontSize: 10, color: T.sub }}>🏦 {f.banca}</div>{f.iban && <div style={{ fontSize: 10, color: T.text, fontFamily: "'JetBrains Mono', monospace", letterSpacing: 0.5 }}>{f.iban}</div>}</div>}
@@ -1387,11 +1425,11 @@ export default function SettingsPanel() {
                   if (existing) setFornitori(p => p.map(f => f.id === fornitoreEdit.id ? fornitoreEdit : f));
                   else setFornitori(p => [...p, fornitoreEdit]);
                   setShowFornitoreForm(false); setFornitoreEdit(null);
-                }} style={{ cursor: "pointer", color: T.acc, fontWeight: 800, fontSize: 13 }}>💾 Salva</div>
+                }} style={{ cursor: "pointer", color: PRI, fontWeight: 800, fontSize: 13 }}>💾 Salva</div>
               </div>
               <div style={{ padding: 16 }}>
                 {/* SEZIONE AZIENDA */}
-                <div style={{ fontSize: 11, fontWeight: 800, color: T.acc, marginBottom: 8, marginTop: 4 }}>🏢 DATI AZIENDA</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: PRI, marginBottom: 8, marginTop: 4 }}>🏢 DATI AZIENDA</div>
                 <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
                   <div><div style={lblStyle}>Nome (breve)</div><input style={fldStyle} value={fornitoreEdit.nome} onChange={e => upd("nome", e.target.value)} placeholder="es. Aluplast" /></div>
                   <div><div style={lblStyle}>Ragione Sociale</div><input style={fldStyle} value={fornitoreEdit.ragioneSociale} onChange={e => upd("ragioneSociale", e.target.value)} placeholder="es. Aluplast Italia SRL" /></div>
@@ -1408,12 +1446,12 @@ export default function SettingsPanel() {
                   <div><div style={lblStyle}>Sito Web</div><input style={fldStyle} value={fornitoreEdit.sito} onChange={e => upd("sito", e.target.value)} placeholder="www.fornitore.it" /></div>
                   <div><div style={lblStyle}>Categoria</div>
                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as any }}>
-                      {CATEGORIE.map(c => <span key={c.id} onClick={() => upd("categoria", c.id)} style={{ padding: "6px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", background: fornitoreEdit.categoria === c.id ? T.accLt : T.bg, color: fornitoreEdit.categoria === c.id ? T.acc : T.sub, border: "1px solid " + (fornitoreEdit.categoria === c.id ? T.acc + "40" : T.bdr) }}>{c.l}</span>)}
+                      {CATEGORIE.map(c => <span key={c.id} onClick={() => upd("categoria", c.id)} style={{ padding: "6px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", background: fornitoreEdit.categoria === c.id ? PRILt : T.bg, color: fornitoreEdit.categoria === c.id ? PRI : T.sub, border: "1px solid " + (fornitoreEdit.categoria === c.id ? PRI + "40" : T.bdr) }}>{c.l}</span>)}
                     </div>
                   </div>
                 </div>
                 {/* SEZIONE CONTATTI */}
-                <div style={{ fontSize: 11, fontWeight: 800, color: T.acc, marginBottom: 8 }}>📞 CONTATTI</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: PRI, marginBottom: 8 }}>📞 CONTATTI</div>
                 <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     <div><div style={lblStyle}>Telefono</div><input style={fldStyle} value={fornitoreEdit.telefono} onChange={e => upd("telefono", e.target.value)} type="tel" /></div>
@@ -1429,7 +1467,7 @@ export default function SettingsPanel() {
                   </div>
                 </div>
                 {/* SEZIONE COMMERCIALE */}
-                <div style={{ fontSize: 11, fontWeight: 800, color: T.acc, marginBottom: 8 }}>💰 CONDIZIONI COMMERCIALI</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: PRI, marginBottom: 8 }}>💰 CONDIZIONI COMMERCIALI</div>
                 <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
                   <div><div style={lblStyle}>Modalità Pagamento</div>
                     <select value={fornitoreEdit.pagamento} onChange={e => upd("pagamento", e.target.value)} style={{...fldStyle}}>
@@ -1444,7 +1482,7 @@ export default function SettingsPanel() {
                   <div><div style={lblStyle}>IBAN</div><input style={fldStyle} value={fornitoreEdit.iban} onChange={e => upd("iban", e.target.value)} placeholder="IT..." /></div>
                 </div>
                 {/* SEZIONE PRODOTTI */}
-                <div style={{ fontSize: 11, fontWeight: 800, color: T.acc, marginBottom: 8 }}>📦 PRODOTTI E NOTE</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: PRI, marginBottom: 8 }}>📦 PRODOTTI E NOTE</div>
                 <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
                   <div><div style={lblStyle}>Sistemi/Prodotti Trattati</div><textarea style={{...fldStyle, minHeight: 60, resize: "vertical" as any}} value={fornitoreEdit.sistemiTrattati} onChange={e => upd("sistemiTrattati", e.target.value)} placeholder="es. Ideal 4000, Ideal 7000..." /></div>
                   <div><div style={lblStyle}>Note</div><textarea style={{...fldStyle, minHeight: 60, resize: "vertical" as any}} value={fornitoreEdit.note} onChange={e => upd("note", e.target.value)} /></div>
@@ -1471,7 +1509,7 @@ export default function SettingsPanel() {
         {settingsTab === "guida" && (
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {/* Header */}
-            <div style={{background:T.acc,borderRadius:12,padding:"16px 18px",color:"#fff"}}>
+            <div style={{background:PRI,borderRadius:12,padding:"16px 18px",color:"#fff"}}>
               <div style={{fontSize:15,fontWeight:800}}>📖 Guida rapida MASTRO</div>
               <div style={{fontSize:11,opacity:0.8,marginTop:4}}>Tutto quello che ti serve sapere, in pillole da 30 secondi.</div>
             </div>
@@ -1479,25 +1517,25 @@ export default function SettingsPanel() {
             {/* CARD 1: CREARE COMMESSA */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#007aff15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📁</div>
+                <div style={{width:28,height:28,borderRadius:8,background:PRI15,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📁</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come creare una commessa</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Commesse</b> dal menu in basso</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca il pulsante <b>+ Nuova Commessa</b> in alto</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Compila <b>nome cliente, indirizzo</b> e tipo di lavoro</div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:"#34c759",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
-                  <div style={{fontSize:12,color:"#34c759",fontWeight:700,lineHeight:1.5}}>La commessa parte in fase "Sopralluogo"</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:"#1A9E73",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
+                  <div style={{fontSize:12,color:"#1A9E73",fontWeight:700,lineHeight:1.5}}>La commessa parte in fase "Sopralluogo"</div>
                 </div>
               </div>
             </div>
@@ -1505,20 +1543,20 @@ export default function SettingsPanel() {
             {/* CARD 2: AGGIUNGERE VANI */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#ff950015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🪟</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#E8A02015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🪟</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come aggiungere i vani</div><div style={{fontSize:10,color:T.sub}}>⏱ 30 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri una commessa e vai nella sezione <b>Rilievi</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>+ Aggiungi vano</b> — scegli tipo (F1A, PF2A, SC2A...)</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Dai un nome al vano (es. "Cucina", "Salone") e scegli la stanza</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:4,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Tipologie rapide:</b> F1A = 1 anta, F2A = 2 ante, PF = portafinestra, SC = scorrevole, VAS = vasistas, TDBR = tenda bracci, TDPERG = pergola</div>
@@ -1528,20 +1566,20 @@ export default function SettingsPanel() {
             {/* CARD 3: INSERIRE MISURE */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#5856d615",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📏</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#8B5CF615",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📏</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come inserire le misure</div><div style={{fontSize:10,color:T.sub}}>⏱ 30 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca un vano per aprirlo — vai nel tab <b>Misure</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Inserisci <b>3 larghezze</b> (alto, centro, basso) e <b>3 altezze</b> (sx, centro, dx)</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Completa <b>spallette</b>, <b>davanzale</b>, telaio e accessori</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:4,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Regola d'oro:</b> misura sempre dal CENTRO del vano — è il punto più affidabile per il taglio</div>
@@ -1551,24 +1589,24 @@ export default function SettingsPanel() {
             {/* CARD 4: GENERARE PREVENTIVO */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#34c75915",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📄</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#1A9E7315",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📄</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come generare un preventivo PDF</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri una commessa con almeno un vano misurato</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca il pulsante <b>€ Preventivo</b> nella barra azioni</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Controlla il riepilogo — fai <b>firmare il cliente</b> sul telefono</div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>4</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>4</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>Genera & Scarica PDF</b> — pronto per inviare via WhatsApp!</div>
                 </div>
               </div>
@@ -1582,13 +1620,13 @@ export default function SettingsPanel() {
               </div>
               <div style={{padding:"12px 16px"}}>
                 {[
-                  {f:"Sopralluogo",i:"📐",d:"Vai dal cliente, valuta il lavoro",c:"#007aff"},
-                  {f:"Preventivo",i:"📝",d:"Prepara e invia l'offerta",c:"#ff9500"},
+                  {f:"Sopralluogo",i:"📐",d:"Vai dal cliente, valuta il lavoro",c:PRI},
+                  {f:"Preventivo",i:"📝",d:"Prepara e invia l'offerta",c:"#E8A020"},
                   {f:"Conferma",i:"✍️",d:"Il cliente accetta e firma",c:"#af52de"},
-                  {f:"Misure",i:"📏",d:"Rilievo preciso di ogni vano",c:"#5856d6"},
-                  {f:"Ordini",i:"🛒",d:"Ordina profili, vetri e accessori",c:"#ff2d55"},
-                  {f:"Produzione",i:"🏭",d:"Attendi che il materiale sia pronto",c:"#ff9500"},
-                  {f:"Posa",i:"🔧",d:"Installa tutto dal cliente",c:"#34c759"},
+                  {f:"Misure",i:"📏",d:"Rilievo preciso di ogni vano",c:"#8B5CF6"},
+                  {f:"Ordini",i:"🛒",d:"Ordina profili, vetri e accessori",c:"#EF4444"},
+                  {f:"Produzione",i:"🏭",d:"Attendi che il materiale sia pronto",c:"#E8A020"},
+                  {f:"Posa",i:"🔧",d:"Installa tutto dal cliente",c:"#1A9E73"},
                   {f:"Chiusura",i:"✅",d:"Saldo finale e garanzia",c:"#30b0c7"},
                 ].map((p,i) => (
                   <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:i<7?6:0}}>
@@ -1604,7 +1642,7 @@ export default function SettingsPanel() {
             {/* CARD 6: SCORCIATOIE */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#ff2d5515",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>⚡</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#EF444415",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>⚡</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Trucchi da Pro</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
@@ -1616,7 +1654,7 @@ export default function SettingsPanel() {
                   {t:"SVG in tempo reale",d:"Mentre inserisci le misure, il disegno del vano si aggiorna live"},
                 ].map((tip,i) => (
                   <div key={i} style={{display:"flex",gap:8,marginBottom:i<4?8:0,alignItems:"flex-start"}}>
-                    <div style={{fontSize:10,color:T.acc,fontWeight:900,marginTop:2}}>▸</div>
+                    <div style={{fontSize:10,color:PRI,fontWeight:900,marginTop:2}}>▸</div>
                     <div><span style={{fontSize:12,fontWeight:700,color:T.text}}>{tip.t}: </span><span style={{fontSize:11,color:T.sub}}>{tip.d}</span></div>
                   </div>
                 ))}
@@ -1631,20 +1669,20 @@ export default function SettingsPanel() {
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri un vano — scorri fino alla sezione <b>🔲 Controtelaio</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Scegli il tipo: <b>Singolo</b>, <b>Doppio</b> o <b>Con Cassonetto</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Inserisci <b>larghezza e altezza vano</b> — il calcolo infisso parte in automatico</div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:"#34c759",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
-                  <div style={{fontSize:12,color:"#34c759",fontWeight:700,lineHeight:1.5}}>L'infisso viene calcolato togliendo l'offset (default 10mm/lato)</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:"#1A9E73",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
+                  <div style={{fontSize:12,color:"#1A9E73",fontWeight:700,lineHeight:1.5}}>L'infisso viene calcolato togliendo l'offset (default 10mm/lato)</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Cassonetto:</b> compila anche H e P cassonetto + modello cielino (A tampone, A tappo, Frontale)</div>
               </div>
@@ -1653,20 +1691,20 @@ export default function SettingsPanel() {
             {/* CARD 8: FOTO VIDEO AUDIO */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#ff2d5515",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📸</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#EF444415",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📸</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Foto, video e note vocali</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Dentro un rilievo, tocca il pulsante <b>📎 Allegati</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Scegli: <b>📷 Foto</b> (scatta dalla fotocamera), <b>🎥 Video</b> o <b>🎤 Nota vocale</b></div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Gli allegati vengono salvati e associati al vano — rivedili quando vuoi</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>AI Photo:</b> tocca il bottone 🤖 AI nel vano per analizzare la foto con intelligenza artificiale</div>
@@ -1676,21 +1714,21 @@ export default function SettingsPanel() {
             {/* CARD 9: FUORISQUADRO */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#ff950015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📐</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#E8A02015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📐</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Fuorisquadro e diagonali</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Nelle misure del vano, inserisci <b>H1</b> (sinistra) e <b>H2</b> (destra) se diverse</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Inserisci le <b>diagonali D1 e D2</b> — il sistema calcola la differenza</div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:"#ff3b30",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>!</div>
-                  <div style={{fontSize:12,color:"#ff3b30",fontWeight:700,lineHeight:1.5}}>Se fuorisquadro: warning rosso + disegno SVG con forma reale</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:"#DC4444",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>!</div>
+                  <div style={{fontSize:12,color:"#DC4444",fontWeight:700,lineHeight:1.5}}>Se fuorisquadro: warning rosso + disegno SVG con forma reale</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Nel riepilogo WhatsApp</b> il fuorisquadro viene segnalato con ⚠️ per avvisare la produzione</div>
               </div>
@@ -1699,29 +1737,29 @@ export default function SettingsPanel() {
             {/* CARD 10: IMPORT EXCEL */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#34c75915",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📥</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#1A9E7315",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📥</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Importare il catalogo da Excel</div><div style={{fontSize:10,color:T.sub}}>⏱ 1 minuto</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Impostazioni → Importa</b> e scarica il <b>Template Excel</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri il file Excel — ogni <b>foglio</b> corrisponde a una categoria del catalogo</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Compila le colonne come indicato sotto — <b>una riga per ogni prodotto</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:10}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>4</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>4</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Torna in <b>Importa</b>, carica il file — il catalogo viene sostituito automaticamente</div>
                 </div>
 
                 {/* Tabella fogli */}
-                <div style={{fontSize:11,fontWeight:800,color:T.acc,marginBottom:6,marginTop:4}}>📊 COLONNE PER OGNI FOGLIO:</div>
+                <div style={{fontSize:11,fontWeight:800,color:PRI,marginBottom:6,marginTop:4}}>📊 COLONNE PER OGNI FOGLIO:</div>
                 {[
                   {foglio:"SISTEMI", colonne:"Marca | Nome Sistema | Uf (W/m²K)", es:"Aluplast | Ideal 4000 | 1.1"},
                   {foglio:"COLORI", colonne:"Nome | RAL/Codice | Tipo", es:"Grigio Antracite | 7016 | RAL"},
@@ -1755,15 +1793,15 @@ export default function SettingsPanel() {
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Impostazioni → Azienda</b> e scorri in basso</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Trovi 5 sezioni: <b>Fornitura, Pagamento, Consegna, Contratto, Dettagli tecnici</b></div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Scrivi il tuo testo — appare nel PDF. Se lasci vuoto, usa il testo standard</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>PEC:</b> compila anche il campo PEC — apparira nell'intestazione del preventivo</div>
@@ -1773,20 +1811,20 @@ export default function SettingsPanel() {
             {/* CARD 12: AGENDA */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#007aff15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📅</div>
+                <div style={{width:28,height:28,borderRadius:8,background:PRI15,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📅</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come usare l'agenda</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Agenda</b> dal menu — scegli vista <b>Mese, Settimana o Giorno</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>+ Nuovo evento</b> — scegli tipo (Sopralluogo, Misure, Posa, Consegna...)</div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Collega l'evento a una <b>commessa</b> — appare anche nella Home del giorno</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>10 tipi evento</b> con icone e colori diversi — i pallini colorati nel mese ti danno il colpo d'occhio</div>
@@ -1796,20 +1834,20 @@ export default function SettingsPanel() {
             {/* CARD 13: AI INBOX */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#5856d615",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🤖</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#8B5CF615",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🤖</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>AI Inbox — email intelligenti</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Messaggi → AI Inbox</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>L'AI classifica ogni email: <b>priorita, sentimento, commessa suggerita</b></div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Azioni rapide: <b>Archivia</b>, <b>Collega a commessa</b> o <b>Rispondi</b> con un tap</div>
                 </div>
               </div>
@@ -1823,15 +1861,15 @@ export default function SettingsPanel() {
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri una commessa con vani — tocca <b>📋 Riepilogo</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vedi il riepilogo formattato con tutti i vani, misure, colori, accessori</div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>Copia</b> — incolla direttamente in WhatsApp per la produzione</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Fuorisquadro incluso:</b> se un vano e fuorisquadro, il riepilogo lo segnala con ⚠️ e le misure reali</div>
@@ -1841,21 +1879,21 @@ export default function SettingsPanel() {
             {/* CARD 15: PIPELINE PERSONALIZZABILE */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#ff950015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>⚙️</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#E8A02015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>⚙️</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Personalizzare la pipeline</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Impostazioni → Pipeline</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Attiva/disattiva le fasi che ti servono con gli <b>switch</b></div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:"#34c759",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
-                  <div style={{fontSize:12,color:"#34c759",fontWeight:700,lineHeight:1.5}}>La fase Chiusura e sempre attiva — non si puo disabilitare</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:"#1A9E73",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
+                  <div style={{fontSize:12,color:"#1A9E73",fontWeight:700,lineHeight:1.5}}>La fase Chiusura e sempre attiva — non si puo disabilitare</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Esempio:</b> non fai produzione interna? Disattiva "Produzione" e le commesse saltano direttamente a "Posa"</div>
               </div>
@@ -1864,25 +1902,25 @@ export default function SettingsPanel() {
             {/* CARD 16: FIRMA CLIENTE */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#5856d615",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>✍️</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#8B5CF615",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>✍️</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Far firmare il cliente sul telefono</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri il <b>Preventivo</b> di una commessa</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>✍️ Firma cliente</b> — appare un'area bianca per firmare col dito</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Il cliente firma col dito sullo schermo — tocca <b>Conferma</b></div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:"#34c759",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
-                  <div style={{fontSize:12,color:"#34c759",fontWeight:700,lineHeight:1.5}}>La firma viene salvata e inserita nel PDF del preventivo</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:"#1A9E73",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
+                  <div style={{fontSize:12,color:"#1A9E73",fontWeight:700,lineHeight:1.5}}>La firma viene salvata e inserita nel PDF del preventivo</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Puoi cancellare</b> e far rifirmare — tocca "Cancella" per resettare l'area firma</div>
               </div>
@@ -1891,20 +1929,20 @@ export default function SettingsPanel() {
             {/* CARD 17: SISTEMA RILIEVI */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#ff950015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📂</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#E8A02015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📂</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Come funzionano i rilievi</div><div style={{fontSize:10,color:T.sub}}>⏱ 30 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri una commessa — tocca <b>+ Nuovo rilievo</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Compila <b>data, rilevatore</b> (dal team), note e condizioni</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Dentro ogni rilievo aggiungi i <b>vani</b> con misure e foto</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:4,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Piu rilievi per commessa:</b> puoi fare un primo sopralluogo esplorativo e poi un secondo con le misure definitive. Il tab <b>Report</b> confronta le differenze tra rilievi</div>
@@ -1919,15 +1957,15 @@ export default function SettingsPanel() {
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Messaggi</b> — trovi la chat AI in basso</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Scrivi domande naturali: <b>"cosa ho in programma oggi?"</b>, <b>"quante commesse ho?"</b></div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>MASTRO AI risponde con dati reali dalle tue commesse, task e misure</div>
                 </div>
               </div>
@@ -1936,20 +1974,20 @@ export default function SettingsPanel() {
             {/* CARD 19: INVIO EMAIL */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#007aff15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📧</div>
+                <div style={{width:28,height:28,borderRadius:8,background:PRI15,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📧</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Inviare email dalla commessa</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Dentro una commessa, tocca <b>📧 Invia email</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Scegli il <b>destinatario</b> (cliente o fornitore), scrivi <b>oggetto e messaggio</b></div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>L'email viene inviata e collegata alla commessa nel <b>log attivita</b></div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Template pronti:</b> conferma appuntamento, promemoria, preventivo pronto — personalizzabili</div>
@@ -1959,20 +1997,20 @@ export default function SettingsPanel() {
             {/* CARD 20: RUBRICA */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#34c75915",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📇</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#1A9E7315",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>📇</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Rubrica contatti</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Messaggi → Rubrica</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Filtra per tipo: <b>Tutti, Preferiti, Team, Clienti, Fornitori</b></div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Ogni contatto mostra: nome, ruolo, canali disponibili (WhatsApp, email, SMS)</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>I membri del team</b> appaiono automaticamente nella rubrica con il loro ruolo e colore</div>
@@ -1982,20 +2020,20 @@ export default function SettingsPanel() {
             {/* CARD 21: TEAM */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#ff2d5515",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>👥</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#EF444415",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>👥</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Gestione Team</div><div style={{fontSize:10,color:T.sub}}>⏱ 20 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Impostazioni → Team</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>+ Aggiungi membro</b> — inserisci nome, ruolo e colore</div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>I membri appaiono nei rilievi, negli eventi e nella rubrica automaticamente</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Assegnazione automatica:</b> quando una commessa avanza di fase, il responsabile viene assegnato in base al ruolo configurato</div>
@@ -2005,20 +2043,20 @@ export default function SettingsPanel() {
             {/* CARD 22: WIDGET DRAG & DROP */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#007aff15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🧩</div>
+                <div style={{width:28,height:28,borderRadius:8,background:PRI15,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🧩</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Personalizzare la Home</div><div style={{fontSize:10,color:T.sub}}>⏱ 15 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Nella Home, tocca <b>✏️ Layout</b> in alto a destra</div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}><b>Trascina</b> i widget per riordinarli — metti in alto quelli che usi di piu</div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Tocca <b>✓ Fine</b> per salvare — l'ordine viene ricordato</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>7 widget disponibili:</b> Contatori, IO (briefing), Attenzione, Programma oggi, Settimana, Commesse, Azioni rapide</div>
@@ -2028,21 +2066,21 @@ export default function SettingsPanel() {
             {/* CARD 23: DATI AZIENDALI */}
             <div style={{background:"#fff",borderRadius:12,border:"1px solid "+(T.bdr||"#E5E3DE"),overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid "+(T.bdr||"#E5E3DE"),display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:8,background:"#ff950015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🏢</div>
+                <div style={{width:28,height:28,borderRadius:8,background:"#E8A02015",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🏢</div>
                 <div><div style={{fontSize:13,fontWeight:800,color:T.text}}>Compilare i dati aziendali</div><div style={{fontSize:10,color:T.sub}}>⏱ 30 secondi</div></div>
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Vai in <b>Impostazioni → Azienda</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Compila: <b>Ragione sociale, P.IVA, CF, Indirizzo, Telefono, Email, PEC, CCIAA</b></div>
                 </div>
                 <div style={{display:"flex",gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:"#34c759",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
-                  <div style={{fontSize:12,color:"#34c759",fontWeight:700,lineHeight:1.5}}>Questi dati appaiono nell'intestazione di ogni preventivo PDF</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:"#1A9E73",color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✓</div>
+                  <div style={{fontSize:12,color:"#1A9E73",fontWeight:700,lineHeight:1.5}}>Questi dati appaiono nell'intestazione di ogni preventivo PDF</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:8,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>Compila tutto subito:</b> cosi ogni preventivo che generi ha gia tutti i dati corretti senza doverli inserire ogni volta</div>
               </div>
@@ -2056,15 +2094,15 @@ export default function SettingsPanel() {
               </div>
               <div style={{padding:"12px 16px"}}>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Apri una commessa — tocca <b>🚨 Segnala problema</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Scegli <b>tipo</b> (Materiale, Misure, Installazione...) e <b>priorità</b></div>
                 </div>
                 <div style={{display:"flex",gap:12,marginBottom:8}}>
-                  <div style={{width:22,height:22,borderRadius:6,background:T.acc,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
+                  <div style={{width:22,height:22,borderRadius:6,background:PRI,color:"#fff",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>3</div>
                   <div style={{fontSize:12,color:T.text,lineHeight:1.5}}>Descrivi il problema e <b>assegna</b> a un membro del team</div>
                 </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:4,padding:"8px 10px",background:T.bg||"#f8f8f5",borderRadius:8}}>💡 <b>3 stati:</b> Aperto → In corso → Risolto. I problemi aperti appaiono nel widget <b>Attenzione</b> in Home</div>
@@ -2086,8 +2124,8 @@ export default function SettingsPanel() {
         )}
 
         {/* === 🔄 RESET DEMO === */}
-        <div style={{ margin: "20px 0", padding: 16, background: "#ff3b3008", borderRadius: 12, border: "1px solid #ff3b3025" }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "#ff3b30", textTransform: "uppercase", marginBottom: 6 }}>🔄 Zona Reset</div>
+        <div style={{ margin: "20px 0", padding: 16, background: "#DC444408", borderRadius: 12, border: "1px solid #DC444425" }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#DC4444", textTransform: "uppercase", marginBottom: 6 }}>🔄 Zona Reset</div>
           <div style={{ fontSize: 11, color: T.sub, marginBottom: 10 }}>Ricarica i 4 clienti demo con tutti i dati precompilati per testare il flusso completo.</div>
           <button onClick={() => {
             if (!confirm("Vuoi ricaricare i dati demo? I dati attuali verranno sostituiti.")) return;
@@ -2098,8 +2136,8 @@ export default function SettingsPanel() {
             localStorage.removeItem("mastro:cleanSlate");
             window.location.reload();
           }} style={{
-            width: "100%", padding: 12, borderRadius: 10, border: "2px solid #ff3b30",
-            background: "#fff", color: "#ff3b30", fontSize: 13, fontWeight: 800,
+            width: "100%", padding: 12, borderRadius: 10, border: "2px solid #DC4444",
+            background: "#fff", color: "#DC4444", fontSize: 13, fontWeight: 800,
             cursor: "pointer", fontFamily: "inherit",
           }}>🔄 RICARICA DATI DEMO (4 clienti)</button>
 
@@ -2126,8 +2164,8 @@ export default function SettingsPanel() {
             alert("✅ Dati puliti! MASTRO è pronto per i tuoi dati reali.");
             window.location.reload();
           }} style={{
-            width: "100%", padding: 12, borderRadius: 10, border: "2px solid #34c759",
-            background: "#fff", color: "#34c759", fontSize: 13, fontWeight: 800,
+            width: "100%", padding: 12, borderRadius: 10, border: "2px solid #1A9E73",
+            background: "#fff", color: "#1A9E73", fontSize: 13, fontWeight: 800,
             cursor: "pointer", fontFamily: "inherit", marginTop: 8,
           }}>🧹 PULISCI TUTTO — Parti da zero</button>
         </div>
@@ -2142,7 +2180,7 @@ export default function SettingsPanel() {
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: T.card, borderRadius: 10, border: `1px solid ${T.bdr}`, marginBottom: 4 }}>
               <span style={{ fontSize: 14 }}>🚪</span>
               <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: T.text }}>{m}</span>
-              <span style={{ fontSize: 9, color: T.grn || T.acc, fontWeight: 700, background: (T.grn||T.acc) + "15", padding: "2px 8px", borderRadius: 6 }}>Attivo</span>
+              <span style={{ fontSize: 9, color: T.grn || PRI, fontWeight: 700, background: (T.grn||PRI) + "15", padding: "2px 8px", borderRadius: 6 }}>Attivo</span>
             </div>
           ))}
           <div style={{ marginTop: 12 }}>
@@ -2345,6 +2383,69 @@ export default function SettingsPanel() {
             <div key={i} style={{ display: "inline-block", padding: "4px 10px", margin: "0 4px 4px 0", borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.card, fontSize: 10, fontWeight: 600, color: T.text }}>{p}</div>
           ))}
         </div>}
+
+        {/* ═══ STRUTTURE — Configuratore ═══ */}
+        {settingsTab === "strutture" && (
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 4 }}>Configuratore Strutture</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 16, lineHeight: 1.5 }}>Progetta pergole, verande, pensiline, box e cancelli con pianta, profili, 3D e disegno tecnico.</div>
+
+            {/* Card principale — apri configuratore */}
+            <div onClick={() => setShowStrutture(true)} style={{
+              padding: 24, borderRadius: 14, cursor: "pointer",
+              background: T.card, border: `2px solid ${T.pri || "#0D7C6B"}`,
+              textAlign: "center", marginBottom: 16,
+              boxShadow: "0 2px 12px rgba(13,124,107,0.12)",
+            }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🏗️</div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: T.text }}>Apri Configuratore</div>
+              <div style={{ fontSize: 12, color: T.sub, marginTop: 6, lineHeight: 1.5 }}>
+                Pianta → Profili → Lati → 3D → Disegno Tecnico
+              </div>
+              <div style={{
+                marginTop: 16, padding: "10px 24px", borderRadius: 8,
+                background: T.pri || "#0D7C6B", color: "#fff",
+                fontSize: 13, fontWeight: 700, display: "inline-block",
+              }}>
+                Avvia →
+              </div>
+            </div>
+
+            {/* Tipologie disponibili */}
+            <div style={{ fontSize: 10, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 8, letterSpacing: "0.04em" }}>7 tipologie configurabili</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {[
+                { n: "Pergola Bioclimatica", d: "Lamelle orientabili" },
+                { n: "Veranda", d: "Chiusura vetrata" },
+                { n: "Pensilina", d: "A sbalzo, fissata a muro" },
+                { n: "Struttura Ferro", d: "Carpenteria su misura" },
+                { n: "Box Alluminio", d: "Ripostiglio esterno" },
+                { n: "Box Doccia", d: "Cabina su misura" },
+                { n: "Cancello", d: "Ingresso carraio/pedonale" },
+              ].map((t, i) => (
+                <div key={i} style={{
+                  padding: "10px 12px", borderRadius: 8,
+                  background: T.card, border: `1px solid ${T.bdr}`,
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.text }}>{t.n}</div>
+                  <div style={{ fontSize: 9, color: T.sub, marginTop: 2 }}>{t.d}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Features */}
+            <div style={{ marginTop: 16, padding: 14, borderRadius: 10, background: T.bg, border: `1px solid ${T.bdr}`, fontSize: 10, color: T.sub, lineHeight: 1.7 }}>
+              <b style={{ color: T.text }}>Funzionalità:</b><br />
+              • 26 profili strutturali (tubolari, IPE, UPN, angolari, piatti)<br />
+              • Pensilina a muro con 4 tipi braccio/staffa<br />
+              • Elementi inseribili su ogni lato (vetrate, porte, finestre)<br />
+              • Pendenza tetto 0-30% con direzione configurabile<br />
+              • Gronde, pluviali, toggle montanti/travi<br />
+              • Vista 3D interattiva + Disegno tecnico stampabile<br />
+              • Etichette testuali su ogni fase
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
