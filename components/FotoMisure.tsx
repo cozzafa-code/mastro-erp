@@ -1,20 +1,14 @@
 "use client";
 // @ts-nocheck
 // ═══════════════════════════════════════════════════════════
-// MASTRO ERP — FotoMisure v1
-// Scatta foto infisso, annota misure sopra con canvas
-// Tap+drag = linea cotata, tap = punto con label
+// MASTRO ERP — FotoMisure v2
+// UX mobile-first: input grande, numpad, drag preciso,
+// preview sotto il bottone, salvataggio chiaro
 // ═══════════════════════════════════════════════════════════
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { FM, ICO, I, Ico, FF } from "./mastro-constants";
+import { FM, ICO, I, FF } from "./mastro-constants";
 
-const COLORS = ["#DC4444", "#3B7FE0", "#D08008", "#0D7C6B", "#af52de"];
-const TOOLS = [
-  { id: "line", label: "Linea", icon: ICO.ruler },
-  { id: "point", label: "Punto", icon: ICO.mapPin },
-  { id: "text", label: "Nota", icon: ICO.edit },
-  { id: "eraser", label: "Annulla", icon: ICO.back },
-];
+const COLORS = ["#DC4444", "#3B7FE0", "#D08008", "#1A9E73", "#af52de", "#fff"];
 
 export default function FotoMisure({ imageUrl, onSave, onClose, T }) {
   const canvasRef = useRef(null);
@@ -23,351 +17,382 @@ export default function FotoMisure({ imageUrl, onSave, onClose, T }) {
   const [tool, setTool] = useState("line");
   const [color, setColor] = useState("#DC4444");
   const [annotations, setAnnotations] = useState([]);
-  const [drawing, setDrawing] = useState(null); // {startX, startY}
-  const [textInput, setTextInput] = useState(null); // {x, y, text}
+  const [drawing, setDrawing] = useState(null);
+  const [inputModal, setInputModal] = useState(null); // { ...pos, type }
+  const [inputValue, setInputValue] = useState("");
   const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
-  const [canvasScale, setCanvasScale] = useState(1);
   const fileRef = useRef(null);
+  const inputRef = useRef(null);
   const [localImg, setLocalImg] = useState(imageUrl || null);
+  const [dragPreview, setDragPreview] = useState(null);
+  const [undoStack, setUndoStack] = useState([]);
 
-  // Load image
+  // ─── Image Load ───
   const onImgLoad = useCallback(() => {
-    const img = imgRef.current;
-    const canvas = canvasRef.current;
+    const img = imgRef.current, canvas = canvasRef.current;
     if (!img || !canvas) return;
-
     const maxW = window.innerWidth;
-    const maxH = window.innerHeight - 160;
+    const maxH = window.innerHeight - 200;
     const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
-
-    const w = Math.round(img.naturalWidth * scale);
-    const h = Math.round(img.naturalHeight * scale);
-
-    canvas.width = w;
-    canvas.height = h;
+    const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+    canvas.width = w; canvas.height = h;
     setImgSize({ w, h });
-    setCanvasScale(scale);
     setLoaded(true);
-    redraw(w, h, scale, []);
   }, []);
 
-  // Redraw canvas
-  const redraw = useCallback((w, h, scale, annots) => {
-    const canvas = canvasRef.current;
-    const img = imgRef.current;
-    if (!canvas || !img) return;
+  // ─── Redraw ───
+  const redraw = useCallback(() => {
+    const canvas = canvasRef.current, img = imgRef.current;
+    if (!canvas || !img || !loaded) return;
     const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(img, 0, 0, w, h);
-
-    // Draw annotations
-    (annots || annotations).forEach(a => {
+    annotations.forEach(a => {
       ctx.save();
-      if (a.type === "line") {
-        drawCotedLine(ctx, a.x1, a.y1, a.x2, a.y2, a.text, a.color);
-      } else if (a.type === "point") {
-        drawPoint(ctx, a.x, a.y, a.text, a.color);
-      } else if (a.type === "text") {
-        drawLabel(ctx, a.x, a.y, a.text, a.color);
-      }
+      if (a.type === "line") drawCoted(ctx, a.x1, a.y1, a.x2, a.y2, a.text, a.color);
+      else if (a.type === "point") drawPoint(ctx, a.x, a.y, a.text, a.color);
+      else if (a.type === "text") drawLabel(ctx, a.x, a.y, a.text, a.color);
       ctx.restore();
     });
-  }, [annotations]);
 
-  useEffect(() => {
-    if (loaded) redraw(imgSize.w, imgSize.h, canvasScale, annotations);
-  }, [annotations, loaded]);
-
-  // Coted line with dimension
-  function drawCotedLine(ctx, x1, y1, x2, y2, text, col) {
-    const dx = x2 - x1, dy = y2 - y1;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const angle = Math.atan2(dy, dx);
-
-    ctx.strokeStyle = col;
-    ctx.lineWidth = 2;
-    ctx.setLineDash([]);
-
-    // Main line
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-
-    // End ticks (perpendicular)
-    const tickLen = 8;
-    const perp = angle + Math.PI / 2;
-    for (const [px, py] of [[x1, y1], [x2, y2]]) {
+    // Live drag preview
+    if (dragPreview && drawing) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
       ctx.beginPath();
-      ctx.moveTo(px - Math.cos(perp) * tickLen, py - Math.sin(perp) * tickLen);
-      ctx.lineTo(px + Math.cos(perp) * tickLen, py + Math.sin(perp) * tickLen);
+      ctx.moveTo(drawing.startX, drawing.startY);
+      ctx.lineTo(dragPreview.x, dragPreview.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Live length
+      const dx = dragPreview.x - drawing.startX, dy = dragPreview.y - drawing.startY;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      if (len > 20) {
+        const mx = (drawing.startX + dragPreview.x) / 2, my = (drawing.startY + dragPreview.y) / 2;
+        ctx.font = "bold 12px 'JetBrains Mono', monospace";
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(mx - 20, my - 10, 40, 20);
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(Math.round(len) + "px", mx, my);
+      }
+      ctx.restore();
+    }
+  }, [annotations, loaded, drawing, dragPreview, color]);
+
+  useEffect(() => { redraw(); }, [redraw]);
+
+  // ─── Drawing functions ───
+  function drawCoted(ctx, x1, y1, x2, y2, text, col) {
+    const dx = x2-x1, dy = y2-y1, angle = Math.atan2(dy, dx);
+    ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    // End ticks
+    const tl = 10, perp = angle + Math.PI/2;
+    for (const [px,py] of [[x1,y1],[x2,y2]]) {
+      ctx.beginPath();
+      ctx.moveTo(px - Math.cos(perp)*tl, py - Math.sin(perp)*tl);
+      ctx.lineTo(px + Math.cos(perp)*tl, py + Math.sin(perp)*tl);
       ctx.stroke();
     }
-
-    // Text background + label at midpoint
-    const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
-    const label = text || Math.round(len) + "";
-    ctx.font = "bold 14px 'JetBrains Mono', monospace";
-    const metrics = ctx.measureText(label);
-    const pad = 4;
-    const tw = metrics.width + pad * 2;
-    const th = 18;
-
-    // Offset above line
-    const offX = -Math.sin(angle) * 14;
-    const offY = Math.cos(angle) * 14;
-
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.fillRect(midX + offX - tw / 2, midY - offY - th / 2, tw, th);
-    ctx.strokeStyle = col;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(midX + offX - tw / 2, midY - offY - th / 2, tw, th);
-
-    ctx.fillStyle = col;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(label, midX + offX, midY - offY);
+    // Label
+    const mx = (x1+x2)/2, my = (y1+y2)/2;
+    const label = text || "";
+    if (label) {
+      ctx.font = "bold 15px 'JetBrains Mono', monospace";
+      const tw = ctx.measureText(label).width + 12;
+      const offX = -Math.sin(angle)*16, offY = Math.cos(angle)*16;
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath(); ctx.roundRect(mx+offX-tw/2, my-offY-11, tw, 22, 4); ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(mx+offX-tw/2, my-offY-11, tw, 22, 4); ctx.stroke();
+      ctx.fillStyle = col; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(label, mx+offX, my-offY);
+    }
   }
 
   function drawPoint(ctx, x, y, text, col) {
-    // Circle
     ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.arc(x, y, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Label
+    ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 2.5; ctx.stroke();
     if (text) {
-      ctx.font = "bold 12px 'JetBrains Mono', monospace";
-      const tw = ctx.measureText(text).width + 8;
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillRect(x + 10, y - 10, tw, 20);
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x + 10, y - 10, tw, 20);
-      ctx.fillStyle = col;
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.fillText(text, x + 14, y);
+      ctx.font = "bold 13px 'JetBrains Mono', monospace";
+      const tw = ctx.measureText(text).width + 10;
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath(); ctx.roundRect(x+12, y-12, tw, 24, 4); ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(x+12, y-12, tw, 24, 4); ctx.stroke();
+      ctx.fillStyle = col; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(text, x+17, y);
     }
   }
 
   function drawLabel(ctx, x, y, text, col) {
-    ctx.font = "bold 13px 'JetBrains Mono', monospace";
-    const tw = ctx.measureText(text).width + 10;
-    ctx.fillStyle = col + "E0";
-    const radius = 6;
-    ctx.beginPath();
-    ctx.roundRect(x - 2, y - 12, tw, 24, radius);
-    ctx.fill();
-    ctx.fillStyle = "#fff";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, x + 3, y);
+    ctx.font = "bold 14px 'JetBrains Mono', monospace";
+    const tw = ctx.measureText(text).width + 12;
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.roundRect(x-2, y-13, tw, 26, 6); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText(text, x+4, y);
   }
 
-  // Touch / click handlers
+  // ─── Touch handlers ───
   const getPos = (e) => {
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const touch = e.touches ? e.touches[0] || e.changedTouches[0] : e;
-    return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+    const rect = canvasRef.current.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] || e.changedTouches[0] : e;
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top };
   };
 
   const handleStart = (e) => {
     e.preventDefault();
+    if (inputModal) return;
     const pos = getPos(e);
-
-    if (tool === "eraser") {
-      setAnnotations(prev => prev.slice(0, -1));
+    if (tool === "eraser") { undo(); return; }
+    if (tool === "text" || tool === "point") {
+      openInput(pos, tool === "point" ? "point" : "text", pos);
       return;
     }
-
-    if (tool === "text") {
-      setTextInput({ x: pos.x, y: pos.y, text: "" });
-      return;
-    }
-
-    if (tool === "point") {
-      setTextInput({ x: pos.x, y: pos.y, text: "", isPoint: true });
-      return;
-    }
-
-    // Line: start drawing
     setDrawing({ startX: pos.x, startY: pos.y });
+    setDragPreview(null);
+  };
+
+  const handleMove = (e) => {
+    if (!drawing) return;
+    e.preventDefault();
+    setDragPreview(getPos(e));
   };
 
   const handleEnd = (e) => {
     if (!drawing) return;
     e.preventDefault();
     const pos = getPos(e);
-    const dx = pos.x - drawing.startX;
-    const dy = pos.y - drawing.startY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-
-    if (dist < 10) {
-      // Too short, treat as point
-      setTextInput({ x: drawing.startX, y: drawing.startY, text: "", isPoint: true });
-      setDrawing(null);
-      return;
+    const dx = pos.x - drawing.startX, dy = pos.y - drawing.startY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    setDragPreview(null);
+    if (dist < 15) {
+      openInput(pos, "point", pos);
+    } else {
+      openInput({ x: (drawing.startX+pos.x)/2, y: (drawing.startY+pos.y)/2 }, "line", { x1: drawing.startX, y1: drawing.startY, x2: pos.x, y2: pos.y });
     }
-
-    // Show input for dimension
-    setTextInput({
-      x: (drawing.startX + pos.x) / 2,
-      y: (drawing.startY + pos.y) / 2,
-      text: "",
-      isLine: true,
-      x1: drawing.startX, y1: drawing.startY,
-      x2: pos.x, y2: pos.y,
-    });
     setDrawing(null);
   };
 
-  const confirmText = () => {
-    if (!textInput) return;
-    const { text } = textInput;
-
-    if (textInput.isLine) {
-      setAnnotations(prev => [...prev, { type: "line", x1: textInput.x1, y1: textInput.y1, x2: textInput.x2, y2: textInput.y2, text: text || "", color }]);
-    } else if (textInput.isPoint) {
-      setAnnotations(prev => [...prev, { type: "point", x: textInput.x, y: textInput.y, text: text || "", color }]);
-    } else {
-      if (text) setAnnotations(prev => [...prev, { type: "text", x: textInput.x, y: textInput.y, text, color }]);
-    }
-    setTextInput(null);
+  // ─── Input modal (bottom sheet with numpad) ───
+  const openInput = (displayPos, type, coords) => {
+    setInputModal({ type, coords, displayPos });
+    setInputValue("");
+    setTimeout(() => inputRef.current?.focus(), 100);
   };
 
-  // Save annotated image
+  const confirmInput = () => {
+    if (!inputModal) return;
+    const { type, coords } = inputModal;
+    const text = inputValue.trim();
+    setUndoStack(prev => [...prev, [...annotations]]);
+    if (type === "line") {
+      setAnnotations(prev => [...prev, { type: "line", x1: coords.x1, y1: coords.y1, x2: coords.x2, y2: coords.y2, text, color }]);
+    } else if (type === "point") {
+      setAnnotations(prev => [...prev, { type: "point", x: coords.x, y: coords.y, text, color }]);
+    } else {
+      if (text) setAnnotations(prev => [...prev, { type: "text", x: coords.x, y: coords.y, text, color }]);
+    }
+    setInputModal(null);
+    setInputValue("");
+  };
+
+  const skipInput = () => {
+    // Save without text (for lines, still show the line)
+    if (inputModal?.type === "line") {
+      setUndoStack(prev => [...prev, [...annotations]]);
+      const { coords } = inputModal;
+      setAnnotations(prev => [...prev, { type: "line", x1: coords.x1, y1: coords.y1, x2: coords.x2, y2: coords.y2, text: "", color }]);
+    }
+    setInputModal(null);
+    setInputValue("");
+  };
+
+  const undo = () => {
+    if (undoStack.length > 0) {
+      setAnnotations(undoStack[undoStack.length - 1]);
+      setUndoStack(prev => prev.slice(0, -1));
+    } else if (annotations.length > 0) {
+      setAnnotations(prev => prev.slice(0, -1));
+    }
+  };
+
+  // ─── Numpad digit helper ───
+  const appendDigit = (d) => setInputValue(prev => prev + d);
+  const backspace = () => setInputValue(prev => prev.slice(0, -1));
+
+  // ─── Quick prefixes ───
+  const quickLabels = [
+    { label: "L", prefix: "L:" },
+    { label: "H", prefix: "H:" },
+    { label: "Ø", prefix: "Ø:" },
+    { label: "Sp", prefix: "Sp:" },
+    { label: "mm", suffix: true },
+  ];
+
+  // ─── Save ───
   const saveImage = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-    onSave(dataUrl, annotations);
+    onSave(canvas.toDataURL("image/jpeg", 0.85), annotations);
   };
 
-  // Take photo
-  const takePhoto = () => { fileRef.current?.click(); };
+  // ─── File input ───
+  const takePhoto = () => fileRef.current?.click();
   const onFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => { setLocalImg(ev.target.result); setAnnotations([]); setLoaded(false); };
+    reader.onload = (ev) => { setLocalImg(ev.target.result); setAnnotations([]); setUndoStack([]); setLoaded(false); };
     reader.readAsDataURL(file);
     e.target.value = "";
   };
 
-  // Quick measure buttons
-  const QUICK = ["L:", "H:", "P:", "Ø:", "Sp:"];
+  const ACC = T?.acc || "#D08008";
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "#000", display: "flex", flexDirection: "column" }}>
 
-      {/* Header */}
-      <div style={{ padding: "10px 16px", background: "#111", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+      {/* ═══ HEADER ═══ */}
+      <div style={{ padding: "10px 12px", background: "#111", display: "flex", alignItems: "center", gap: 8, flexShrink: 0, borderBottom: "1px solid #222" }}>
         <div onClick={onClose} style={{ padding: 6, cursor: "pointer" }}>
           <I d={ICO.back} s={20} c="#fff" />
         </div>
-        <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#fff" }}>Foto + Misure</span>
+        <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: "#fff", fontFamily: FF }}>📸 Foto Misure</span>
+        <div style={{ fontSize: 10, color: "#666", fontFamily: FM }}>{annotations.length} segni</div>
         {localImg && (
-          <div onClick={saveImage} style={{ padding: "6px 14px", borderRadius: 8, background: T?.acc || "#D08008", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-            Salva
+          <div onClick={saveImage} style={{ padding: "7px 16px", borderRadius: 8, background: "#1A9E73", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+            ✓ Salva
           </div>
         )}
       </div>
 
-      {/* Canvas area */}
-      <div style={{ flex: 1, overflow: "auto", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+      {/* ═══ CANVAS AREA ═══ */}
+      <div style={{ flex: 1, overflow: "auto", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", background: "#0a0a0a" }}>
         {!localImg ? (
           <div style={{ textAlign: "center", padding: 40 }}>
-            <div onClick={takePhoto} style={{ width: 80, height: 80, borderRadius: 40, background: T?.acc || "#D08008", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", cursor: "pointer", boxShadow: "0 4px 20px rgba(208,128,8,0.4)" }}>
-              <I d={ICO.camera} s={32} c="#fff" />
+            <div onClick={takePhoto} style={{ width: 90, height: 90, borderRadius: "50%", background: "linear-gradient(135deg, #DC4444, #B83030)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", cursor: "pointer", boxShadow: "0 4px 30px rgba(220,68,68,0.4)" }}>
+              <I d={ICO.camera} s={36} c="#fff" />
             </div>
-            <div style={{ fontSize: 14, color: "#fff", fontWeight: 600 }}>Scatta foto infisso</div>
-            <div style={{ fontSize: 12, color: "#888", marginTop: 4 }}>Poi annota le misure direttamente sopra</div>
+            <div style={{ fontSize: 16, color: "#fff", fontWeight: 700 }}>Scatta foto infisso</div>
+            <div style={{ fontSize: 12, color: "#666", marginTop: 6, lineHeight: 1.5 }}>Trascina una linea per quotare{"\n"}Tocca per un punto con misura</div>
           </div>
         ) : (
           <>
-            <img
-              ref={imgRef}
-              src={localImg}
-              onLoad={onImgLoad}
-              style={{ display: "none" }}
-            />
+            <img ref={imgRef} src={localImg} onLoad={onImgLoad} style={{ display: "none" }} />
             <canvas
               ref={canvasRef}
-              onTouchStart={handleStart}
-              onTouchEnd={handleEnd}
-              onMouseDown={handleStart}
-              onMouseUp={handleEnd}
-              style={{ touchAction: "none", cursor: tool === "line" ? "crosshair" : tool === "eraser" ? "pointer" : "crosshair" }}
+              onTouchStart={handleStart} onTouchMove={handleMove} onTouchEnd={handleEnd}
+              onMouseDown={handleStart} onMouseMove={handleMove} onMouseUp={handleEnd}
+              style={{ touchAction: "none", cursor: tool === "line" ? "crosshair" : "pointer" }}
             />
           </>
         )}
-
-        {/* Text input overlay */}
-        {textInput && (
-          <div style={{ position: "absolute", left: Math.min(textInput.x, (imgSize.w || 300) - 180), top: Math.min(textInput.y + 20, (imgSize.h || 400) - 60), zIndex: 10 }}>
-            <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
-              {QUICK.map(q => (
-                <div key={q} onClick={() => setTextInput(prev => ({ ...prev, text: prev.text + q }))}
-                  style={{ padding: "3px 8px", borderRadius: 6, background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FM }}>
-                  {q}
-                </div>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: 4 }}>
-              <input
-                autoFocus
-                value={textInput.text}
-                onChange={e => setTextInput(prev => ({ ...prev, text: e.target.value }))}
-                onKeyDown={e => { if (e.key === "Enter") confirmText(); }}
-                placeholder={textInput.isLine ? "es. 1200" : textInput.isPoint ? "es. L:1200" : "nota..."}
-                style={{ width: 140, padding: "8px 10px", borderRadius: 8, border: "2px solid " + color, background: "rgba(0,0,0,0.8)", color: "#fff", fontSize: 14, fontFamily: FM, fontWeight: 700, outline: "none" }}
-              />
-              <div onClick={confirmText} style={{ padding: "8px 12px", borderRadius: 8, background: color, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center" }}>
-                ✓
-              </div>
-              <div onClick={() => setTextInput(null)} style={{ padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,0.1)", color: "#888", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center" }}>
-                ✕
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Toolbar */}
-      {localImg && (
-        <div style={{ padding: "8px 16px 20px", background: "#111", flexShrink: 0 }}>
-          {/* Tools */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 8, justifyContent: "center" }}>
-            {TOOLS.map(t => (
-              <div key={t.id} onClick={() => { if (t.id === "eraser") { setAnnotations(prev => prev.slice(0, -1)); } else { setTool(t.id); } }}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "6px 12px", borderRadius: 10, background: tool === t.id && t.id !== "eraser" ? color + "30" : "rgba(255,255,255,0.08)", cursor: "pointer", border: tool === t.id && t.id !== "eraser" ? "1px solid " + color : "1px solid transparent" }}>
-                <I d={t.icon} s={18} c={tool === t.id && t.id !== "eraser" ? color : "#888"} />
-                <span style={{ fontSize: 9, fontWeight: 600, color: tool === t.id && t.id !== "eraser" ? "#fff" : "#888" }}>{t.label}</span>
+      {/* ═══ INPUT MODAL — bottom sheet con numpad ═══ */}
+      {inputModal && (
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20, background: "#1a1a1a", borderRadius: "16px 16px 0 0", padding: "12px 16px 24px", boxShadow: "0 -4px 30px rgba(0,0,0,0.5)" }}>
+          {/* Handle */}
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: "#333", margin: "0 auto 10px" }} />
+          
+          {/* Type label */}
+          <div style={{ fontSize: 10, color: "#666", fontWeight: 700, textTransform: "uppercase", marginBottom: 8, textAlign: "center" }}>
+            {inputModal.type === "line" ? "📏 Inserisci misura della linea" : inputModal.type === "point" ? "📍 Inserisci valore del punto" : "📝 Inserisci nota"}
+          </div>
+
+          {/* Quick prefix buttons */}
+          <div style={{ display: "flex", gap: 6, marginBottom: 10, justifyContent: "center" }}>
+            {quickLabels.map(q => (
+              <div key={q.label} onClick={() => {
+                if (q.suffix) setInputValue(prev => prev + " mm");
+                else setInputValue(prev => q.prefix + prev.replace(/^[A-ZØ]+:/i, ""));
+              }} style={{ padding: "6px 12px", borderRadius: 8, background: inputValue.startsWith(q.prefix) ? color + "30" : "rgba(255,255,255,0.06)", border: "1px solid " + (inputValue.startsWith(q.prefix) ? color : "#333"), color: inputValue.startsWith(q.prefix) ? color : "#888", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FM }}>
+                {q.label}
               </div>
             ))}
-            <div onClick={takePhoto}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "6px 12px", borderRadius: 10, background: "rgba(255,255,255,0.08)", cursor: "pointer" }}>
-              <I d={ICO.camera} s={18} c="#888" />
-              <span style={{ fontSize: 9, fontWeight: 600, color: "#888" }}>Nuova</span>
+          </div>
+
+          {/* Big input display */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
+            <div style={{ flex: 1, padding: "14px 16px", borderRadius: 12, background: "#000", border: "2px solid " + color, fontSize: 24, fontWeight: 800, fontFamily: FM, color: "#fff", textAlign: "center", minHeight: 52, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {inputValue || <span style={{ color: "#444" }}>{inputModal.type === "line" ? "1200" : "valore"}</span>}
             </div>
           </div>
+
+          {/* Numpad */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 10 }}>
+            {["1","2","3","⌫","4","5","6","","7","8","9","0"].map((d, i) => {
+              if (d === "") return <div key={i} />;
+              if (d === "⌫") return (
+                <div key={d} onClick={backspace} style={{ padding: "14px 0", borderRadius: 10, background: "rgba(255,255,255,0.06)", color: "#888", textAlign: "center", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <I d={ICO.back} s={18} c="#888" />
+                </div>
+              );
+              return (
+                <div key={d} onClick={() => appendDigit(d)} style={{ padding: "14px 0", borderRadius: 10, background: "rgba(255,255,255,0.08)", color: "#fff", textAlign: "center", fontSize: 20, fontWeight: 700, cursor: "pointer", fontFamily: FM, userSelect: "none" }}>
+                  {d}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <div onClick={skipInput} style={{ flex: 1, padding: "12px 0", borderRadius: 10, background: "rgba(255,255,255,0.06)", color: "#888", textAlign: "center", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              {inputModal.type === "line" ? "Solo linea" : "Annulla"}
+            </div>
+            <div onClick={confirmInput} style={{ flex: 2, padding: "12px 0", borderRadius: 10, background: color, color: "#fff", textAlign: "center", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+              ✓ Conferma {inputValue ? `"${inputValue}"` : ""}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ TOOLBAR ═══ */}
+      {localImg && !inputModal && (
+        <div style={{ padding: "8px 12px 22px", background: "#111", flexShrink: 0, borderTop: "1px solid #222" }}>
+          {/* Tools row */}
+          <div style={{ display: "flex", gap: 4, marginBottom: 8, justifyContent: "center" }}>
+            {[
+              { id: "line", label: "Linea", icon: "📏" },
+              { id: "point", label: "Punto", icon: "📍" },
+              { id: "text", label: "Nota", icon: "📝" },
+            ].map(t => (
+              <div key={t.id} onClick={() => setTool(t.id)} style={{
+                display: "flex", alignItems: "center", gap: 5, padding: "8px 14px", borderRadius: 10, cursor: "pointer",
+                background: tool === t.id ? color + "20" : "rgba(255,255,255,0.05)",
+                border: "1.5px solid " + (tool === t.id ? color : "#333"),
+                color: tool === t.id ? "#fff" : "#777",
+              }}>
+                <span style={{ fontSize: 15 }}>{t.icon}</span>
+                <span style={{ fontSize: 11, fontWeight: 700 }}>{t.label}</span>
+              </div>
+            ))}
+            <div onClick={undo} style={{ display: "flex", alignItems: "center", gap: 5, padding: "8px 14px", borderRadius: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1.5px solid #333" }}>
+              <I d={ICO.back} s={15} c="#777" />
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#777" }}>Annulla</span>
+            </div>
+            <div onClick={takePhoto} style={{ display: "flex", alignItems: "center", gap: 5, padding: "8px 12px", borderRadius: 10, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1.5px solid #333" }}>
+              <I d={ICO.camera} s={15} c="#777" />
+            </div>
+          </div>
+
           {/* Colors */}
           <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
             {COLORS.map(c => (
-              <div key={c} onClick={() => setColor(c)}
-                style={{ width: 28, height: 28, borderRadius: 14, background: c, cursor: "pointer", border: color === c ? "3px solid #fff" : "3px solid transparent", boxShadow: color === c ? "0 0 8px " + c : "none" }} />
+              <div key={c} onClick={() => setColor(c)} style={{
+                width: 26, height: 26, borderRadius: 13, background: c, cursor: "pointer",
+                border: color === c ? "3px solid " + (c === "#fff" ? "#333" : "#fff") : "2px solid #333",
+                boxShadow: color === c ? "0 0 10px " + c + "60" : "none",
+              }} />
             ))}
-          </div>
-          {/* Counter */}
-          <div style={{ textAlign: "center", marginTop: 6, fontSize: 10, color: "#666" }}>
-            {annotations.length} annotazion{annotations.length === 1 ? "e" : "i"}
           </div>
         </div>
       )}

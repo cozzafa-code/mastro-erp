@@ -898,7 +898,7 @@ export default function VanoDetailPanel() {
           </div>
 
           {/* FOTO + MISURE RAPIDA */}
-          <div onClick={() => setShowFotoMisure(true)} style={{ padding: "12px 16px", borderRadius: 14, background: "linear-gradient(135deg, #DC4444, #B83030)", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, marginBottom: 12, boxShadow: "0 3px 12px rgba(220,68,68,0.3)" }}>
+          <div onClick={() => setShowFotoMisure(true)} style={{ padding: "12px 16px", borderRadius: 14, background: "linear-gradient(135deg, #DC4444, #B83030)", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, marginBottom: 0, boxShadow: "0 3px 12px rgba(220,68,68,0.3)" }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             </div>
@@ -908,6 +908,27 @@ export default function VanoDetailPanel() {
             </div>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
+          {/* GALLERY FOTO MISURE — sotto il bottone */}
+          {(() => {
+            const fotoMisure = Object.entries(v.foto || {}).filter(([k]) => k.startsWith("misure_")).sort((a, b) => b[0].localeCompare(a[0]));
+            if (fotoMisure.length === 0) return <div style={{ marginBottom: 12 }} />;
+            return (
+              <div style={{ marginTop: 0, marginBottom: 12, borderRadius: "0 0 14px 14px", background: T.card, border: "1px solid " + T.bdr, borderTop: "none", padding: "8px 10px", overflow: "hidden" }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase", marginBottom: 6 }}>📸 Foto misure salvate ({fotoMisure.length})</div>
+                <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch" }}>
+                  {fotoMisure.map(([key, foto]) => (
+                    <div key={key} style={{ flexShrink: 0, position: "relative" }}>
+                      <img src={foto.dataUrl} style={{ width: 100, height: 75, objectFit: "cover", borderRadius: 8, border: "2px solid " + T.bdr }} />
+                      <div style={{ position: "absolute", bottom: 2, left: 2, right: 2, padding: "2px 4px", borderRadius: "0 0 6px 6px", background: "rgba(0,0,0,0.6)", fontSize: 8, color: "#fff", fontWeight: 700, textAlign: "center" }}>
+                        {(foto.annotations || []).length} segni
+                      </div>
+                      <div onClick={(e) => { e.stopPropagation(); const newFoto = { ...(v.foto || {}) }; delete newFoto[key]; setCantieri(cs => cs.map(c2 => c2.id === selectedCM?.id ? { ...c2, rilievi: c2.rilievi.map(r2 => r2.id === selectedRilievo?.id ? { ...r2, vani: r2.vani.map(vn => vn.id === v.id ? { ...vn, foto: newFoto } : vn) } : r2) } : c2)); setSelectedVano(prev => ({ ...prev, foto: newFoto })); }} style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: 9, background: "rgba(220,68,68,0.85)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 10, color: "#fff", fontWeight: 700 }}>✕</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Warnings */}
           {vanoStep === 0 && (hasWarnings || hasHWarnings) && (
